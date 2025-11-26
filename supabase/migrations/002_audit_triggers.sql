@@ -2,6 +2,9 @@
 -- Migration 002: Audit Triggers
 -- Implements automatic audit logging for compliance
 
+-- Set search path to ensure we're in the right schema
+SET search_path TO public;
+
 -- ============================================================================
 -- AUDIT TRAIL TRIGGER FUNCTION (Generic)
 -- ============================================================================

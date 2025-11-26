@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   postgres:
-    image: supabase/postgres:16.1.0.54
+    image: supabase/postgres:15.1.0.147
     container_name: lims-postgres
     restart: unless-stopped
     ports:
@@ -14,7 +14,7 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./supabase/migrations:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 10s
       timeout: 5s
       retries: 5

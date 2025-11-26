@@ -2,6 +2,9 @@
 -- Migration 001: Initial Schema
 -- Creates core tables for LIMS system with 21 CFR Part 11 compliance
 
+-- Set search path to ensure we're in the right schema
+SET search_path TO public;
+
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 

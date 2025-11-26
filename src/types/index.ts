@@ -206,3 +206,36 @@ export const LoginSchema = z.object({
 })
 
 export type Login = z.infer<typeof LoginSchema>
+
+// ============================================================================
+// SAMPLE EXTENDED SCHEMAS (Phase 2)
+// ============================================================================
+
+export const AssignTestsSchema = z.object({
+    sampleId: z.string().uuid(),
+    assayIds: z.array(z.string().uuid()).min(1, 'At least one test must be selected'),
+})
+
+export type AssignTests = z.infer<typeof AssignTestsSchema>
+
+export const SampleListParamsSchema = PaginationSchema.extend({
+    status: SampleStatus.optional(),
+})
+
+export type SampleListParams = z.infer<typeof SampleListParamsSchema>
+
+export const SampleWithUserSchema = SampleSchema.extend({
+    received_by_name: z.string().nullable(),
+})
+
+export type SampleWithUser = z.infer<typeof SampleWithUserSchema>
+
+// ============================================================================
+// ASSAY WITH METHOD SCHEMA
+// ============================================================================
+
+export const AssayWithMethodSchema = AssayDefinitionSchema.extend({
+    method_name: z.string().nullable(),
+})
+
+export type AssayWithMethod = z.infer<typeof AssayWithMethodSchema>

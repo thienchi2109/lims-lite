@@ -2,6 +2,9 @@
 -- Migration 003: RLS Policies
 -- Implements role-based access control at the database level
 
+-- Set search path to ensure we're in the right schema
+SET search_path TO public;
+
 -- ============================================================================
 -- ENABLE ROW LEVEL SECURITY
 -- ============================================================================
