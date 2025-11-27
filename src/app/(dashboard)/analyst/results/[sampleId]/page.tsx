@@ -73,7 +73,7 @@ export default async function AnalystResultsPage({ params }: PageProps) {
             <div className="flex items-start justify-between">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                        <Link href="/dashboard/analyst/samples">
+                        <Link href="/analyst/samples">
                             <Button variant="ghost" size="sm" className="gap-2">
                                 <ArrowLeft className="h-4 w-4" />
                                 Back to Samples

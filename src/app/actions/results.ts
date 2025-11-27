@@ -190,8 +190,8 @@ export async function saveBatchResults(data: SaveBatchResults) {
         }
 
         // Revalidate paths
-        revalidatePath('/dashboard/analyst/results/[sampleId]', 'page')
-        revalidatePath('/dashboard/manager/results/[sampleId]', 'page')
+        revalidatePath('/analyst/results/[sampleId]', 'page')
+        revalidatePath('/manager/results/[sampleId]', 'page')
 
         return { success: true, updatedCount: updates.length }
     } catch (error) {

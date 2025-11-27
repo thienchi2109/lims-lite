@@ -3,10 +3,33 @@ import { redirect } from 'next/navigation'
 import { logout } from '@/app/actions/auth'
 import { Button } from '@/components/ui/button'
 import { SampleListTable } from '@/components/sample-list-table'
+import { SampleFilters } from '@/components/sample-filters'
+import { fetchSamples } from '@/lib/data/samples'
+import { type SampleStatus } from '@/types'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 
-export default async function SamplesPage() {
+type SamplesPageProps = {
+    searchParams?: Promise<{
+        search?: string
+        status?: string
+        page?: string
+    }>
+}
+
+const validStatuses: SampleStatus[] = ['received', 'assigned', 'in_progress', 'review', 'completed']
+
+export default async function SamplesPage({ searchParams }: SamplesPageProps) {
+    const params = searchParams ? await searchParams : {}
+    const searchTerm = typeof params.search === 'string' ? params.search : ''
+    const statusParam = typeof params.status === 'string' ? params.status : 'all'
+    const status = validStatuses.includes(statusParam as SampleStatus)
+        ? (statusParam as SampleStatus)
+        : undefined
+    const pageParam = Number(params.page || '1')
+    const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1
+    const pageSize = 20
+
     const supabase = await createClient()
 
     const {
@@ -22,6 +45,15 @@ export default async function SamplesPage() {
         .select('full_name, role')
         .eq('id', user.id)
         .single()
+
+    const result = await fetchSamples({
+        page,
+        pageSize,
+        search: searchTerm || undefined,
+        status,
+        sortBy: 'created_at',
+        sortOrder: 'desc',
+    })
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -55,7 +87,7 @@ export default async function SamplesPage() {
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="mb-6">
-                    <Link href="/dashboard/analyst">
+                    <Link href="/analyst">
                         <Button variant="ghost" size="sm">
                             <ArrowLeft className="h-4 w-4 mr-2" />
                             Back to Dashboard
@@ -63,7 +95,19 @@ export default async function SamplesPage() {
                     </Link>
                 </div>
 
-                <SampleListTable isManager={false} />
+                <div className="mb-6">
+                    <SampleFilters search={searchTerm} status={(status ?? 'all')} />
+                </div>
+
+                <SampleListTable
+                    samples={result.data || []}
+                    page={result.page || page}
+                    pageSize={result.pageSize || pageSize}
+                    totalPages={result.totalPages || 1}
+                    totalCount={result.count || 0}
+                    error={result.error || null}
+                    isManager={false}
+                />
             </main>
         </div>
     )

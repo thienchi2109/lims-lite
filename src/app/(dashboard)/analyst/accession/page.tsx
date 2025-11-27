@@ -55,7 +55,7 @@ export default async function AccessionPage() {
 
             <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="mb-6">
-                    <Link href="/dashboard/analyst">
+                    <Link href="/analyst">
                         <Button variant="ghost" size="sm">
                             <ArrowLeft className="h-4 w-4 mr-2" />
                             Back to Dashboard

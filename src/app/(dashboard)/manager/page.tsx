@@ -56,7 +56,7 @@ export default async function ManagerDashboard() {
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Sample Management Card */}
-                    <Link href="/dashboard/manager/samples">
+                    <Link href="/manager/samples">
                         <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
                             <CardHeader>
                                 <div className="flex items-center gap-3">

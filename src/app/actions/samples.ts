@@ -11,9 +11,9 @@ import {
     type UpdateSample,
     type AssignTests,
     type SampleListParams,
-    type SampleWithUser,
 } from '@/types'
 import { generateSampleId, getTodayRange } from '@/lib/utils-lims'
+import { fetchSamples } from '@/lib/data/samples'
 
 /**
  * Creates a new sample with auto-generated sample ID
@@ -65,9 +65,9 @@ export async function createSample(data: CreateSample) {
             return { error: error.message }
         }
 
-        revalidatePath('/dashboard/analyst/samples')
-        revalidatePath('/dashboard/analyst/accession')
-        revalidatePath('/dashboard/manager/samples')
+        revalidatePath('/analyst/samples')
+        revalidatePath('/analyst/accession')
+        revalidatePath('/manager/samples')
 
         return { data: sample }
     } catch (error) {
@@ -114,8 +114,8 @@ export async function updateSample(data: UpdateSample) {
             return { error: error.message }
         }
 
-        revalidatePath('/dashboard/analyst/samples')
-        revalidatePath('/dashboard/manager/samples')
+        revalidatePath('/analyst/samples')
+        revalidatePath('/manager/samples')
 
         return { data: sample }
     } catch (error) {
@@ -129,74 +129,7 @@ export async function updateSample(data: UpdateSample) {
  */
 export async function getSamples(params: SampleListParams) {
     try {
-        const supabase = await createClient()
-
-        // Get current user
-        const {
-            data: { user },
-        } = await supabase.auth.getUser()
-
-        if (!user) {
-            return { error: 'Unauthorized' }
-        }
-
-        // Validate params
-        const validatedParams = SampleListParamsSchema.parse(params)
-
-        // Build query
-        let query = supabase
-            .from('samples')
-            .select(
-                `
-                *,
-                received_by_name:users!samples_received_by_fkey(full_name)
-            `,
-                { count: 'exact' }
-            )
-            .is('deleted_at', null)
-
-        // Apply status filter
-        if (validatedParams.status) {
-            query = query.eq('status', validatedParams.status)
-        }
-
-        // Apply search filter
-        if (validatedParams.search) {
-            query = query.or(
-                `sample_id.ilike.%${validatedParams.search}%,client_name.ilike.%${validatedParams.search}%`
-            )
-        }
-
-        // Apply sorting
-        const sortBy = validatedParams.sortBy || 'created_at'
-        const sortOrder = validatedParams.sortOrder || 'desc'
-        query = query.order(sortBy, { ascending: sortOrder === 'asc' })
-
-        // Apply pagination
-        const from = (validatedParams.page - 1) * validatedParams.pageSize
-        const to = from + validatedParams.pageSize - 1
-        query = query.range(from, to)
-
-        const { data: samples, error, count } = await query
-
-        if (error) {
-            console.error('Error fetching samples:', error)
-            return { error: error.message }
-        }
-
-        // Transform data to flatten received_by_name
-        const transformedSamples: SampleWithUser[] = samples.map((sample: any) => ({
-            ...sample,
-            received_by_name: sample.received_by_name?.full_name || null,
-        }))
-
-        return {
-            data: transformedSamples,
-            count: count || 0,
-            page: validatedParams.page,
-            pageSize: validatedParams.pageSize,
-            totalPages: Math.ceil((count || 0) / validatedParams.pageSize),
-        }
+        return await fetchSamples(params)
     } catch (error) {
         console.error('Error in getSamples:', error)
         return { error: error instanceof Error ? error.message : 'Failed to fetch samples' }
@@ -258,8 +191,8 @@ export async function assignTests(data: AssignTests) {
             return { error: updateError.message }
         }
 
-        revalidatePath('/dashboard/analyst/samples')
-        revalidatePath('/dashboard/manager/samples')
+        revalidatePath('/analyst/samples')
+        revalidatePath('/manager/samples')
 
         return { success: true }
     } catch (error) {

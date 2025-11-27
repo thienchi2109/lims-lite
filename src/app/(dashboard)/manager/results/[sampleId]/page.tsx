@@ -73,7 +73,7 @@ export default async function ManagerResultsPage({ params }: PageProps) {
             <div className="flex items-start justify-between">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                        <Link href="/dashboard/manager/samples">
+                        <Link href="/manager/samples">
                             <Button variant="ghost" size="sm" className="gap-2">
                                 <ArrowLeft className="h-4 w-4" />
                                 Back to Samples

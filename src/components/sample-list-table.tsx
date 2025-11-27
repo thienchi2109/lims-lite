@@ -1,86 +1,54 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import {
     useReactTable,
     getCoreRowModel,
     flexRender,
     type ColumnDef,
 } from '@tanstack/react-table'
-import { getSamples, updateSample } from '@/app/actions/samples'
-import { type SampleWithUser, type SampleStatus } from '@/types'
+import { updateSample } from '@/app/actions/samples'
+import { type SampleWithUser } from '@/types'
 import { formatDate } from '@/lib/utils-lims'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { SampleStatusBadge } from '@/components/sample-status-badge'
 import { EditableCell } from '@/components/editable-cell'
 import { TestAssignmentDialog } from '@/components/test-assignment-dialog'
-import { Loader2, ChevronLeft, ChevronRight, FlaskConical } from 'lucide-react'
+import { ChevronLeft, ChevronRight, FlaskConical } from 'lucide-react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
 interface SampleListTableProps {
+    samples: SampleWithUser[]
+    page: number
+    pageSize: number
+    totalPages: number
+    totalCount: number
     isManager?: boolean
+    error?: string | null
 }
 
-export function SampleListTable({ isManager = false }: SampleListTableProps) {
-    const [samples, setSamples] = useState<SampleWithUser[]>([])
-    const [isLoading, setIsLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
-
-    // Pagination state
-    const [page, setPage] = useState(1)
-    const [pageSize] = useState(20)
-    const [totalPages, setTotalPages] = useState(1)
-    const [totalCount, setTotalCount] = useState(0)
-
-    // Filter state
-    const [search, setSearch] = useState('')
-    const [statusFilter, setStatusFilter] = useState<SampleStatus | 'all'>('all')
-
-    // Dialog state
+export function SampleListTable({
+    samples: serverSamples,
+    page,
+    pageSize,
+    totalPages,
+    totalCount,
+    isManager = false,
+    error,
+}: SampleListTableProps) {
+    const [samples, setSamples] = useState<SampleWithUser[]>(serverSamples)
     const [assignDialogOpen, setAssignDialogOpen] = useState(false)
     const [selectedSample, setSelectedSample] = useState<SampleWithUser | null>(null)
 
-    // Load samples
-    const loadSamples = async () => {
-        setIsLoading(true)
-        setError(null)
+    const router = useRouter()
+    const searchParams = useSearchParams()
+    const pathname = usePathname()
 
-        const result = await getSamples({
-            page,
-            pageSize,
-            search: search || undefined,
-            status: statusFilter === 'all' ? undefined : statusFilter,
-            sortBy: 'created_at',
-            sortOrder: 'desc',
-        })
-
-        if (result.error) {
-            setError(result.error)
-        } else {
-            setSamples(result.data || [])
-            setTotalPages(result.totalPages || 1)
-            setTotalCount(result.count || 0)
-        }
-
-        setIsLoading(false)
-    }
-
-    // Reload on filter/page change
+    // Keep local state in sync with server data on navigation
     useEffect(() => {
-        loadSamples()
-    }, [page, statusFilter])
-
-    // Debounced search
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setPage(1) // Reset to first page on search
-            loadSamples()
-        }, 500)
-
-        return () => clearTimeout(timer)
-    }, [search])
+        setSamples(serverSamples)
+    }, [serverSamples])
 
     const handleUpdateCell = async (sampleId: string, field: 'client_name', value: string) => {
         const result = await updateSample({
@@ -161,7 +129,7 @@ export function SampleListTable({ isManager = false }: SampleListTableProps) {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => window.location.href = `/dashboard/manager/results/${row.original.id}`}
+                                onClick={() => window.location.href = `/manager/results/${row.original.id}`}
                             >
                                 View Results
                             </Button>
@@ -193,7 +161,7 @@ export function SampleListTable({ isManager = false }: SampleListTableProps) {
                     <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => window.location.href = `/dashboard/analyst/results/${row.original.id}`}
+                        onClick={() => window.location.href = `/analyst/results/${row.original.id}`}
                     >
                         Enter Results
                     </Button>
@@ -210,42 +178,23 @@ export function SampleListTable({ isManager = false }: SampleListTableProps) {
         pageCount: totalPages,
     })
 
+    const updateQuery = (nextPage: number) => {
+        const params = new URLSearchParams(searchParams.toString())
+        params.set('page', String(nextPage))
+        const query = params.toString()
+        router.replace(query ? `${pathname}?${query}` : pathname)
+    }
+
+    const handleAssignSuccess = () => {
+        setAssignDialogOpen(false)
+        router.refresh()
+    }
+
     return (
         <div className="space-y-4">
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                    <Input
-                        placeholder="Search by sample ID or client name..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
-                </div>
-                <Select
-                    value={statusFilter}
-                    onValueChange={(value) => setStatusFilter(value as SampleStatus | 'all')}
-                >
-                    <SelectTrigger className="w-full sm:w-[180px]">
-                        <SelectValue placeholder="Filter by status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Statuses</SelectItem>
-                        <SelectItem value="received">Received</SelectItem>
-                        <SelectItem value="assigned">Assigned</SelectItem>
-                        <SelectItem value="in_progress">In Progress</SelectItem>
-                        <SelectItem value="review">Review</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-
             {/* Table */}
             <div className="rounded-md border">
-                {isLoading ? (
-                    <div className="flex items-center justify-center py-12">
-                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    </div>
-                ) : error ? (
+                {error ? (
                     <div className="p-8 text-center text-destructive">{error}</div>
                 ) : samples.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground">
@@ -288,7 +237,7 @@ export function SampleListTable({ isManager = false }: SampleListTableProps) {
             </div>
 
             {/* Pagination */}
-            {!isLoading && samples.length > 0 && (
+            {samples.length > 0 && (
                 <div className="flex items-center justify-between">
                     <div className="text-sm text-muted-foreground">
                         Showing {(page - 1) * pageSize + 1} to{' '}
@@ -298,7 +247,7 @@ export function SampleListTable({ isManager = false }: SampleListTableProps) {
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setPage((p) => Math.max(1, p - 1))}
+                            onClick={() => updateQuery(Math.max(1, page - 1))}
                             disabled={page === 1}
                         >
                             <ChevronLeft className="h-4 w-4" />
@@ -310,7 +259,7 @@ export function SampleListTable({ isManager = false }: SampleListTableProps) {
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                            onClick={() => updateQuery(Math.min(totalPages, page + 1))}
                             disabled={page === totalPages}
                         >
                             Next
@@ -327,7 +276,7 @@ export function SampleListTable({ isManager = false }: SampleListTableProps) {
                     sampleName={selectedSample.sample_id}
                     open={assignDialogOpen}
                     onOpenChange={setAssignDialogOpen}
-                    onSuccess={loadSamples}
+                    onSuccess={handleAssignSuccess}
                 />
             )}
         </div>

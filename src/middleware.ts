@@ -45,7 +45,8 @@ export async function middleware(request: NextRequest) {
     }
 
     // Protect dashboard routes
-    if (request.nextUrl.pathname.startsWith('/dashboard')) {
+    const isProtectedRoute = request.nextUrl.pathname.startsWith('/analyst') || request.nextUrl.pathname.startsWith('/manager')
+    if (isProtectedRoute) {
         if (!user) {
             const url = request.nextUrl.clone()
             url.pathname = '/login'
@@ -53,9 +54,9 @@ export async function middleware(request: NextRequest) {
         }
 
         // Role-based route protection
-        if (request.nextUrl.pathname.startsWith('/dashboard/manager') && userRole !== 'manager') {
+        if (request.nextUrl.pathname.startsWith('/manager') && userRole !== 'manager') {
             const url = request.nextUrl.clone()
-            url.pathname = '/dashboard/analyst'
+            url.pathname = '/analyst'
             return NextResponse.redirect(url)
         }
     }
@@ -63,7 +64,7 @@ export async function middleware(request: NextRequest) {
     // Redirect logged-in users away from login page
     if (request.nextUrl.pathname === '/login' && user) {
         const url = request.nextUrl.clone()
-        url.pathname = userRole === 'manager' ? '/dashboard/manager' : '/dashboard/analyst'
+        url.pathname = userRole === 'manager' ? '/manager' : '/analyst'
         return NextResponse.redirect(url)
     }
 
@@ -71,7 +72,7 @@ export async function middleware(request: NextRequest) {
     if (request.nextUrl.pathname === '/') {
         const url = request.nextUrl.clone()
         if (user) {
-            url.pathname = userRole === 'manager' ? '/dashboard/manager' : '/dashboard/analyst'
+            url.pathname = userRole === 'manager' ? '/manager' : '/analyst'
         } else {
             url.pathname = '/login'
         }

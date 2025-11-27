@@ -23,10 +23,10 @@ export async function login(prevState: any, formData: FormData) {
 
     const { username, password } = validation.data
 
-    // In Supabase, we need to get the email from username
-    // For now, we'll use a workaround: username@lims.local
-    // In production, you'd query the users table first
-    const email = `${username}@lims.local`
+    // Map username to the seeded auth email (usernames don't exist in auth.users)
+    // Allow logging in with either the full email or just the username.
+    const emailSuffix = '@cdc-lims.local'
+    const email = username.includes('@') ? username : `${username}${emailSuffix}`
 
     const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -49,7 +49,7 @@ export async function login(prevState: any, formData: FormData) {
     const role = userData?.role || 'analyst'
 
     // Redirect based on role
-    redirect(role === 'manager' ? '/dashboard/manager' : '/dashboard/analyst')
+    redirect(role === 'manager' ? '/manager' : '/analyst')
 }
 
 export async function logout() {
