@@ -32,7 +32,7 @@ export async function fetchSamples(params: SampleListParams) {
         // For managers, treat "In Progress" as samples with results entered but not yet approved
         const { data: resultSamples, error: resultError } = await supabase
             .from('results')
-            .select('sample_id', { distinct: true })
+            .select('sample_id')
             .eq('status', 'entered')
 
         if (resultError) {
@@ -40,7 +40,7 @@ export async function fetchSamples(params: SampleListParams) {
             return { error: resultError.message }
         }
 
-        const sampleIds = (resultSamples || []).map((r: any) => r.sample_id).filter(Boolean)
+        const sampleIds = Array.from(new Set((resultSamples || []).map((r: any) => r.sample_id).filter(Boolean)))
 
         if (sampleIds.length === 0) {
             return {
