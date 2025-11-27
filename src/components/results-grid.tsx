@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState, useCallback } from 'react'
-import { useForm, useFieldArray } from 'react-hook-form'
+import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import {
     useReactTable,
     getCoreRowModel,
@@ -94,13 +94,9 @@ export function ResultsGrid({ results, sampleId, userRole, onSaveSuccess }: Resu
                 return next
             })
 
-            // Update form value
-            update(index, {
-                ...fields[index],
-                value,
-            })
+            return value
         },
-        [results, fields, update]
+        [results]
     )
 
     // Handle batch save
@@ -273,14 +269,23 @@ export function ResultsGrid({ results, sampleId, userRole, onSaveSuccess }: Resu
                     const isPending = field?.value !== field?.originalValue
 
                     return (
-                        <ResultCellEditor
-                            value={field?.value || ''}
-                            onChange={(value) => handleValueChange(index, value)}
-                            isEditable={isEditable(row.original)}
-                            validationError={validationErrors[row.original.id]}
-                            isPending={isPending}
-                            units={row.original.assay_units}
-                            autoFocus={focusedCellIndex === index}
+                        <Controller
+                            name={`results.${index}.value`}
+                            control={control}
+                            render={({ field: controllerField }) => (
+                                <ResultCellEditor
+                                    value={controllerField.value || ''}
+                                    onChange={(value) => {
+                                        handleValueChange(index, value)
+                                        controllerField.onChange(value)
+                                    }}
+                                    isEditable={isEditable(row.original)}
+                                    validationError={validationErrors[row.original.id]}
+                                    isPending={isPending}
+                                    units={row.original.assay_units}
+                                    autoFocus={focusedCellIndex === index}
+                                />
+                            )}
                         />
                     )
                 },
