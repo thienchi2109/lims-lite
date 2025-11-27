@@ -221,7 +221,6 @@ export type AssignTests = z.infer<typeof AssignTestsSchema>
 
 export const SampleListParamsSchema = PaginationSchema.extend({
     status: SampleStatus.optional(),
-    needsApproval: z.boolean().optional(),
 })
 
 export type SampleListParams = z.infer<typeof SampleListParamsSchema>

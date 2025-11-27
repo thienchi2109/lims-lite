@@ -8,15 +8,14 @@ import { type SampleStatus } from '@/types'
 
 type SampleFiltersProps = {
     search?: string
-    status?: SampleStatus | 'all' | 'needs_approval'
+    status?: SampleStatus | 'all'
 }
 
-const statusOptions: Array<{ value: SampleStatus | 'all' | 'needs_approval'; label: string }> = [
+const statusOptions: Array<{ value: SampleStatus | 'all'; label: string }> = [
     { value: 'all', label: 'All Statuses' },
     { value: 'received', label: 'Received' },
     { value: 'assigned', label: 'Assigned' },
     { value: 'in_progress', label: 'In Progress' },
-    { value: 'needs_approval', label: 'Needs Approval' },
     { value: 'review', label: 'Review' },
     { value: 'completed', label: 'Completed' },
 ]
@@ -26,7 +25,7 @@ export function SampleFilters({
     status = 'all',
 }: SampleFiltersProps) {
     const [searchValue, setSearchValue] = useState(search)
-    const [statusValue, setStatusValue] = useState<SampleStatus | 'all' | 'needs_approval'>(status)
+    const [statusValue, setStatusValue] = useState<SampleStatus | 'all'>(status)
 
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -61,7 +60,7 @@ export function SampleFilters({
         return () => clearTimeout(timer)
     }, [searchValue, pathname, router, searchParamsString])
 
-    const handleStatusChange = (value: SampleStatus | 'all' | 'needs_approval') => {
+    const handleStatusChange = (value: SampleStatus | 'all') => {
         setStatusValue(value)
         const params = new URLSearchParams(searchParamsString)
         if (value === 'all') {
@@ -87,7 +86,7 @@ export function SampleFilters({
             </div>
             <Select
                 value={statusValue}
-                onValueChange={(value) => handleStatusChange(value as SampleStatus | 'all' | 'needs_approval')}
+                onValueChange={(value) => handleStatusChange(value as SampleStatus | 'all')}
             >
                 <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue placeholder="Filter by status" />
