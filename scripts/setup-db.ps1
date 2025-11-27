@@ -9,6 +9,11 @@ Write-Host "===================================" -ForegroundColor Cyan
 Write-Host "`nStep 1: Enabling uuid-ossp extension..." -ForegroundColor Yellow
 docker exec lims-postgres psql -U postgres postgres -c 'CREATE EXTENSION IF NOT EXISTS "uuid-ossp";'
 
+# Step 1.5: Copy migrations to container
+Write-Host "Step 1.5: Copying migrations to container..." -ForegroundColor Yellow
+docker exec lims-postgres mkdir -p /tmp/migrations
+docker cp supabase/migrations/. lims-postgres:/tmp/migrations/
+
 # Step 2: Create auth.uid() function (simplified for standalone setup)
 Write-Host "Step 2: Creating auth.uid() function..." -ForegroundColor Yellow
 $authUidSql = @"
@@ -20,13 +25,13 @@ docker exec lims-postgres psql -U postgres postgres -c $authUidSql
 
 # Step 3: Apply migrations
 Write-Host "Step 3: Applying migration 001 (schema)..." -ForegroundColor Yellow
-docker exec lims-postgres psql -U postgres postgres -f /tmp/migrations/001_initial_schema.sql 2>&1 | Out-Null
+docker exec lims-postgres psql -U postgres postgres -f /tmp/migrations/001_initial_schema.sql
 
 Write-Host "Step 4: Applying migration 002 (audit triggers)..." -ForegroundColor Yellow
-docker exec lims-postgres psql -U postgres postgres -f /tmp/migrations/002_audit_triggers.sql 2>&1 | Out-Null
+docker exec lims-postgres psql -U postgres postgres -f /tmp/migrations/002_audit_triggers.sql
 
 Write-Host "Step 5: Applying migration 003 (RLS policies)..." -ForegroundColor Yellow
-docker exec lims-postgres psql -U postgres postgres -f /tmp/migrations/003_rls_policies.sql 2>&1 | Out-Null
+docker exec lims-postgres psql -U postgres postgres -f /tmp/migrations/003_rls_policies.sql
 
 # Step 6: Seed data
 Write-Host "Step 6: Seeding database with test users and sample data..." -ForegroundColor Yellow

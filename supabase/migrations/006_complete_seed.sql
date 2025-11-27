@@ -113,10 +113,77 @@ INSERT INTO auth.users (
     reauthentication_sent_at
 ) VALUES (
     '00000000-0000-0000-0000-000000000000',
-    'm0000000-0000-0000-0000-000000000001',
+    'b0000000-0000-0000-0000-000000000001', -- Fixed UUID (was m...)
     'authenticated',
     'authenticated',
     'manager@cdc-lims.local',
+    '$2a$10$lJEe7ViDUvCTyL3B5FJLF.O6n8Y8P4WjxGCGZE.uwzZQD7bDXhNYO', -- password123
+    NOW(),
+    NULL,
+    '',
+    NULL,
+    '',
+    NULL,
+    '',
+    '',
+    NULL,
+    NULL,
+    '{"provider":"email","providers":["email"]}',
+    '{}',
+    FALSE,
+    NOW(),
+    NOW(),
+    NULL,
+    NULL,
+    '',
+    '',
+    NULL,
+    '',
+    0,
+    NULL,
+    '',
+    NULL
+) ON CONFLICT (id) DO NOTHING;
+
+-- Create System User (for audit logs when no user is logged in)
+INSERT INTO auth.users (
+    instance_id,
+    id,
+    aud,
+    role,
+    email,
+    encrypted_password,
+    email_confirmed_at,
+    invited_at,
+    confirmation_token,
+    confirmation_sent_at,
+    recovery_token,
+    recovery_sent_at,
+    email_change_token_new,
+    email_change,
+    email_change_sent_at,
+    last_sign_in_at,
+    raw_app_meta_data,
+    raw_user_meta_data,
+    is_super_admin,
+    created_at,
+    updated_at,
+    phone,
+    phone_confirmed_at,
+    phone_change,
+    phone_change_token,
+    phone_change_sent_at,
+    email_change_token_current,
+    email_change_confirm_status,
+    banned_until,
+    reauthentication_token,
+    reauthentication_sent_at
+) VALUES (
+    '00000000-0000-0000-0000-000000000000',
+    '00000000-0000-0000-0000-000000000000',
+    'authenticated',
+    'service_role',
+    'system@cdc-lims.local',
     '$2a$10$lJEe7ViDUvCTyL3B5FJLF.O6n8Y8P4WjxGCGZE.uwzZQD7bDXhNYO', -- password123
     NOW(),
     NULL,
@@ -149,8 +216,9 @@ INSERT INTO auth.users (
 -- STEP 2: CREATE PUBLIC.USERS RECORDS
 -- ============================================================================
 INSERT INTO public.users (id, username, full_name, role) VALUES
+('00000000-0000-0000-0000-000000000000', 'system', 'System', 'manager'),
 ('a0000000-0000-0000-0000-000000000001', 'analyst', 'Test Analyst', 'analyst'),
-('m0000000-0000-0000-0000-000000000001', 'manager', 'Test Manager', 'manager')
+('b0000000-0000-0000-0000-000000000001', 'manager', 'Test Manager', 'manager')
 ON CONFLICT (id) DO UPDATE SET
     username = EXCLUDED.username,
     full_name = EXCLUDED.full_name,
@@ -185,9 +253,8 @@ ON CONFLICT (id) DO NOTHING;
 -- ============================================================================
 DO $$
 DECLARE
-    analyst_id UUID := 'a0000000-0000-0000-0000-000000000001';
-    sample_ids UUID[];
-    sample_id UUID;
+    v_analyst_id UUID := 'a0000000-0000-0000-0000-000000000001';
+    v_sample_id UUID;
     i INTEGER;
     created_samples INTEGER := 0;
 BEGIN
@@ -198,13 +265,13 @@ BEGIN
             'CDC-XN-' || TO_CHAR(CURRENT_DATE, 'DDMMYYYY') || '-' || LPAD(i::TEXT, 4, '0'),
             'Test Client ' || i,
             'received',
-            analyst_id,
+            v_analyst_id,
             CURRENT_TIMESTAMP - (i || ' hours')::INTERVAL
         )
         ON CONFLICT (sample_id) DO NOTHING
-        RETURNING id INTO sample_id;
+        RETURNING id INTO v_sample_id;
         
-        IF sample_id IS NOT NULL THEN
+        IF v_sample_id IS NOT NULL THEN
             created_samples := created_samples + 1;
         END IF;
     END LOOP;
