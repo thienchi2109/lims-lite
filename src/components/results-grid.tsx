@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
-import { useForm } from 'react-hook-form'
 import {
     useReactTable,
     getCoreRowModel,
@@ -23,7 +22,7 @@ import { saveBatchResults } from '@/app/actions/results'
 import { validateNumericValue, validateTextValue, formatRelativeTime } from '@/lib/utils-lims'
 import { type ResultWithAssay } from '@/types'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Loader2, AlertCircle } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
@@ -40,10 +39,12 @@ type ResultValue = {
     originalValue: string
 }
 
-export function ResultsGrid({ results, sampleId, userRole, onSaveSuccess }: ResultsGridProps) {
+export function ResultsGrid({ results, sampleId: _sampleId, userRole, onSaveSuccess }: ResultsGridProps) {
     const [isSaving, setIsSaving] = useState(false)
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
-    const [focusedCellIndex, setFocusedCellIndex] = useState<number | null>(null)
+    const [activeResultId, setActiveResultId] = useState<string | null>(null)
+    const resultValuesRef = useRef<Record<string, ResultValue>>({})
+    const validationErrorsRef = useRef<Record<string, string>>({})
 
     // Use local state for values to prevent re-renders
     const [resultValues, setResultValues] = useState<Record<string, ResultValue>>(() => {
@@ -55,8 +56,44 @@ export function ResultsGrid({ results, sampleId, userRole, onSaveSuccess }: Resu
                 originalValue: r.value || '',
             }
         })
+        resultValuesRef.current = initial
         return initial
     })
+    validationErrorsRef.current = validationErrors
+    resultValuesRef.current = resultValues
+
+    // Keep local state in sync when results prop changes without blowing away unsaved edits
+    useEffect(() => {
+        setResultValues((prev) => {
+            const next: Record<string, ResultValue> = {}
+            results.forEach((r) => {
+                const incoming = r.value || ''
+                const existing = prev[r.id]
+                const isDirty = existing ? existing.value !== existing.originalValue : false
+
+                next[r.id] = {
+                    id: r.id,
+                    value: isDirty && existing ? existing.value : incoming,
+                    originalValue: incoming,
+                }
+            })
+            return next
+        })
+
+        setValidationErrors((prev) => {
+            const next: Record<string, string> = {}
+            results.forEach((r) => {
+                if (prev[r.id]) {
+                    next[r.id] = prev[r.id]
+                }
+            })
+            return next
+        })
+
+        setActiveResultId((current) =>
+            current && results.some((r) => r.id === current) ? current : null
+        )
+    }, [results])
 
     // Calculate pending changes
     const pendingChanges = useMemo(() => {
@@ -105,7 +142,7 @@ export function ResultsGrid({ results, sampleId, userRole, onSaveSuccess }: Resu
     )
 
     // Handle batch save
-    const handleSave = async () => {
+    const handleSave = useCallback(async () => {
         if (Object.keys(validationErrors).length > 0) {
             toast.error('Please fix validation errors before saving')
             return
@@ -151,7 +188,7 @@ export function ResultsGrid({ results, sampleId, userRole, onSaveSuccess }: Resu
         } finally {
             setIsSaving(false)
         }
-    }
+    }, [pendingChanges, validationErrors, onSaveSuccess])
 
     // Handle discard
     const handleDiscard = () => {
@@ -178,7 +215,7 @@ export function ResultsGrid({ results, sampleId, userRole, onSaveSuccess }: Resu
 
         window.addEventListener('keydown', handleKeyDown)
         return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [pendingChanges, validationErrors])
+    }, [pendingChanges, validationErrors, handleSave])
 
     // Warn before unload if there are pending changes
     useEffect(() => {
@@ -194,10 +231,10 @@ export function ResultsGrid({ results, sampleId, userRole, onSaveSuccess }: Resu
     }, [pendingChanges])
 
     // Helper to determine if cell is editable
-    const isEditable = (result: ResultWithAssay) => {
+    const isEditable = useCallback((result: ResultWithAssay) => {
         if (userRole === 'manager') return true
         return result.status !== 'approved'
-    }
+    }, [userRole])
 
     // Define columns - memoized with stable dependencies
     const columns = useMemo<ColumnDef<ResultWithAssay>[]>(
@@ -232,8 +269,9 @@ export function ResultsGrid({ results, sampleId, userRole, onSaveSuccess }: Resu
                 accessorKey: 'value',
                 header: 'Result Value',
                 cell: ({ row }) => {
-                    const resultValue = resultValues[row.original.id]
+                    const resultValue = resultValuesRef.current[row.original.id]
                     const isPending = resultValue?.value !== resultValue?.originalValue
+                    const error = validationErrorsRef.current[row.original.id]
 
                     return (
                         <ResultCellEditor
@@ -241,9 +279,12 @@ export function ResultsGrid({ results, sampleId, userRole, onSaveSuccess }: Resu
                             value={resultValue?.value || ''}
                             onChange={(value) => handleValueChange(row.original.id, value)}
                             isEditable={isEditable(row.original)}
-                            validationError={validationErrors[row.original.id]}
+                            validationError={error}
                             isPending={isPending}
                             units={row.original.assay_units}
+                            onFocus={() => setActiveResultId(row.original.id)}
+                            onBlur={() => setActiveResultId(null)}
+                            autoFocus={activeResultId === row.original.id}
                         />
                     )
                 },
@@ -288,7 +329,7 @@ export function ResultsGrid({ results, sampleId, userRole, onSaveSuccess }: Resu
                     ),
             },
         ],
-        [results, resultValues, validationErrors, handleValueChange]
+        [results, handleValueChange, isEditable, activeResultId]
     )
 
     const table = useReactTable({

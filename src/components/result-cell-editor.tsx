@@ -9,6 +9,7 @@ interface ResultCellEditorProps {
     value: string
     onChange: (value: string) => void
     onBlur?: () => void
+    onFocus?: () => void
     isEditable: boolean
     validationError?: string | null
     isPending?: boolean
@@ -20,6 +21,7 @@ export function ResultCellEditor({
     value,
     onChange,
     onBlur,
+    onFocus,
     isEditable,
     validationError,
     isPending = false,
@@ -31,8 +33,12 @@ export function ResultCellEditor({
 
     useEffect(() => {
         if (autoFocus && inputRef.current && isEditable) {
-            inputRef.current.focus()
-            inputRef.current.select()
+            // Only refocus when the element isn't already active to avoid stealing cursor position
+            if (document.activeElement !== inputRef.current) {
+                inputRef.current.focus()
+                const len = inputRef.current.value?.length ?? 0
+                inputRef.current.setSelectionRange(len, len) // place caret at end for continued entry
+            }
         }
     }, [autoFocus, isEditable])
 
@@ -59,7 +65,10 @@ export function ResultCellEditor({
                     setIsFocused(false)
                     onBlur?.()
                 }}
-                onFocus={() => setIsFocused(true)}
+                onFocus={() => {
+                    setIsFocused(true)
+                    onFocus?.()
+                }}
                 disabled={!isEditable}
                 className={cn(
                     'pr-16 transition-all duration-200',
