@@ -32,7 +32,7 @@ export default async function AccessionPage() {
                             Hệ thống quản lý thông tin khoa Xét nghiệm
                         </h1>
                         <p className="text-sm text-slate-600 dark:text-slate-400">
-                            Sample Accessioning
+                            Tiếp nhận mẫu
                         </p>
                     </div>
                     <div className="flex items-center gap-4">
@@ -46,7 +46,7 @@ export default async function AccessionPage() {
                         </div>
                         <form action={logout}>
                             <Button variant="outline" size="sm" type="submit">
-                                Logout
+                                Đăng xuất
                             </Button>
                         </form>
                     </div>
@@ -56,14 +56,25 @@ export default async function AccessionPage() {
             <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="mb-6">
                     <Link href="/analyst">
-                        <Button variant="ghost" size="sm">
-                            <ArrowLeft className="h-4 w-4 mr-2" />
-                            Back to Dashboard
+                        <Button variant="ghost" className="gap-2 pl-0 hover:pl-0 hover:bg-transparent">
+                            <ArrowLeft className="h-4 w-4" />
+                            Quay lại trang chủ
                         </Button>
                     </Link>
                 </div>
 
-                <SampleAccessionForm />
+                <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 p-6">
+                    <div className="mb-6">
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                            Tiếp nhận mẫu mới
+                        </h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                            Nhập thông tin mẫu hoặc quét mã QR để tiếp nhận
+                        </p>
+                    </div>
+
+                    <SampleAccessionForm />
+                </div>
             </main>
         </div>
     )

@@ -71,17 +71,29 @@ export function SampleListTable({
         setAssignDialogOpen(true)
     }
 
+    const handleAssignSuccess = () => {
+        setAssignDialogOpen(false)
+        router.refresh()
+    }
+
+    const updateQuery = (nextPage: number) => {
+        const params = new URLSearchParams(searchParams.toString())
+        params.set('page', String(nextPage))
+        const query = params.toString()
+        router.replace(query ? `${pathname}?${query}` : pathname)
+    }
+
     const columns: ColumnDef<SampleWithUser>[] = [
         {
             accessorKey: 'sample_id',
-            header: 'Sample ID',
+            header: 'Mã mẫu',
             cell: ({ row }) => (
                 <span className="font-mono font-medium">{row.original.sample_id}</span>
             ),
         },
         {
             accessorKey: 'client_name',
-            header: 'Client Name',
+            header: 'Tên khách hàng',
             cell: ({ row }) => (
                 <EditableCell
                     value={row.original.client_name || ''}
@@ -94,12 +106,12 @@ export function SampleListTable({
         },
         {
             accessorKey: 'status',
-            header: 'Status',
+            header: 'Trạng thái',
             cell: ({ row }) => <SampleStatusBadge status={row.original.status} />,
         },
         {
             accessorKey: 'received_at',
-            header: 'Received At',
+            header: 'Ngày nhận',
             cell: ({ row }) => (
                 <span className="text-sm text-muted-foreground">
                     {formatDate(row.original.received_at)}
@@ -108,7 +120,7 @@ export function SampleListTable({
         },
         {
             accessorKey: 'received_by_name',
-            header: 'Received By',
+            header: 'Người nhận',
             cell: ({ row }) => (
                 <span className="text-sm">{row.original.received_by_name || 'N/A'}</span>
             ),
@@ -119,7 +131,7 @@ export function SampleListTable({
     if (isManager) {
         columns.push({
             id: 'actions',
-            header: 'Actions',
+            header: 'Hành động',
             cell: ({ row }) => {
                 const canViewResults = ['assigned', 'in_progress', 'review', 'completed'].includes(row.original.status)
 
@@ -131,7 +143,7 @@ export function SampleListTable({
                                 size="sm"
                                 onClick={() => window.location.href = `/manager/results/${row.original.id}`}
                             >
-                                View Results
+                                Xem kết quả
                             </Button>
                         )}
                         <Button
@@ -141,7 +153,7 @@ export function SampleListTable({
                             disabled={row.original.status === 'completed'}
                         >
                             <FlaskConical className="h-4 w-4 mr-2" />
-                            Assign Tests
+                            Chỉ định xét nghiệm
                         </Button>
                     </div>
                 )
@@ -151,7 +163,7 @@ export function SampleListTable({
         // Analyst actions
         columns.push({
             id: 'actions',
-            header: 'Actions',
+            header: 'Hành động',
             cell: ({ row }) => {
                 const canEnterResults = ['assigned', 'in_progress'].includes(row.original.status)
 
@@ -163,7 +175,7 @@ export function SampleListTable({
                         size="sm"
                         onClick={() => window.location.href = `/analyst/results/${row.original.id}`}
                     >
-                        Enter Results
+                        Nhập kết quả
                     </Button>
                 )
             },
@@ -178,18 +190,6 @@ export function SampleListTable({
         pageCount: totalPages,
     })
 
-    const updateQuery = (nextPage: number) => {
-        const params = new URLSearchParams(searchParams.toString())
-        params.set('page', String(nextPage))
-        const query = params.toString()
-        router.replace(query ? `${pathname}?${query}` : pathname)
-    }
-
-    const handleAssignSuccess = () => {
-        setAssignDialogOpen(false)
-        router.refresh()
-    }
-
     return (
         <div className="space-y-4">
             {/* Table */}
@@ -198,7 +198,7 @@ export function SampleListTable({
                     <div className="p-8 text-center text-destructive">{error}</div>
                 ) : samples.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground">
-                        No samples found. Create your first sample to get started.
+                        Không tìm thấy mẫu nào. Tạo mẫu đầu tiên để bắt đầu.
                     </div>
                 ) : (
                     <Table>
@@ -240,8 +240,8 @@ export function SampleListTable({
             {samples.length > 0 && (
                 <div className="flex items-center justify-between">
                     <div className="text-sm text-muted-foreground">
-                        Showing {(page - 1) * pageSize + 1} to{' '}
-                        {Math.min(page * pageSize, totalCount)} of {totalCount} samples
+                        Hiển thị {(page - 1) * pageSize + 1} đến{' '}
+                        {Math.min(page * pageSize, totalCount)} của {totalCount} mẫu
                     </div>
                     <div className="flex items-center gap-2">
                         <Button
@@ -251,10 +251,10 @@ export function SampleListTable({
                             disabled={page === 1}
                         >
                             <ChevronLeft className="h-4 w-4" />
-                            Previous
+                            Trước
                         </Button>
                         <div className="text-sm">
-                            Page {page} of {totalPages}
+                            Trang {page} của {totalPages}
                         </div>
                         <Button
                             variant="outline"
@@ -262,7 +262,7 @@ export function SampleListTable({
                             onClick={() => updateQuery(Math.min(totalPages, page + 1))}
                             disabled={page === totalPages}
                         >
-                            Next
+                            Tiếp
                             <ChevronRight className="h-4 w-4" />
                         </Button>
                     </div>

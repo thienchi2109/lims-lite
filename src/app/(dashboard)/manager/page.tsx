@@ -32,7 +32,7 @@ export default async function ManagerDashboard() {
                             Hệ thống quản lý thông tin khoa Xét nghiệm
                         </h1>
                         <p className="text-sm text-slate-600 dark:text-slate-400">
-                            Manager Dashboard
+                            Bảng điều khiển Quản lý
                         </p>
                     </div>
                     <div className="flex items-center gap-4">
@@ -46,7 +46,7 @@ export default async function ManagerDashboard() {
                         </div>
                         <form action={logout}>
                             <Button variant="outline" size="sm" type="submit">
-                                Logout
+                                Đăng xuất
                             </Button>
                         </form>
                     </div>
@@ -64,16 +64,16 @@ export default async function ManagerDashboard() {
                                         <FlaskConical className="h-6 w-6 text-primary" />
                                     </div>
                                     <div>
-                                        <CardTitle>Sample Management</CardTitle>
+                                        <CardTitle>Quản lý mẫu</CardTitle>
                                         <CardDescription>
-                                            Manage samples and assign tests
+                                            Quản lý mẫu và chỉ định xét nghiệm
                                         </CardDescription>
                                     </div>
                                 </div>
                             </CardHeader>
                             <CardContent>
                                 <p className="text-sm text-muted-foreground">
-                                    View all samples, assign tests, and manage workflow
+                                    Xem tất cả mẫu, chỉ định xét nghiệm và quản lý quy trình
                                 </p>
                             </CardContent>
                         </Card>
@@ -88,16 +88,16 @@ export default async function ManagerDashboard() {
                                         <CheckCircle2 className="h-6 w-6 text-green-600" />
                                     </div>
                                     <div>
-                                        <CardTitle>Approval Queue</CardTitle>
+                                        <CardTitle>Hàng đợi phê duyệt</CardTitle>
                                         <CardDescription>
-                                            Review and approve test results
+                                            Xem xét và phê duyệt kết quả xét nghiệm
                                         </CardDescription>
                                     </div>
                                 </div>
                             </CardHeader>
                             <CardContent>
                                 <p className="text-sm text-muted-foreground">
-                                    Approve entered results and manage approvals
+                                    Phê duyệt kết quả đã nhập và quản lý phê duyệt
                                 </p>
                             </CardContent>
                         </Card>

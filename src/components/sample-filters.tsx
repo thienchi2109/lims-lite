@@ -14,12 +14,12 @@ type SampleFiltersProps = {
 }
 
 const statusOptions: Array<{ value: SampleStatus | 'all'; label: string }> = [
-    { value: 'all', label: 'All Statuses' },
-    { value: 'received', label: 'Received' },
-    { value: 'assigned', label: 'Assigned' },
-    { value: 'in_progress', label: 'In Progress' },
-    { value: 'review', label: 'Review' },
-    { value: 'completed', label: 'Completed' },
+    { value: 'all', label: 'Tất cả trạng thái' },
+    { value: 'received', label: 'Đã nhận' },
+    { value: 'assigned', label: 'Đã giao' },
+    { value: 'in_progress', label: 'Đang thực hiện' },
+    { value: 'review', label: 'Chờ duyệt' },
+    { value: 'completed', label: 'Hoàn thành' },
 ]
 
 export function SampleFilters({
@@ -124,7 +124,7 @@ export function SampleFilters({
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                 <div className="flex-1">
                     <Input
-                        placeholder="Search by sample ID or client name..."
+                        placeholder="Tìm kiếm theo mã mẫu hoặc tên khách hàng..."
                         value={searchValue}
                         onChange={(e) => setSearchValue(e.target.value)}
                     />
@@ -134,7 +134,7 @@ export function SampleFilters({
                     onValueChange={(value) => handleStatusChange(value as SampleStatus | 'all')}
                 >
                     <SelectTrigger className="w-full sm:w-[180px]">
-                        <SelectValue placeholder="Filter by status" />
+                        <SelectValue placeholder="Lọc theo trạng thái" />
                     </SelectTrigger>
                     <SelectContent>
                         {statusOptions.map((option) => (
@@ -149,7 +149,7 @@ export function SampleFilters({
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                 <div className="flex-1">
                     <div className="flex items-center gap-2">
-                        <label className="text-sm font-medium whitespace-nowrap">From:</label>
+                        <label className="text-sm font-medium whitespace-nowrap">Từ ngày:</label>
                         <Input
                             type="date"
                             value={fromDateValue}
@@ -160,7 +160,7 @@ export function SampleFilters({
                 </div>
                 <div className="flex-1">
                     <div className="flex items-center gap-2">
-                        <label className="text-sm font-medium whitespace-nowrap">To:</label>
+                        <label className="text-sm font-medium whitespace-nowrap">Đến ngày:</label>
                         <Input
                             type="date"
                             value={toDateValue}

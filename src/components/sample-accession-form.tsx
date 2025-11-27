@@ -41,7 +41,7 @@ export function SampleAccessionForm() {
         if (result.error) {
             setSubmitError(result.error)
         } else {
-            setSubmitSuccess(`Sample ${result.data?.sample_id} created successfully!`)
+            setSubmitSuccess(`Mẫu ${result.data?.sample_id} đã được tạo thành công!`)
             reset()
             // Clear success message after 5 seconds
             setTimeout(() => setSubmitSuccess(null), 5000)
@@ -60,9 +60,9 @@ export function SampleAccessionForm() {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Accession New Sample</CardTitle>
+                <CardTitle>Tiếp nhận mẫu mới</CardTitle>
                 <CardDescription>
-                    Receive a new sample into the system. Sample ID will be auto-generated.
+                    Tiếp nhận mẫu mới vào hệ thống. Mã mẫu sẽ được tạo tự động.
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -70,7 +70,7 @@ export function SampleAccessionForm() {
                     {/* Client Name Field */}
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                            <Label htmlFor="client_name">Client Name *</Label>
+                            <Label htmlFor="client_name">Tên khách hàng *</Label>
                             <Button
                                 type="button"
                                 variant="ghost"
@@ -78,13 +78,13 @@ export function SampleAccessionForm() {
                                 onClick={() => setShowScanner(!showScanner)}
                             >
                                 <Scan className="h-4 w-4 mr-2" />
-                                {showScanner ? 'Hide Scanner' : 'Scan QR'}
+                                {showScanner ? 'Ẩn máy quét' : 'Quét QR'}
                             </Button>
                         </div>
                         <Input
                             id="client_name"
                             {...register('client_name')}
-                            placeholder="Enter client name"
+                            placeholder="Nhập tên khách hàng"
                             autoFocus
                         />
                         {errors.client_name && (
@@ -104,14 +104,14 @@ export function SampleAccessionForm() {
 
                     {/* Received At Field (Optional) */}
                     <div className="space-y-2">
-                        <Label htmlFor="received_at">Received At (Optional)</Label>
+                        <Label htmlFor="received_at">Thời gian nhận (Tùy chọn)</Label>
                         <Input
                             id="received_at"
                             type="datetime-local"
                             {...register('received_at')}
                         />
                         <p className="text-xs text-muted-foreground">
-                            Leave empty to use current date/time
+                            Để trống để sử dụng ngày giờ hiện tại
                         </p>
                         {errors.received_at && (
                             <p className="text-sm text-destructive">{errors.received_at.message}</p>
@@ -138,10 +138,10 @@ export function SampleAccessionForm() {
                         {isSubmitting ? (
                             <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Creating Sample...
+                                Đang tạo mẫu...
                             </>
                         ) : (
-                            'Create Sample'
+                            'Tạo mẫu'
                         )}
                     </Button>
                 </form>

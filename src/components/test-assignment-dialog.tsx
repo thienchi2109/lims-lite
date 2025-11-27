@@ -79,7 +79,7 @@ export function TestAssignmentDialog({
 
     const handleSubmit = async () => {
         if (selectedAssayIds.length === 0) {
-            setError('Please select at least one test')
+            setError('Vui lòng chọn ít nhất một xét nghiệm')
             return
         }
 
@@ -110,9 +110,9 @@ export function TestAssignmentDialog({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Assign Tests</DialogTitle>
+                    <DialogTitle>Chỉ định xét nghiệm</DialogTitle>
                     <DialogDescription>
-                        Select tests to assign to sample: <strong>{sampleName}</strong>
+                        Chọn xét nghiệm để chỉ định cho mẫu: <strong>{sampleName}</strong>
                     </DialogDescription>
                 </DialogHeader>
 
@@ -124,7 +124,7 @@ export function TestAssignmentDialog({
                     <div className="space-y-4">
                         {assays.length === 0 ? (
                             <p className="text-sm text-muted-foreground py-4">
-                                No assays available. Please create assay definitions first.
+                                Không có xét nghiệm nào. Vui lòng tạo định nghĩa xét nghiệm trước.
                             </p>
                         ) : (
                             <div className="space-y-3">
@@ -147,25 +147,25 @@ export function TestAssignmentDialog({
                                                 <Label
                                                     htmlFor={assay.id}
                                                     className={`font-medium ${isAssigned
-                                                            ? 'text-muted-foreground'
-                                                            : 'cursor-pointer'
+                                                        ? 'text-muted-foreground'
+                                                        : 'cursor-pointer'
                                                         }`}
                                                 >
                                                     {assay.name}
                                                     {isAssigned && (
                                                         <span className="ml-2 text-xs text-green-600 dark:text-green-400">
-                                                            (Already Assigned)
+                                                            (Đã chỉ định)
                                                         </span>
                                                     )}
                                                 </Label>
                                                 {assay.units && (
                                                     <p className="text-sm text-muted-foreground">
-                                                        Units: {assay.units}
+                                                        Đơn vị: {assay.units}
                                                     </p>
                                                 )}
                                                 {assay.method_name && (
                                                     <p className="text-xs text-muted-foreground">
-                                                        Method: {assay.method_name}
+                                                        Phương pháp: {assay.method_name}
                                                     </p>
                                                 )}
                                             </div>
@@ -186,22 +186,22 @@ export function TestAssignmentDialog({
                 {success && (
                     <div className="bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 p-3 rounded-md text-sm flex items-center gap-2">
                         <CheckCircle2 className="h-4 w-4" />
-                        Tests assigned successfully!
+                        Đã chỉ định xét nghiệm thành công!
                     </div>
                 )}
 
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-                        Cancel
+                        Hủy
                     </Button>
                     <Button onClick={handleSubmit} disabled={isSubmitting || selectedAssayIds.length === 0}>
                         {isSubmitting ? (
                             <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Assigning...
+                                Đang chỉ định...
                             </>
                         ) : (
-                            `Assign ${selectedAssayIds.length} Test${selectedAssayIds.length !== 1 ? 's' : ''}`
+                            `Chỉ định ${selectedAssayIds.length} xét nghiệm`
                         )}
                     </Button>
                 </DialogFooter>

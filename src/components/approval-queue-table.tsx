@@ -34,7 +34,7 @@ export function ApprovalQueueTable({ data }: ApprovalQueueTableProps) {
     const columns: ColumnDef<ApprovalQueueSample>[] = [
         {
             accessorKey: 'sample_id',
-            header: 'Sample ID',
+            header: 'Mã mẫu',
             cell: ({ row }) => {
                 return (
                     <Link
@@ -48,12 +48,12 @@ export function ApprovalQueueTable({ data }: ApprovalQueueTableProps) {
         },
         {
             accessorKey: 'client_name',
-            header: 'Client',
+            header: 'Khách hàng',
             cell: ({ row }) => row.getValue('client_name') || '-',
         },
         {
             id: 'progress',
-            header: 'Progress',
+            header: 'Tiến độ',
             cell: ({ row }) => {
                 const { entered_count, approved_count, total_tests } = row.original
                 const completedCount = entered_count + approved_count
@@ -61,17 +61,17 @@ export function ApprovalQueueTable({ data }: ApprovalQueueTableProps) {
                 return (
                     <div className="flex items-center gap-2">
                         <span className="text-sm text-muted-foreground">
-                            {completedCount}/{total_tests} tests
+                            {completedCount}/{total_tests} xét nghiệm
                         </span>
                         <div className="flex gap-1">
                             {entered_count > 0 && (
                                 <Badge variant="secondary" className="text-xs">
-                                    {entered_count} entered
+                                    {entered_count} đã nhập
                                 </Badge>
                             )}
                             {approved_count > 0 && (
                                 <Badge variant="default" className="text-xs bg-green-600">
-                                    {approved_count} approved
+                                    {approved_count} đã duyệt
                                 </Badge>
                             )}
                         </div>
@@ -81,7 +81,7 @@ export function ApprovalQueueTable({ data }: ApprovalQueueTableProps) {
         },
         {
             accessorKey: 'received_at',
-            header: 'Received',
+            header: 'Đã nhận',
             cell: ({ row }) => {
                 const date = new Date(row.getValue('received_at'))
                 return (
@@ -94,12 +94,12 @@ export function ApprovalQueueTable({ data }: ApprovalQueueTableProps) {
         },
         {
             id: 'actions',
-            header: 'Actions',
+            header: 'Hành động',
             cell: ({ row }) => {
                 return (
                     <Link href={`/manager/results/${row.original.id}`}>
                         <Button variant="outline" size="sm">
-                            Review & Approve
+                            Xem xét & Phê duyệt
                         </Button>
                     </Link>
                 )
@@ -116,7 +116,7 @@ export function ApprovalQueueTable({ data }: ApprovalQueueTableProps) {
     if (data.length === 0) {
         return (
             <div className="rounded-lg border border-dashed p-8 text-center">
-                <p className="text-muted-foreground">No samples awaiting approval</p>
+                <p className="text-muted-foreground">Không có mẫu nào chờ phê duyệt</p>
             </div>
         )
     }

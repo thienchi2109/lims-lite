@@ -32,7 +32,7 @@ export default async function AnalystDashboard() {
                             Hệ thống quản lý thông tin khoa Xét nghiệm
                         </h1>
                         <p className="text-sm text-slate-600 dark:text-slate-400">
-                            Analyst Dashboard
+                            Bảng điều khiển Kiểm nghiệm viên
                         </p>
                     </div>
                     <div className="flex items-center gap-4">
@@ -46,7 +46,7 @@ export default async function AnalystDashboard() {
                         </div>
                         <form action={logout}>
                             <Button variant="outline" size="sm" type="submit">
-                                Logout
+                                Đăng xuất
                             </Button>
                         </form>
                     </div>
@@ -64,16 +64,16 @@ export default async function AnalystDashboard() {
                                         <Plus className="h-6 w-6 text-primary" />
                                     </div>
                                     <div>
-                                        <CardTitle>Accession Sample</CardTitle>
+                                        <CardTitle>Tiếp nhận mẫu</CardTitle>
                                         <CardDescription>
-                                            Receive new samples into the system
+                                            Tiếp nhận mẫu mới vào hệ thống
                                         </CardDescription>
                                     </div>
                                 </div>
                             </CardHeader>
                             <CardContent>
                                 <p className="text-sm text-muted-foreground">
-                                    Use QR scanner or manual entry to register new samples
+                                    Sử dụng máy quét QR hoặc nhập thủ công để đăng ký mẫu mới
                                 </p>
                             </CardContent>
                         </Card>
@@ -88,16 +88,16 @@ export default async function AnalystDashboard() {
                                         <List className="h-6 w-6 text-primary" />
                                     </div>
                                     <div>
-                                        <CardTitle>Sample List</CardTitle>
+                                        <CardTitle>Danh sách mẫu</CardTitle>
                                         <CardDescription>
-                                            View and manage all samples
+                                            Xem và quản lý tất cả các mẫu
                                         </CardDescription>
                                     </div>
                                 </div>
                             </CardHeader>
                             <CardContent>
                                 <p className="text-sm text-muted-foreground">
-                                    Search, filter, and edit sample information
+                                    Tìm kiếm, lọc và chỉnh sửa thông tin mẫu
                                 </p>
                             </CardContent>
                         </Card>

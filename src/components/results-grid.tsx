@@ -144,7 +144,7 @@ export function ResultsGrid({ results, sampleId: _sampleId, userRole, onSaveSucc
     // Handle batch save
     const handleSave = useCallback(async () => {
         if (Object.keys(validationErrors).length > 0) {
-            toast.error('Please fix validation errors before saving')
+            toast.error('Vui lòng sửa lỗi xác thực trước khi lưu')
             return
         }
 
@@ -154,7 +154,7 @@ export function ResultsGrid({ results, sampleId: _sampleId, userRole, onSaveSucc
         }))
 
         if (changedResults.length === 0) {
-            toast.info('No changes to save')
+            toast.info('Không có thay đổi nào để lưu')
             return
         }
 
@@ -170,7 +170,7 @@ export function ResultsGrid({ results, sampleId: _sampleId, userRole, onSaveSucc
                 return
             }
 
-            toast.success(`Successfully saved ${changedResults.length} result(s)`)
+            toast.success(`Đã lưu thành công ${changedResults.length} kết quả`)
 
             // Update original values
             setResultValues((prev) => {
@@ -184,7 +184,7 @@ export function ResultsGrid({ results, sampleId: _sampleId, userRole, onSaveSucc
             onSaveSuccess?.()
         } catch (error) {
             console.error('Error saving results:', error)
-            toast.error('Failed to save results')
+            toast.error('Lưu kết quả thất bại')
         } finally {
             setIsSaving(false)
         }
@@ -200,7 +200,7 @@ export function ResultsGrid({ results, sampleId: _sampleId, userRole, onSaveSucc
             return next
         })
         setValidationErrors({})
-        toast.info('Changes discarded')
+        toast.info('Đã hủy thay đổi')
     }
 
     // Keyboard shortcuts
@@ -241,7 +241,7 @@ export function ResultsGrid({ results, sampleId: _sampleId, userRole, onSaveSucc
         () => [
             {
                 accessorKey: 'sample_id_display',
-                header: 'Sample ID',
+                header: 'Mã mẫu',
                 cell: ({ row }) => (
                     <div className="font-mono text-sm font-medium">
                         {row.original.sample_id_display}
@@ -250,14 +250,14 @@ export function ResultsGrid({ results, sampleId: _sampleId, userRole, onSaveSucc
             },
             {
                 accessorKey: 'assay_name',
-                header: 'Assay',
+                header: 'Xét nghiệm',
                 cell: ({ row }) => (
                     <div className="font-semibold">{row.original.assay_name}</div>
                 ),
             },
             {
                 accessorKey: 'method_name',
-                header: 'Method',
+                header: 'Phương pháp',
                 cell: ({ row }) => (
                     <div className="text-sm text-slate-600 dark:text-slate-400">
                         {row.original.method_name || 'N/A'}
@@ -267,7 +267,7 @@ export function ResultsGrid({ results, sampleId: _sampleId, userRole, onSaveSucc
             {
                 id: 'value',
                 accessorKey: 'value',
-                header: 'Result Value',
+                header: 'Kết quả',
                 cell: ({ row }) => {
                     const resultValue = resultValuesRef.current[row.original.id]
                     const isPending = resultValue?.value !== resultValue?.originalValue
@@ -291,12 +291,12 @@ export function ResultsGrid({ results, sampleId: _sampleId, userRole, onSaveSucc
             },
             {
                 accessorKey: 'status',
-                header: 'Status',
+                header: 'Trạng thái',
                 cell: ({ row }) => <ResultStatusBadge status={row.original.status} />,
             },
             {
                 accessorKey: 'entered_by_name',
-                header: 'Entered By',
+                header: 'Người nhập',
                 cell: ({ row }) => {
                     if (!row.original.entered_by_name) return <span className="text-sm text-slate-400">—</span>
 
@@ -318,7 +318,7 @@ export function ResultsGrid({ results, sampleId: _sampleId, userRole, onSaveSucc
             },
             {
                 accessorKey: 'entered_at',
-                header: 'Entered At',
+                header: 'Thời gian nhập',
                 cell: ({ row }) =>
                     row.original.entered_at ? (
                         <span className="text-sm text-slate-600 dark:text-slate-400">
@@ -343,18 +343,18 @@ export function ResultsGrid({ results, sampleId: _sampleId, userRole, onSaveSucc
             <div className="flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 p-8 dark:border-slate-700">
                 <AlertCircle className="mb-4 h-12 w-12 text-slate-400" />
                 <h3 className="mb-2 text-lg font-semibold text-slate-700 dark:text-slate-300">
-                    No Tests Assigned
+                    Chưa có xét nghiệm nào được chỉ định
                 </h3>
                 <p className="text-center text-sm text-slate-500">
-                    This sample has no tests assigned yet. Manager must assign tests before results can be entered.
+                    Mẫu này chưa được chỉ định xét nghiệm nào. Quản lý phải chỉ định xét nghiệm trước khi có thể nhập kết quả.
                 </p>
             </div>
         )
     }
 
     return (
-        <div className="relative">
-            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+        <div className="space-y-4">
+            <div className="rounded-md border border-slate-200 dark:border-slate-800">
                 <Table>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (

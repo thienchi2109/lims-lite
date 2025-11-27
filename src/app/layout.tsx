@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Hệ thống quản lý thông tin khoa Xét nghiệm",
-  description: "CDC Laboratory Information Management System for sample tracking and results management",
+  title: "Hệ thống quản lý thông tin khoa Xét nghiệm CDC",
+  description: "Hệ thống quản lý thông tin theo dõi mẫu và quản lý kết quả xét nghiệm CDC",
 };
 
 export default function RootLayout({
@@ -24,7 +24,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="vi">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

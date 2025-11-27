@@ -33,9 +33,9 @@ export function ApprovalActions({ sampleId, results }: ApprovalActionsProps) {
         <>
             <Card>
                 <CardHeader>
-                    <CardTitle>Approval Actions</CardTitle>
+                    <CardTitle>Thao tác phê duyệt</CardTitle>
                     <CardDescription>
-                        Review and approve test results or cancel existing approvals
+                        Xem xét và phê duyệt kết quả xét nghiệm hoặc hủy phê duyệt hiện có
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -47,7 +47,7 @@ export function ApprovalActions({ sampleId, results }: ApprovalActionsProps) {
                                 size="lg"
                             >
                                 <CheckCircle2 className="h-5 w-5" />
-                                Approve {enteredResults.length} Result{enteredResults.length > 1 ? 's' : ''}
+                                Phê duyệt {enteredResults.length} kết quả
                             </Button>
                         )}
 
@@ -59,20 +59,20 @@ export function ApprovalActions({ sampleId, results }: ApprovalActionsProps) {
                                 size="lg"
                             >
                                 <XCircle className="h-5 w-5" />
-                                Cancel Approval ({approvedResults.length})
+                                Hủy phê duyệt ({approvedResults.length})
                             </Button>
                         )}
                     </div>
 
                     <div className="mt-4 space-y-2 text-sm text-muted-foreground">
                         <p>
-                            • <strong>{enteredResults.length}</strong> result{enteredResults.length !== 1 ? 's' : ''} ready for approval
+                            • <strong>{enteredResults.length}</strong> kết quả sẵn sàng phê duyệt
                         </p>
                         <p>
-                            • <strong>{approvedResults.length}</strong> result{approvedResults.length !== 1 ? 's' : ''} already approved
+                            • <strong>{approvedResults.length}</strong> kết quả đã được phê duyệt
                         </p>
                         <p>
-                            • <strong>{results.filter((r) => r.status === 'pending').length}</strong> result{results.filter((r) => r.status === 'pending').length !== 1 ? 's' : ''} pending data entry
+                            • <strong>{results.filter((r) => r.status === 'pending').length}</strong> kết quả đang chờ nhập liệu
                         </p>
                     </div>
                 </CardContent>

@@ -9,8 +9,8 @@ import Link from 'next/link'
 import { SampleStatusBadge } from '@/components/sample-status-badge'
 
 export const metadata: Metadata = {
-    title: 'Enter Results - CDC LIMS',
-    description: 'Data entry for test results',
+    title: 'Nhập kết quả - CDC LIMS',
+    description: 'Nhập liệu cho kết quả xét nghiệm',
 }
 
 interface PageProps {
@@ -61,7 +61,7 @@ export default async function AnalystResultsPage({ params }: PageProps) {
         return (
             <div className="container mx-auto max-w-7xl p-6">
                 <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
-                    Error loading results: {error}
+                    Lỗi khi tải kết quả: {error}
                 </div>
             </div>
         )
@@ -76,57 +76,26 @@ export default async function AnalystResultsPage({ params }: PageProps) {
                         <Link href="/analyst/samples">
                             <Button variant="ghost" size="sm" className="gap-2">
                                 <ArrowLeft className="h-4 w-4" />
-                                Back to Samples
+                                Quay lại danh sách mẫu
                             </Button>
                         </Link>
                     </div>
                     <div className="flex items-center gap-3">
-                        <h1 className="text-3xl font-bold tracking-tight">Enter Results</h1>
+                        <h1 className="text-3xl font-bold tracking-tight">Nhập kết quả</h1>
                         <SampleStatusBadge status={sample.status} />
                     </div>
                     <p className="text-muted-foreground">
-                        Analyst: {userData.full_name}
+                        Kiểm nghiệm viên: {userData.full_name}
                     </p>
                 </div>
-                <form>
-                    <Button variant="outline" size="sm" className="gap-2">
+                <Button variant="outline" size="icon" asChild>
+                    <a href={`/analyst/results/${resolvedParams.sampleId}`}>
                         <RefreshCcw className="h-4 w-4" />
-                        Refresh
-                    </Button>
-                </form>
+                        <span className="sr-only">Làm mới</span>
+                    </a>
+                </Button>
             </div>
 
-            {/* Sample Info Card */}
-            <div className="rounded-lg border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-6 shadow-sm dark:border-slate-700 dark:from-slate-900 dark:to-slate-800">
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <div>
-                        <div className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                            Sample ID
-                        </div>
-                        <div className="mt-1 font-mono text-lg font-semibold">
-                            {sample.sample_id}
-                        </div>
-                    </div>
-                    <div>
-                        <div className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                            Client
-                        </div>
-                        <div className="mt-1 text-lg font-semibold">
-                            {sample.client_name || 'N/A'}
-                        </div>
-                    </div>
-                    <div>
-                        <div className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                            Received At
-                        </div>
-                        <div className="mt-1 text-lg font-semibold">
-                            {new Date(sample.received_at).toLocaleDateString()}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Results Grid */}
             <ResultsGrid
                 results={results}
                 sampleId={resolvedParams.sampleId}

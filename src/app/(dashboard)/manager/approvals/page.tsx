@@ -37,10 +37,10 @@ export default async function ApprovalsPage() {
                     <div className="flex items-center justify-between">
                         <div>
                             <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                                Approval Queue
+                                Mẫu đợi phê duyệt kết quả
                             </h1>
                             <p className="text-sm text-slate-600 dark:text-slate-400">
-                                Review and approve test results
+                                Xem xét và phê duyệt kết quả xét nghiệm
                             </p>
                         </div>
                         <div className="text-right">
@@ -65,9 +65,9 @@ export default async function ApprovalsPage() {
                                     <CheckCircle2 className="h-6 w-6 text-primary" />
                                 </div>
                                 <div>
-                                    <CardTitle>Pending Approvals</CardTitle>
+                                    <CardTitle>Đang chờ phê duyệt</CardTitle>
                                     <CardDescription>
-                                        Samples with results awaiting your approval
+                                        Mẫu có kết quả đang chờ bạn phê duyệt
                                     </CardDescription>
                                 </div>
                             </div>
@@ -77,7 +77,7 @@ export default async function ApprovalsPage() {
                                 {samples?.length || 0}
                             </div>
                             <p className="text-sm text-muted-foreground mt-1">
-                                {samples?.length === 1 ? 'sample' : 'samples'} ready for review
+                                {samples?.length === 1 ? 'mẫu' : 'mẫu'} sẵn sàng để xem xét
                             </p>
                         </CardContent>
                     </Card>
@@ -85,15 +85,15 @@ export default async function ApprovalsPage() {
                     {/* Approval Queue Table */}
                     <Card>
                         <CardHeader>
-                            <CardTitle>Samples Awaiting Approval</CardTitle>
+                            <CardTitle>Mẫu đang chờ phê duyệt</CardTitle>
                             <CardDescription>
-                                Click on a sample to review and approve results
+                                Nhấp vào mẫu để xem xét và phê duyệt kết quả
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             {error ? (
                                 <div className="text-center py-8 text-destructive">
-                                    Error loading approval queue: {error}
+                                    Lỗi khi tải hàng đợi phê duyệt: {error}
                                 </div>
                             ) : (
                                 <ApprovalQueueTable data={samples || []} />

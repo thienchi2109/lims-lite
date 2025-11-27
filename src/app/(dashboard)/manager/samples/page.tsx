@@ -98,7 +98,7 @@ export default async function ManagerSamplesPage({ searchParams }: ManagerSample
                             Hệ thống quản lý thông tin khoa Xét nghiệm
                         </h1>
                         <p className="text-sm text-slate-600 dark:text-slate-400">
-                            Sample Management
+                            Quản lý mẫu
                         </p>
                     </div>
                     <div className="flex items-center gap-4">
@@ -112,7 +112,7 @@ export default async function ManagerSamplesPage({ searchParams }: ManagerSample
                         </div>
                         <form action={logout}>
                             <Button variant="outline" size="sm" type="submit">
-                                Logout
+                                Đăng xuất
                             </Button>
                         </form>
                     </div>
@@ -124,7 +124,7 @@ export default async function ManagerSamplesPage({ searchParams }: ManagerSample
                     <Link href="/manager">
                         <Button variant="ghost" size="sm">
                             <ArrowLeft className="h-4 w-4 mr-2" />
-                            Back to Dashboard
+                            Quay lại Bảng điều khiển
                         </Button>
                     </Link>
                 </div>

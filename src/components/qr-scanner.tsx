@@ -44,7 +44,7 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
 
             setIsScanning(true)
         } catch (err) {
-            const errorMsg = err instanceof Error ? err.message : 'Failed to start camera'
+            const errorMsg = err instanceof Error ? err.message : 'Không thể khởi động máy ảnh'
             setError(errorMsg)
             onError?.(errorMsg)
             console.error('Error starting QR scanner:', err)
@@ -83,7 +83,7 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
                     className="w-full"
                 >
                     <Camera className="mr-2 h-4 w-4" />
-                    Scan QR Code
+                    Quét mã QR
                 </Button>
             ) : (
                 <div className="space-y-2">
@@ -98,7 +98,7 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
                         className="w-full"
                     >
                         <X className="mr-2 h-4 w-4" />
-                        Stop Scanning
+                        Dừng quét
                     </Button>
                 </div>
             )}

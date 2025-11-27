@@ -10,8 +10,8 @@ import Link from 'next/link'
 import { SampleStatusBadge } from '@/components/sample-status-badge'
 
 export const metadata: Metadata = {
-    title: 'Review Results - CDC LIMS',
-    description: 'Review and approve test results',
+    title: 'Xem xét kết quả - CDC LIMS',
+    description: 'Xem xét và phê duyệt kết quả xét nghiệm',
 }
 
 interface PageProps {
@@ -62,7 +62,7 @@ export default async function ManagerResultsPage({ params }: PageProps) {
         return (
             <div className="container mx-auto max-w-7xl p-6">
                 <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
-                    Error loading results: {error}
+                    Lỗi khi tải kết quả: {error}
                 </div>
             </div>
         )
@@ -77,22 +77,22 @@ export default async function ManagerResultsPage({ params }: PageProps) {
                         <Link href="/manager/samples">
                             <Button variant="ghost" size="sm" className="gap-2">
                                 <ArrowLeft className="h-4 w-4" />
-                                Back to Samples
+                                Quay lại danh sách mẫu
                             </Button>
                         </Link>
                     </div>
                     <div className="flex items-center gap-3">
-                        <h1 className="text-3xl font-bold tracking-tight">Review Results</h1>
+                        <h1 className="text-3xl font-bold tracking-tight">Xem xét kết quả</h1>
                         <SampleStatusBadge status={sample.status} />
                     </div>
                     <p className="text-muted-foreground">
-                        Manager: {userData.full_name}
+                        Quản lý: {userData.full_name}
                     </p>
                 </div>
                 <form>
                     <Button variant="outline" size="sm" className="gap-2">
                         <RefreshCcw className="h-4 w-4" />
-                        Refresh
+                        Làm mới
                     </Button>
                 </form>
             </div>
@@ -102,7 +102,7 @@ export default async function ManagerResultsPage({ params }: PageProps) {
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <div>
                         <div className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                            Sample ID
+                            Mã mẫu
                         </div>
                         <div className="mt-1 font-mono text-lg font-semibold">
                             {sample.sample_id}
@@ -110,7 +110,7 @@ export default async function ManagerResultsPage({ params }: PageProps) {
                     </div>
                     <div>
                         <div className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                            Client
+                            Khách hàng
                         </div>
                         <div className="mt-1 text-lg font-semibold">
                             {sample.client_name || 'N/A'}
@@ -118,7 +118,7 @@ export default async function ManagerResultsPage({ params }: PageProps) {
                     </div>
                     <div>
                         <div className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                            Received At
+                            Đã nhận lúc
                         </div>
                         <div className="mt-1 text-lg font-semibold">
                             {new Date(sample.received_at).toLocaleDateString()}
