@@ -325,7 +325,7 @@ export function ResultsGrid({ results, sampleId, userRole, onSaveSuccess }: Resu
                     ),
             },
         ],
-        [results, fields, validationErrors, focusedCellIndex, handleValueChange]
+        [results, fields, validationErrors, focusedCellIndex]
     )
 
     const table = useReactTable({
