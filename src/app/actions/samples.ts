@@ -202,13 +202,13 @@ export async function assignTests(data: AssignTests) {
 }
 
 /**
- * Gets all available assay definitions
+ * Gets all available assay definitions with optional search
  */
-export async function getAssayDefinitions() {
+export async function getAssayDefinitions(search?: string) {
     try {
         const supabase = await createClient()
 
-        const { data: assays, error } = await supabase
+        let query = supabase
             .from('assay_definitions')
             .select(
                 `
@@ -218,6 +218,25 @@ export async function getAssayDefinitions() {
             )
             .is('deleted_at', null)
             .order('name')
+
+        if (search) {
+            // First find matching methods to get their IDs
+            const { data: matchingMethods } = await supabase
+                .from('methods')
+                .select('id')
+                .ilike('name', `%${search}%`)
+
+            const methodIds = matchingMethods?.map((m) => m.id) || []
+
+            // Construct OR filter: match assay name OR match method ID
+            if (methodIds.length > 0) {
+                query = query.or(`name.ilike.%${search}%,method_id.in.(${methodIds.join(',')})`)
+            } else {
+                query = query.ilike('name', `%${search}%`)
+            }
+        }
+
+        const { data: assays, error } = await query
 
         if (error) {
             console.error('Error fetching assays:', error)
@@ -249,7 +268,12 @@ export async function getSampleTests(sampleId: string) {
             .select(
                 `
                 *,
-                assay:assay_definitions(id, name, units)
+                assay:assay_definitions(
+                    id, 
+                    name, 
+                    units,
+                    method:methods(name)
+                )
             `
             )
             .eq('sample_id', sampleId)
@@ -259,7 +283,16 @@ export async function getSampleTests(sampleId: string) {
             return { error: error.message }
         }
 
-        return { data: results }
+        // Transform to flatten method name
+        const transformedResults = results.map((r: any) => ({
+            ...r,
+            assay: {
+                ...r.assay,
+                method_name: r.assay?.method?.name || null
+            }
+        }))
+
+        return { data: transformedResults }
     } catch (error) {
         console.error('Error in getSampleTests:', error)
         return { error: error instanceof Error ? error.message : 'Failed to fetch sample tests' }
