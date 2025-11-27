@@ -239,3 +239,56 @@ export const AssayWithMethodSchema = AssayDefinitionSchema.extend({
 })
 
 export type AssayWithMethod = z.infer<typeof AssayWithMethodSchema>
+
+// ============================================================================
+// VALIDATION RULES (Phase 3)
+// ============================================================================
+
+export const ValidationRulesSchema = z.record(z.string(), z.any()).default({})
+
+export type ValidationRules = z.infer<typeof ValidationRulesSchema>
+
+// ============================================================================
+// BATCH RESULT OPERATIONS (Phase 3)
+// ============================================================================
+
+export const BatchResultInputSchema = z.object({
+    id: z.string().uuid(),
+    value: z.string().min(1, 'Value is required'),
+})
+
+export type BatchResultInput = z.infer<typeof BatchResultInputSchema>
+
+export const SaveBatchResultsSchema = z.object({
+    results: z.array(BatchResultInputSchema).min(1, 'At least one result must be provided'),
+})
+
+export type SaveBatchResults = z.infer<typeof SaveBatchResultsSchema>
+
+// ============================================================================
+// RESULT WITH ASSAY DETAILS (Phase 3)
+// ============================================================================
+
+export const ResultWithAssaySchema = ResultSchema.extend({
+    assay_name: z.string(),
+    assay_units: z.string().nullable(),
+    method_name: z.string().nullable(),
+    validation_rules: ValidationRulesSchema,
+    sample_id_display: z.string(),
+    entered_by_name: z.string().nullable(),
+})
+
+export type ResultWithAssay = z.infer<typeof ResultWithAssaySchema>
+
+// ============================================================================
+// VALIDATION ERROR (Phase 3)
+// ============================================================================
+
+export const ValidationErrorSchema = z.object({
+    field: z.string(),
+    message: z.string(),
+    rule: z.string().optional(),
+})
+
+export type ValidationError = z.infer<typeof ValidationErrorSchema>
+

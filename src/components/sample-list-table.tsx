@@ -147,22 +147,58 @@ export function SampleListTable({ isManager = false }: SampleListTableProps) {
         },
     ]
 
-    // Add actions column for managers
+    // Add actions column based on role
     if (isManager) {
         columns.push({
             id: 'actions',
             header: 'Actions',
-            cell: ({ row }) => (
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleAssignTests(row.original)}
-                    disabled={row.original.status === 'completed'}
-                >
-                    <FlaskConical className="h-4 w-4 mr-2" />
-                    Assign Tests
-                </Button>
-            ),
+            cell: ({ row }) => {
+                const canViewResults = ['assigned', 'in_progress', 'review', 'completed'].includes(row.original.status)
+
+                return (
+                    <div className="flex items-center gap-2">
+                        {canViewResults && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.location.href = `/dashboard/manager/results/${row.original.id}`}
+                            >
+                                View Results
+                            </Button>
+                        )}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleAssignTests(row.original)}
+                            disabled={row.original.status === 'completed'}
+                        >
+                            <FlaskConical className="h-4 w-4 mr-2" />
+                            Assign Tests
+                        </Button>
+                    </div>
+                )
+            },
+        })
+    } else {
+        // Analyst actions
+        columns.push({
+            id: 'actions',
+            header: 'Actions',
+            cell: ({ row }) => {
+                const canEnterResults = ['assigned', 'in_progress'].includes(row.original.status)
+
+                if (!canEnterResults) return null
+
+                return (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.location.href = `/dashboard/analyst/results/${row.original.id}`}
+                    >
+                        Enter Results
+                    </Button>
+                )
+            },
         })
     }
 
