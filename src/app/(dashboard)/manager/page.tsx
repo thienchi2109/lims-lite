@@ -4,7 +4,7 @@ import { logout } from '@/app/actions/auth'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
-import { FlaskConical, CheckCircle2 } from 'lucide-react'
+import { FlaskConical, CheckCircle2, ClipboardList } from 'lucide-react'
 
 export default async function ManagerDashboard() {
     const supabase = await createClient()
@@ -54,7 +54,7 @@ export default async function ManagerDashboard() {
             </header>
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {/* Sample Management Card */}
                     <Link href="/manager/samples">
                         <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
@@ -98,6 +98,30 @@ export default async function ManagerDashboard() {
                             <CardContent>
                                 <p className="text-sm text-muted-foreground">
                                     Phê duyệt kết quả đã nhập và quản lý phê duyệt
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </Link>
+
+                    {/* Assay Definitions Card */}
+                    <Link href="/manager/assays">
+                        <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                            <CardHeader>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-blue-600/10 rounded-lg">
+                                        <ClipboardList className="h-6 w-6 text-blue-600" />
+                                    </div>
+                                    <div>
+                                        <CardTitle>Chỉ tiêu xét nghiệm</CardTitle>
+                                        <CardDescription>
+                                            Quản lý danh mục chỉ tiêu
+                                        </CardDescription>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-sm text-muted-foreground">
+                                    Thêm, sửa, xóa chỉ tiêu xét nghiệm trong hệ thống
                                 </p>
                             </CardContent>
                         </Card>
