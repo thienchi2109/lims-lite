@@ -139,6 +139,7 @@ export const ResultSchema = z.object({
     entered_at: z.string().datetime().nullable(),
     approved_by: z.string().uuid().nullable(),
     approved_at: z.string().datetime().nullable(),
+    approval_note: z.string().nullable(),
     created_at: z.string().datetime(),
     updated_at: z.string().datetime(),
 })
@@ -291,4 +292,24 @@ export const ValidationErrorSchema = z.object({
 })
 
 export type ValidationError = z.infer<typeof ValidationErrorSchema>
+
+// ============================================================================
+// APPROVAL ACTIONS (Phase 4)
+// ============================================================================
+
+export const ApproveResultsSchema = z.object({
+    sampleId: z.string().uuid(),
+    resultIds: z.array(z.string().uuid()).min(1, 'At least one result must be selected'),
+    note: z.string().max(500).optional(),
+})
+
+export type ApproveResults = z.infer<typeof ApproveResultsSchema>
+
+export const CancelApprovalSchema = z.object({
+    sampleId: z.string().uuid(),
+    resultIds: z.array(z.string().uuid()).min(1, 'At least one result must be selected'),
+    reason: z.string().min(3, 'Reason is required (min 3 characters)').max(500),
+})
+
+export type CancelApproval = z.infer<typeof CancelApprovalSchema>
 

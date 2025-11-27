@@ -6,6 +6,10 @@ import {
     SaveBatchResultsSchema,
     type SaveBatchResults,
     type ResultWithAssay,
+    ApproveResultsSchema,
+    type ApproveResults,
+    CancelApprovalSchema,
+    type CancelApproval,
 } from '@/types'
 import { validateNumericValue, validateTextValue } from '@/lib/utils-lims'
 
@@ -200,5 +204,197 @@ export async function saveBatchResults(data: SaveBatchResults) {
             return { error: 'Invalid input data' }
         }
         return { error: error instanceof Error ? error.message : 'Failed to save results' }
+    }
+}
+
+/**
+ * Approves a batch of results (Manager only)
+ * Phase 4: Approval workflow
+ */
+export async function approveResults(data: ApproveResults) {
+    try {
+        const supabase = await createClient()
+
+        // Get current user
+        const {
+            data: { user },
+        } = await supabase.auth.getUser()
+
+        if (!user) {
+            return { error: 'Unauthorized' }
+        }
+
+        // Verify user is manager
+        const { data: userData } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+        if (userData?.role !== 'manager') {
+            return { error: 'Only managers can approve results' }
+        }
+
+        // Validate input
+        const validatedData = ApproveResultsSchema.parse(data)
+
+        // Fetch results to verify they exist and have status='entered'
+        const { data: results, error: fetchError } = await supabase
+            .from('results')
+            .select('id, status, sample_id')
+            .in('id', validatedData.resultIds)
+
+        if (fetchError) {
+            console.error('Error fetching results for approval:', fetchError)
+            return { error: fetchError.message }
+        }
+
+        // Validate all results are in 'entered' status
+        const invalidResults = results.filter((r: any) => r.status !== 'entered')
+        if (invalidResults.length > 0) {
+            return { error: 'Can only approve results with status "entered"' }
+        }
+
+        // Verify all results belong to the same sample
+        const sampleIds = [...new Set(results.map((r: any) => r.sample_id))]
+        if (sampleIds.length > 1) {
+            return { error: 'All results must belong to the same sample' }
+        }
+
+        // Perform batch approval
+        const updateData: any = {
+            status: 'approved',
+            approved_by: user.id,
+            approved_at: new Date().toISOString(),
+        }
+
+        // Add optional note if provided
+        if (validatedData.note) {
+            updateData.approval_note = validatedData.note
+        }
+
+        const { error: updateError } = await supabase
+            .from('results')
+            .update(updateData)
+            .in('id', validatedData.resultIds)
+
+        if (updateError) {
+            console.error('Error approving results:', updateError)
+            return { error: updateError.message }
+        }
+
+        // Update sample status to 'review'
+        if (sampleIds[0]) {
+            await supabase
+                .from('samples')
+                .update({ status: 'review' })
+                .eq('id', sampleIds[0])
+        }
+
+        // Revalidate paths
+        revalidatePath('/manager/approvals', 'page')
+        revalidatePath('/manager/results/[sampleId]', 'page')
+        revalidatePath('/manager/samples', 'page')
+
+        return { success: true, approvedCount: validatedData.resultIds.length }
+    } catch (error) {
+        console.error('Error in approveResults:', error)
+        if (error instanceof Error && error.message.includes('parse')) {
+            return { error: 'Invalid input data' }
+        }
+        return { error: error instanceof Error ? error.message : 'Failed to approve results' }
+    }
+}
+
+/**
+ * Cancels/revokes approval of results (Manager only)
+ * Phase 4: Approval workflow
+ */
+export async function cancelApproval(data: CancelApproval) {
+    try {
+        const supabase = await createClient()
+
+        // Get current user
+        const {
+            data: { user },
+        } = await supabase.auth.getUser()
+
+        if (!user) {
+            return { error: 'Unauthorized' }
+        }
+
+        // Verify user is manager
+        const { data: userData } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+        if (userData?.role !== 'manager') {
+            return { error: 'Only managers can cancel approvals' }
+        }
+
+        // Validate input
+        const validatedData = CancelApprovalSchema.parse(data)
+
+        // Fetch results to verify they exist and are approved
+        const { data: results, error: fetchError } = await supabase
+            .from('results')
+            .select('id, status, sample_id')
+            .in('id', validatedData.resultIds)
+
+        if (fetchError) {
+            console.error('Error fetching results for cancel:', fetchError)
+            return { error: fetchError.message }
+        }
+
+        // Validate all results are approved
+        const invalidResults = results.filter((r: any) => r.status !== 'approved')
+        if (invalidResults.length > 0) {
+            return { error: 'Can only cancel approval for approved results' }
+        }
+
+        // Verify all results belong to the same sample
+        const sampleIds = [...new Set(results.map((r: any) => r.sample_id))]
+        if (sampleIds.length > 1) {
+            return { error: 'All results must belong to the same sample' }
+        }
+
+        // Cancel approval
+        const { error: updateError } = await supabase
+            .from('results')
+            .update({
+                status: 'entered',
+                approved_by: null,
+                approved_at: null,
+                approval_note: `REVOKED: ${validatedData.reason}`,
+            })
+            .in('id', validatedData.resultIds)
+
+        if (updateError) {
+            console.error('Error canceling approval:', updateError)
+            return { error: updateError.message }
+        }
+
+        // Update sample status back to 'in_progress'
+        if (sampleIds[0]) {
+            await supabase
+                .from('samples')
+                .update({ status: 'in_progress' })
+                .eq('id', sampleIds[0])
+        }
+
+        // Revalidate paths
+        revalidatePath('/manager/approvals', 'page')
+        revalidatePath('/manager/results/[sampleId]', 'page')
+        revalidatePath('/manager/samples', 'page')
+
+        return { success: true, canceledCount: validatedData.resultIds.length }
+    } catch (error) {
+        console.error('Error in cancelApproval:', error)
+        if (error instanceof Error && error.message.includes('parse')) {
+            return { error: 'Invalid input data' }
+        }
+        return { error: error instanceof Error ? error.message : 'Failed to cancel approval' }
     }
 }
