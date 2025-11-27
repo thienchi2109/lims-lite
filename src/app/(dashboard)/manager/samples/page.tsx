@@ -14,6 +14,8 @@ type ManagerSamplesPageProps = {
         search?: string
         status?: string
         page?: string
+        fromDate?: string
+        toDate?: string
     }>
 }
 
@@ -29,6 +31,8 @@ export default async function ManagerSamplesPage({ searchParams }: ManagerSample
     const pageParam = Number(params.page || '1')
     const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1
     const pageSize = 20
+    const fromDate = typeof params.fromDate === 'string' ? params.fromDate : ''
+    const toDate = typeof params.toDate === 'string' ? params.toDate : ''
 
     const supabase = await createClient()
 
@@ -56,6 +60,8 @@ export default async function ManagerSamplesPage({ searchParams }: ManagerSample
         pageSize,
         search: searchTerm || undefined,
         status,
+        fromDate: fromDate || undefined,
+        toDate: toDate || undefined,
         sortBy: 'created_at',
         sortOrder: 'desc',
     })
@@ -66,7 +72,7 @@ export default async function ManagerSamplesPage({ searchParams }: ManagerSample
     if (status === 'in_progress' || status === undefined) {
         const { data: resultSamples } = await supabase
             .from('results')
-            .select('sample_id', { distinct: true })
+            .select('sample_id')
             .eq('status', 'entered')
 
         const needsApprovalIds = new Set((resultSamples || []).map((r: any) => r.sample_id))
@@ -124,7 +130,12 @@ export default async function ManagerSamplesPage({ searchParams }: ManagerSample
                 </div>
 
                 <div className="mb-6">
-                    <SampleFilters search={searchTerm} status={(status ?? 'all')} />
+                    <SampleFilters
+                        search={searchTerm}
+                        status={(status ?? 'all')}
+                        fromDate={fromDate}
+                        toDate={toDate}
+                    />
                 </div>
 
                 <SampleListTable

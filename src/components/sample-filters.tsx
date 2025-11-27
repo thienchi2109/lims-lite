@@ -9,6 +9,8 @@ import { type SampleStatus } from '@/types'
 type SampleFiltersProps = {
     search?: string
     status?: SampleStatus | 'all'
+    fromDate?: string
+    toDate?: string
 }
 
 const statusOptions: Array<{ value: SampleStatus | 'all'; label: string }> = [
@@ -23,9 +25,13 @@ const statusOptions: Array<{ value: SampleStatus | 'all'; label: string }> = [
 export function SampleFilters({
     search = '',
     status = 'all',
+    fromDate = '',
+    toDate = '',
 }: SampleFiltersProps) {
     const [searchValue, setSearchValue] = useState(search)
     const [statusValue, setStatusValue] = useState<SampleStatus | 'all'>(status)
+    const [fromDateValue, setFromDateValue] = useState(fromDate)
+    const [toDateValue, setToDateValue] = useState(toDate)
 
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -40,6 +46,14 @@ export function SampleFilters({
     useEffect(() => {
         setStatusValue(status)
     }, [status])
+
+    useEffect(() => {
+        setFromDateValue(fromDate)
+    }, [fromDate])
+
+    useEffect(() => {
+        setToDateValue(toDate)
+    }, [toDate])
 
     // Debounce search updates (250ms) and push to URL for server rendering
     useEffect(() => {
@@ -75,30 +89,87 @@ export function SampleFilters({
         }
     }
 
+    const handleFromDateChange = (value: string) => {
+        setFromDateValue(value)
+        const params = new URLSearchParams(searchParamsString)
+        if (value) {
+            params.set('fromDate', value)
+        } else {
+            params.delete('fromDate')
+        }
+        params.set('page', '1')
+        const query = params.toString()
+        if (query !== searchParamsString) {
+            router.replace(query ? `${pathname}?${query}` : pathname)
+        }
+    }
+
+    const handleToDateChange = (value: string) => {
+        setToDateValue(value)
+        const params = new URLSearchParams(searchParamsString)
+        if (value) {
+            params.set('toDate', value)
+        } else {
+            params.delete('toDate')
+        }
+        params.set('page', '1')
+        const query = params.toString()
+        if (query !== searchParamsString) {
+            router.replace(query ? `${pathname}?${query}` : pathname)
+        }
+    }
+
     return (
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <div className="flex-1">
-                <Input
-                    placeholder="Search by sample ID or client name..."
-                    value={searchValue}
-                    onChange={(e) => setSearchValue(e.target.value)}
-                />
+        <div className="space-y-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <div className="flex-1">
+                    <Input
+                        placeholder="Search by sample ID or client name..."
+                        value={searchValue}
+                        onChange={(e) => setSearchValue(e.target.value)}
+                    />
+                </div>
+                <Select
+                    value={statusValue}
+                    onValueChange={(value) => handleStatusChange(value as SampleStatus | 'all')}
+                >
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {statusOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
-            <Select
-                value={statusValue}
-                onValueChange={(value) => handleStatusChange(value as SampleStatus | 'all')}
-            >
-                <SelectTrigger className="w-full sm:w-[180px]">
-                    <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                    {statusOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
+
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium whitespace-nowrap">From:</label>
+                        <Input
+                            type="date"
+                            value={fromDateValue}
+                            onChange={(e) => handleFromDateChange(e.target.value)}
+                            className="flex-1"
+                        />
+                    </div>
+                </div>
+                <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium whitespace-nowrap">To:</label>
+                        <Input
+                            type="date"
+                            value={toDateValue}
+                            onChange={(e) => handleToDateChange(e.target.value)}
+                            className="flex-1"
+                        />
+                    </div>
+                </div>
+            </div>
         </div>
     )
 }

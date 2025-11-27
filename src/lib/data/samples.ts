@@ -64,6 +64,17 @@ export async function fetchSamples(params: SampleListParams) {
         )
     }
 
+    // Apply date range filter
+    if (validatedParams.fromDate) {
+        query = query.gte('received_at', validatedParams.fromDate)
+    }
+    if (validatedParams.toDate) {
+        // Add time to the end of the day to include the entire day
+        const endOfDay = new Date(validatedParams.toDate)
+        endOfDay.setHours(23, 59, 59, 999)
+        query = query.lte('received_at', endOfDay.toISOString())
+    }
+
     // Apply sorting
     const sortBy = validatedParams.sortBy || 'created_at'
     const sortOrder = validatedParams.sortOrder || 'desc'

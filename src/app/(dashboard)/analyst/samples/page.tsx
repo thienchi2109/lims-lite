@@ -14,6 +14,8 @@ type SamplesPageProps = {
         search?: string
         status?: string
         page?: string
+        fromDate?: string
+        toDate?: string
     }>
 }
 
@@ -29,6 +31,8 @@ export default async function SamplesPage({ searchParams }: SamplesPageProps) {
     const pageParam = Number(params.page || '1')
     const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1
     const pageSize = 20
+    const fromDate = typeof params.fromDate === 'string' ? params.fromDate : ''
+    const toDate = typeof params.toDate === 'string' ? params.toDate : ''
 
     const supabase = await createClient()
 
@@ -51,6 +55,8 @@ export default async function SamplesPage({ searchParams }: SamplesPageProps) {
         pageSize,
         search: searchTerm || undefined,
         status,
+        fromDate: fromDate || undefined,
+        toDate: toDate || undefined,
         sortBy: 'created_at',
         sortOrder: 'desc',
     })
@@ -96,7 +102,12 @@ export default async function SamplesPage({ searchParams }: SamplesPageProps) {
                 </div>
 
                 <div className="mb-6">
-                    <SampleFilters search={searchTerm} status={(status ?? 'all')} />
+                    <SampleFilters
+                        search={searchTerm}
+                        status={(status ?? 'all')}
+                        fromDate={fromDate}
+                        toDate={toDate}
+                    />
                 </div>
 
                 <SampleListTable
