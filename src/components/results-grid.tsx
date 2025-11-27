@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState, useCallback } from 'react'
-import { useForm, useFieldArray, Controller } from 'react-hook-form'
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
+import { useForm } from 'react-hook-form'
 import {
     useReactTable,
     getCoreRowModel,
@@ -34,12 +34,10 @@ interface ResultsGridProps {
     onSaveSuccess?: () => void
 }
 
-type FormValues = {
-    results: Array<{
-        id: string
-        value: string
-        originalValue: string
-    }>
+type ResultValue = {
+    id: string
+    value: string
+    originalValue: string
 }
 
 export function ResultsGrid({ results, sampleId, userRole, onSaveSuccess }: ResultsGridProps) {
@@ -47,32 +45,32 @@ export function ResultsGrid({ results, sampleId, userRole, onSaveSuccess }: Resu
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
     const [focusedCellIndex, setFocusedCellIndex] = useState<number | null>(null)
 
-    // Initialize form
-    const { control, handleSubmit, watch, reset, formState } = useForm<FormValues>({
-        defaultValues: {
-            results: results.map((r) => ({
+    // Use local state for values to prevent re-renders
+    const [resultValues, setResultValues] = useState<Record<string, ResultValue>>(() => {
+        const initial: Record<string, ResultValue> = {}
+        results.forEach((r) => {
+            initial[r.id] = {
                 id: r.id,
                 value: r.value || '',
                 originalValue: r.value || '',
-            })),
-        },
+            }
+        })
+        return initial
     })
 
-    const { fields, update } = useFieldArray({
-        control,
-        name: 'results',
-    })
-
-    // Watch all values to detect changes
-    const watchedResults = watch('results')
+    // Calculate pending changes
     const pendingChanges = useMemo(() => {
-        return watchedResults.filter((r, index) => r.value !== r.originalValue && !validationErrors[r.id])
-    }, [watchedResults, validationErrors])
+        return Object.values(resultValues).filter(
+            (rv) => rv.value !== rv.originalValue && !validationErrors[rv.id]
+        )
+    }, [resultValues, validationErrors])
 
     // Handle value change with validation
     const handleValueChange = useCallback(
-        (index: number, value: string) => {
-            const result = results[index]
+        (resultId: string, value: string) => {
+            const result = results.find((r) => r.id === resultId)
+            if (!result) return
+
             const rules = result.validation_rules || {}
 
             // Perform client-side validation
@@ -87,28 +85,36 @@ export function ResultsGrid({ results, sampleId, userRole, onSaveSuccess }: Resu
             setValidationErrors((prev) => {
                 const next = { ...prev }
                 if (error) {
-                    next[result.id] = error
+                    next[resultId] = error
                 } else {
-                    delete next[result.id]
+                    delete next[resultId]
                 }
                 return next
             })
 
-            return value
+            // Update value
+            setResultValues((prev) => ({
+                ...prev,
+                [resultId]: {
+                    ...prev[resultId],
+                    value,
+                },
+            }))
         },
         [results]
     )
 
     // Handle batch save
-    const onSubmit = async (data: FormValues) => {
+    const handleSave = async () => {
         if (Object.keys(validationErrors).length > 0) {
             toast.error('Please fix validation errors before saving')
             return
         }
 
-        const changedResults = data.results.filter(
-            (r, index) => r.value !== r.originalValue
-        )
+        const changedResults = pendingChanges.map((rv) => ({
+            id: rv.id,
+            value: rv.value,
+        }))
 
         if (changedResults.length === 0) {
             toast.info('No changes to save')
@@ -119,10 +125,7 @@ export function ResultsGrid({ results, sampleId, userRole, onSaveSuccess }: Resu
 
         try {
             const response = await saveBatchResults({
-                results: changedResults.map((r) => ({
-                    id: r.id,
-                    value: r.value,
-                })),
+                results: changedResults,
             })
 
             if (response.error) {
@@ -132,12 +135,13 @@ export function ResultsGrid({ results, sampleId, userRole, onSaveSuccess }: Resu
 
             toast.success(`Successfully saved ${changedResults.length} result(s)`)
 
-            // Reset form with new values as originals
-            reset({
-                results: data.results.map((r) => ({
-                    ...r,
-                    originalValue: r.value,
-                })),
+            // Update original values
+            setResultValues((prev) => {
+                const next = { ...prev }
+                changedResults.forEach((cr) => {
+                    next[cr.id].originalValue = cr.value
+                })
+                return next
             })
 
             onSaveSuccess?.()
@@ -151,66 +155,30 @@ export function ResultsGrid({ results, sampleId, userRole, onSaveSuccess }: Resu
 
     // Handle discard
     const handleDiscard = () => {
-        reset({
-            results: fields.map((f) => ({
-                ...f,
-                value: f.originalValue,
-            })),
+        setResultValues((prev) => {
+            const next = { ...prev }
+            Object.keys(next).forEach((id) => {
+                next[id].value = next[id].originalValue
+            })
+            return next
         })
         setValidationErrors({})
         toast.info('Changes discarded')
     }
 
-    // Keyboard navigation
+    // Keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             // Ctrl+S to save
             if (e.ctrlKey && e.key === 's') {
                 e.preventDefault()
-                handleSubmit(onSubmit)()
-                return
-            }
-
-            if (focusedCellIndex === null) return
-
-            const editableIndices = results
-                .map((r, i) => ({ index: i, editable: isEditable(r) }))
-                .filter((item) => item.editable)
-                .map((item) => item.index)
-
-            const currentPosition = editableIndices.indexOf(focusedCellIndex)
-
-            switch (e.key) {
-                case 'ArrowDown':
-                    e.preventDefault()
-                    if (currentPosition < editableIndices.length - 1) {
-                        setFocusedCellIndex(editableIndices[currentPosition + 1])
-                    }
-                    break
-                case 'ArrowUp':
-                    e.preventDefault()
-                    if (currentPosition > 0) {
-                        setFocusedCellIndex(editableIndices[currentPosition - 1])
-                    }
-                    break
-                case 'Tab':
-                    e.preventDefault()
-                    if (e.shiftKey) {
-                        if (currentPosition > 0) {
-                            setFocusedCellIndex(editableIndices[currentPosition - 1])
-                        }
-                    } else {
-                        if (currentPosition < editableIndices.length - 1) {
-                            setFocusedCellIndex(editableIndices[currentPosition + 1])
-                        }
-                    }
-                    break
+                handleSave()
             }
         }
 
         window.addEventListener('keydown', handleKeyDown)
         return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [focusedCellIndex, results, handleSubmit, onSubmit])
+    }, [pendingChanges, validationErrors])
 
     // Warn before unload if there are pending changes
     useEffect(() => {
@@ -231,7 +199,7 @@ export function ResultsGrid({ results, sampleId, userRole, onSaveSuccess }: Resu
         return result.status !== 'approved'
     }
 
-    // Define columns
+    // Define columns - memoized with stable dependencies
     const columns = useMemo<ColumnDef<ResultWithAssay>[]>(
         () => [
             {
@@ -264,28 +232,18 @@ export function ResultsGrid({ results, sampleId, userRole, onSaveSuccess }: Resu
                 accessorKey: 'value',
                 header: 'Result Value',
                 cell: ({ row }) => {
-                    const index = results.findIndex((r) => r.id === row.original.id)
-                    const field = fields[index]
-                    const isPending = field?.value !== field?.originalValue
+                    const resultValue = resultValues[row.original.id]
+                    const isPending = resultValue?.value !== resultValue?.originalValue
 
                     return (
-                        <Controller
-                            name={`results.${index}.value`}
-                            control={control}
-                            render={({ field: controllerField }) => (
-                                <ResultCellEditor
-                                    value={controllerField.value || ''}
-                                    onChange={(value) => {
-                                        handleValueChange(index, value)
-                                        controllerField.onChange(value)
-                                    }}
-                                    isEditable={isEditable(row.original)}
-                                    validationError={validationErrors[row.original.id]}
-                                    isPending={isPending}
-                                    units={row.original.assay_units}
-                                    autoFocus={focusedCellIndex === index}
-                                />
-                            )}
+                        <ResultCellEditor
+                            key={row.original.id}
+                            value={resultValue?.value || ''}
+                            onChange={(value) => handleValueChange(row.original.id, value)}
+                            isEditable={isEditable(row.original)}
+                            validationError={validationErrors[row.original.id]}
+                            isPending={isPending}
+                            units={row.original.assay_units}
                         />
                     )
                 },
@@ -330,7 +288,7 @@ export function ResultsGrid({ results, sampleId, userRole, onSaveSuccess }: Resu
                     ),
             },
         ],
-        [results, fields, validationErrors, focusedCellIndex]
+        [results, resultValues, validationErrors, handleValueChange]
     )
 
     const table = useReactTable({
@@ -399,7 +357,7 @@ export function ResultsGrid({ results, sampleId, userRole, onSaveSuccess }: Resu
 
             <BatchSaveToolbar
                 pendingCount={pendingChanges.length}
-                onSave={handleSubmit(onSubmit)}
+                onSave={handleSave}
                 onDiscard={handleDiscard}
                 isSaving={isSaving}
                 isVisible={pendingChanges.length > 0}
