@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CDC-LIMS - Laboratory Information Management System",
+  title: "Hệ thống quản lý thông tin khoa Xét nghiệm",
   description: "CDC Laboratory Information Management System for sample tracking and results management",
 };
 
@@ -34,4 +34,3 @@ export default function RootLayout({
     </html>
   );
 }
-

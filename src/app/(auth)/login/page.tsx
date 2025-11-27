@@ -21,7 +21,7 @@ export default function LoginPage() {
 
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-4">
-            <div className="w-full max-w-md space-y-8">
+            <div className="w-full max-w-lg md:max-w-xl space-y-8">
                 <div className="flex flex-col items-center justify-center space-y-2 text-center">
                     <div className="rounded-full bg-primary/10 p-4">
                         <FlaskConical className="h-10 w-10 text-primary" />
@@ -36,7 +36,7 @@ export default function LoginPage() {
 
                 <Card className="border-border/50 shadow-xl">
                     <CardHeader className="space-y-1 pb-6">
-                        <CardTitle className="text-xl text-center">CDC-LIMS</CardTitle>
+                        <CardTitle className="text-lg md:text-xl text-center leading-6 md:leading-7">Hệ thống quản lý thông tin khoa Xét nghiệm</CardTitle>
                         <CardDescription className="text-center">
                             Laboratory Information Management System
                         </CardDescription>
@@ -118,7 +118,7 @@ export default function LoginPage() {
                 </Card>
                 
                 <p className="text-center text-xs text-muted-foreground px-8">
-                    &copy; {new Date().getFullYear()} CDC-LIMS. All rights reserved.
+                    &copy; {new Date().getFullYear()} Hệ thống quản lý thông tin khoa Xét nghiệm. All rights reserved.
                 </p>
             </div>
         </div>

@@ -1,5 +1,5 @@
 /**
- * Utility functions for CDC-LIMS
+ * Utility functions for Hệ thống quản lý thông tin khoa Xét nghiệm
  */
 
 /**
