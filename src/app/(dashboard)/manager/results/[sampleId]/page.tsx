@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getResultsBySample } from '@/app/actions/results'
 import { ResultsGrid } from '@/components/results-grid'
+import { ApprovalActions } from '@/components/approval-actions'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, RefreshCcw } from 'lucide-react'
 import Link from 'next/link'
@@ -133,7 +134,8 @@ export default async function ManagerResultsPage({ params }: PageProps) {
                 userRole="manager"
             />
 
-            {/* Future: Approval Actions will go here in Phase 4 */}
+            {/* Approval Actions */}
+            <ApprovalActions sampleId={resolvedParams.sampleId} results={results} />
         </div>
     )
 }

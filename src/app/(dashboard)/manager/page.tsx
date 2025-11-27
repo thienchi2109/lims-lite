@@ -4,7 +4,7 @@ import { logout } from '@/app/actions/auth'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
-import { FlaskConical, BarChart3 } from 'lucide-react'
+import { FlaskConical, CheckCircle2 } from 'lucide-react'
 
 export default async function ManagerDashboard() {
     const supabase = await createClient()
@@ -79,25 +79,29 @@ export default async function ManagerDashboard() {
                         </Card>
                     </Link>
 
-                    {/* Reports Card (Coming Soon) */}
-                    <Card className="opacity-60 h-full">
-                        <CardHeader>
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-muted rounded-lg">
-                                    <BarChart3 className="h-6 w-6 text-muted-foreground" />
+                    {/* Approval Queue Card */}
+                    <Link href="/manager/approvals">
+                        <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                            <CardHeader>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-green-600/10 rounded-lg">
+                                        <CheckCircle2 className="h-6 w-6 text-green-600" />
+                                    </div>
+                                    <div>
+                                        <CardTitle>Approval Queue</CardTitle>
+                                        <CardDescription>
+                                            Review and approve test results
+                                        </CardDescription>
+                                    </div>
                                 </div>
-                                <div>
-                                    <CardTitle>Reports & Analytics</CardTitle>
-                                    <CardDescription>Coming in Phase 4</CardDescription>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-sm text-muted-foreground">
-                                Generate CoA reports and view analytics
-                            </p>
-                        </CardContent>
-                    </Card>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-sm text-muted-foreground">
+                                    Approve entered results and manage approvals
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </Link>
                 </div>
             </main>
         </div>
