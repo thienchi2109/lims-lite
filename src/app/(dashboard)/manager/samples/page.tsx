@@ -23,9 +23,11 @@ export default async function ManagerSamplesPage({ searchParams }: ManagerSample
     const params = searchParams ? await searchParams : {}
     const searchTerm = typeof params.search === 'string' ? params.search : ''
     const statusParam = typeof params.status === 'string' ? params.status : 'all'
+    const needsApproval = statusParam === 'needs_approval'
     const status = validStatuses.includes(statusParam as SampleStatus)
         ? (statusParam as SampleStatus)
         : undefined
+    const statusFilterValue = needsApproval ? 'needs_approval' : status ?? 'all'
     const pageParam = Number(params.page || '1')
     const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1
     const pageSize = 20
@@ -56,6 +58,7 @@ export default async function ManagerSamplesPage({ searchParams }: ManagerSample
         pageSize,
         search: searchTerm || undefined,
         status,
+        needsApproval: needsApproval || undefined,
         sortBy: 'created_at',
         sortOrder: 'desc',
     })
@@ -101,7 +104,7 @@ export default async function ManagerSamplesPage({ searchParams }: ManagerSample
                 </div>
 
                 <div className="mb-6">
-                    <SampleFilters search={searchTerm} status={(status ?? 'all')} />
+                    <SampleFilters search={searchTerm} status={statusFilterValue} />
                 </div>
 
                 <SampleListTable

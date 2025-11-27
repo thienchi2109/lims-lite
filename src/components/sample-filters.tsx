@@ -8,21 +8,25 @@ import { type SampleStatus } from '@/types'
 
 type SampleFiltersProps = {
     search?: string
-    status?: SampleStatus | 'all'
+    status?: SampleStatus | 'all' | 'needs_approval'
 }
 
-const statusOptions: Array<{ value: SampleStatus | 'all'; label: string }> = [
+const statusOptions: Array<{ value: SampleStatus | 'all' | 'needs_approval'; label: string }> = [
     { value: 'all', label: 'All Statuses' },
     { value: 'received', label: 'Received' },
     { value: 'assigned', label: 'Assigned' },
     { value: 'in_progress', label: 'In Progress' },
+    { value: 'needs_approval', label: 'Needs Approval' },
     { value: 'review', label: 'Review' },
     { value: 'completed', label: 'Completed' },
 ]
 
-export function SampleFilters({ search = '', status = 'all' }: SampleFiltersProps) {
+export function SampleFilters({
+    search = '',
+    status = 'all',
+}: SampleFiltersProps) {
     const [searchValue, setSearchValue] = useState(search)
-    const [statusValue, setStatusValue] = useState<SampleStatus | 'all'>(status)
+    const [statusValue, setStatusValue] = useState<SampleStatus | 'all' | 'needs_approval'>(status)
 
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -57,7 +61,7 @@ export function SampleFilters({ search = '', status = 'all' }: SampleFiltersProp
         return () => clearTimeout(timer)
     }, [searchValue, pathname, router, searchParamsString])
 
-    const handleStatusChange = (value: SampleStatus | 'all') => {
+    const handleStatusChange = (value: SampleStatus | 'all' | 'needs_approval') => {
         setStatusValue(value)
         const params = new URLSearchParams(searchParamsString)
         if (value === 'all') {
@@ -73,7 +77,7 @@ export function SampleFilters({ search = '', status = 'all' }: SampleFiltersProp
     }
 
     return (
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
             <div className="flex-1">
                 <Input
                     placeholder="Search by sample ID or client name..."
@@ -83,7 +87,7 @@ export function SampleFilters({ search = '', status = 'all' }: SampleFiltersProp
             </div>
             <Select
                 value={statusValue}
-                onValueChange={(value) => handleStatusChange(value as SampleStatus | 'all')}
+                onValueChange={(value) => handleStatusChange(value as SampleStatus | 'all' | 'needs_approval')}
             >
                 <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue placeholder="Filter by status" />

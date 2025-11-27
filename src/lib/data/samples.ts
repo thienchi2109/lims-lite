@@ -27,6 +27,33 @@ export async function fetchSamples(params: SampleListParams) {
     // Build query
     let query = supabase.from('samples').select('*', { count: 'exact' }).is('deleted_at', null)
 
+    // Filter for samples that have results entered but not approved
+    if (validatedParams.needsApproval) {
+        const { data: resultSamples, error: resultError } = await supabase
+            .from('results')
+            .select('sample_id', { distinct: true })
+            .eq('status', 'entered')
+
+        if (resultError) {
+            console.error('Error fetching samples needing approval:', resultError)
+            return { error: resultError.message }
+        }
+
+        const sampleIds = (resultSamples || []).map((r: any) => r.sample_id).filter(Boolean)
+
+        if (sampleIds.length === 0) {
+            return {
+                data: [],
+                count: 0,
+                page: validatedParams.page,
+                pageSize: validatedParams.pageSize,
+                totalPages: 0,
+            }
+        }
+
+        query = query.in('id', sampleIds)
+    }
+
     // Apply status filter
     if (validatedParams.status) {
         query = query.eq('status', validatedParams.status)
