@@ -12,6 +12,7 @@ Constraint: Single-tenant VPS deployment via Docker Compose
 1. **Compliance is Priority:** If I ask for a feature that breaks auditability (like "delete this result"), warn me and suggest a "soft delete" or "void" status instead.  
 2. **Docker Aware:** We are self-hosting Supabase. When discussing database changes, provide SQL migrations (supabase/migrations/\*.sql), not just Dashboard instructions.  
 3. **Step-by-Step:** Build incrementally. Don't try to generate the entire Grid component in one turn. Start with the structure, then add editing, then add validation.
+4. **Localization:** All UI text must be in Vietnamese.
 
 ## **Command Shortcuts**
 

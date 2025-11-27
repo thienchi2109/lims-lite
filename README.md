@@ -1,5 +1,10 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+
+## Localization
+
+**Note:** This application is localized for Vietnamese users. All user interface text should be in Vietnamese.
+
 ## Getting Started
 
 First, run the development server:

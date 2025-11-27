@@ -12,6 +12,7 @@
 *   **Database:** Supabase (PostgreSQL)
 *   **Authentication:** Supabase Auth
 *   **ORM/Client:** Supabase JS Client
+*   **UI Language:** Vietnamese (All user-facing text must be in Vietnamese)
 
 **Architecture Pattern:**
 The project follows a standard Next.js App Router architecture. It leverages **Server Components** for data fetching and **Server Actions** for mutations (API layer), minimizing client-side JavaScript.
