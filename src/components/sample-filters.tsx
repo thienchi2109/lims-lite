@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -27,6 +27,7 @@ export function SampleFilters({ search = '', status = 'all' }: SampleFiltersProp
     const router = useRouter()
     const searchParams = useSearchParams()
     const pathname = usePathname()
+    const searchParamsString = useMemo(() => searchParams.toString(), [searchParams])
 
     // Keep inputs in sync with URL changes (e.g., back/forward nav)
     useEffect(() => {
@@ -40,7 +41,7 @@ export function SampleFilters({ search = '', status = 'all' }: SampleFiltersProp
     // Debounce search updates (250ms) and push to URL for server rendering
     useEffect(() => {
         const timer = setTimeout(() => {
-            const params = new URLSearchParams(searchParams.toString())
+            const params = new URLSearchParams(searchParamsString)
             if (searchValue) {
                 params.set('search', searchValue)
             } else {
@@ -48,15 +49,17 @@ export function SampleFilters({ search = '', status = 'all' }: SampleFiltersProp
             }
             params.set('page', '1')
             const query = params.toString()
-            router.replace(query ? `${pathname}?${query}` : pathname)
+            if (query !== searchParamsString) {
+                router.replace(query ? `${pathname}?${query}` : pathname)
+            }
         }, 250)
 
         return () => clearTimeout(timer)
-    }, [searchValue, pathname, router, searchParams])
+    }, [searchValue, pathname, router, searchParamsString])
 
     const handleStatusChange = (value: SampleStatus | 'all') => {
         setStatusValue(value)
-        const params = new URLSearchParams(searchParams.toString())
+        const params = new URLSearchParams(searchParamsString)
         if (value === 'all') {
             params.delete('status')
         } else {
@@ -64,7 +67,9 @@ export function SampleFilters({ search = '', status = 'all' }: SampleFiltersProp
         }
         params.set('page', '1')
         const query = params.toString()
-        router.replace(query ? `${pathname}?${query}` : pathname)
+        if (query !== searchParamsString) {
+            router.replace(query ? `${pathname}?${query}` : pathname)
+        }
     }
 
     return (
