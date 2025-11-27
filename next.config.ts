@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
     // Disable server source maps to avoid noisy invalid sourcemap warnings on Windows/dev
     serverSourceMaps: false,
   },
+  // Enable standalone output for Docker deployments
+  output: 'standalone',
 };
 
 export default nextConfig;
