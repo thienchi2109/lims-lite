@@ -60,6 +60,11 @@ export default async function ManagerSamplesPage({ searchParams }: ManagerSample
         sortOrder: 'desc',
     })
 
+    const samplesForDisplay =
+        status === 'in_progress' && result.data
+            ? result.data.map((s) => ({ ...s, status: 'in_progress' }))
+            : result.data
+
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
             <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm">
@@ -105,7 +110,7 @@ export default async function ManagerSamplesPage({ searchParams }: ManagerSample
                 </div>
 
                 <SampleListTable
-                    samples={result.data || []}
+                    samples={samplesForDisplay || []}
                     page={result.page || page}
                     pageSize={result.pageSize || pageSize}
                     totalPages={result.totalPages || 1}
