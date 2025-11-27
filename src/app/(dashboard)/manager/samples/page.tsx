@@ -60,10 +60,28 @@ export default async function ManagerSamplesPage({ searchParams }: ManagerSample
         sortOrder: 'desc',
     })
 
-    const samplesForDisplay =
-        status === 'in_progress' && result.data
-            ? result.data.map((s) => ({ ...s, status: 'in_progress' }))
-            : result.data
+    let samplesForDisplay = result.data || []
+
+    // When filtering by in_progress or showing all, highlight samples that have entered (unapproved) results
+    if (status === 'in_progress' || status === undefined) {
+        const { data: resultSamples } = await supabase
+            .from('results')
+            .select('sample_id', { distinct: true })
+            .eq('status', 'entered')
+
+        const needsApprovalIds = new Set((resultSamples || []).map((r: any) => r.sample_id))
+
+        samplesForDisplay = samplesForDisplay.map((sample) => {
+            if (
+                needsApprovalIds.has(sample.id) &&
+                sample.status !== 'review' &&
+                sample.status !== 'completed'
+            ) {
+                return { ...sample, status: 'in_progress' }
+            }
+            return sample
+        })
+    }
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
