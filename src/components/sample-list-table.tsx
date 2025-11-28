@@ -16,6 +16,13 @@ import { SampleStatusBadge } from '@/components/sample-status-badge'
 import { EditableCell } from '@/components/editable-cell'
 import { TestAssignmentDialog } from '@/components/test-assignment-dialog'
 import { ChevronLeft, ChevronRight, FlaskConical, Eye, Pencil } from 'lucide-react'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
 interface SampleListTableProps {
@@ -76,9 +83,10 @@ export function SampleListTable({
         router.refresh()
     }
 
-    const updateQuery = (nextPage: number) => {
+    const updateQuery = (nextPage: number, nextPageSize: number) => {
         const params = new URLSearchParams(searchParams.toString())
         params.set('page', String(nextPage))
+        params.set('pageSize', String(nextPageSize))
         const query = params.toString()
         router.replace(query ? `${pathname}?${query}` : pathname)
     }
@@ -241,15 +249,33 @@ export function SampleListTable({
             {/* Pagination */}
             {samples.length > 0 && (
                 <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">
-                        Hiển thị {(page - 1) * pageSize + 1} đến{' '}
-                        {Math.min(page * pageSize, totalCount)} của {totalCount} mẫu
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span>Hiển thị</span>
+                        <Select
+                            value={String(pageSize)}
+                            onValueChange={(value) => updateQuery(1, Number(value))}
+                        >
+                            <SelectTrigger className="h-8 w-[70px]">
+                                <SelectValue placeholder={pageSize} />
+                            </SelectTrigger>
+                            <SelectContent side="top">
+                                {[10, 20, 50, 100].map((size) => (
+                                    <SelectItem key={size} value={String(size)}>
+                                        {size}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <span>
+                            {(page - 1) * pageSize + 1} -{' '}
+                            {Math.min(page * pageSize, totalCount)} của {totalCount} mẫu
+                        </span>
                     </div>
                     <div className="flex items-center gap-2">
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => updateQuery(Math.max(1, page - 1))}
+                            onClick={() => updateQuery(Math.max(1, page - 1), pageSize)}
                             disabled={page === 1}
                         >
                             <ChevronLeft className="h-4 w-4" />
@@ -261,7 +287,7 @@ export function SampleListTable({
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => updateQuery(Math.min(totalPages, page + 1))}
+                            onClick={() => updateQuery(Math.min(totalPages, page + 1), pageSize)}
                             disabled={page === totalPages}
                         >
                             Tiếp

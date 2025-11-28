@@ -9,13 +9,25 @@ import { CreateAssayDefinitionSchema } from '@/types'
 // GET ALL ASSAY DEFINITIONS
 // ============================================================================
 
-export async function getAssayDefinitions() {
+export async function getAssayDefinitions(params?: {
+    page?: number
+    pageSize?: number
+    search?: string
+}) {
     try {
         const supabase = await createClient()
+        const page = params?.page || 1
+        const pageSize = params?.pageSize || 10
+        const search = params?.search || ''
 
-        const { data, error } = await supabase
+        // Calculate range
+        const from = (page - 1) * pageSize
+        const to = from + pageSize - 1
+
+        let query = supabase
             .from('assay_definitions')
-            .select(`
+            .select(
+                `
                 id,
                 name,
                 method_id,
@@ -27,9 +39,31 @@ export async function getAssayDefinitions() {
                     id,
                     name
                 )
-            `)
+            `,
+                { count: 'exact' }
+            )
             .is('deleted_at', null)
             .order('name', { ascending: true })
+
+        if (search) {
+            // First find matching methods to get their IDs
+            const { data: matchingMethods } = await supabase
+                .from('methods')
+                .select('id')
+                .ilike('name', `%${search}%`)
+
+            const methodIds = matchingMethods?.map((m) => m.id) || []
+
+            // Construct OR filter: match assay name OR match method ID
+            if (methodIds.length > 0) {
+                query = query.or(`name.ilike.%${search}%,method_id.in.(${methodIds.join(',')})`)
+            } else {
+                query = query.ilike('name', `%${search}%`)
+            }
+        }
+
+        // Apply pagination
+        const { data, error, count } = await query.range(from, to)
 
         if (error) {
             console.error('Error fetching assay definitions:', error)
@@ -43,7 +77,13 @@ export async function getAssayDefinitions() {
             methods: undefined, // Remove the nested object
         }))
 
-        return { data: transformedData }
+        return {
+            data: transformedData,
+            totalCount: count || 0,
+            totalPages: Math.ceil((count || 0) / pageSize),
+            page,
+            pageSize,
+        }
     } catch (error) {
         console.error('Unexpected error:', error)
         return { error: 'Đã xảy ra lỗi không mong muốn' }

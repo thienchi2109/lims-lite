@@ -8,7 +8,11 @@ import { ArrowLeft, Plus } from 'lucide-react'
 import { getAssayDefinitions } from '@/app/actions/assays'
 import { AssayDefinitionsTable } from '@/components/assay-definitions-table'
 
-export default async function AssaysPage() {
+export default async function AssaysPage({
+    searchParams,
+}: {
+    searchParams: { page?: string; pageSize?: string }
+}) {
     const supabase = await createClient()
 
     const {
@@ -30,7 +34,12 @@ export default async function AssaysPage() {
     }
 
     // Fetch assay definitions
-    const { data: assays, error } = await getAssayDefinitions()
+    const page = Number(searchParams?.page) || 1
+    const pageSize = Number(searchParams?.pageSize) || 10
+    const { data: assays, totalCount, totalPages, error } = await getAssayDefinitions({
+        page,
+        pageSize,
+    })
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -88,7 +97,13 @@ export default async function AssaysPage() {
                                 <p>Lỗi: {error}</p>
                             </div>
                         ) : (
-                            <AssayDefinitionsTable assays={assays || []} />
+                            <AssayDefinitionsTable
+                                assays={assays || []}
+                                page={page}
+                                pageSize={pageSize}
+                                totalPages={totalPages || 1}
+                                totalCount={totalCount || 0}
+                            />
                         )}
                     </CardContent>
                 </Card>
