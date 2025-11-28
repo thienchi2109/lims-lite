@@ -100,14 +100,14 @@ END $$;
 \echo '============================================================================'
 
 SELECT
-    id,
-    name,
-    method_id,
+    assay_definitions.id,
+    assay_definitions.name,
+    assay_definitions.method_id,
     methods.name as method_name,
-    units,
-    validation_rules,
-    created_at,
-    updated_at
+    assay_definitions.units,
+    assay_definitions.validation_rules,
+    assay_definitions.created_at,
+    assay_definitions.updated_at
 FROM assay_definitions
 LEFT JOIN methods ON assay_definitions.method_id = methods.id
 WHERE assay_definitions.deleted_at IS NULL
@@ -143,14 +143,14 @@ END $$;
 \echo '============================================================================'
 
 SELECT
-    id,
-    name,
-    method_id,
+    assay_definitions.id,
+    assay_definitions.name,
+    assay_definitions.method_id,
     methods.name as method_name,
-    units,
-    validation_rules,
-    created_at,
-    updated_at
+    assay_definitions.units,
+    assay_definitions.validation_rules,
+    assay_definitions.created_at,
+    assay_definitions.updated_at
 FROM assay_definitions
 LEFT JOIN methods ON assay_definitions.method_id = methods.id
 WHERE assay_definitions.id = 'dddddddd-dddd-dddd-dddd-dddddddddddd'
@@ -186,12 +186,12 @@ END $$;
 \echo '============================================================================'
 
 SELECT
-    id,
-    name,
-    deleted_at
+    assay_definitions.id,
+    assay_definitions.name,
+    assay_definitions.deleted_at
 FROM assay_definitions
-WHERE id = '99999999-9999-9999-9999-999999999999'
-    AND deleted_at IS NULL;
+WHERE assay_definitions.id = '99999999-9999-9999-9999-999999999999'
+    AND assay_definitions.deleted_at IS NULL;
 
 \echo ''
 \echo 'Expected: 0 rows (soft-deleted assay should not be returned)'

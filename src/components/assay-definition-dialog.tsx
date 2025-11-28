@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
     Select,
     SelectContent,
@@ -55,7 +55,12 @@ export function AssayDefinitionDialog({ open, onOpenChange, mode, assay }: Props
     const [name, setName] = useState('')
     const [methodId, setMethodId] = useState<string>('')
     const [units, setUnits] = useState('')
-    const [validationRulesJson, setValidationRulesJson] = useState('')
+
+    // Validation rules - individual fields
+    const [minValue, setMinValue] = useState('')
+    const [maxValue, setMaxValue] = useState('')
+    const [dataType, setDataType] = useState<string>('numeric')
+    const [isRequired, setIsRequired] = useState(false)
 
     // Load methods on mount
     useEffect(() => {
@@ -70,11 +75,13 @@ export function AssayDefinitionDialog({ open, onOpenChange, mode, assay }: Props
             setName(assay.name)
             setMethodId(assay.method_id || '')
             setUnits(assay.units || '')
-            setValidationRulesJson(
-                assay.validation_rules && Object.keys(assay.validation_rules).length > 0
-                    ? JSON.stringify(assay.validation_rules, null, 2)
-                    : ''
-            )
+
+            // Parse validation rules into individual fields
+            const rules = assay.validation_rules || {}
+            setMinValue(rules.min !== undefined ? String(rules.min) : '')
+            setMaxValue(rules.max !== undefined ? String(rules.max) : '')
+            setDataType(rules.type || rules.dataType || 'numeric')
+            setIsRequired(rules.required === true)
         } else if (mode === 'create') {
             resetForm()
         }
@@ -93,21 +100,38 @@ export function AssayDefinitionDialog({ open, onOpenChange, mode, assay }: Props
         setName('')
         setMethodId('')
         setUnits('')
-        setValidationRulesJson('')
+        setMinValue('')
+        setMaxValue('')
+        setDataType('numeric')
+        setIsRequired(false)
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
-        // Validate JSON if provided
-        let validationRules = {}
-        if (validationRulesJson.trim()) {
-            try {
-                validationRules = JSON.parse(validationRulesJson)
-            } catch (error) {
-                toast.error('Quy tắc xác thực phải là JSON hợp lệ')
-                return
+        // Build validation rules from individual fields
+        const validationRules: Record<string, any> = {}
+
+        if (minValue !== '') {
+            const minNum = parseFloat(minValue)
+            if (!isNaN(minNum)) {
+                validationRules.min = minNum
             }
+        }
+
+        if (maxValue !== '') {
+            const maxNum = parseFloat(maxValue)
+            if (!isNaN(maxNum)) {
+                validationRules.max = maxNum
+            }
+        }
+
+        if (dataType) {
+            validationRules.type = dataType
+        }
+
+        if (isRequired) {
+            validationRules.required = true
         }
 
         const formData = new FormData()
@@ -194,7 +218,6 @@ export function AssayDefinitionDialog({ open, onOpenChange, mode, assay }: Props
                                     <SelectValue placeholder="Chọn phương pháp (không bắt buộc)" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">Không chọn phương pháp</SelectItem>
                                     {methods.map((method) => (
                                         <SelectItem key={method.id} value={method.id}>
                                             {method.name}
@@ -221,23 +244,75 @@ export function AssayDefinitionDialog({ open, onOpenChange, mode, assay }: Props
                             />
                         </div>
 
-                        {/* Validation Rules */}
-                        <div className="space-y-2">
-                            <Label htmlFor="validation_rules">
-                                Quy tắc xác thực (JSON)
-                            </Label>
-                            <Textarea
-                                id="validation_rules"
-                                value={validationRulesJson}
-                                onChange={(e) => setValidationRulesJson(e.target.value)}
-                                placeholder='{"min": 0, "max": 14, "type": "number"}'
-                                rows={4}
-                                disabled={isPending}
-                                className="font-mono text-sm"
-                            />
-                            <p className="text-xs text-muted-foreground">
-                                Nhập JSON để định nghĩa quy tắc xác thực (không bắt buộc)
-                            </p>
+                        {/* Validation Rules Section */}
+                        <div className="space-y-4 pt-2">
+                            <div className="border-t pt-4">
+                                <h4 className="text-sm font-medium mb-3">Quy tắc xác thực (không bắt buộc)</h4>
+
+                                {/* Min and Max in a grid */}
+                                <div className="grid grid-cols-2 gap-4 mb-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="min_value">Giá trị tối thiểu</Label>
+                                        <Input
+                                            id="min_value"
+                                            type="number"
+                                            step="any"
+                                            value={minValue}
+                                            onChange={(e) => setMinValue(e.target.value)}
+                                            placeholder="0"
+                                            disabled={isPending}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="max_value">Giá trị tối đa</Label>
+                                        <Input
+                                            id="max_value"
+                                            type="number"
+                                            step="any"
+                                            value={maxValue}
+                                            onChange={(e) => setMaxValue(e.target.value)}
+                                            placeholder="100"
+                                            disabled={isPending}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Data Type */}
+                                <div className="space-y-2 mb-4">
+                                    <Label htmlFor="data_type">Kiểu dữ liệu</Label>
+                                    <Select
+                                        value={dataType}
+                                        onValueChange={setDataType}
+                                        disabled={isPending}
+                                    >
+                                        <SelectTrigger id="data_type">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="numeric">Số (Numeric)</SelectItem>
+                                            <SelectItem value="text">Văn bản (Text)</SelectItem>
+                                            <SelectItem value="boolean">Đúng/Sai (Boolean)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Required Checkbox */}
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id="is_required"
+                                        checked={isRequired}
+                                        onCheckedChange={(checked) => setIsRequired(checked === true)}
+                                        disabled={isPending}
+                                    />
+                                    <Label
+                                        htmlFor="is_required"
+                                        className="text-sm font-normal cursor-pointer"
+                                    >
+                                        Bắt buộc nhập kết quả
+                                    </Label>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
