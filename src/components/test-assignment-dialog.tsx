@@ -207,7 +207,7 @@ export function TestAssignmentDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-5xl h-[85vh] flex flex-col p-0 gap-0">
+            <DialogContent className="max-w-[98vw] sm:max-w-[98vw] w-full h-[95vh] flex flex-col p-0 gap-0">
                 <DialogHeader className="px-6 py-4 border-b">
                     <DialogTitle>Chỉ định xét nghiệm</DialogTitle>
                     <DialogDescription>
@@ -241,25 +241,31 @@ export function TestAssignmentDialog({
 
                                     return (
                                         <div key={method} className="space-y-2">
-                                            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-1">
+                                            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-1 flex items-center gap-2">
+                                                <div className="h-px flex-1 bg-border"></div>
                                                 {method}
+                                                <div className="h-px flex-1 bg-border"></div>
                                             </h4>
-                                            <div className="grid grid-cols-1 gap-2">
+                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
                                                 {assays.map(assay => (
                                                     <button
                                                         key={assay.id}
                                                         onClick={() => handleAddAssay(assay)}
-                                                        className="flex items-center justify-between p-3 rounded-lg border bg-background hover:border-primary/50 hover:shadow-sm transition-all text-left group"
+                                                        className="flex flex-col items-start justify-between p-3 rounded-lg border bg-background hover:border-primary hover:shadow-md transition-all text-left group h-full min-h-[80px] relative overflow-hidden"
                                                     >
-                                                        <div>
-                                                            <div className="font-medium">{assay.name}</div>
+                                                        <div className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <div className="bg-primary/10 p-0.5 rounded-full">
+                                                                <Plus className="h-3 w-3 text-primary" />
+                                                            </div>
+                                                        </div>
+                                                        <div className="space-y-1 w-full">
+                                                            <div className="font-medium text-sm line-clamp-2 pr-4">{assay.name}</div>
                                                             {assay.units && (
-                                                                <div className="text-xs text-muted-foreground">
-                                                                    Đơn vị: {assay.units}
+                                                                <div className="text-[10px] text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded-md w-fit">
+                                                                    {assay.units}
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                                                     </button>
                                                 ))}
                                             </div>
@@ -308,8 +314,8 @@ export function TestAssignmentDialog({
                                                 <div
                                                     key={assay.id}
                                                     className={`flex items-start justify-between p-3 rounded-lg border group transition-all ${markedForRemoval
-                                                            ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800 opacity-50'
-                                                            : 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800'
+                                                        ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800 opacity-50'
+                                                        : 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800'
                                                         }`}
                                                 >
                                                     <div className="flex-1">
@@ -327,8 +333,8 @@ export function TestAssignmentDialog({
                                                                 : handleMarkForRemoval(assay.id)
                                                         }
                                                         className={`p-1 transition-colors ${markedForRemoval
-                                                                ? 'text-green-600 hover:text-green-700'
-                                                                : 'text-muted-foreground hover:text-destructive'
+                                                            ? 'text-green-600 hover:text-green-700'
+                                                            : 'text-muted-foreground hover:text-destructive'
                                                             }`}
                                                         title={markedForRemoval ? 'Hoàn tác' : 'Xóa'}
                                                     >
