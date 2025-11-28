@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { SampleStatusBadge } from '@/components/sample-status-badge'
 import { EditableCell } from '@/components/editable-cell'
 import { TestAssignmentDialog } from '@/components/test-assignment-dialog'
-import { ChevronLeft, ChevronRight, FlaskConical } from 'lucide-react'
+import { ChevronLeft, ChevronRight, FlaskConical, Eye, Pencil } from 'lucide-react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
 interface SampleListTableProps {
@@ -136,24 +136,25 @@ export function SampleListTable({
                 const canViewResults = ['assigned', 'in_progress', 'review', 'completed'].includes(row.original.status)
 
                 return (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                         {canViewResults && (
                             <Button
-                                variant="outline"
-                                size="sm"
+                                variant="ghost"
+                                size="icon-sm"
                                 onClick={() => window.location.href = `/manager/results/${row.original.id}`}
+                                title="Xem kết quả"
                             >
-                                Xem kết quả
+                                <Eye className="h-4 w-4" />
                             </Button>
                         )}
                         <Button
-                            variant="outline"
-                            size="sm"
+                            variant="ghost"
+                            size="icon-sm"
                             onClick={() => handleAssignTests(row.original)}
                             disabled={row.original.status === 'completed'}
+                            title="Chỉ định xét nghiệm"
                         >
-                            <FlaskConical className="h-4 w-4 mr-2" />
-                            Chỉ định xét nghiệm
+                            <FlaskConical className="h-4 w-4" />
                         </Button>
                     </div>
                 )
@@ -171,11 +172,12 @@ export function SampleListTable({
 
                 return (
                     <Button
-                        variant="outline"
-                        size="sm"
+                        variant="ghost"
+                        size="icon-sm"
                         onClick={() => window.location.href = `/analyst/results/${row.original.id}`}
+                        title="Nhập kết quả"
                     >
-                        Nhập kết quả
+                        <Pencil className="h-4 w-4" />
                     </Button>
                 )
             },

@@ -78,3 +78,7 @@ This project uses Next.js Server Actions as the API layer. These functions are c
     *   Returns a list of all available assays for assignment.
 *   **`getSampleTests(sampleId)`**
     *   Returns all tests (results) currently assigned to a specific sample.
+
+## 4. Development Workflow
+
+*   **Validation:** Use `npm run typecheck` to validate code changes instead of `npm run build`.

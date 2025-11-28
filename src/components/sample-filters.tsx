@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { type SampleStatus } from '@/types'
+import { cn } from '@/lib/utils'
+import { Search, Calendar } from 'lucide-react'
 
 type SampleFiltersProps = {
     search?: string
@@ -14,7 +15,7 @@ type SampleFiltersProps = {
 }
 
 const statusOptions: Array<{ value: SampleStatus | 'all'; label: string }> = [
-    { value: 'all', label: 'Tất cả trạng thái' },
+    { value: 'all', label: 'Tất cả' },
     { value: 'received', label: 'Đã nhận' },
     { value: 'assigned', label: 'Đã giao' },
     { value: 'in_progress', label: 'Đang thực hiện' },
@@ -59,14 +60,17 @@ export function SampleFilters({
     useEffect(() => {
         const timer = setTimeout(() => {
             const params = new URLSearchParams(searchParamsString)
-            if (searchValue) {
-                params.set('search', searchValue)
-            } else {
-                params.delete('search')
-            }
-            params.set('page', '1')
-            const query = params.toString()
-            if (query !== searchParamsString) {
+            const currentSearch = params.get('search') || ''
+
+            // Only update if the search value has actually changed compared to the URL
+            if (currentSearch !== searchValue) {
+                if (searchValue) {
+                    params.set('search', searchValue)
+                } else {
+                    params.delete('search')
+                }
+                params.set('page', '1')
+                const query = params.toString()
                 router.replace(query ? `${pathname}?${query}` : pathname)
             }
         }, 250)
@@ -120,52 +124,59 @@ export function SampleFilters({
     }
 
     return (
-        <div className="space-y-4">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                <div className="flex-1">
-                    <Input
-                        placeholder="Tìm kiếm theo mã mẫu hoặc tên khách hàng..."
-                        value={searchValue}
-                        onChange={(e) => setSearchValue(e.target.value)}
-                    />
-                </div>
-                <Select
-                    value={statusValue}
-                    onValueChange={(value) => handleStatusChange(value as SampleStatus | 'all')}
-                >
-                    <SelectTrigger className="w-full sm:w-[180px]">
-                        <SelectValue placeholder="Lọc theo trạng thái" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {statusOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+        <div className="space-y-6">
+            {/* Status Tabs */}
+            <div className="flex flex-wrap items-center gap-2">
+                {statusOptions.map((option) => {
+                    const isSelected = statusValue === option.value
+                    return (
+                        <button
+                            key={option.value}
+                            onClick={() => handleStatusChange(option.value)}
+                            className={cn(
+                                "inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+                                isSelected
+                                    ? "bg-primary text-primary-foreground shadow-sm"
+                                    : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            )}
+                        >
+                            {option.label}
+                        </button>
+                    )
+                })}
             </div>
 
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                        <label className="text-sm font-medium whitespace-nowrap">Từ ngày:</label>
+            {/* Filters Bar */}
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                {/* Search */}
+                <div className="relative w-full lg:w-96">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Tìm kiếm theo mã mẫu, khách hàng..."
+                        value={searchValue}
+                        onChange={(e) => setSearchValue(e.target.value)}
+                        className="pl-9 bg-background"
+                    />
+                </div>
+
+                {/* Date Filters */}
+                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                    <div className="flex items-center gap-2 bg-background p-1 rounded-md border">
+                        <div className="px-2 text-muted-foreground">
+                            <Calendar className="h-4 w-4" />
+                        </div>
                         <Input
                             type="date"
                             value={fromDateValue}
                             onChange={(e) => handleFromDateChange(e.target.value)}
-                            className="flex-1"
+                            className="border-0 focus-visible:ring-0 w-auto h-8 p-0"
                         />
-                    </div>
-                </div>
-                <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                        <label className="text-sm font-medium whitespace-nowrap">Đến ngày:</label>
+                        <span className="text-muted-foreground px-1">-</span>
                         <Input
                             type="date"
                             value={toDateValue}
                             onChange={(e) => handleToDateChange(e.target.value)}
-                            className="flex-1"
+                            className="border-0 focus-visible:ring-0 w-auto h-8 p-0"
                         />
                     </div>
                 </div>
