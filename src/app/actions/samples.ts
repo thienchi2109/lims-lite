@@ -202,6 +202,75 @@ export async function assignTests(data: AssignTests) {
 }
 
 /**
+ * Removes test assignments from a sample (Manager only)
+ * Only allows removing tests that are still in 'pending' status
+ */
+export async function unassignTests(data: AssignTests) {
+    try {
+        const supabase = await createClient()
+
+        // Get current user
+        const {
+            data: { user },
+        } = await supabase.auth.getUser()
+
+        if (!user) {
+            return { error: 'Unauthorized' }
+        }
+
+        // Check if user is a manager
+        const { data: userData } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+        if (userData?.role !== 'manager') {
+            return { error: 'Only managers can unassign tests' }
+        }
+
+        // Validate input
+        const validatedData = AssignTestsSchema.parse(data)
+
+        // Delete result records for the specified assays
+        // Only delete if status is 'pending' (not yet entered or approved)
+        const { error: deleteError } = await supabase
+            .from('results')
+            .delete()
+            .eq('sample_id', validatedData.sampleId)
+            .in('assay_id', validatedData.assayIds)
+            .eq('status', 'pending')
+
+        if (deleteError) {
+            console.error('Error deleting results:', deleteError)
+            return { error: deleteError.message }
+        }
+
+        // Check if sample still has any assigned tests
+        const { count } = await supabase
+            .from('results')
+            .select('*', { count: 'exact', head: true })
+            .eq('sample_id', validatedData.sampleId)
+
+        // If no tests remain, update sample status back to 'received'
+        if (count === 0) {
+            await supabase
+                .from('samples')
+                .update({ status: 'received' })
+                .eq('id', validatedData.sampleId)
+        }
+
+        revalidatePath('/analyst/samples')
+        revalidatePath('/manager/samples')
+
+        return { success: true }
+    } catch (error) {
+        console.error('Error in unassignTests:', error)
+        return { error: error instanceof Error ? error.message : 'Failed to unassign tests' }
+    }
+}
+
+/**
  * Gets all available assay definitions with optional search
  */
 export async function getAssayDefinitions(search?: string) {

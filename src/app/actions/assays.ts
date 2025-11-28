@@ -85,7 +85,7 @@ export async function getAssayDefinitionById(id: string) {
         // Transform the data
         const transformedData = {
             ...data,
-            method_name: data.methods?.name || null,
+            method_name: (data as any).methods?.name || null,
             methods: undefined,
         }
 
