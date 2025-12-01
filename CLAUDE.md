@@ -12,6 +12,8 @@
 
 This project is in active development with core features implemented:
 - ✅ Authentication & Role-Based Access Control (Analyst/Manager)
+  - Token Expiry: Access tokens (1h), Refresh tokens (4h) - enforces re-login after 4 hours
+  - Configuration: `GOTRUE_JWT_EXP=3600`, `GOTRUE_REFRESH_TOKEN_EXPIRY=14400`
 - ✅ Sample Accessioning (Manual & QR Scanner)
 - ✅ Test Assignment (POS-style UI with server-side search)
 - ✅ Results Grid (TanStack Table with editable cells)

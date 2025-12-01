@@ -60,6 +60,15 @@ This project uses Next.js Server Actions as the API layer. These functions are c
 *   **`logout()`**
     *   Signs the user out and redirects to the login page.
 
+**Token Expiry Configuration:**
+*   **Access Token (JWT):** Expires after 1 hour (3600s) - `GOTRUE_JWT_EXP=3600`
+*   **Refresh Token:** Expires after 4 hours (14400s) - `GOTRUE_REFRESH_TOKEN_EXPIRY=14400`
+*   **Behavior:**
+    *   Access tokens are automatically refreshed by the Supabase client using the refresh token
+    *   After 4 hours, the refresh token expires and users must re-login
+    *   Middleware (`src/middleware.ts`) enforces authentication and triggers token refresh on each request
+*   **Security:** This configuration ensures sessions timeout after 4 hours of inactivity, meeting audit requirements while maintaining good UX
+
 ### Sample Management (`src/app/actions/samples.ts`)
 *   **`createSample(data: CreateSample)`**
     *   Generates a sequential sample ID (e.g., `20231027-001`).
