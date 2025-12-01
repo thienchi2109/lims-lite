@@ -24,6 +24,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
+import { SearchInput } from '@/components/ui/search-input'
 
 type AssayMethod = {
     id: string
@@ -75,9 +76,10 @@ export function AssayDefinitionsTable({
 
     return (
         <div className="space-y-4">
-            <div className="flex justify-between items-center">
-                <div>
-                    <p className="text-sm text-muted-foreground">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="flex flex-1 items-center gap-4">
+                    <SearchInput placeholder="Tìm kiếm chỉ tiêu..." className="w-full md:w-72" />
+                    <p className="text-sm text-muted-foreground hidden md:block border-l pl-4">
                         Tổng số: <span className="font-semibold">{totalCount}</span> chỉ tiêu
                     </p>
                 </div>

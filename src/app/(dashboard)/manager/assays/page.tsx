@@ -4,14 +4,14 @@ import { logout } from '@/app/actions/auth'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
-import { ArrowLeft, Plus } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { getAssayDefinitions } from '@/app/actions/assays'
 import { AssayDefinitionsTable } from '@/components/assay-definitions-table'
 
 export default async function AssaysPage({
     searchParams,
 }: {
-    searchParams: Promise<{ page?: string; pageSize?: string }>
+    searchParams: Promise<{ page?: string; pageSize?: string; search?: string }>
 }) {
     const supabase = await createClient()
 
@@ -39,9 +39,12 @@ export default async function AssaysPage({
     // Fetch assay definitions
     const page = Number(params?.page) || 1
     const pageSize = Number(params?.pageSize) || 10
+    const search = params?.search || ''
+
     const { data: assays, totalCount, totalPages, error } = await getAssayDefinitions({
         page,
         pageSize,
+        search,
     })
 
     return (

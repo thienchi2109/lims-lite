@@ -98,7 +98,11 @@ export function AssayDefinitionDialog({ open, onOpenChange, mode, assay }: Props
         setLoadingMethods(true)
         const result = await getMethods()
         if (result.data) {
-            setMethods(result.data)
+            // Deduplicate by name to ensure unique values in dropdown
+            const uniqueMethods = result.data.filter((method, index, self) =>
+                index === self.findIndex((m) => m.name === method.name)
+            )
+            setMethods(uniqueMethods)
         }
         setLoadingMethods(false)
     }
@@ -230,7 +234,7 @@ export function AssayDefinitionDialog({ open, onOpenChange, mode, assay }: Props
                                         <SelectTrigger id="method">
                                             <SelectValue placeholder="Chọn phương pháp" />
                                         </SelectTrigger>
-                                        <SelectContent>
+                                        <SelectContent className="max-h-[200px]">
                                             {methods.map((method) => (
                                                 <SelectItem key={method.id} value={method.id}>
                                                     {method.name}
@@ -277,7 +281,7 @@ export function AssayDefinitionDialog({ open, onOpenChange, mode, assay }: Props
                                                 value={minValue}
                                                 onChange={(e) => setMinValue(e.target.value)}
                                                 placeholder="0"
-                                                disabled={isPending}
+                                                disabled={isPending || dataType === 'boolean'}
                                             />
                                         </div>
 
@@ -290,7 +294,7 @@ export function AssayDefinitionDialog({ open, onOpenChange, mode, assay }: Props
                                                 value={maxValue}
                                                 onChange={(e) => setMaxValue(e.target.value)}
                                                 placeholder="100"
-                                                disabled={isPending}
+                                                disabled={isPending || dataType === 'boolean'}
                                             />
                                         </div>
                                     </div>
@@ -300,7 +304,13 @@ export function AssayDefinitionDialog({ open, onOpenChange, mode, assay }: Props
                                         <Label htmlFor="data_type">Kiểu dữ liệu</Label>
                                         <Select
                                             value={dataType}
-                                            onValueChange={setDataType}
+                                            onValueChange={(val) => {
+                                                setDataType(val)
+                                                if (val === 'boolean') {
+                                                    setMinValue('')
+                                                    setMaxValue('')
+                                                }
+                                            }}
                                             disabled={isPending}
                                         >
                                             <SelectTrigger id="data_type">
@@ -309,7 +319,7 @@ export function AssayDefinitionDialog({ open, onOpenChange, mode, assay }: Props
                                             <SelectContent>
                                                 <SelectItem value="numeric">Số (Numeric)</SelectItem>
                                                 <SelectItem value="text">Văn bản (Text)</SelectItem>
-                                                <SelectItem value="boolean">Đúng/Sai (Boolean)</SelectItem>
+                                                <SelectItem value="boolean">Dương tính/Âm tính</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
