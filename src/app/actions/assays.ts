@@ -24,6 +24,7 @@ export async function getAssayDefinitions(params?: {
         const from = (page - 1) * pageSize
         const to = from + pageSize - 1
 
+        // 1. Fetch assay definitions
         let query = supabase
             .from('assay_definitions')
             .select(
@@ -33,17 +34,7 @@ export async function getAssayDefinitions(params?: {
                 units,
                 validation_rules,
                 created_at,
-                updated_at,
-                assay_methods!assay_methods_assay_id_fkey (
-                    id,
-                    method_id,
-                    is_default,
-                    notes,
-                    methods!assay_methods_method_id_fkey (
-                        id,
-                        name
-                    )
-                )
+                updated_at
             `,
                 { count: 'exact' }
             )
@@ -51,30 +42,79 @@ export async function getAssayDefinitions(params?: {
             .order('name', { ascending: true })
 
         if (search) {
-            // Search by assay name or method name
+            // Search by assay name
             query = query.ilike('name', `%${search}%`)
         }
 
         // Apply pagination
-        const { data, error, count } = await query.range(from, to)
+        const { data: assays, error: assayError, count } = await query.range(from, to)
 
-        if (error) {
-            console.error('Error fetching assay definitions:', JSON.stringify(error, null, 2))
-            return { error: error.message }
+        if (assayError) {
+            console.error('Error fetching assay definitions:', JSON.stringify(assayError, null, 2))
+            return { error: assayError.message }
         }
 
-        // Transform the data to include methods array
-        const transformedData = data.map((assay: any) => ({
-            ...assay,
-            methods: (assay.assay_methods || []).map((am: any) => ({
-                id: am.id,
-                method_id: am.method_id,
-                name: am.methods?.name || '',
-                is_default: am.is_default,
-                notes: am.notes,
-            })),
-            assay_methods: undefined, // Remove the nested object
-        }))
+        if (!assays || assays.length === 0) {
+            return {
+                data: [],
+                totalCount: count || 0,
+                totalPages: Math.ceil((count || 0) / pageSize),
+                page,
+                pageSize,
+            }
+        }
+
+        // 2. Fetch related assay_methods (without joining methods yet)
+        const assayIds = assays.map(a => a.id)
+        const { data: assayMethods, error: methodsError } = await supabase
+            .from('assay_methods')
+            .select(`
+                id,
+                assay_id,
+                method_id,
+                is_default,
+                notes
+            `)
+            .in('assay_id', assayIds)
+
+        if (methodsError) {
+            console.error('Error fetching assay methods:', methodsError)
+        }
+
+        // 2.5 Fetch methods details
+        let methodsMap = new Map<string, any>()
+        if (assayMethods && assayMethods.length > 0) {
+            const methodIds = [...new Set(assayMethods.map((am: any) => am.method_id))]
+            const { data: methodsData, error: methodsDataError } = await supabase
+                .from('methods')
+                .select('id, name')
+                .in('id', methodIds)
+
+            if (methodsDataError) {
+                console.error('Error fetching methods details:', methodsDataError)
+            } else if (methodsData) {
+                methodsData.forEach((m: any) => methodsMap.set(m.id, m))
+            }
+        }
+
+        // 3. Merge data
+        const transformedData = assays.map((assay: any) => {
+            const relatedMethods = assayMethods?.filter((am: any) => am.assay_id === assay.id) || []
+
+            return {
+                ...assay,
+                methods: relatedMethods.map((am: any) => {
+                    const methodDetail = methodsMap.get(am.method_id)
+                    return {
+                        id: am.id,
+                        method_id: am.method_id,
+                        name: methodDetail?.name || '',
+                        is_default: am.is_default,
+                        notes: am.notes,
+                    }
+                }),
+            }
+        })
 
         return {
             data: transformedData,
@@ -97,7 +137,8 @@ export async function getAssayDefinitionById(id: string) {
     try {
         const supabase = await createClient()
 
-        const { data, error } = await supabase
+        // 1. Fetch assay definition
+        const { data: assay, error: assayError } = await supabase
             .from('assay_definitions')
             .select(`
                 id,
@@ -105,38 +146,61 @@ export async function getAssayDefinitionById(id: string) {
                 units,
                 validation_rules,
                 created_at,
-                updated_at,
-                assay_methods!assay_methods_assay_id_fkey (
-                    id,
-                    method_id,
-                    is_default,
-                    notes,
-                    methods!assay_methods_method_id_fkey (
-                        id,
-                        name
-                    )
-                )
+                updated_at
             `)
             .eq('id', id)
             .is('deleted_at', null)
             .single()
 
-        if (error) {
-            console.error('Error fetching assay definition:', JSON.stringify(error, null, 2))
-            return { error: error.message }
+        if (assayError) {
+            console.error('Error fetching assay definition:', JSON.stringify(assayError, null, 2))
+            return { error: assayError.message }
         }
 
-        // Transform the data to include methods array
+        // 2. Fetch related assay_methods
+        const { data: assayMethods, error: methodsError } = await supabase
+            .from('assay_methods')
+            .select(`
+                id,
+                method_id,
+                is_default,
+                notes
+            `)
+            .eq('assay_id', id)
+
+        if (methodsError) {
+            console.error('Error fetching assay methods:', methodsError)
+        }
+
+        // 2.5 Fetch methods details
+        let methodsMap = new Map<string, any>()
+        if (assayMethods && assayMethods.length > 0) {
+            const methodIds = [...new Set(assayMethods.map((am: any) => am.method_id))]
+            const { data: methodsData, error: methodsDataError } = await supabase
+                .from('methods')
+                .select('id, name')
+                .in('id', methodIds)
+
+            if (methodsDataError) {
+                console.error('Error fetching methods details:', methodsDataError)
+            } else if (methodsData) {
+                methodsData.forEach((m: any) => methodsMap.set(m.id, m))
+            }
+        }
+
+        // 3. Merge data
         const transformedData = {
-            ...data,
-            methods: ((data as any).assay_methods || []).map((am: any) => ({
-                id: am.id,
-                method_id: am.method_id,
-                name: am.methods?.name || '',
-                is_default: am.is_default,
-                notes: am.notes,
-            })),
-            assay_methods: undefined,
+            ...assay,
+            methods: (assayMethods || []).map((am: any) => {
+                const methodDetail = methodsMap.get(am.method_id)
+                return {
+                    id: am.id,
+                    method_id: am.method_id,
+                    name: methodDetail?.name || '',
+                    is_default: am.is_default,
+                    notes: am.notes,
+                }
+            }),
         }
 
         return { data: transformedData }

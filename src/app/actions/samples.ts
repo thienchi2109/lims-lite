@@ -281,32 +281,15 @@ export async function getAssayDefinitions(search?: string) {
     try {
         const supabase = await createClient()
 
+        // 1. Fetch assay definitions
         let query = supabase
             .from('assay_definitions')
-            .select(
-                `
-                *,
-                method_name:methods(name)
-            `
-            )
+            .select('*')
             .is('deleted_at', null)
             .order('name')
 
         if (search) {
-            // First find matching methods to get their IDs
-            const { data: matchingMethods } = await supabase
-                .from('methods')
-                .select('id')
-                .ilike('name', `%${search}%`)
-
-            const methodIds = matchingMethods?.map((m) => m.id) || []
-
-            // Construct OR filter: match assay name OR match method ID
-            if (methodIds.length > 0) {
-                query = query.or(`name.ilike.%${search}%,method_id.in.(${methodIds.join(',')})`)
-            } else {
-                query = query.ilike('name', `%${search}%`)
-            }
+            query = query.ilike('name', `%${search}%`)
         }
 
         const { data: assays, error } = await query
@@ -316,11 +299,51 @@ export async function getAssayDefinitions(search?: string) {
             return { error: error.message }
         }
 
-        // Transform data to flatten method_name
-        const transformedAssays = assays.map((assay: any) => ({
-            ...assay,
-            method_name: assay.method_name?.name || null,
-        }))
+        if (!assays || assays.length === 0) {
+            return { data: [] }
+        }
+
+        // 2. Fetch default methods for these assays
+        const assayIds = assays.map(a => a.id)
+        const { data: defaultMethods, error: methodsError } = await supabase
+            .from('assay_methods')
+            .select(`
+                assay_id,
+                method_id
+            `)
+            .in('assay_id', assayIds)
+            .eq('is_default', true)
+
+        if (methodsError) {
+            console.error('Error fetching default methods:', methodsError)
+        }
+
+        // 2.5 Fetch methods details
+        let methodsMap = new Map<string, any>()
+        if (defaultMethods && defaultMethods.length > 0) {
+            const methodIds = [...new Set(defaultMethods.map((am: any) => am.method_id))]
+            const { data: methodsData, error: methodsDataError } = await supabase
+                .from('methods')
+                .select('id, name')
+                .in('id', methodIds)
+
+            if (methodsDataError) {
+                console.error('Error fetching methods details:', methodsDataError)
+            } else if (methodsData) {
+                methodsData.forEach((m: any) => methodsMap.set(m.id, m))
+            }
+        }
+
+        // 3. Merge data
+        const transformedAssays = assays.map((assay: any) => {
+            const defaultMethod = defaultMethods?.find((am: any) => am.assay_id === assay.id)
+            const methodDetail = defaultMethod ? methodsMap.get(defaultMethod.method_id) : null
+
+            return {
+                ...assay,
+                method_name: methodDetail?.name || null,
+            }
+        })
 
         return { data: transformedAssays }
     } catch (error) {
