@@ -11,7 +11,7 @@ import { AssayDefinitionsTable } from '@/components/assay-definitions-table'
 export default async function AssaysPage({
     searchParams,
 }: {
-    searchParams: { page?: string; pageSize?: string }
+    searchParams: Promise<{ page?: string; pageSize?: string }>
 }) {
     const supabase = await createClient()
 
@@ -33,9 +33,12 @@ export default async function AssaysPage({
         redirect('/manager')
     }
 
+    // Await searchParams before accessing its properties
+    const params = await searchParams
+
     // Fetch assay definitions
-    const page = Number(searchParams?.page) || 1
-    const pageSize = Number(searchParams?.pageSize) || 10
+    const page = Number(params?.page) || 1
+    const pageSize = Number(params?.pageSize) || 10
     const { data: assays, totalCount, totalPages, error } = await getAssayDefinitions({
         page,
         pageSize,
