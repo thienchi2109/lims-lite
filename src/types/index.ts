@@ -62,13 +62,37 @@ export const CreateMethodSchema = z.object({
 export type CreateMethod = z.infer<typeof CreateMethodSchema>
 
 // ============================================================================
+// ASSAY-METHOD JUNCTION SCHEMAS
+// ============================================================================
+
+export const AssayMethodSchema = z.object({
+    id: z.string().uuid(),
+    assay_id: z.string().uuid(),
+    method_id: z.string().uuid(),
+    is_default: z.boolean(),
+    notes: z.string().nullable(),
+    created_at: z.string().datetime(),
+    updated_at: z.string().datetime(),
+})
+
+export type AssayMethod = z.infer<typeof AssayMethodSchema>
+
+export const CreateAssayMethodSchema = z.object({
+    assay_id: z.string().uuid(),
+    method_id: z.string().uuid(),
+    is_default: z.boolean().default(false),
+    notes: z.string().optional(),
+})
+
+export type CreateAssayMethod = z.infer<typeof CreateAssayMethodSchema>
+
+// ============================================================================
 // ASSAY DEFINITION SCHEMAS
 // ============================================================================
 
 export const AssayDefinitionSchema = z.object({
     id: z.string().uuid(),
     name: z.string().min(1).max(200),
-    method_id: z.string().uuid().nullable(),
     units: z.string().nullable(),
     validation_rules: z.record(z.string(), z.any()).default({}),
     created_at: z.string().datetime(),
@@ -80,12 +104,25 @@ export type AssayDefinition = z.infer<typeof AssayDefinitionSchema>
 
 export const CreateAssayDefinitionSchema = z.object({
     name: z.string().min(1).max(200),
-    method_id: z.string().uuid().optional(),
+    method_id: z.string().uuid().optional(), // Initial method for creation
     units: z.string().optional(),
     validation_rules: z.record(z.string(), z.any()).optional(),
 })
 
 export type CreateAssayDefinition = z.infer<typeof CreateAssayDefinitionSchema>
+
+// Extended assay definition with methods array
+export const AssayDefinitionWithMethodsSchema = AssayDefinitionSchema.extend({
+    methods: z.array(z.object({
+        id: z.string().uuid(),
+        method_id: z.string().uuid(),
+        name: z.string(),
+        is_default: z.boolean(),
+        notes: z.string().nullable(),
+    })),
+})
+
+export type AssayDefinitionWithMethods = z.infer<typeof AssayDefinitionWithMethodsSchema>
 
 // ============================================================================
 // SAMPLE SCHEMAS
@@ -214,10 +251,14 @@ export type Login = z.infer<typeof LoginSchema>
 
 export const AssignTestsSchema = z.object({
     sampleId: z.string().uuid(),
-    assayIds: z.array(z.string().uuid()).min(1, 'At least one test must be selected'),
+    tests: z.array(z.object({
+        assayId: z.string().uuid(),
+        methodId: z.string().uuid(),
+    })).min(1, 'At least one test must be selected'),
 })
 
 export type AssignTests = z.infer<typeof AssignTestsSchema>
+
 
 export const SampleListParamsSchema = PaginationSchema.extend({
     status: SampleStatus.optional(),
@@ -237,6 +278,8 @@ export type SampleWithUser = z.infer<typeof SampleWithUserSchema>
 // ASSAY WITH METHOD SCHEMA
 // ============================================================================
 
+// Deprecated: Use AssayDefinitionWithMethodsSchema instead
+// Kept for backward compatibility during migration
 export const AssayWithMethodSchema = AssayDefinitionSchema.extend({
     method_name: z.string().nullable(),
 })

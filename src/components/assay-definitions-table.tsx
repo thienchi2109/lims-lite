@@ -25,15 +25,22 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 
+type AssayMethod = {
+    id: string
+    method_id: string
+    name: string
+    is_default: boolean
+    notes: string | null
+}
+
 type AssayDefinition = {
     id: string
     name: string
-    method_id: string | null
-    method_name: string | null
     units: string | null
     validation_rules: Record<string, any>
     created_at: string
     updated_at: string
+    methods: AssayMethod[]
 }
 
 type Props = {
@@ -110,10 +117,23 @@ export function AssayDefinitionsTable({
                                             {assay.name}
                                         </TableCell>
                                         <TableCell>
-                                            {assay.method_name ? (
-                                                <Badge variant="outline">
-                                                    {assay.method_name}
-                                                </Badge>
+                                            {assay.methods && assay.methods.length > 0 ? (
+                                                <div className="flex flex-col gap-1 items-start">
+                                                    {assay.methods.find(m => m.is_default) ? (
+                                                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                                            {assay.methods.find(m => m.is_default)?.name}
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="outline">
+                                                            {assay.methods[0].name}
+                                                        </Badge>
+                                                    )}
+                                                    {assay.methods.length > 1 && (
+                                                        <span className="text-xs text-muted-foreground ml-1">
+                                                            +{assay.methods.length - 1} phương pháp khác
+                                                        </span>
+                                                    )}
+                                                </div>
                                             ) : (
                                                 <span className="text-muted-foreground text-sm">
                                                     Chưa chỉ định

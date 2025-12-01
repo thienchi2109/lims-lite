@@ -30,14 +30,19 @@ export async function getAssayDefinitions(params?: {
                 `
                 id,
                 name,
-                method_id,
                 units,
                 validation_rules,
                 created_at,
                 updated_at,
-                methods (
+                assay_methods!assay_methods_assay_id_fkey (
                     id,
-                    name
+                    method_id,
+                    is_default,
+                    notes,
+                    methods!assay_methods_method_id_fkey (
+                        id,
+                        name
+                    )
                 )
             `,
                 { count: 'exact' }
@@ -46,35 +51,29 @@ export async function getAssayDefinitions(params?: {
             .order('name', { ascending: true })
 
         if (search) {
-            // First find matching methods to get their IDs
-            const { data: matchingMethods } = await supabase
-                .from('methods')
-                .select('id')
-                .ilike('name', `%${search}%`)
-
-            const methodIds = matchingMethods?.map((m) => m.id) || []
-
-            // Construct OR filter: match assay name OR match method ID
-            if (methodIds.length > 0) {
-                query = query.or(`name.ilike.%${search}%,method_id.in.(${methodIds.join(',')})`)
-            } else {
-                query = query.ilike('name', `%${search}%`)
-            }
+            // Search by assay name or method name
+            query = query.ilike('name', `%${search}%`)
         }
 
         // Apply pagination
         const { data, error, count } = await query.range(from, to)
 
         if (error) {
-            console.error('Error fetching assay definitions:', error)
+            console.error('Error fetching assay definitions:', JSON.stringify(error, null, 2))
             return { error: error.message }
         }
 
-        // Transform the data to flatten method name
+        // Transform the data to include methods array
         const transformedData = data.map((assay: any) => ({
             ...assay,
-            method_name: assay.methods?.name || null,
-            methods: undefined, // Remove the nested object
+            methods: (assay.assay_methods || []).map((am: any) => ({
+                id: am.id,
+                method_id: am.method_id,
+                name: am.methods?.name || '',
+                is_default: am.is_default,
+                notes: am.notes,
+            })),
+            assay_methods: undefined, // Remove the nested object
         }))
 
         return {
@@ -103,14 +102,19 @@ export async function getAssayDefinitionById(id: string) {
             .select(`
                 id,
                 name,
-                method_id,
                 units,
                 validation_rules,
                 created_at,
                 updated_at,
-                methods (
+                assay_methods!assay_methods_assay_id_fkey (
                     id,
-                    name
+                    method_id,
+                    is_default,
+                    notes,
+                    methods!assay_methods_method_id_fkey (
+                        id,
+                        name
+                    )
                 )
             `)
             .eq('id', id)
@@ -118,15 +122,21 @@ export async function getAssayDefinitionById(id: string) {
             .single()
 
         if (error) {
-            console.error('Error fetching assay definition:', error)
+            console.error('Error fetching assay definition:', JSON.stringify(error, null, 2))
             return { error: error.message }
         }
 
-        // Transform the data
+        // Transform the data to include methods array
         const transformedData = {
             ...data,
-            method_name: (data as any).methods?.name || null,
-            methods: undefined,
+            methods: ((data as any).assay_methods || []).map((am: any) => ({
+                id: am.id,
+                method_id: am.method_id,
+                name: am.methods?.name || '',
+                is_default: am.is_default,
+                notes: am.notes,
+            })),
+            assay_methods: undefined,
         }
 
         return { data: transformedData }
@@ -179,25 +189,41 @@ export async function createAssayDefinition(formData: FormData) {
             }
         }
 
-        // Insert to database
-        const { data, error } = await supabase
+        // Insert assay definition
+        const { data: assayData, error: assayError } = await supabase
             .from('assay_definitions')
             .insert({
                 name: result.data.name,
-                method_id: result.data.method_id || null,
                 units: result.data.units || null,
                 validation_rules: result.data.validation_rules || {},
             })
             .select()
             .single()
 
-        if (error) {
-            console.error('Error creating assay definition:', error)
-            return { error: error.message }
+        if (assayError) {
+            console.error('Error creating assay definition:', assayError)
+            return { error: assayError.message }
+        }
+
+        // If method_id provided, create initial assay-method relationship
+        if (result.data.method_id) {
+            const { error: methodError } = await supabase
+                .from('assay_methods')
+                .insert({
+                    assay_id: assayData.id,
+                    method_id: result.data.method_id,
+                    is_default: true,
+                    notes: 'Initial method',
+                })
+
+            if (methodError) {
+                console.error('Error creating assay-method relationship:', methodError)
+                // Don't fail the whole operation, just log the error
+            }
         }
 
         revalidatePath('/manager/assays')
-        return { success: true, data }
+        return { success: true, data: assayData }
     } catch (error) {
         console.error('Unexpected error:', error)
         return { error: 'Đã xảy ra lỗi không mong muốn' }
@@ -211,7 +237,6 @@ export async function createAssayDefinition(formData: FormData) {
 const UpdateAssayDefinitionSchema = z.object({
     id: z.string().uuid(),
     name: z.string().min(1).max(200),
-    method_id: z.string().uuid().optional(),
     units: z.string().optional(),
     validation_rules: z.record(z.string(), z.any()).optional(),
 })
@@ -240,7 +265,6 @@ export async function updateAssayDefinition(formData: FormData) {
         const rawData = {
             id: formData.get('id'),
             name: formData.get('name'),
-            method_id: formData.get('method_id') || undefined,
             units: formData.get('units') || undefined,
             validation_rules: formData.get('validation_rules')
                 ? JSON.parse(formData.get('validation_rules') as string)
@@ -261,7 +285,6 @@ export async function updateAssayDefinition(formData: FormData) {
             .from('assay_definitions')
             .update({
                 name: result.data.name,
-                method_id: result.data.method_id || null,
                 units: result.data.units || null,
                 validation_rules: result.data.validation_rules || {},
             })

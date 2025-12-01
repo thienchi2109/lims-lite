@@ -23,6 +23,7 @@ import {
 import { createAssayDefinition, updateAssayDefinition, getMethods } from '@/app/actions/assays'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
+import { AssayMethodsList } from './assay-methods-list'
 
 type Method = {
     id: string
@@ -30,13 +31,20 @@ type Method = {
     description: string | null
 }
 
+type AssayMethod = {
+    id: string
+    method_id: string
+    name: string
+    is_default: boolean
+    notes: string | null
+}
+
 type AssayDefinition = {
     id: string
     name: string
-    method_id: string | null
-    method_name: string | null
     units: string | null
     validation_rules: Record<string, any>
+    methods?: AssayMethod[]
 }
 
 type Props = {
@@ -64,16 +72,15 @@ export function AssayDefinitionDialog({ open, onOpenChange, mode, assay }: Props
 
     // Load methods on mount
     useEffect(() => {
-        if (open) {
+        if (open && mode === 'create') {
             loadMethods()
         }
-    }, [open])
+    }, [open, mode])
 
     // Initialize form when editing
     useEffect(() => {
         if (mode === 'edit' && assay) {
             setName(assay.name)
-            setMethodId(assay.method_id || '')
             setUnits(assay.units || '')
 
             // Parse validation rules into individual fields
@@ -139,9 +146,12 @@ export function AssayDefinitionDialog({ open, onOpenChange, mode, assay }: Props
             formData.append('id', assay.id)
         }
         formData.append('name', name)
-        if (methodId) {
+
+        // Only append method_id in create mode
+        if (mode === 'create' && methodId) {
             formData.append('method_id', methodId)
         }
+
         if (units) {
             formData.append('units', units)
         }
@@ -177,7 +187,7 @@ export function AssayDefinitionDialog({ open, onOpenChange, mode, assay }: Props
 
     return (
         <Dialog open={open} onOpenChange={handleClose}>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>
                         {mode === 'create' ? 'Thêm chỉ tiêu xét nghiệm' : 'Sửa chỉ tiêu xét nghiệm'}
@@ -189,148 +199,166 @@ export function AssayDefinitionDialog({ open, onOpenChange, mode, assay }: Props
                     </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit}>
-                    <div className="space-y-4 py-4">
-                        {/* Name */}
-                        <div className="space-y-2">
-                            <Label htmlFor="name">
-                                Tên chỉ tiêu <span className="text-red-500">*</span>
-                            </Label>
-                            <Input
-                                id="name"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                placeholder="Ví dụ: pH, Độ đục, E.coli"
-                                required
-                                disabled={isPending}
-                            />
-                        </div>
+                <div className="space-y-6">
+                    <form id="assay-form" onSubmit={handleSubmit}>
+                        <div className="space-y-4 py-4">
+                            {/* Name */}
+                            <div className="space-y-2">
+                                <Label htmlFor="name">
+                                    Tên chỉ tiêu <span className="text-red-500">*</span>
+                                </Label>
+                                <Input
+                                    id="name"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    placeholder="Ví dụ: pH, Độ đục, E.coli"
+                                    required
+                                    disabled={isPending}
+                                />
+                            </div>
 
-                        {/* Method */}
-                        <div className="space-y-2">
-                            <Label htmlFor="method">Phương pháp</Label>
-                            <Select
-                                value={methodId}
-                                onValueChange={setMethodId}
-                                disabled={isPending || loadingMethods}
-                            >
-                                <SelectTrigger id="method">
-                                    <SelectValue placeholder="Chọn phương pháp (không bắt buộc)" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {methods.map((method) => (
-                                        <SelectItem key={method.id} value={method.id}>
-                                            {method.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            {loadingMethods && (
-                                <p className="text-xs text-muted-foreground">
-                                    Đang tải danh sách phương pháp...
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Units */}
-                        <div className="space-y-2">
-                            <Label htmlFor="units">Đơn vị</Label>
-                            <Input
-                                id="units"
-                                value={units}
-                                onChange={(e) => setUnits(e.target.value)}
-                                placeholder="Ví dụ: mg/L, CFU/100mL, NTU"
-                                disabled={isPending}
-                            />
-                        </div>
-
-                        {/* Validation Rules Section */}
-                        <div className="space-y-4 pt-2">
-                            <div className="border-t pt-4">
-                                <h4 className="text-sm font-medium mb-3">Quy tắc xác thực (không bắt buộc)</h4>
-
-                                {/* Min and Max in a grid */}
-                                <div className="grid grid-cols-2 gap-4 mb-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="min_value">Giá trị tối thiểu</Label>
-                                        <Input
-                                            id="min_value"
-                                            type="number"
-                                            step="any"
-                                            value={minValue}
-                                            onChange={(e) => setMinValue(e.target.value)}
-                                            placeholder="0"
-                                            disabled={isPending}
-                                        />
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="max_value">Giá trị tối đa</Label>
-                                        <Input
-                                            id="max_value"
-                                            type="number"
-                                            step="any"
-                                            value={maxValue}
-                                            onChange={(e) => setMaxValue(e.target.value)}
-                                            placeholder="100"
-                                            disabled={isPending}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Data Type */}
-                                <div className="space-y-2 mb-4">
-                                    <Label htmlFor="data_type">Kiểu dữ liệu</Label>
+                            {/* Method - Only show in create mode */}
+                            {mode === 'create' && (
+                                <div className="space-y-2">
+                                    <Label htmlFor="method">Phương pháp ban đầu <span className="text-red-500">*</span></Label>
                                     <Select
-                                        value={dataType}
-                                        onValueChange={setDataType}
-                                        disabled={isPending}
+                                        value={methodId}
+                                        onValueChange={setMethodId}
+                                        disabled={isPending || loadingMethods}
+                                        required
                                     >
-                                        <SelectTrigger id="data_type">
-                                            <SelectValue />
+                                        <SelectTrigger id="method">
+                                            <SelectValue placeholder="Chọn phương pháp" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="numeric">Số (Numeric)</SelectItem>
-                                            <SelectItem value="text">Văn bản (Text)</SelectItem>
-                                            <SelectItem value="boolean">Đúng/Sai (Boolean)</SelectItem>
+                                            {methods.map((method) => (
+                                                <SelectItem key={method.id} value={method.id}>
+                                                    {method.name}
+                                                </SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
+                                    {loadingMethods && (
+                                        <p className="text-xs text-muted-foreground">
+                                            Đang tải danh sách phương pháp...
+                                        </p>
+                                    )}
+                                    <p className="text-xs text-muted-foreground">
+                                        Bạn có thể thêm nhiều phương pháp khác sau khi tạo.
+                                    </p>
                                 </div>
+                            )}
 
-                                {/* Required Checkbox */}
-                                <div className="flex items-center space-x-2">
-                                    <Checkbox
-                                        id="is_required"
-                                        checked={isRequired}
-                                        onCheckedChange={(checked) => setIsRequired(checked === true)}
-                                        disabled={isPending}
-                                    />
-                                    <Label
-                                        htmlFor="is_required"
-                                        className="text-sm font-normal cursor-pointer"
-                                    >
-                                        Bắt buộc nhập kết quả
-                                    </Label>
+                            {/* Units */}
+                            <div className="space-y-2">
+                                <Label htmlFor="units">Đơn vị</Label>
+                                <Input
+                                    id="units"
+                                    value={units}
+                                    onChange={(e) => setUnits(e.target.value)}
+                                    placeholder="Ví dụ: mg/L, CFU/100mL, NTU"
+                                    disabled={isPending}
+                                />
+                            </div>
+
+                            {/* Validation Rules Section */}
+                            <div className="space-y-4 pt-2">
+                                <div className="border-t pt-4">
+                                    <h4 className="text-sm font-medium mb-3">Quy tắc xác thực (không bắt buộc)</h4>
+
+                                    {/* Min and Max in a grid */}
+                                    <div className="grid grid-cols-2 gap-4 mb-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="min_value">Giá trị tối thiểu</Label>
+                                            <Input
+                                                id="min_value"
+                                                type="number"
+                                                step="any"
+                                                value={minValue}
+                                                onChange={(e) => setMinValue(e.target.value)}
+                                                placeholder="0"
+                                                disabled={isPending}
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="max_value">Giá trị tối đa</Label>
+                                            <Input
+                                                id="max_value"
+                                                type="number"
+                                                step="any"
+                                                value={maxValue}
+                                                onChange={(e) => setMaxValue(e.target.value)}
+                                                placeholder="100"
+                                                disabled={isPending}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Data Type */}
+                                    <div className="space-y-2 mb-4">
+                                        <Label htmlFor="data_type">Kiểu dữ liệu</Label>
+                                        <Select
+                                            value={dataType}
+                                            onValueChange={setDataType}
+                                            disabled={isPending}
+                                        >
+                                            <SelectTrigger id="data_type">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="numeric">Số (Numeric)</SelectItem>
+                                                <SelectItem value="text">Văn bản (Text)</SelectItem>
+                                                <SelectItem value="boolean">Đúng/Sai (Boolean)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {/* Required Checkbox */}
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id="is_required"
+                                            checked={isRequired}
+                                            onCheckedChange={(checked) => setIsRequired(checked === true)}
+                                            disabled={isPending}
+                                        />
+                                        <Label
+                                            htmlFor="is_required"
+                                            className="text-sm font-normal cursor-pointer"
+                                        >
+                                            Bắt buộc nhập kết quả
+                                        </Label>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </form>
 
-                    <DialogFooter>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={handleClose}
-                            disabled={isPending}
-                        >
-                            Hủy
-                        </Button>
-                        <Button type="submit" disabled={isPending}>
-                            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {mode === 'create' ? 'Tạo' : 'Cập nhật'}
-                        </Button>
-                    </DialogFooter>
-                </form>
+                    {/* Methods Management (Edit Mode Only) */}
+                    {mode === 'edit' && assay && (
+                        <div className="border-t pt-6">
+                            <AssayMethodsList
+                                assayId={assay.id}
+                                methods={assay.methods || []}
+                            />
+                        </div>
+                    )}
+                </div>
+
+                <DialogFooter className="mt-6">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleClose}
+                        disabled={isPending}
+                    >
+                        Hủy
+                    </Button>
+                    <Button type="submit" form="assay-form" disabled={isPending}>
+                        {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {mode === 'create' ? 'Tạo' : 'Cập nhật'}
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     )

@@ -39,8 +39,10 @@ export async function getResultsBySample(sampleId: string) {
                     id,
                     name,
                     units,
-                    validation_rules,
-                    method:methods(name)
+                    validation_rules
+                ),
+                method:methods!results_method_id_fkey(
+                    name
                 ),
                 sample:samples!results_sample_id_fkey(sample_id),
                 entered_by_user:users!results_entered_by_fkey(full_name)
@@ -59,7 +61,7 @@ export async function getResultsBySample(sampleId: string) {
             ...result,
             assay_name: result.assay?.name || 'Unknown',
             assay_units: result.assay?.units || null,
-            method_name: result.assay?.method?.name || null,
+            method_name: result.method?.name || null,
             validation_rules: result.assay?.validation_rules || {},
             sample_id_display: result.sample?.sample_id || '',
             entered_by_name: result.entered_by_user?.full_name || null,

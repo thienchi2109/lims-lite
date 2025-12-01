@@ -166,10 +166,11 @@ export async function assignTests(data: AssignTests) {
         // Validate input
         const validatedData = AssignTestsSchema.parse(data)
 
-        // Create result records for each assay
-        const resultInserts = validatedData.assayIds.map((assayId) => ({
+        // Create result records for each test (assay + method combination)
+        const resultInserts = validatedData.tests.map((test) => ({
             sample_id: validatedData.sampleId,
-            assay_id: assayId,
+            assay_id: test.assayId,
+            method_id: test.methodId,
             status: 'pending',
         }))
 
@@ -232,13 +233,16 @@ export async function unassignTests(data: AssignTests) {
         // Validate input
         const validatedData = AssignTestsSchema.parse(data)
 
+        // Extract assay IDs from tests array
+        const assayIds = validatedData.tests.map(t => t.assayId)
+
         // Delete result records for the specified assays
         // Only delete if status is 'pending' (not yet entered or approved)
         const { error: deleteError } = await supabase
             .from('results')
             .delete()
             .eq('sample_id', validatedData.sampleId)
-            .in('assay_id', validatedData.assayIds)
+            .in('assay_id', assayIds)
             .eq('status', 'pending')
 
         if (deleteError) {
@@ -340,9 +344,9 @@ export async function getSampleTests(sampleId: string) {
                 assay:assay_definitions(
                     id, 
                     name, 
-                    units,
-                    method:methods(name)
-                )
+                    units
+                ),
+                method:methods(name)
             `
             )
             .eq('sample_id', sampleId)
@@ -357,7 +361,7 @@ export async function getSampleTests(sampleId: string) {
             ...r,
             assay: {
                 ...r.assay,
-                method_name: r.assay?.method?.name || null
+                method_name: r.method?.name || null
             }
         }))
 
