@@ -144,13 +144,25 @@ export const SampleSchema = z.object({
 export type Sample = z.infer<typeof SampleSchema>
 
 export const CreateSampleSchema = z.object({
-    sample_id: z.string().min(1).max(100),
+    sample_id: z.string().min(1).max(100).optional(),
     client_id: z.string().uuid().optional(),
     client_name: z.string().min(1).max(200).optional(),
     received_at: z.string().datetime().optional(),
 })
 
 export type CreateSample = z.infer<typeof CreateSampleSchema>
+
+export const CreateSampleWithAssignmentsSchema = z.object({
+    client_id: z.string().uuid().optional(),
+    client_name: z.string().min(1).max(200),
+    received_at: z.string().datetime().optional(),
+    tests: z.array(z.object({
+        assayId: z.string().uuid(),
+        methodId: z.string().uuid(),
+    })).min(1, 'At least one test must be selected'),
+})
+
+export type CreateSampleWithAssignments = z.infer<typeof CreateSampleWithAssignmentsSchema>
 
 export const UpdateSampleSchema = z.object({
     id: z.string().uuid(),

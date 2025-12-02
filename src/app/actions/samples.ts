@@ -4,10 +4,12 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import {
     CreateSampleSchema,
+    CreateSampleWithAssignmentsSchema,
     UpdateSampleSchema,
     AssignTestsSchema,
     SampleListParamsSchema,
     type CreateSample,
+    type CreateSampleWithAssignments,
     type UpdateSample,
     type AssignTests,
     type SampleListParams,
@@ -73,6 +75,48 @@ export async function createSample(data: CreateSample) {
     } catch (error) {
         console.error('Error in createSample:', error)
         return { error: error instanceof Error ? error.message : 'Failed to create sample' }
+    }
+}
+
+/**
+ * Creates a sample and assigns tests in a single flow (analysts can assign for their own samples)
+ */
+export async function accessionAndAssignTests(data: CreateSampleWithAssignments) {
+    try {
+        const supabase = await createClient()
+
+        // Ensure user is authenticated before calling RPC
+        const {
+            data: { user },
+        } = await supabase.auth.getUser()
+
+        if (!user) {
+            return { error: 'Unauthorized' }
+        }
+
+        const validatedData = CreateSampleWithAssignmentsSchema.parse(data)
+
+        // Execute transactional accession + assignment via RPC (enforced by RLS)
+        const { data: rpcResult, error } = await supabase.rpc('accession_and_assign_tests', {
+            p_client_id: validatedData.client_id || null,
+            p_client_name: validatedData.client_name,
+            p_received_at: validatedData.received_at || null,
+            p_tests: validatedData.tests,
+        })
+
+        if (error) {
+            console.error('Error in accession_and_assign_tests RPC:', error)
+            return { error: error.message }
+        }
+
+        revalidatePath('/analyst/samples')
+        revalidatePath('/analyst/accession')
+        revalidatePath('/manager/samples')
+
+        return { data: rpcResult }
+    } catch (error) {
+        console.error('Error in accessionAndAssignTests:', error)
+        return { error: error instanceof Error ? error.message : 'Failed to accession sample' }
     }
 }
 
