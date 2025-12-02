@@ -369,7 +369,7 @@ export async function getSampleTests(sampleId: string) {
                     name, 
                     units
                 ),
-                method:methods(name)
+                method:methods(id, name)
             `
             )
             .eq('sample_id', sampleId)
@@ -379,12 +379,12 @@ export async function getSampleTests(sampleId: string) {
             return { error: error.message }
         }
 
-        // Transform to flatten method name
+        // Transform to include method object with id and name
         const transformedResults = results.map((r: any) => ({
             ...r,
             assay: {
                 ...r.assay,
-                method_name: r.method?.name || null
+                method: r.method ? { id: r.method.id, name: r.method.name } : null
             }
         }))
 

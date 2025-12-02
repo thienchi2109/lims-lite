@@ -41,9 +41,36 @@ export async function getAssayDefinitions(params?: {
             .is('deleted_at', null)
             .order('name', { ascending: true })
 
+        // Handle search: match by assay name OR method name
+        let assayIdsMatchingMethod: string[] = []
         if (search) {
-            // Search by assay name
-            query = query.ilike('name', `%${search}%`)
+            // First, find methods that match the search term
+            const { data: matchingMethods } = await supabase
+                .from('methods')
+                .select('id')
+                .ilike('name', `%${search}%`)
+
+            if (matchingMethods && matchingMethods.length > 0) {
+                const methodIds = matchingMethods.map((m) => m.id)
+
+                // Find assays linked to these methods
+                const { data: assayMethodLinks } = await supabase
+                    .from('assay_methods')
+                    .select('assay_id')
+                    .in('method_id', methodIds)
+
+                if (assayMethodLinks && assayMethodLinks.length > 0) {
+                    assayIdsMatchingMethod = [...new Set(assayMethodLinks.map((am) => am.assay_id))]
+                }
+            }
+
+            // Filter: assay name matches OR assay id is in the method-matched list
+            if (assayIdsMatchingMethod.length > 0) {
+                query = query.or(`name.ilike.%${search}%,id.in.(${assayIdsMatchingMethod.join(',')})`)
+            } else {
+                // No method matches, just search by assay name
+                query = query.ilike('name', `%${search}%`)
+            }
         }
 
         // Apply pagination
