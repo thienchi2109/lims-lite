@@ -16,14 +16,7 @@ import { SampleStatusBadge } from '@/components/sample-status-badge'
 import { EditableCell } from '@/components/editable-cell'
 import { TestAssignmentDialog } from '@/components/test-assignment-dialog'
 import { SampleDetailDialog } from '@/components/sample-detail-dialog'
-import { ChevronLeft, ChevronRight, FlaskConical, Eye, Pencil, FileText } from 'lucide-react'
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select'
+import { ChevronLeft, ChevronRight, FlaskConical, Eye, Pencil, FileText, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
 interface SampleListTableProps {
@@ -34,6 +27,8 @@ interface SampleListTableProps {
     totalCount: number
     isManager?: boolean
     error?: string | null
+    sortBy?: string
+    sortOrder?: 'asc' | 'desc'
 }
 
 export function SampleListTable({
@@ -44,6 +39,8 @@ export function SampleListTable({
     totalCount,
     isManager = false,
     error,
+    sortBy = 'created_at',
+    sortOrder = 'desc',
 }: SampleListTableProps) {
     const [samples, setSamples] = useState<SampleWithUser[]>(serverSamples)
     const [assignDialogOpen, setAssignDialogOpen] = useState(false)
@@ -90,12 +87,25 @@ export function SampleListTable({
         setDetailDialogOpen(true)
     }
 
-    const updateQuery = (nextPage: number, nextPageSize: number) => {
+    const updateQuery = (updates: Record<string, string>) => {
         const params = new URLSearchParams(searchParams.toString())
-        params.set('page', String(nextPage))
-        params.set('pageSize', String(nextPageSize))
+        Object.entries(updates).forEach(([key, value]) => {
+            if (value === null || value === undefined) {
+                params.delete(key)
+            } else {
+                params.set(key, value)
+            }
+        })
         const query = params.toString()
         router.replace(query ? `${pathname}?${query}` : pathname)
+    }
+
+    const handleSort = (column: string) => {
+        const isAsc = sortBy === column && sortOrder === 'asc'
+        updateQuery({
+            sortBy: column,
+            sortOrder: isAsc ? 'desc' : 'asc',
+        })
     }
 
     const columns: ColumnDef<SampleWithUser>[] = [
@@ -126,7 +136,26 @@ export function SampleListTable({
         },
         {
             accessorKey: 'received_at',
-            header: 'Ngày nhận',
+            header: ({ column }) => {
+                return (
+                    <Button
+                        variant="ghost"
+                        onClick={() => handleSort('received_at')}
+                        className="-ml-4 h-8 data-[state=open]:bg-accent"
+                    >
+                        Ngày nhận
+                        {sortBy === 'received_at' ? (
+                            sortOrder === 'asc' ? (
+                                <ArrowUp className="ml-2 h-4 w-4" />
+                            ) : (
+                                <ArrowDown className="ml-2 h-4 w-4" />
+                            )
+                        ) : (
+                            <ArrowUpDown className="ml-2 h-4 w-4" />
+                        )}
+                    </Button>
+                )
+            },
             cell: ({ row }) => (
                 <span className="text-sm text-muted-foreground">
                     {formatDate(row.original.received_at)}
@@ -275,22 +304,6 @@ export function SampleListTable({
             {samples.length > 0 && (
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>Hiển thị</span>
-                        <Select
-                            value={String(pageSize)}
-                            onValueChange={(value) => updateQuery(1, Number(value))}
-                        >
-                            <SelectTrigger className="h-8 w-[70px]">
-                                <SelectValue placeholder={pageSize} />
-                            </SelectTrigger>
-                            <SelectContent side="top">
-                                {[10, 20, 50, 100].map((size) => (
-                                    <SelectItem key={size} value={String(size)}>
-                                        {size}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
                         <span>
                             {(page - 1) * pageSize + 1} -{' '}
                             {Math.min(page * pageSize, totalCount)} của {totalCount} mẫu
@@ -300,7 +313,7 @@ export function SampleListTable({
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => updateQuery(Math.max(1, page - 1), pageSize)}
+                            onClick={() => updateQuery({ page: String(Math.max(1, page - 1)) })}
                             disabled={page === 1}
                         >
                             <ChevronLeft className="h-4 w-4" />
@@ -312,7 +325,7 @@ export function SampleListTable({
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => updateQuery(Math.min(totalPages, page + 1), pageSize)}
+                            onClick={() => updateQuery({ page: String(Math.min(totalPages, page + 1)) })}
                             disabled={page === totalPages}
                         >
                             Tiếp

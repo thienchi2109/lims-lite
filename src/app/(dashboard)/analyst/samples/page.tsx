@@ -14,8 +14,11 @@ type SamplesPageProps = {
         search?: string
         status?: string
         page?: string
+        pageSize?: string
         fromDate?: string
         toDate?: string
+        sortBy?: string
+        sortOrder?: string
     }>
 }
 
@@ -30,9 +33,12 @@ export default async function SamplesPage({ searchParams }: SamplesPageProps) {
         : undefined
     const pageParam = Number(params.page || '1')
     const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1
-    const pageSize = 20
+    const pageSizeParam = Number(params.pageSize || '20')
+    const pageSize = Number.isFinite(pageSizeParam) && pageSizeParam > 0 ? pageSizeParam : 20
     const fromDate = typeof params.fromDate === 'string' ? params.fromDate : ''
     const toDate = typeof params.toDate === 'string' ? params.toDate : ''
+    const sortBy = typeof params.sortBy === 'string' ? params.sortBy : 'created_at'
+    const sortOrder = params.sortOrder === 'asc' ? 'asc' : 'desc'
 
     const supabase = await createClient()
 
@@ -57,8 +63,8 @@ export default async function SamplesPage({ searchParams }: SamplesPageProps) {
         status,
         fromDate: fromDate || undefined,
         toDate: toDate || undefined,
-        sortBy: 'created_at',
-        sortOrder: 'desc',
+        sortBy,
+        sortOrder: sortOrder as 'asc' | 'desc',
     })
 
     return (
@@ -107,6 +113,9 @@ export default async function SamplesPage({ searchParams }: SamplesPageProps) {
                         status={(status ?? 'all')}
                         fromDate={fromDate}
                         toDate={toDate}
+                        pageSize={Number(pageSize)}
+                        sortBy={sortBy}
+                        sortOrder={sortOrder as 'asc' | 'desc'}
                     />
                 </div>
 
@@ -118,6 +127,8 @@ export default async function SamplesPage({ searchParams }: SamplesPageProps) {
                     totalCount={result.count || 0}
                     error={result.error || null}
                     isManager={false}
+                    sortBy={sortBy}
+                    sortOrder={sortOrder as 'asc' | 'desc'}
                 />
             </main>
         </div>
