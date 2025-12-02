@@ -1,41 +1,201 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CDC LIMS-Lite
 
+A lightweight Laboratory Information Management System (LIMS) built with Next.js 16, TypeScript, and Supabase.
 
-## Localization
+## 🌐 Localization
 
-**Note:** This application is localized for Vietnamese users. All user interface text should be in Vietnamese.
+**Note:** This application is localized for Vietnamese users. All user interface text is in Vietnamese.
 
-## Getting Started
+## 🚀 Quick Start
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+ and npm
+- Docker and Docker Compose
+- Git
+
+### 1. Clone and Install
+
+```bash
+git clone <repository-url>
+cd lims-lite
+npm install
+```
+
+### 2. Environment Setup
+
+Copy the environment template:
+
+```bash
+# Windows PowerShell
+Copy-Item .env.txt .env
+
+# Linux/Mac
+cp .env.txt .env
+```
+
+The `.env` file contains all necessary configuration for local development.
+
+### 3. Start Supabase (Docker)
+
+```bash
+docker-compose up -d
+```
+
+Wait for all containers to start (about 30 seconds). Verify with:
+
+```bash
+docker ps
+```
+
+You should see 6 containers running:
+- `lims-postgres` (healthy)
+- `lims-auth` (Up)
+- `lims-rest` (Up)
+- `lims-storage` (Up)
+- `lims-kong` (healthy)
+- `lims-studio` (Up)
+
+### 4. Initialize Database
+
+**First time setup only:**
+
+```bash
+# Create required schemas
+docker exec lims-postgres psql -U postgres -d postgres -c "CREATE SCHEMA IF NOT EXISTS auth; CREATE SCHEMA IF NOT EXISTS storage; CREATE SCHEMA IF NOT EXISTS graphql_public;"
+
+# Restart auth service to apply migrations
+docker restart lims-auth
+
+# Wait for auth to start
+Start-Sleep -Seconds 10
+
+# Apply application migrations
+Get-ChildItem -Path .\supabase\migrations\*.sql | Sort-Object Name | ForEach-Object { 
+  Write-Host "Applying: $($_.Name)"
+  Get-Content $_.FullName | docker exec -i lims-postgres psql -U postgres -d postgres 
+}
+
+# Fix user passwords
+docker exec lims-postgres psql -U postgres -d postgres -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
+docker exec lims-postgres psql -U postgres -d postgres -c "UPDATE auth.users SET encrypted_password = crypt('password123', gen_salt('bf')) WHERE email IN ('analyst@cdc-lims.local', 'manager@cdc-lims.local');"
+```
+
+### 5. Start Next.js Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 6. Login
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Use one of the test accounts:
 
-## Learn More
+**Analyst Account:**
+- Username: `analyst`
+- Password: `password123`
 
-To learn more about Next.js, take a look at the following resources:
+**Manager Account:**
+- Username: `manager`
+- Password: `password123`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📁 Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+lims-lite/
+├── src/
+│   ├── app/              # Next.js App Router pages
+│   │   ├── (auth)/       # Authentication pages
+│   │   ├── (dashboard)/  # Dashboard layouts
+│   │   │   ├── analyst/  # Analyst role pages
+│   │   │   └── manager/  # Manager role pages
+│   │   └── actions/      # Server Actions (API layer)
+│   ├── components/       # Reusable UI components
+│   ├── lib/              # Utilities and Supabase client
+│   └── types/            # TypeScript types and Zod schemas
+├── supabase/
+│   ├── migrations/       # Database migrations
+│   └── kong.yml          # API Gateway configuration
+├── scripts/              # Utility scripts
+└── docker-compose.yml    # Supabase stack configuration
+```
 
-## Deploy on Vercel
+## 🛠️ Tech Stack
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Frontend:** Next.js 16 (App Router), TypeScript, Tailwind CSS
+- **UI Components:** Shadcn UI (Radix UI + Tailwind)
+- **Backend:** Supabase (PostgreSQL + GoTrue Auth + PostgREST)
+- **State Management:** React Server Components + Server Actions
+- **Form Handling:** React Hook Form + Zod
+- **Deployment:** Docker Compose (local), Railway/Render (production)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📚 Documentation
+
+- **[GEMINI.md](./GEMINI.md)** - Architecture and development guide
+- **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)** - Common issues and solutions
+- **[SUPABASE_CLOUD_DEPLOYMENT.md](./SUPABASE_CLOUD_DEPLOYMENT.md)** - Production deployment guide
+
+## 🐛 Troubleshooting
+
+If you encounter issues:
+
+1. **Authentication errors (503):** See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md#1-authentication-errors-503-service-unavailable)
+2. **Login fails:** Ensure Docker containers are running and passwords are set correctly
+3. **Source map warnings:** These are harmless development warnings and can be ignored
+
+**Quick health check:**
+
+```bash
+# Check if Supabase is running
+curl http://localhost:8000/auth/v1/health
+
+# Expected response:
+# {"version":"vunspecified","name":"GoTrue","description":"GoTrue is a user registration and authentication API"}
+```
+
+## 🔧 Development
+
+### Type Checking
+
+```bash
+npm run typecheck
+```
+
+### Building for Production
+
+```bash
+npm run build
+```
+
+### Database Management
+
+**Access PostgreSQL:**
+```bash
+docker exec -it lims-postgres psql -U postgres -d postgres
+```
+
+**View Supabase Studio:**
+Open [http://localhost:3002](http://localhost:3002)
+
+### Stopping Services
+
+```bash
+# Stop containers (keeps data)
+docker-compose stop
+
+# Stop and remove containers (keeps data)
+docker-compose down
+
+# Stop and remove everything including data
+docker-compose down -v
+```
+
+## 📝 License
+
+[Your License Here]
+
+## 🤝 Contributing
+
+[Your Contributing Guidelines Here]
