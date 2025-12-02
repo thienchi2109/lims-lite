@@ -16,7 +16,8 @@ import { SampleStatusBadge } from '@/components/sample-status-badge'
 import { EditableCell } from '@/components/editable-cell'
 import { TestAssignmentDialog } from '@/components/test-assignment-dialog'
 import { SampleDetailDialog } from '@/components/sample-detail-dialog'
-import { ChevronLeft, ChevronRight, FlaskConical, Eye, Pencil, FileText, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { SampleEditDialog } from '@/components/sample-edit-dialog'
+import { ChevronLeft, ChevronRight, FlaskConical, Eye, Pencil, FileText, ArrowUpDown, ArrowUp, ArrowDown, ClipboardPen } from 'lucide-react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
 interface SampleListTableProps {
@@ -45,6 +46,7 @@ export function SampleListTable({
     const [samples, setSamples] = useState<SampleWithUser[]>(serverSamples)
     const [assignDialogOpen, setAssignDialogOpen] = useState(false)
     const [detailDialogOpen, setDetailDialogOpen] = useState(false)
+    const [editDialogOpen, setEditDialogOpen] = useState(false)
     const [selectedSample, setSelectedSample] = useState<SampleWithUser | null>(null)
 
     const router = useRouter()
@@ -85,6 +87,15 @@ export function SampleListTable({
     const handleViewDetail = (sample: SampleWithUser) => {
         setSelectedSample(sample)
         setDetailDialogOpen(true)
+    }
+
+    const handleEditSample = (sample: SampleWithUser) => {
+        setSelectedSample(sample)
+        setEditDialogOpen(true)
+    }
+
+    const handleEditSuccess = () => {
+        router.refresh()
     }
 
     const updateQuery = (updates: Record<string, string>) => {
@@ -219,8 +230,7 @@ export function SampleListTable({
             header: 'Hành động',
             cell: ({ row }) => {
                 const canEnterResults = ['assigned', 'in_progress'].includes(row.original.status)
-
-                if (!canEnterResults) return null
+                const isReceived = row.original.status === 'received'
 
                 return (
                     <div className="flex items-center gap-1">
@@ -232,14 +242,26 @@ export function SampleListTable({
                         >
                             <FileText className="h-4 w-4" />
                         </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => window.location.href = `/analyst/results/${row.original.id}`}
-                            title="Nhập kết quả"
-                        >
-                            <Pencil className="h-4 w-4" />
-                        </Button>
+                        {isReceived && (
+                            <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() => handleEditSample(row.original)}
+                                title="Chỉnh sửa"
+                            >
+                                <Pencil className="h-4 w-4" />
+                            </Button>
+                        )}
+                        {canEnterResults && (
+                            <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() => window.location.href = `/analyst/results/${row.original.id}`}
+                                title="Nhập kết quả"
+                            >
+                                <ClipboardPen className="h-4 w-4" />
+                            </Button>
+                        )}
                     </div>
                 )
             },
@@ -349,6 +371,13 @@ export function SampleListTable({
                         sample={selectedSample}
                         open={detailDialogOpen}
                         onOpenChange={setDetailDialogOpen}
+                    />
+                    <SampleEditDialog
+                        key={selectedSample.id}
+                        sample={selectedSample}
+                        open={editDialogOpen}
+                        onOpenChange={setEditDialogOpen}
+                        onSuccess={handleEditSuccess}
                     />
                 </>
             )}
