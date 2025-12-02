@@ -30,7 +30,11 @@ export default async function ManagerResultsPage({ params }: PageProps) {
     } = await supabase.auth.getUser()
 
     if (!user) {
-        notFound()
+        return (
+            <div className="p-6 text-red-500">
+                Error: User not authenticated. Please log in.
+            </div>
+        )
     }
 
     // Get user role
@@ -41,7 +45,11 @@ export default async function ManagerResultsPage({ params }: PageProps) {
         .single()
 
     if (!userData || userData.role !== 'manager') {
-        notFound()
+        return (
+            <div className="p-6 text-red-500">
+                Error: Unauthorized. User role is '{userData?.role}', expected 'manager'.
+            </div>
+        )
     }
 
     // Get sample details
@@ -52,7 +60,15 @@ export default async function ManagerResultsPage({ params }: PageProps) {
         .single()
 
     if (!sample) {
-        notFound()
+        return (
+            <div className="p-6 text-red-500">
+                Error: Sample not found in database.
+                <br />
+                Requested ID: {resolvedParams.sampleId}
+                <br />
+                User ID: {user.id}
+            </div>
+        )
     }
 
     // Get results for this sample

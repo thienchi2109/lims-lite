@@ -20,7 +20,7 @@ const statusConfig: Record<
             'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700',
     },
     assigned: {
-        label: 'Đã giao',
+        label: 'Đã chỉ định',
         className:
             'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900 dark:text-indigo-200 dark:border-indigo-700',
     },

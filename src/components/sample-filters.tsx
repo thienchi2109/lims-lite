@@ -17,7 +17,7 @@ type SampleFiltersProps = {
 const statusOptions: Array<{ value: SampleStatus | 'all'; label: string }> = [
     { value: 'all', label: 'Tất cả' },
     { value: 'received', label: 'Đã nhận' },
-    { value: 'assigned', label: 'Đã giao' },
+    { value: 'assigned', label: 'Đã chỉ định' },
     { value: 'in_progress', label: 'Đang thực hiện' },
     { value: 'review', label: 'Chờ duyệt' },
     { value: 'completed', label: 'Hoàn thành' },
