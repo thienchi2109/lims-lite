@@ -15,7 +15,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { SampleStatusBadge } from '@/components/sample-status-badge'
 import { EditableCell } from '@/components/editable-cell'
 import { TestAssignmentDialog } from '@/components/test-assignment-dialog'
-import { ChevronLeft, ChevronRight, FlaskConical, Eye, Pencil } from 'lucide-react'
+import { SampleDetailDialog } from '@/components/sample-detail-dialog'
+import { ChevronLeft, ChevronRight, FlaskConical, Eye, Pencil, FileText } from 'lucide-react'
 import {
     Select,
     SelectContent,
@@ -46,6 +47,7 @@ export function SampleListTable({
 }: SampleListTableProps) {
     const [samples, setSamples] = useState<SampleWithUser[]>(serverSamples)
     const [assignDialogOpen, setAssignDialogOpen] = useState(false)
+    const [detailDialogOpen, setDetailDialogOpen] = useState(false)
     const [selectedSample, setSelectedSample] = useState<SampleWithUser | null>(null)
 
     const router = useRouter()
@@ -81,6 +83,11 @@ export function SampleListTable({
     const handleAssignSuccess = () => {
         setAssignDialogOpen(false)
         router.refresh()
+    }
+
+    const handleViewDetail = (sample: SampleWithUser) => {
+        setSelectedSample(sample)
+        setDetailDialogOpen(true)
     }
 
     const updateQuery = (nextPage: number, nextPageSize: number) => {
@@ -145,6 +152,14 @@ export function SampleListTable({
 
                 return (
                     <div className="flex items-center gap-1">
+                        <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => handleViewDetail(row.original)}
+                            title="Chi tiết mẫu"
+                        >
+                            <FileText className="h-4 w-4" />
+                        </Button>
                         {canViewResults && (
                             <Button
                                 variant="ghost"
@@ -179,14 +194,24 @@ export function SampleListTable({
                 if (!canEnterResults) return null
 
                 return (
-                    <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => window.location.href = `/analyst/results/${row.original.id}`}
-                        title="Nhập kết quả"
-                    >
-                        <Pencil className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                        <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => handleViewDetail(row.original)}
+                            title="Chi tiết mẫu"
+                        >
+                            <FileText className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => window.location.href = `/analyst/results/${row.original.id}`}
+                            title="Nhập kết quả"
+                        >
+                            <Pencil className="h-4 w-4" />
+                        </Button>
+                    </div>
                 )
             },
         })
@@ -299,13 +324,20 @@ export function SampleListTable({
 
             {/* Test Assignment Dialog */}
             {selectedSample && (
-                <TestAssignmentDialog
-                    sampleId={selectedSample.id}
-                    sampleName={selectedSample.sample_id}
-                    open={assignDialogOpen}
-                    onOpenChange={setAssignDialogOpen}
-                    onSuccess={handleAssignSuccess}
-                />
+                <>
+                    <TestAssignmentDialog
+                        sampleId={selectedSample.id}
+                        sampleName={selectedSample.sample_id}
+                        open={assignDialogOpen}
+                        onOpenChange={setAssignDialogOpen}
+                        onSuccess={handleAssignSuccess}
+                    />
+                    <SampleDetailDialog
+                        sample={selectedSample}
+                        open={detailDialogOpen}
+                        onOpenChange={setDetailDialogOpen}
+                    />
+                </>
             )}
         </div>
     )
