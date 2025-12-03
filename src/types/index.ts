@@ -276,6 +276,7 @@ export const SampleListParamsSchema = PaginationSchema.extend({
     status: SampleStatus.optional(),
     fromDate: z.string().optional(),
     toDate: z.string().optional(),
+    receiverId: z.string().uuid().optional(),
 })
 
 export type SampleListParams = z.infer<typeof SampleListParamsSchema>

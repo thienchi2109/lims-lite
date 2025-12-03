@@ -28,6 +28,8 @@ type SampleFiltersProps = {
     pageSize?: number
     sortBy?: string
     sortOrder?: 'asc' | 'desc'
+    receiverId?: string
+    receiverOptions?: Array<{ id: string; name: string }>
 }
 
 const statusOptions: Array<{ value: SampleStatus | 'all'; label: string }> = [
@@ -54,11 +56,14 @@ export function SampleFilters({
     pageSize = 20,
     sortBy = 'created_at',
     sortOrder = 'desc',
+    receiverId = '',
+    receiverOptions = [],
 }: SampleFiltersProps) {
     const [searchValue, setSearchValue] = useState(search)
     const [statusValue, setStatusValue] = useState<SampleStatus | 'all'>(status)
     const [fromDateValue, setFromDateValue] = useState(fromDate)
     const [toDateValue, setToDateValue] = useState(toDate)
+    const [receiverValue, setReceiverValue] = useState(receiverId || 'all')
 
     const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false)
 
@@ -83,6 +88,10 @@ export function SampleFilters({
     useEffect(() => {
         setToDateValue(toDate)
     }, [toDate])
+
+    useEffect(() => {
+        setReceiverValue(receiverId || 'all')
+    }, [receiverId])
 
     const updateUrl = (updates: Record<string, string | null>) => {
         const params = new URLSearchParams(searchParamsString)
@@ -142,13 +151,20 @@ export function SampleFilters({
         updateUrl({ pageSize: value })
     }
 
-    const isFiltered = statusValue !== 'all' || fromDateValue || toDateValue || searchValue
+    const handleReceiverChange = (value: string) => {
+        const nextValue = value === 'all' ? '' : value
+        setReceiverValue(value)
+        updateUrl({ receiverId: nextValue || null })
+    }
+
+    const isFiltered = statusValue !== 'all' || fromDateValue || toDateValue || searchValue || receiverValue !== 'all'
 
     const handleReset = () => {
         setSearchValue('')
         setStatusValue('all')
         setFromDateValue('')
         setToDateValue('')
+        setReceiverValue('all')
         router.replace(pathname)
     }
 
@@ -220,6 +236,21 @@ export function SampleFilters({
                         {statusOptions.map((option) => (
                             <SelectItem key={option.value} value={option.value}>
                                 {option.label}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+
+                {/* Receiver Filter */}
+                <Select value={receiverValue} onValueChange={handleReceiverChange}>
+                    <SelectTrigger className="h-9 w-[180px] border-dashed data-[state=open]:border-solid data-[value=all]:border-dashed">
+                        <SelectValue placeholder="Người nhận" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Tất cả người nhận</SelectItem>
+                        {receiverOptions.map((receiver) => (
+                            <SelectItem key={receiver.id} value={receiver.id}>
+                                {receiver.name}
                             </SelectItem>
                         ))}
                     </SelectContent>

@@ -57,11 +57,37 @@ export async function fetchSamples(params: SampleListParams) {
         query = query.eq('status', validatedParams.status)
     }
 
+    // Apply receiver filter
+    if (validatedParams.receiverId) {
+        query = query.eq('received_by', validatedParams.receiverId)
+    }
+
     // Apply search filter
     if (validatedParams.search) {
-        query = query.or(
-            `sample_id.ilike.%${validatedParams.search}%,client_name.ilike.%${validatedParams.search}%`
-        )
+        let receiverIdsFromSearch: string[] = []
+
+        const { data: receiverMatches, error: receiverSearchError } = await supabase
+            .from('users')
+            .select('id')
+            .ilike('full_name', `%${validatedParams.search}%`)
+
+        if (receiverSearchError) {
+            console.error('Error fetching receivers for search:', receiverSearchError)
+        } else if (receiverMatches) {
+            receiverIdsFromSearch = receiverMatches.map((r: any) => r.id).filter(Boolean)
+        }
+
+        const searchFilters = [
+            `sample_id.ilike.%${validatedParams.search}%`,
+            `client_name.ilike.%${validatedParams.search}%`,
+        ]
+
+        if (receiverIdsFromSearch.length > 0) {
+            const receiverList = receiverIdsFromSearch.map((id) => `"${id}"`).join(',')
+            searchFilters.push(`received_by.in.(${receiverList})`)
+        }
+
+        query = query.or(searchFilters.join(','))
     }
 
     // Apply date range filter

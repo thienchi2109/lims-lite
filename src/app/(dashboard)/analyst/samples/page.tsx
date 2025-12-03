@@ -19,6 +19,7 @@ type SamplesPageProps = {
         toDate?: string
         sortBy?: string
         sortOrder?: string
+        receiverId?: string
     }>
 }
 
@@ -39,6 +40,8 @@ export default async function SamplesPage({ searchParams }: SamplesPageProps) {
     const toDate = typeof params.toDate === 'string' ? params.toDate : ''
     const sortBy = typeof params.sortBy === 'string' ? params.sortBy : 'created_at'
     const sortOrder = params.sortOrder === 'asc' ? 'asc' : 'desc'
+    const receiverIdParam = typeof params.receiverId === 'string' ? params.receiverId : ''
+    const receiverId = receiverIdParam.match(/^[0-9a-fA-F-]{36}$/) ? receiverIdParam : ''
 
     const supabase = await createClient()
 
@@ -56,6 +59,21 @@ export default async function SamplesPage({ searchParams }: SamplesPageProps) {
         .eq('id', user.id)
         .single()
 
+    const { data: receiverData, error: receiverError } = await supabase
+        .from('users')
+        .select('id, full_name')
+        .order('full_name', { ascending: true })
+
+    if (receiverError) {
+        console.error('Error fetching receiver list:', receiverError)
+    }
+
+    const receiverOptions: Array<{ id: string; name: string }> =
+        receiverData?.map((receiver) => ({
+            id: String(receiver.id),
+            name: receiver.full_name || '',
+        })) || []
+
     const result = await fetchSamples({
         page,
         pageSize,
@@ -65,6 +83,7 @@ export default async function SamplesPage({ searchParams }: SamplesPageProps) {
         toDate: toDate || undefined,
         sortBy,
         sortOrder: sortOrder as 'asc' | 'desc',
+        receiverId: receiverId || undefined,
     })
 
     return (
@@ -116,6 +135,8 @@ export default async function SamplesPage({ searchParams }: SamplesPageProps) {
                         pageSize={Number(pageSize)}
                         sortBy={sortBy}
                         sortOrder={sortOrder as 'asc' | 'desc'}
+                        receiverId={receiverId}
+                        receiverOptions={receiverOptions}
                     />
                 </div>
 
