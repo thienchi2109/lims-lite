@@ -14,10 +14,8 @@ import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { SampleStatusBadge } from '@/components/sample-status-badge'
 import { EditableCell } from '@/components/editable-cell'
-import { TestAssignmentDialog } from '@/components/test-assignment-dialog'
-import { SampleDetailDialog } from '@/components/sample-detail-dialog'
 import { SampleEditDialog } from '@/components/sample-edit-dialog'
-import { ChevronLeft, ChevronRight, FlaskConical, Eye, Pencil, FileText, ArrowUpDown, ArrowUp, ArrowDown, ClipboardPen } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Eye, Pencil, ArrowUpDown, ArrowUp, ArrowDown, ClipboardPen } from 'lucide-react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
 interface SampleListTableProps {
@@ -30,6 +28,7 @@ interface SampleListTableProps {
     error?: string | null
     sortBy?: string
     sortOrder?: 'asc' | 'desc'
+    selectedSampleId?: string | null
 }
 
 export function SampleListTable({
@@ -42,12 +41,11 @@ export function SampleListTable({
     error,
     sortBy = 'created_at',
     sortOrder = 'desc',
+    selectedSampleId,
 }: SampleListTableProps) {
     const [samples, setSamples] = useState<SampleWithUser[]>(serverSamples)
-    const [assignDialogOpen, setAssignDialogOpen] = useState(false)
-    const [detailDialogOpen, setDetailDialogOpen] = useState(false)
     const [editDialogOpen, setEditDialogOpen] = useState(false)
-    const [selectedSample, setSelectedSample] = useState<SampleWithUser | null>(null)
+    const [selectedSampleForEdit, setSelectedSampleForEdit] = useState<SampleWithUser | null>(null)
 
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -74,24 +72,8 @@ export function SampleListTable({
         return result
     }
 
-    const handleAssignTests = (sample: SampleWithUser) => {
-        setSelectedSample(sample)
-        setAssignDialogOpen(true)
-    }
-
-    const handleAssignSuccess = () => {
-        setAssignDialogOpen(false)
-        router.refresh()
-    }
-
-    const handleViewDetail = (sample: SampleWithUser) => {
-        setSelectedSample(sample)
-        setDetailDialogOpen(true)
-        updateQuery({ sampleId: sample.id })
-    }
-
     const handleEditSample = (sample: SampleWithUser) => {
-        setSelectedSample(sample)
+        setSelectedSampleForEdit(sample)
         setEditDialogOpen(true)
     }
 
@@ -120,23 +102,8 @@ export function SampleListTable({
         })
     }
 
-    // Auto-open detail dialog when sampleId is present in query (e.g., after creation)
-    useEffect(() => {
-        const sampleId = searchParams.get('sampleId')
-        if (sampleId) {
-            const sample = samples.find((s) => s.id === sampleId)
-            if (sample) {
-                setSelectedSample(sample)
-                setDetailDialogOpen(true)
-            }
-        }
-    }, [searchParams, samples])
-
-    const handleDetailOpenChange = (open: boolean) => {
-        setDetailDialogOpen(open)
-        if (!open) {
-            updateQuery({ sampleId: null })
-        }
+    const handleRowClick = (sample: SampleWithUser) => {
+        updateQuery({ sampleId: sample.id })
     }
 
     const columns: ColumnDef<SampleWithUser>[] = [
@@ -211,15 +178,7 @@ export function SampleListTable({
                 const canViewResults = ['assigned', 'in_progress', 'review', 'completed'].includes(row.original.status)
 
                 return (
-                    <div className="flex items-center gap-1">
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => handleViewDetail(row.original)}
-                            title="Chi tiết mẫu"
-                        >
-                            <FileText className="h-4 w-4" />
-                        </Button>
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                         {canViewResults && (
                             <Button
                                 variant="ghost"
@@ -230,15 +189,6 @@ export function SampleListTable({
                                 <Eye className="h-4 w-4" />
                             </Button>
                         )}
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => handleAssignTests(row.original)}
-                            disabled={row.original.status === 'completed'}
-                            title="Chỉ định xét nghiệm"
-                        >
-                            <FlaskConical className="h-4 w-4" />
-                        </Button>
                     </div>
                 )
             },
@@ -253,15 +203,7 @@ export function SampleListTable({
                 const isReceived = row.original.status === 'received'
 
                 return (
-                    <div className="flex items-center gap-1">
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => handleViewDetail(row.original)}
-                            title="Chi tiết mẫu"
-                        >
-                            <FileText className="h-4 w-4" />
-                        </Button>
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                         {isReceived && (
                             <Button
                                 variant="ghost"
@@ -297,9 +239,9 @@ export function SampleListTable({
     })
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 h-full flex flex-col">
             {/* Table */}
-            <div className="rounded-md border">
+            <div className="rounded-md border flex-1 overflow-auto bg-white dark:bg-slate-950 relative">
                 {error ? (
                     <div className="p-8 text-center text-destructive">{error}</div>
                 ) : samples.length === 0 ? (
@@ -308,7 +250,7 @@ export function SampleListTable({
                     </div>
                 ) : (
                     <Table>
-                        <TableHeader>
+                        <TableHeader className="sticky top-0 bg-white dark:bg-slate-950 z-10 shadow-sm">
                             {table.getHeaderGroups().map((headerGroup) => (
                                 <TableRow key={headerGroup.id}>
                                     {headerGroup.headers.map((header) => (
@@ -325,18 +267,25 @@ export function SampleListTable({
                             ))}
                         </TableHeader>
                         <TableBody>
-                            {table.getRowModel().rows.map((row) => (
-                                <TableRow key={row.id}>
-                                    {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id}>
-                                            {flexRender(
-                                                cell.column.columnDef.cell,
-                                                cell.getContext()
-                                            )}
-                                        </TableCell>
-                                    ))}
-                                </TableRow>
-                            ))}
+                            {table.getRowModel().rows.map((row) => {
+                                const isSelected = row.original.id === selectedSampleId
+                                return (
+                                    <TableRow
+                                        key={row.id}
+                                        onClick={() => handleRowClick(row.original)}
+                                        className={`cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30' : 'hover:bg-slate-50 dark:hover:bg-slate-900/50'}`}
+                                    >
+                                        {row.getVisibleCells().map((cell) => (
+                                            <TableCell key={cell.id}>
+                                                {flexRender(
+                                                    cell.column.columnDef.cell,
+                                                    cell.getContext()
+                                                )}
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                )
+                            })}
                         </TableBody>
                     </Table>
                 )}
@@ -344,7 +293,7 @@ export function SampleListTable({
 
             {/* Pagination */}
             {samples.length > 0 && (
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <span>
                             {(page - 1) * pageSize + 1} -{' '}
@@ -377,29 +326,15 @@ export function SampleListTable({
                 </div>
             )}
 
-            {/* Test Assignment Dialog */}
-            {selectedSample && (
-                <>
-                    <TestAssignmentDialog
-                        sampleId={selectedSample.id}
-                        sampleName={selectedSample.sample_id}
-                        open={assignDialogOpen}
-                        onOpenChange={setAssignDialogOpen}
-                        onSuccess={handleAssignSuccess}
-                    />
-                    <SampleDetailDialog
-                        sample={selectedSample}
-                        open={detailDialogOpen}
-                        onOpenChange={handleDetailOpenChange}
-                    />
-                    <SampleEditDialog
-                        key={selectedSample.id}
-                        sample={selectedSample}
-                        open={editDialogOpen}
-                        onOpenChange={setEditDialogOpen}
-                        onSuccess={handleEditSuccess}
-                    />
-                </>
+            {/* Edit Dialog */}
+            {selectedSampleForEdit && (
+                <SampleEditDialog
+                    key={selectedSampleForEdit.id}
+                    sample={selectedSampleForEdit}
+                    open={editDialogOpen}
+                    onOpenChange={setEditDialogOpen}
+                    onSuccess={handleEditSuccess}
+                />
             )}
         </div>
     )

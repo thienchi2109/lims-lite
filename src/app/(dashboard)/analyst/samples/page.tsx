@@ -1,156 +1,102 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import { logout } from '@/app/actions/auth'
-import { Button } from '@/components/ui/button'
+import { Suspense } from 'react'
+import { getSamples, getSample } from '@/app/actions/samples'
 import { SampleListTable } from '@/components/sample-list-table'
 import { SampleFilters } from '@/components/sample-filters'
-import { fetchSamples } from '@/lib/data/samples'
-import { type SampleStatus } from '@/types'
-import Link from 'next/link'
+import { SampleBottomRow } from '@/components/sample-bottom-row'
+import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
+import { SampleListParamsSchema } from '@/types'
 
-type SamplesPageProps = {
-    searchParams?: Promise<{
-        search?: string
-        status?: string
-        page?: string
-        pageSize?: string
-        fromDate?: string
-        toDate?: string
-        sortBy?: string
-        sortOrder?: string
-        receiverId?: string
-    }>
+interface SamplesPageProps {
+    searchParams: { [key: string]: string | string[] | undefined }
 }
 
-const validStatuses: SampleStatus[] = ['received', 'assigned', 'in_progress', 'review', 'completed']
-
 export default async function SamplesPage({ searchParams }: SamplesPageProps) {
-    const params = searchParams ? await searchParams : {}
-    const searchTerm = typeof params.search === 'string' ? params.search : ''
-    const statusParam = typeof params.status === 'string' ? params.status : 'all'
-    const status = validStatuses.includes(statusParam as SampleStatus)
-        ? (statusParam as SampleStatus)
-        : undefined
-    const pageParam = Number(params.page || '1')
-    const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1
-    const pageSizeParam = Number(params.pageSize || '20')
-    const pageSize = Number.isFinite(pageSizeParam) && pageSizeParam > 0 ? pageSizeParam : 20
-    const fromDate = typeof params.fromDate === 'string' ? params.fromDate : ''
-    const toDate = typeof params.toDate === 'string' ? params.toDate : ''
-    const sortBy = typeof params.sortBy === 'string' ? params.sortBy : 'created_at'
-    const sortOrder = params.sortOrder === 'asc' ? 'asc' : 'desc'
-    const receiverIdParam = typeof params.receiverId === 'string' ? params.receiverId : ''
-    const receiverId = receiverIdParam.match(/^[0-9a-fA-F-]{36}$/) ? receiverIdParam : ''
+    // Parse search params
+    const page = Number(searchParams.page) || 1
+    const pageSize = Number(searchParams.pageSize) || 10
+    const status = searchParams.status as string | undefined
+    const search = searchParams.search as string | undefined
+    const sortBy = (searchParams.sortBy as string) || 'created_at'
+    const sortOrder = (searchParams.sortOrder as 'asc' | 'desc') || 'desc'
+    const sampleId = searchParams.sampleId as string | undefined
 
-    const supabase = await createClient()
-
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-        redirect('/login')
-    }
-
-    const { data: userData } = await supabase
-        .from('users')
-        .select('full_name, role')
-        .eq('id', user.id)
-        .single()
-
-    const { data: receiverData, error: receiverError } = await supabase
-        .from('users')
-        .select('id, full_name')
-        .order('full_name', { ascending: true })
-
-    if (receiverError) {
-        console.error('Error fetching receiver list:', receiverError)
-    }
-
-    const receiverOptions: Array<{ id: string; name: string }> =
-        receiverData?.map((receiver) => ({
-            id: String(receiver.id),
-            name: receiver.full_name || '',
-        })) || []
-
-    const result = await fetchSamples({
+    // Validate params
+    const validatedParams = SampleListParamsSchema.safeParse({
         page,
         pageSize,
-        search: searchTerm || undefined,
         status,
-        fromDate: fromDate || undefined,
-        toDate: toDate || undefined,
+        search,
         sortBy,
-        sortOrder: sortOrder as 'asc' | 'desc',
-        receiverId: receiverId || undefined,
+        sortOrder,
     })
 
+    if (!validatedParams.success) {
+        return <div>Invalid parameters</div>
+    }
+
+    // Fetch samples list
+    const result = await getSamples(validatedParams.data)
+
+    // Fetch selected sample if ID is present
+    let selectedSample = null
+    if (sampleId) {
+        const { data: sampleData } = await getSample(sampleId)
+        if (sampleData) {
+            selectedSample = sampleData
+        }
+    }
+
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-            <header className="sticky top-0 z-50 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-                    <div>
-                        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                            Hệ thống quản lý thông tin khoa Xét nghiệm
-                        </h1>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
-                            Danh sách mẫu
-                        </p>
-                    </div>
+        <div className="h-[calc(100vh-4rem)] flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden">
+            <header className="shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm px-4 sm:px-6 lg:px-8 py-4">
+                <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <div className="text-right">
-                            <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                                {userData?.full_name}
-                            </p>
-                            <p className="text-xs text-slate-600 dark:text-slate-400 capitalize">
-                                {userData?.role}
-                            </p>
-                        </div>
-                        <form action={logout}>
-                            <Button variant="outline" size="sm" type="submit">
-                                Đăng xuất
+                        <Link href="/analyst">
+                            <Button variant="ghost" size="sm">
+                                <ArrowLeft className="h-4 w-4 mr-2" />
+                                Quay lại
                             </Button>
-                        </form>
+                        </Link>
+                        <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+                            Quản lý mẫu
+                        </h1>
                     </div>
                 </div>
             </header>
 
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="mb-6">
-                    <Link href="/analyst">
-                        <Button variant="ghost" size="sm">
-                            <ArrowLeft className="h-4 w-4 mr-2" />
-                            Quay lại Bảng điều khiển
-                        </Button>
-                    </Link>
+            <main className="flex-1 flex flex-col min-h-0 p-4 sm:px-6 lg:px-8 gap-4">
+                {/* Top Row: Filters & Grid (Fixed Height ~50%) */}
+                <div className="flex flex-col gap-4 h-[50vh] min-h-[400px] shrink-0">
+                    <div className="shrink-0">
+                        <SampleFilters
+                            search={search}
+                            status={status as any} // Cast to any or specific type if needed, strict check might fail if status is undefined
+                            pageSize={pageSize}
+                            sortBy={sortBy}
+                            sortOrder={sortOrder}
+                        />
+                    </div>
+                    <div className="flex-1 min-h-0">
+                        <SampleListTable
+                            samples={result.data || []}
+                            page={page}
+                            pageSize={pageSize}
+                            totalPages={result.totalPages || 0}
+                            totalCount={result.count || 0}
+                            error={result.error}
+                            sortBy={sortBy}
+                            sortOrder={sortOrder}
+                            selectedSampleId={selectedSample?.id}
+                        />
+                    </div>
                 </div>
 
-                <div className="mb-6">
-                    <SampleFilters
-                        search={searchTerm}
-                        status={(status ?? 'all')}
-                        fromDate={fromDate}
-                        toDate={toDate}
-                        pageSize={Number(pageSize)}
-                        sortBy={sortBy}
-                        sortOrder={sortOrder as 'asc' | 'desc'}
-                        receiverId={receiverId}
-                        receiverOptions={receiverOptions}
-                    />
+                {/* Bottom Row: Detail & Assignments (Remaining Height) */}
+                <div className="flex-1 min-h-0 border-t pt-4">
+                    <SampleBottomRow sample={selectedSample} />
                 </div>
-
-                <SampleListTable
-                    samples={result.data || []}
-                    page={result.page || page}
-                    pageSize={result.pageSize || pageSize}
-                    totalPages={result.totalPages || 1}
-                    totalCount={result.count || 0}
-                    error={result.error || null}
-                    isManager={false}
-                    sortBy={sortBy}
-                    sortOrder={sortOrder as 'asc' | 'desc'}
-                />
             </main>
         </div>
     )

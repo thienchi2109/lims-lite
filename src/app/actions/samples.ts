@@ -181,6 +181,41 @@ export async function getSamples(params: SampleListParams) {
 }
 
 /**
+ * Gets a single sample by ID
+ */
+export async function getSample(id: string) {
+    try {
+        const supabase = await createClient()
+
+        const { data: sample, error } = await supabase
+            .from('samples')
+            .select(
+                `
+                *,
+                received_by_user:users!samples_received_by_fkey(full_name)
+            `
+            )
+            .eq('id', id)
+            .single()
+
+        if (error) {
+            console.error('Error fetching sample:', error)
+            return { error: error.message }
+        }
+
+        return {
+            data: {
+                ...sample,
+                received_by_name: sample.received_by_user?.full_name || null,
+            },
+        }
+    } catch (error) {
+        console.error('Error in getSample:', error)
+        return { error: error instanceof Error ? error.message : 'Failed to fetch sample' }
+    }
+}
+
+/**
  * Assigns tests to a sample (Manager only)
  */
 export async function assignTests(data: AssignTests) {
