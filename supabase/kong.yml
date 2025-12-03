@@ -25,6 +25,14 @@ services:
           - /storage/v1
         strip_path: true
 
+  - name: meta
+    url: http://meta:8080
+    routes:
+      - name: meta-route
+        paths:
+          - /pg
+        strip_path: true
+
 plugins:
   - name: cors
     config:

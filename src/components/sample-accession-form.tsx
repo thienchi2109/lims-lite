@@ -13,11 +13,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { QRScanner } from '@/components/qr-scanner'
 import { TestAssignmentGrid, type SelectedTest } from '@/components/test-assignment-grid'
 import { Loader2, CheckCircle2, Scan } from 'lucide-react'
+import Link from 'next/link'
 
 export function SampleAccessionForm() {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [submitError, setSubmitError] = useState<string | null>(null)
     const [submitSuccess, setSubmitSuccess] = useState<string | null>(null)
+    const [lastSampleId, setLastSampleId] = useState<string | null>(null)
     const [showScanner, setShowScanner] = useState(false)
     const [selectedTests, setSelectedTests] = useState<SelectedTest[]>([])
 
@@ -89,8 +91,10 @@ export function SampleAccessionForm() {
                 setSubmitError(result.error)
             } else {
                 const sampleCode = result.data?.sample?.sample_id
+                const sampleId = result.data?.sample?.id
                 const assignedCount = result.data?.results?.length || selectedTests.length
                 setSubmitSuccess(`Mẫu ${sampleCode || ''} đã được tạo và chỉ định ${assignedCount} xét nghiệm.`.trim())
+                setLastSampleId(sampleId || null)
                 reset()
                 setSelectedTests([])
                 // Clear success message after 5 seconds
@@ -182,9 +186,20 @@ export function SampleAccessionForm() {
 
                         {/* Success Message */}
                         {submitSuccess && (
-                            <div className="bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 p-3 rounded-md text-sm flex items-center gap-2">
-                                <CheckCircle2 className="h-4 w-4" />
-                                {submitSuccess}
+                            <div className="bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 p-3 rounded-md text-sm flex flex-col gap-2">
+                                <div className="flex items-center gap-2">
+                                    <CheckCircle2 className="h-4 w-4" />
+                                    {submitSuccess}
+                                </div>
+                                {lastSampleId && (
+                                    <div className="flex gap-2">
+                                        <Link href={`/analyst/results/${lastSampleId}`} className="w-full">
+                                            <Button variant="secondary" className="w-full">
+                                                Mở mẫu vừa tạo
+                                            </Button>
+                                        </Link>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

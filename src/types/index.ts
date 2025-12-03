@@ -158,7 +158,7 @@ export const CreateSampleWithAssignmentsSchema = z.object({
     received_at: z.string().datetime().optional(),
     tests: z.array(z.object({
         assayId: z.string().uuid(),
-        methodId: z.string().uuid(),
+        methodId: z.string(), // Relaxed from .uuid() to support legacy/test data
     })).min(1, 'At least one test must be selected'),
 })
 
