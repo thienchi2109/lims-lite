@@ -90,15 +90,16 @@ export function SampleAccessionForm() {
             if (result.error) {
                 setSubmitError(result.error)
             } else {
-                const sampleCode = result.data?.sample?.sample_id
-                const sampleId = result.data?.sample?.id
-                const assignedCount = result.data?.results?.length || selectedTests.length
+                // Handle both object and array responses from Supabase RPC
+                const payload = Array.isArray(result.data) ? result.data[0] : result.data
+                const sampleData = payload?.sample
+                const sampleCode = sampleData?.sample_id
+                const sampleId = sampleData?.id
+                const assignedCount = payload?.results?.length || selectedTests.length
                 setSubmitSuccess(`Mẫu ${sampleCode || ''} đã được tạo và chỉ định ${assignedCount} xét nghiệm.`.trim())
                 setLastSampleId(sampleId || null)
                 reset()
                 setSelectedTests([])
-                // Clear success message after 5 seconds
-                setTimeout(() => setSubmitSuccess(null), 5000)
             }
         } catch (error) {
             setSubmitError('Đã có lỗi xảy ra')
@@ -193,9 +194,9 @@ export function SampleAccessionForm() {
                                 </div>
                                 {lastSampleId && (
                                     <div className="flex gap-2">
-                                        <Link href={`/analyst/results/${lastSampleId}`} className="w-full">
+                                        <Link href={`/analyst/samples?sampleId=${lastSampleId}`} className="w-full">
                                             <Button variant="secondary" className="w-full">
-                                                Mở mẫu vừa tạo
+                                                Mở chi tiết mẫu
                                             </Button>
                                         </Link>
                                     </div>

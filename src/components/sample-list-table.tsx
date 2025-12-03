@@ -87,6 +87,7 @@ export function SampleListTable({
     const handleViewDetail = (sample: SampleWithUser) => {
         setSelectedSample(sample)
         setDetailDialogOpen(true)
+        updateQuery({ sampleId: sample.id })
     }
 
     const handleEditSample = (sample: SampleWithUser) => {
@@ -98,7 +99,7 @@ export function SampleListTable({
         router.refresh()
     }
 
-    const updateQuery = (updates: Record<string, string>) => {
+    const updateQuery = (updates: Record<string, string | null>) => {
         const params = new URLSearchParams(searchParams.toString())
         Object.entries(updates).forEach(([key, value]) => {
             if (value === null || value === undefined) {
@@ -117,6 +118,25 @@ export function SampleListTable({
             sortBy: column,
             sortOrder: isAsc ? 'desc' : 'asc',
         })
+    }
+
+    // Auto-open detail dialog when sampleId is present in query (e.g., after creation)
+    useEffect(() => {
+        const sampleId = searchParams.get('sampleId')
+        if (sampleId) {
+            const sample = samples.find((s) => s.id === sampleId)
+            if (sample) {
+                setSelectedSample(sample)
+                setDetailDialogOpen(true)
+            }
+        }
+    }, [searchParams, samples])
+
+    const handleDetailOpenChange = (open: boolean) => {
+        setDetailDialogOpen(open)
+        if (!open) {
+            updateQuery({ sampleId: null })
+        }
     }
 
     const columns: ColumnDef<SampleWithUser>[] = [
@@ -370,7 +390,7 @@ export function SampleListTable({
                     <SampleDetailDialog
                         sample={selectedSample}
                         open={detailDialogOpen}
-                        onOpenChange={setDetailDialogOpen}
+                        onOpenChange={handleDetailOpenChange}
                     />
                     <SampleEditDialog
                         key={selectedSample.id}

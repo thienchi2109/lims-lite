@@ -3,7 +3,7 @@
 SET search_path TO public;
 
 -- Allow analysts to update samples they received (needed for accession_and_assign_tests)
-CREATE POLICY IF NOT EXISTS "Analysts can update own samples"
+CREATE POLICY "Analysts can update own samples"
 ON public.samples FOR UPDATE
 USING (
     get_user_role() = 'analyst'
