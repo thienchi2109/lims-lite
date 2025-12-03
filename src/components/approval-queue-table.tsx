@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import { format } from 'date-fns'
+import { cn } from '@/lib/utils'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 
 // Type for approval queue data
 interface ApprovalQueueSample {
@@ -28,21 +30,29 @@ interface ApprovalQueueSample {
 
 interface ApprovalQueueTableProps {
     data: ApprovalQueueSample[]
+    selectedSampleId?: string
 }
 
-export function ApprovalQueueTable({ data }: ApprovalQueueTableProps) {
+export function ApprovalQueueTable({ data, selectedSampleId }: ApprovalQueueTableProps) {
+    const router = useRouter()
+    const pathname = usePathname()
+    const searchParams = useSearchParams()
+
+    const handleRowClick = (sampleId: string) => {
+        const params = new URLSearchParams(searchParams.toString())
+        params.set('sampleId', sampleId)
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    }
+
     const columns: ColumnDef<ApprovalQueueSample>[] = [
         {
             accessorKey: 'sample_id',
             header: 'Mã mẫu',
             cell: ({ row }) => {
                 return (
-                    <Link
-                        href={`/manager/results/${row.original.id}`}
-                        className="font-medium text-primary hover:underline"
-                    >
+                    <span className="font-medium text-primary">
                         {row.getValue('sample_id')}
-                    </Link>
+                    </span>
                 )
             },
         },
@@ -97,11 +107,16 @@ export function ApprovalQueueTable({ data }: ApprovalQueueTableProps) {
             header: 'Hành động',
             cell: ({ row }) => {
                 return (
-                    <Link href={`/manager/results/${row.original.id}`}>
-                        <Button variant="outline" size="sm">
-                            Xem xét & Phê duyệt
-                        </Button>
-                    </Link>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            handleRowClick(row.original.id)
+                        }}
+                    >
+                        Xem xét
+                    </Button>
                 )
             },
         },
@@ -122,9 +137,9 @@ export function ApprovalQueueTable({ data }: ApprovalQueueTableProps) {
     }
 
     return (
-        <div className="rounded-md border">
+        <div className="rounded-md border bg-white dark:bg-slate-900 h-full overflow-auto">
             <Table>
-                <TableHeader>
+                <TableHeader className="sticky top-0 bg-white dark:bg-slate-900 z-10 shadow-sm">
                     {table.getHeaderGroups().map((headerGroup) => (
                         <TableRow key={headerGroup.id}>
                             {headerGroup.headers.map((header) => (
@@ -139,7 +154,16 @@ export function ApprovalQueueTable({ data }: ApprovalQueueTableProps) {
                 </TableHeader>
                 <TableBody>
                     {table.getRowModel().rows.map((row) => (
-                        <TableRow key={row.id}>
+                        <TableRow
+                            key={row.id}
+                            className={cn(
+                                'cursor-pointer transition-colors',
+                                row.original.id === selectedSampleId
+                                    ? 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 border-l-4 border-l-blue-500'
+                                    : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                            )}
+                            onClick={() => handleRowClick(row.original.id)}
+                        >
                             {row.getVisibleCells().map((cell) => (
                                 <TableCell key={cell.id}>
                                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
