@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo, useEffect } from 'react'
-import { getAssayDefinitions } from '@/app/actions/assays'
+import { getAssayDefinitions, getMethods } from '@/app/actions/assays'
 import {
     Search,
     Beaker,
@@ -14,7 +14,8 @@ import {
     CheckSquare,
     Square,
     FlaskConical,
-    Loader2
+    Loader2,
+    Filter
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -81,6 +82,8 @@ export function TestAssignmentGrid({
 }: TestAssignmentGridProps) {
     // State
     const [availableAssays, setAvailableAssays] = useState<AssayDefinitionWithMethods[]>([])
+    const [methods, setMethods] = useState<{ id: string, name: string }[]>([])
+    const [selectedMethodId, setSelectedMethodId] = useState<string>('all')
     const [isLoading, setIsLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
     const [sortConfig, setSortConfig] = useState<{ key: keyof AssayDefinitionWithMethods, direction: 'asc' | 'desc' } | null>({ key: 'name', direction: 'asc' })
@@ -88,19 +91,38 @@ export function TestAssignmentGrid({
 
     // Initial Load
     useEffect(() => {
+        loadMethods()
         loadAssays()
     }, [])
+
+    // Reload assays when method filter changes
+    useEffect(() => {
+        loadAssays()
+    }, [selectedMethodId])
+
+    const loadMethods = async () => {
+        const result = await getMethods()
+        if (result.data) {
+            setMethods(result.data)
+        }
+    }
 
     const loadAssays = async () => {
         setIsLoading(true)
         try {
-            // Fetch all assays (pageSize 100 for now, could implement server-side pagination later)
-            const result = await getAssayDefinitions({ pageSize: 100 })
+            // Fetch assays with method filter
+            const result = await getAssayDefinitions({
+                pageSize: 100,
+                methodId: selectedMethodId
+            })
             if (result.data) {
                 setAvailableAssays(result.data as AssayDefinitionWithMethods[])
+            } else {
+                setAvailableAssays([])
             }
         } catch (error) {
             console.error('Failed to load assays', error)
+            setAvailableAssays([])
         } finally {
             setIsLoading(false)
         }
@@ -151,13 +173,22 @@ export function TestAssignmentGrid({
             onChange(newSelected)
         } else {
             // Add with default method
-            const defaultMethod = assay.methods.find(m => m.is_default) || assay.methods[0]
-            if (defaultMethod) {
+            // If a specific method is filtered, try to select that one first
+            let methodToSelect = assay.methods.find(m => m.is_default) || assay.methods[0]
+
+            if (selectedMethodId !== 'all') {
+                const filteredMethod = assay.methods.find(m => m.method_id === selectedMethodId)
+                if (filteredMethod) {
+                    methodToSelect = filteredMethod
+                }
+            }
+
+            if (methodToSelect) {
                 onChange([...selected, {
                     assayId: assay.id,
-                    methodId: defaultMethod.method_id,
+                    methodId: methodToSelect.method_id,
                     assayName: assay.name,
-                    methodName: defaultMethod.name,
+                    methodName: methodToSelect.name,
                     units: assay.units
                 }])
             }
@@ -218,7 +249,7 @@ export function TestAssignmentGrid({
                 {/* Toolbar */}
                 <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center gap-4 justify-between bg-white dark:bg-slate-950">
                     <div className="flex items-center gap-2 flex-1">
-                        <div className="relative w-full max-w-md">
+                        <div className="relative w-full max-w-[240px]">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                             <input
                                 type="text"
@@ -227,6 +258,29 @@ export function TestAssignmentGrid({
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
+                        </div>
+
+                        <div className="w-[200px]">
+                            <Select value={selectedMethodId} onValueChange={setSelectedMethodId}>
+                                <SelectTrigger className="h-9 bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                                        <Filter size={14} />
+                                        <span className="truncate">
+                                            {selectedMethodId === 'all'
+                                                ? 'Tất cả phương pháp'
+                                                : methods.find(m => m.id === selectedMethodId)?.name || 'Phương pháp'}
+                                        </span>
+                                    </div>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Tất cả phương pháp</SelectItem>
+                                    {methods.map(method => (
+                                        <SelectItem key={method.id} value={method.id}>
+                                            {method.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
                     <div className="text-xs text-slate-500 font-medium whitespace-nowrap">

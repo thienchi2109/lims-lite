@@ -13,12 +13,14 @@ export async function getAssayDefinitions(params?: {
     page?: number
     pageSize?: number
     search?: string
+    methodId?: string
 }) {
     try {
         const supabase = await createClient()
         const page = params?.page || 1
         const pageSize = params?.pageSize || 10
         const search = params?.search || ''
+        const methodId = params?.methodId
 
         // Calculate range
         const from = (page - 1) * pageSize
@@ -40,6 +42,28 @@ export async function getAssayDefinitions(params?: {
             )
             .is('deleted_at', null)
             .order('name', { ascending: true })
+
+        // Apply Method Filter
+        if (methodId && methodId !== 'all') {
+            const { data: linkedAssays } = await supabase
+                .from('assay_methods')
+                .select('assay_id')
+                .eq('method_id', methodId)
+
+            if (linkedAssays && linkedAssays.length > 0) {
+                const linkedAssayIds = linkedAssays.map(a => a.assay_id)
+                query = query.in('id', linkedAssayIds)
+            } else {
+                // Method has no assays, return empty
+                return {
+                    data: [],
+                    totalCount: 0,
+                    totalPages: 0,
+                    page,
+                    pageSize,
+                }
+            }
+        }
 
         // Handle search: match by assay name OR method name
         let assayIdsMatchingMethod: string[] = []

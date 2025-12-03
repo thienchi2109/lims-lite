@@ -205,9 +205,11 @@ export function SampleFilters({
                         <div className="flex items-center gap-2">
                             <div className={cn("h-2 w-2 rounded-full",
                                 statusValue === 'all' ? "bg-slate-400" :
-                                    statusValue === 'completed' ? "bg-green-500" :
-                                        statusValue === 'received' ? "bg-blue-500" :
-                                            "bg-orange-500"
+                                    statusValue === 'completed' ? "bg-blue-400" :
+                                        statusValue === 'received' ? "bg-yellow-400" :
+                                            statusValue === 'assigned' ? "bg-green-400" :
+                                                statusValue === 'review' ? "bg-sky-400" :
+                                                    "bg-orange-400"
                             )} />
                             <span className="truncate">
                                 {statusOptions.find(o => o.value === statusValue)?.label}
