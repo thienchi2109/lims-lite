@@ -21,8 +21,18 @@ export async function fetchSamples(params: SampleListParams) {
         return { error: 'Unauthorized' }
     }
 
+    // Normalize receiverId to a valid UUID (or undefined) before validation
+    const receiverId =
+        typeof params.receiverId === 'string' &&
+        params.receiverId.match(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/)
+            ? params.receiverId
+            : undefined
+
     // Validate params
-    const validatedParams = SampleListParamsSchema.parse(params)
+    const validatedParams = SampleListParamsSchema.parse({
+        ...params,
+        receiverId,
+    })
 
     // Build query
     let query = supabase.from('samples').select('*', { count: 'exact' }).is('deleted_at', null)
@@ -83,7 +93,7 @@ export async function fetchSamples(params: SampleListParams) {
         ]
 
         if (receiverIdsFromSearch.length > 0) {
-            const receiverList = receiverIdsFromSearch.map((id) => `"${id}"`).join(',')
+            const receiverList = receiverIdsFromSearch.join(',')
             searchFilters.push(`received_by.in.(${receiverList})`)
         }
 

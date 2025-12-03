@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { type SampleStatus } from '@/types'
@@ -64,6 +64,7 @@ export function SampleFilters({
     const [fromDateValue, setFromDateValue] = useState(fromDate)
     const [toDateValue, setToDateValue] = useState(toDate)
     const [receiverValue, setReceiverValue] = useState(receiverId || 'all')
+    const searchInputRef = useRef<HTMLInputElement | null>(null)
 
     const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false)
 
@@ -74,7 +75,9 @@ export function SampleFilters({
 
     // Keep inputs in sync with URL changes
     useEffect(() => {
-        setSearchValue(search)
+        if (document.activeElement !== searchInputRef.current) {
+            setSearchValue(search)
+        }
     }, [search])
 
     useEffect(() => {
@@ -206,6 +209,7 @@ export function SampleFilters({
             <div className="relative w-full lg:w-72">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
+                    ref={searchInputRef}
                     placeholder="Tìm kiếm..."
                     value={searchValue}
                     onChange={(e) => setSearchValue(e.target.value)}
