@@ -13,7 +13,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Loader2, CheckCircle2, Plus, Trash2, X, AlertCircle } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { TestAssignmentSelector, type SelectedTest } from '@/components/test-assignment-selector'
+import { TestAssignmentGrid, type SelectedTest } from '@/components/test-assignment-grid'
 
 // Types matching the backend response
 type AssignedTest = SelectedTest
@@ -34,105 +34,68 @@ export function TestAssignmentDialog({
     onSuccess,
 }: TestAssignmentDialogProps) {
     // State
-    const [currentlyAssigned, setCurrentlyAssigned] = useState<AssignedTest[]>([])
-    const [toAdd, setToAdd] = useState<AssignedTest[]>([])
-    const [toRemove, setToRemove] = useState<string[]>([]) // IDs of assigned tests (assayId) to remove
-
-    // Loading states
-    const [isInitialLoading, setIsInitialLoading] = useState(false)
+    const [initialTests, setInitialTests] = useState<AssignedTest[]>([])
+    const [selectedTests, setSelectedTests] = useState<AssignedTest[]>([])
+    const [isLoading, setIsLoading] = useState(true)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    const [success, setSuccess] = useState(false)
-
-    const disabledAssayIds = useMemo(
-        () => currentlyAssigned.filter((a) => !toRemove.includes(a.assayId)).map((a) => a.assayId),
-        [currentlyAssigned, toRemove]
-    )
 
     // Initial load
     useEffect(() => {
         if (open) {
             loadInitialData()
-            setToAdd([])
-            setToRemove([])
-            setSuccess(false)
-            setError(null)
         }
     }, [open, sampleId])
 
     const loadInitialData = async () => {
-        setIsInitialLoading(true)
+        setIsLoading(true)
         try {
-            // Load currently assigned tests
             const testsResult = await getSampleTests(sampleId)
             if (testsResult.error) {
                 setError(testsResult.error)
             } else {
-                // Transform results to AssignedTest format
-                const assigned =
-                    testsResult.data?.map((r: any) => ({
-                        assayId: r.assay.id,
-                        methodId: r.assay.method?.id || '', // Should always have method
-                        assayName: r.assay.name,
-                        methodName: r.assay.method?.name || 'Chưa xác định',
-                        units: r.assay.units,
-                    })) || []
-                setCurrentlyAssigned(assigned)
+                const assigned = testsResult.data?.map((r: any) => ({
+                    assayId: r.assay.id,
+                    methodId: r.assay.method?.id || '',
+                    assayName: r.assay.name,
+                    methodName: r.assay.method?.name || 'Chưa xác định',
+                    units: r.assay.units,
+                })) || []
+                setInitialTests(assigned)
+                setSelectedTests(assigned)
             }
         } catch (err) {
             setError('Failed to load data')
         } finally {
-            setIsInitialLoading(false)
+            setIsLoading(false)
         }
     }
 
-    const handleRemoveFromToAdd = (assayId: string) => {
-        setToAdd(prev => prev.filter(a => a.assayId !== assayId))
-    }
-
-    const handleMarkForRemoval = (assayId: string) => {
-        if (!toRemove.includes(assayId)) {
-            setToRemove(prev => [...prev, assayId])
-        }
-    }
-
-    const handleUnmarkForRemoval = (assayId: string) => {
-        setToRemove(prev => prev.filter(id => id !== assayId))
-    }
-
-    const handleSubmit = async () => {
-        if (toAdd.length === 0 && toRemove.length === 0) {
-            onOpenChange(false)
-            return
-        }
-
+    const handleSave = async () => {
         setIsSubmitting(true)
         setError(null)
 
         try {
-            // First, remove tests marked for removal
-            if (toRemove.length > 0) {
-                // Map to required structure for unassignTests
-                const testsToRemove = toRemove.map(assayId => {
-                    const assigned = currentlyAssigned.find(a => a.assayId === assayId)
-                    return {
-                        assayId,
-                        methodId: assigned?.methodId || '00000000-0000-0000-0000-000000000000'
-                    }
-                })
+            // Calculate diffs
+            const initialIds = new Set(initialTests.map(t => t.assayId))
+            const selectedIds = new Set(selectedTests.map(t => t.assayId))
 
+            const toAdd = selectedTests.filter(t => !initialIds.has(t.assayId))
+            const toRemove = initialTests.filter(t => !selectedIds.has(t.assayId))
+
+            // 1. Remove tests
+            if (toRemove.length > 0) {
                 const removeResult = await unassignTests({
                     sampleId,
-                    tests: testsToRemove,
+                    tests: toRemove.map(t => ({
+                        assayId: t.assayId,
+                        methodId: t.methodId
+                    }))
                 })
-                if (removeResult.error) {
-                    setError(removeResult.error)
-                    setIsSubmitting(false)
-                    return
-                }
+                if (removeResult.error) throw new Error(removeResult.error)
             }
 
-            // Then, add new tests
+            // 2. Add tests
             if (toAdd.length > 0) {
                 const addResult = await assignTests({
                     sampleId,
@@ -141,189 +104,90 @@ export function TestAssignmentDialog({
                         methodId: t.methodId
                     }))
                 })
-                if (addResult.error) {
-                    setError(addResult.error)
-                    setIsSubmitting(false)
-                    return
-                }
+                if (addResult.error) throw new Error(addResult.error)
             }
 
-            // Success!
-            setSuccess(true)
-            setTimeout(() => {
-                setSuccess(false)
-                onOpenChange(false)
-                onSuccess?.()
-            }, 1500)
-        } catch (err) {
-            setError('Failed to update test assignments')
+            // 3. Update methods for existing tests if changed
+            const toUpdateMethod = selectedTests.filter(t => {
+                const initial = initialTests.find(i => i.assayId === t.assayId)
+                return initial && initial.methodId !== t.methodId
+            })
+
+            if (toUpdateMethod.length > 0) {
+                const updateRemoveResult = await unassignTests({
+                    sampleId,
+                    tests: toUpdateMethod.map(t => {
+                        const initial = initialTests.find(i => i.assayId === t.assayId)
+                        return {
+                            assayId: t.assayId,
+                            methodId: initial!.methodId
+                        }
+                    })
+                })
+                if (updateRemoveResult.error) throw new Error(updateRemoveResult.error)
+
+                const updateAddResult = await assignTests({
+                    sampleId,
+                    tests: toUpdateMethod.map(t => ({
+                        assayId: t.assayId,
+                        methodId: t.methodId
+                    }))
+                })
+                if (updateAddResult.error) throw new Error(updateAddResult.error)
+            }
+
+            onSuccess?.()
+            onOpenChange(false)
+
+        } catch (err: any) {
+            setError(err.message || 'Failed to update assignments')
         } finally {
             setIsSubmitting(false)
         }
     }
 
-    const hasChanges = toAdd.length > 0 || toRemove.length > 0
-    const totalAfterChange = currentlyAssigned.length - toRemove.length + toAdd.length
-
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-[98vw] sm:max-w-[98vw] w-full h-[95vh] flex flex-col p-0 gap-0">
-                <DialogHeader className="px-6 py-4 border-b">
+                <DialogHeader className="px-6 py-4 border-b hidden">
                     <DialogTitle>Chỉ định xét nghiệm</DialogTitle>
-                    <DialogDescription>
-                        Mẫu: <span className="font-medium text-foreground">{sampleName}</span>
-                    </DialogDescription>
                 </DialogHeader>
 
-                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-slate-50/50 dark:bg-slate-900/40">
-                    <TestAssignmentSelector
-                        selected={toAdd}
-                        onChange={setToAdd}
-                        disabledAssayIds={disabledAssayIds}
-                        heading="Chọn xét nghiệm cần thêm (POS)"
-                        subheading="Tìm kiếm, chọn phương pháp và đưa vào danh sách thêm mới. Các chỉ tiêu đã có sẽ bị khóa trừ khi bạn bỏ chọn ở danh sách bên dưới."
-                    />
-
-                    <div className="border rounded-lg bg-background">
-                        <div className="p-4 border-b flex items-center justify-between">
-                            <div>
-                                <h3 className="font-semibold">Xét nghiệm đã chỉ định</h3>
-                                <p className="text-xs text-muted-foreground">
-                                    Bỏ chọn để hủy, số đếm cập nhật sau khi lưu.
-                                </p>
-                                {hasChanges && (
-                                    <div className="text-xs text-muted-foreground flex gap-3 mt-1">
-                                        {toAdd.length > 0 && <span className="text-green-600">+{toAdd.length} thêm</span>}
-                                        {toRemove.length > 0 && <span className="text-red-600">-{toRemove.length} xóa</span>}
-                                    </div>
-                                )}
-                            </div>
-                            <Badge variant="secondary">{totalAfterChange}</Badge>
+                <div className="flex-1 overflow-hidden bg-slate-50/50 dark:bg-slate-900/40">
+                    {isLoading ? (
+                        <div className="flex items-center justify-center h-full">
+                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                         </div>
-                        <ScrollArea className="max-h-[360px]">
-                            {isInitialLoading ? (
-                                <div className="flex justify-center py-8">
-                                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                                </div>
-                            ) : currentlyAssigned.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center text-muted-foreground gap-2 py-10">
-                                    <div className="p-3 rounded-full bg-slate-100 dark:bg-slate-800">
-                                        <Plus className="h-5 w-5" />
-                                    </div>
-                                    <p className="text-sm">Chưa có xét nghiệm nào.</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-2 p-4">
-                                    {currentlyAssigned.map((test) => {
-                                        const markedForRemoval = toRemove.includes(test.assayId)
-                                        return (
-                                            <div
-                                                key={test.assayId}
-                                                className={`flex items-start justify-between p-3 rounded-lg border group transition-all ${markedForRemoval
-                                                    ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800 opacity-70'
-                                                    : 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800'
-                                                    }`}
-                                            >
-                                                <div className="flex-1">
-                                                    <div className={`font-medium text-sm ${markedForRemoval ? 'line-through' : ''}`}>
-                                                        {test.assayName}
-                                                    </div>
-                                                    <div className="text-xs text-muted-foreground mt-1">
-                                                        <span className="font-medium">PP:</span> {test.methodName}
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    onClick={() =>
-                                                        markedForRemoval
-                                                            ? handleUnmarkForRemoval(test.assayId)
-                                                            : handleMarkForRemoval(test.assayId)
-                                                    }
-                                                    className={`p-1 transition-colors ${markedForRemoval
-                                                        ? 'text-green-600 hover:text-green-700'
-                                                        : 'text-muted-foreground hover:text-destructive'
-                                                        }`}
-                                                    title={markedForRemoval ? 'Hoàn tác' : 'Xóa'}
-                                                >
-                                                    {markedForRemoval ? (
-                                                        <CheckCircle2 className="h-4 w-4" />
-                                                    ) : (
-                                                        <Trash2 className="h-4 w-4" />
-                                                    )}
-                                                </button>
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                            )}
-                        </ScrollArea>
-
-                        {toAdd.length > 0 && (
-                            <div className="border-t p-4 space-y-2">
-                                <h4 className="text-xs font-semibold text-green-600 uppercase">
-                                    Sẽ thêm ({toAdd.length})
-                                </h4>
-                                <div className="space-y-2">
-                                    {toAdd.map((test) => (
-                                        <div
-                                            key={test.assayId}
-                                            className="flex items-start justify-between p-3 rounded-lg border bg-green-50/50 dark:bg-green-900/10 border-green-200 dark:border-green-800 group"
-                                        >
-                                            <div>
-                                                <div className="font-medium text-sm">{test.assayName}</div>
-                                                <div className="text-xs text-muted-foreground mt-1">
-                                                    <span className="font-medium">PP:</span> {test.methodName}
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={() => handleRemoveFromToAdd(test.assayId)}
-                                                className="text-muted-foreground hover:text-destructive transition-colors p-1"
-                                                title="Bỏ khỏi danh sách thêm"
-                                            >
-                                                <X className="h-4 w-4" />
-                                            </button>
+                    ) : (
+                        <TestAssignmentGrid
+                            selected={selectedTests}
+                            onChange={setSelectedTests}
+                            onSave={handleSave}
+                            isSaving={isSubmitting}
+                            context={
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Mã mẫu</label>
+                                        <div className="text-lg font-mono font-bold text-slate-800 dark:text-slate-200 tracking-tight">
+                                            {sampleName}
                                         </div>
-                                    ))}
+                                    </div>
+
+                                    {error && (
+                                        <div className="p-3 bg-destructive/10 rounded text-sm text-destructive">
+                                            {error}
+                                        </div>
+                                    )}
+
+                                    <div className="pt-4">
+                                        <Button variant="outline" className="w-full" onClick={() => onOpenChange(false)}>
+                                            Đóng
+                                        </Button>
+                                    </div>
                                 </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                <div className="px-6 py-4 border-t bg-background space-y-3">
-                    {error && (
-                        <div className="text-sm text-destructive bg-destructive/10 p-2 rounded flex items-start gap-2">
-                            <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                            <span>{error}</span>
-                        </div>
+                            }
+                        />
                     )}
-                    {success && (
-                        <div className="text-sm text-green-600 bg-green-50 dark:bg-green-900/20 p-2 rounded flex items-center gap-2">
-                            <CheckCircle2 className="h-4 w-4" />
-                            Đã lưu thành công
-                        </div>
-                    )}
-
-                    <div className="flex gap-2">
-                        <Button
-                            variant="outline"
-                            className="flex-1"
-                            onClick={() => onOpenChange(false)}
-                            disabled={isSubmitting}
-                        >
-                            Hủy
-                        </Button>
-                        <Button
-                            className="flex-1"
-                            onClick={handleSubmit}
-                            disabled={!hasChanges || isSubmitting}
-                        >
-                            {isSubmitting ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                                'Lưu thay đổi'
-                            )}
-                        </Button>
-                    </div>
                 </div>
             </DialogContent>
         </Dialog>

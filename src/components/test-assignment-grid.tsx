@@ -1,0 +1,422 @@
+'use client'
+
+import React, { useState, useMemo, useEffect } from 'react'
+import { getAssayDefinitions } from '@/app/actions/assays'
+import {
+    Search,
+    Beaker,
+    CheckCircle2,
+    X,
+    Plus,
+    ArrowUpDown,
+    ArrowUp,
+    ArrowDown,
+    CheckSquare,
+    Square,
+    FlaskConical,
+    Loader2
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+
+// --- Types ---
+
+type AssayMethod = {
+    id: string
+    method_id: string
+    name: string
+    is_default: boolean
+    notes: string | null
+}
+
+type AssayDefinitionWithMethods = {
+    id: string
+    name: string
+    units: string | null
+    methods: AssayMethod[]
+}
+
+export type SelectedTest = {
+    assayId: string
+    methodId: string
+    assayName: string
+    methodName: string
+    units: string | null
+}
+
+interface TestAssignmentGridProps {
+    selected: SelectedTest[]
+    onChange: (tests: SelectedTest[]) => void
+    context?: React.ReactNode
+    disabledAssayIds?: string[]
+    onSave?: () => void
+    isSaving?: boolean
+    saveLabel?: string
+}
+
+// --- Components ---
+
+const SortIcon = ({ column, sortConfig }: { column: string, sortConfig: any }) => {
+    if (sortConfig?.key !== column) return <ArrowUpDown size={14} className="text-slate-300 opacity-0 group-hover:opacity-50" />
+    return sortConfig.direction === 'asc'
+        ? <ArrowUp size={14} className="text-blue-600" />
+        : <ArrowDown size={14} className="text-blue-600" />
+}
+
+export function TestAssignmentGrid({
+    selected,
+    onChange,
+    context,
+    disabledAssayIds = [],
+    onSave,
+    isSaving = false,
+    saveLabel = 'Lưu thay đổi'
+}: TestAssignmentGridProps) {
+    // State
+    const [availableAssays, setAvailableAssays] = useState<AssayDefinitionWithMethods[]>([])
+    const [isLoading, setIsLoading] = useState(true)
+    const [searchQuery, setSearchQuery] = useState('')
+    const [sortConfig, setSortConfig] = useState<{ key: keyof AssayDefinitionWithMethods, direction: 'asc' | 'desc' } | null>({ key: 'name', direction: 'asc' })
+    const [showToast, setShowToast] = useState(false)
+
+    // Initial Load
+    useEffect(() => {
+        loadAssays()
+    }, [])
+
+    const loadAssays = async () => {
+        setIsLoading(true)
+        try {
+            // Fetch all assays (pageSize 100 for now, could implement server-side pagination later)
+            const result = await getAssayDefinitions({ pageSize: 100 })
+            if (result.data) {
+                setAvailableAssays(result.data as AssayDefinitionWithMethods[])
+            }
+        } catch (error) {
+            console.error('Failed to load assays', error)
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    // Sorting Handler
+    const requestSort = (key: keyof AssayDefinitionWithMethods) => {
+        let direction: 'asc' | 'desc' = 'asc'
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc'
+        }
+        setSortConfig({ key, direction })
+    }
+
+    // Derived State
+    const processedTests = useMemo(() => {
+        let data = availableAssays.filter(test => {
+            const matchesSearch = test.name.toLowerCase().includes(searchQuery.toLowerCase())
+            return matchesSearch
+        })
+
+        if (sortConfig) {
+            data.sort((a, b) => {
+                // Handle null values safely
+                const aValue = a[sortConfig.key] || ''
+                const bValue = b[sortConfig.key] || ''
+
+                if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1
+                if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1
+                return 0
+            })
+        }
+        return data
+    }, [availableAssays, searchQuery, sortConfig])
+
+    const disabledSet = useMemo(() => new Set(disabledAssayIds), [disabledAssayIds])
+
+    // Handlers
+    const toggleTestSelection = (assay: AssayDefinitionWithMethods) => {
+        if (disabledSet.has(assay.id)) return
+
+        const existingIndex = selected.findIndex(t => t.assayId === assay.id)
+
+        if (existingIndex >= 0) {
+            // Remove
+            const newSelected = [...selected]
+            newSelected.splice(existingIndex, 1)
+            onChange(newSelected)
+        } else {
+            // Add with default method
+            const defaultMethod = assay.methods.find(m => m.is_default) || assay.methods[0]
+            if (defaultMethod) {
+                onChange([...selected, {
+                    assayId: assay.id,
+                    methodId: defaultMethod.method_id,
+                    assayName: assay.name,
+                    methodName: defaultMethod.name,
+                    units: assay.units
+                }])
+            }
+        }
+    }
+
+    const handleMethodChange = (assayId: string, methodId: string) => {
+        const newSelected = selected.map(t => {
+            if (t.assayId === assayId) {
+                const assay = availableAssays.find(a => a.id === assayId)
+                const method = assay?.methods.find(m => m.method_id === methodId)
+                if (method) {
+                    return {
+                        ...t,
+                        methodId: method.method_id,
+                        methodName: method.name
+                    }
+                }
+            }
+            return t
+        })
+        onChange(newSelected)
+    }
+
+    const handleRemove = (assayId: string) => {
+        onChange(selected.filter(t => t.assayId !== assayId))
+    }
+
+    return (
+        <div className="flex flex-col lg:flex-row h-[calc(100vh-200px)] min-h-[600px] bg-white dark:bg-slate-950 border rounded-lg overflow-hidden shadow-sm">
+
+            {/* -------------------------------------------------------------
+                LEFT PANE: CONTEXT
+            ----------------------------------------------------------------- */}
+            <aside className="w-full lg:w-72 bg-slate-50 dark:bg-slate-900 border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800 flex flex-col z-20 shrink-0">
+                <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900">
+                    <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400 mb-1">
+                        <FlaskConical size={18} />
+                        <span className="font-bold tracking-tight text-sm">LIMS<span className="text-slate-900 dark:text-slate-100">Pro</span> Grid</span>
+                    </div>
+                </div>
+
+                <div className="p-5 flex-1 overflow-y-auto">
+                    {context}
+                </div>
+
+                <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 text-[10px] text-slate-500 text-center">
+                    Workflow: Test Assignment
+                </div>
+            </aside>
+
+
+            {/* -------------------------------------------------------------
+                CENTER PANE: DATA GRID
+            ----------------------------------------------------------------- */}
+            <main className="flex-1 flex flex-col min-w-0 bg-white dark:bg-slate-950">
+
+                {/* Toolbar */}
+                <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center gap-4 justify-between bg-white dark:bg-slate-950">
+                    <div className="flex items-center gap-2 flex-1">
+                        <div className="relative w-full max-w-md">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                            <input
+                                type="text"
+                                placeholder="Tìm kiếm chỉ tiêu..."
+                                className="w-full pl-9 pr-4 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500 transition-all outline-none"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <div className="text-xs text-slate-500 font-medium whitespace-nowrap">
+                        {processedTests.length} chỉ tiêu
+                    </div>
+                </div>
+
+                {/* The Grid Header */}
+                <div className="flex-1 overflow-hidden flex flex-col">
+                    <div className="overflow-auto flex-1">
+                        <table className="w-full text-left border-collapse">
+                            <thead className="bg-slate-50 dark:bg-slate-900 sticky top-0 z-10 shadow-sm ring-1 ring-slate-900/5 dark:ring-slate-100/5">
+                                <tr>
+                                    <th className="p-3 w-12 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
+                                    </th>
+                                    <th onClick={() => requestSort('name')} className="group p-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 border-b border-slate-200 dark:border-slate-800 select-none">
+                                        <div className="flex items-center gap-1">Tên chỉ tiêu <SortIcon column="name" sortConfig={sortConfig} /></div>
+                                    </th>
+                                    <th className="p-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 w-48 select-none">
+                                        Phương pháp
+                                    </th>
+                                    <th onClick={() => requestSort('units')} className="group p-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 border-b border-slate-200 dark:border-slate-800 w-24 select-none">
+                                        <div className="flex items-center gap-1">ĐVT <SortIcon column="units" sortConfig={sortConfig} /></div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white dark:bg-slate-950">
+                                {isLoading ? (
+                                    <tr>
+                                        <td colSpan={4} className="p-8 text-center text-muted-foreground">
+                                            <div className="flex justify-center items-center gap-2">
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                Đang tải dữ liệu...
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : processedTests.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={4} className="p-8 text-center text-muted-foreground">
+                                            Không tìm thấy chỉ tiêu nào
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    processedTests.map((test, index) => {
+                                        const selectedTest = selected.find(t => t.assayId === test.id)
+                                        const isSelected = !!selectedTest
+                                        const isDisabled = disabledSet.has(test.id)
+
+                                        return (
+                                            <tr
+                                                key={test.id}
+                                                onClick={() => !isDisabled && toggleTestSelection(test)}
+                                                className={`
+                                                    transition-colors border-b border-slate-100 dark:border-slate-800 last:border-0 
+                                                    ${isDisabled ? 'opacity-50 cursor-not-allowed bg-slate-50 dark:bg-slate-900' : 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900'}
+                                                    ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30' : index % 2 === 0 ? 'bg-white dark:bg-slate-950' : 'bg-slate-50/30 dark:bg-slate-900/30'}
+                                                `}
+                                            >
+                                                <td className="p-3 text-center">
+                                                    {isDisabled ? (
+                                                        <CheckCircle2 size={18} className="text-slate-300 dark:text-slate-600 inline-block" />
+                                                    ) : isSelected ? (
+                                                        <CheckSquare size={18} className="text-blue-600 dark:text-blue-400 inline-block" />
+                                                    ) : (
+                                                        <Square size={18} className="text-slate-300 dark:text-slate-600 inline-block" />
+                                                    )}
+                                                </td>
+                                                <td className="p-3">
+                                                    <div className="flex flex-col">
+                                                        <span className={`text-sm font-medium ${isSelected ? 'text-blue-900 dark:text-blue-100' : 'text-slate-800 dark:text-slate-200'}`}>{test.name}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                                                    {isSelected && test.methods.length > 1 ? (
+                                                        <Select
+                                                            value={selectedTest.methodId}
+                                                            onValueChange={(value) => handleMethodChange(test.id, value)}
+                                                        >
+                                                            <SelectTrigger className="h-8 w-full text-xs">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {test.methods.map(m => (
+                                                                    <SelectItem key={m.method_id} value={m.method_id} className="text-xs">
+                                                                        {m.name}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    ) : (
+                                                        <span className="text-xs text-slate-600 dark:text-slate-400">
+                                                            {isSelected ? selectedTest.methodName : test.methods[0]?.name || 'N/A'}
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="p-3 text-xs text-slate-600 dark:text-slate-400">
+                                                    {test.units || '-'}
+                                                </td>
+                                            </tr>
+                                        )
+                                    })
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+
+
+            {/* -------------------------------------------------------------
+                RIGHT PANE: STAGING AREA
+            ----------------------------------------------------------------- */}
+            <aside className="w-full lg:w-80 bg-white dark:bg-slate-950 border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-slate-800 flex flex-col shadow-xl z-30 shrink-0">
+                <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <div className="bg-slate-800 dark:bg-slate-700 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                            {selected.length}
+                        </div>
+                        <h2 className="font-semibold text-slate-800 dark:text-slate-200 text-sm">Đã chọn</h2>
+                    </div>
+                    <button
+                        onClick={() => onChange([])}
+                        className="text-[10px] uppercase font-bold text-slate-400 hover:text-red-600 tracking-wider"
+                        disabled={selected.length === 0}
+                    >
+                        Xóa hết
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-0">
+                    {selected.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-slate-400 p-8 text-center">
+                            <div className="w-10 h-10 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-center mb-2">
+                                <Plus size={16} className="text-slate-300 dark:text-slate-600" />
+                            </div>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Chọn chỉ tiêu từ danh sách</p>
+                        </div>
+                    ) : (
+                        <table className="w-full text-left">
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                {selected.map((test) => (
+                                    <tr key={test.assayId} className="group hover:bg-red-50/30 dark:hover:bg-red-900/10 transition-colors">
+                                        <td className="p-3">
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm text-slate-800 dark:text-slate-200 font-medium leading-tight">{test.assayName}</span>
+                                                    <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">PP: {test.methodName}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleRemove(test.assayId)}
+                                                    className="text-slate-300 hover:text-red-500 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                                                >
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
+                    {onSave && (
+                        <Button
+                            onClick={onSave}
+                            disabled={selected.length === 0 || isSaving}
+                            className="w-full"
+                        >
+                            {isSaving ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Đang xử lý...
+                                </>
+                            ) : (
+                                saveLabel
+                            )}
+                        </Button>
+                    )}
+                </div>
+            </aside>
+
+            {/* Toast Notification */}
+            <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded shadow-lg flex items-center gap-3 transition-all duration-300 z-50 ${showToast ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
+                <CheckCircle2 size={18} className="text-green-400" />
+                <span className="text-sm font-medium">Đã lưu thay đổi</span>
+            </div>
+
+        </div>
+    )
+}
