@@ -16,28 +16,30 @@ interface SampleBottomRowProps {
 export function SampleBottomRow({ sample }: SampleBottomRowProps) {
     const [isEditing, setIsEditing] = useState(false)
     const [userRole, setUserRole] = useState<'analyst' | 'manager'>('analyst')
+    const [userFullName, setUserFullName] = useState<string>('')
     const router = useRouter()
     const searchParams = useSearchParams()
     const pathname = usePathname()
     const view = searchParams.get('view')
 
-    // Fetch user role on mount
+    // Fetch user role and name on mount
     useEffect(() => {
-        const fetchUserRole = async () => {
+        const fetchUserData = async () => {
             const supabase = createClient()
             const { data: { user } } = await supabase.auth.getUser()
             if (user) {
                 const { data } = await supabase
                     .from('users')
-                    .select('role')
+                    .select('role, full_name')
                     .eq('id', user.id)
                     .single()
                 if (data) {
                     setUserRole(data.role as 'analyst' | 'manager')
+                    setUserFullName(data.full_name || '')
                 }
             }
         }
-        fetchUserRole()
+        fetchUserData()
     }, [])
 
     // Reset editing state when sample changes
@@ -69,6 +71,7 @@ export function SampleBottomRow({ sample }: SampleBottomRowProps) {
                 <SampleResultsView
                     sample={sample}
                     userRole={userRole}
+                    userFullName={userFullName}
                     onClose={handleCloseResults}
                 />
             </div>

@@ -7,16 +7,16 @@ import { Button } from '@/components/ui/button'
 import { X, RefreshCcw, FileText } from 'lucide-react'
 import { SampleStatusBadge } from '@/components/sample-status-badge'
 import { ResultWithAssay, SampleWithUser } from '@/types'
-import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { toast } from 'sonner'
+import { useRouter } from 'next/navigation'
 
 interface SampleResultsViewProps {
     sample: SampleWithUser
     userRole: 'analyst' | 'manager'
+    userFullName?: string
     onClose: () => void
 }
 
-export function SampleResultsView({ sample, userRole, onClose }: SampleResultsViewProps) {
+export function SampleResultsView({ sample, userRole, userFullName, onClose }: SampleResultsViewProps) {
     const [results, setResults] = useState<ResultWithAssay[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -64,9 +64,15 @@ export function SampleResultsView({ sample, userRole, onClose }: SampleResultsVi
                             </h3>
                             <SampleStatusBadge status={sample.status} />
                         </div>
-                        <p className="text-xs text-muted-foreground truncate">
-                            {sample.client_name || 'N/A'}
-                        </p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground truncate">
+                            <span>{sample.client_name || 'N/A'}</span>
+                            {userFullName && (
+                                <>
+                                    <span className="text-slate-300 dark:text-slate-700">•</span>
+                                    <span>Kiểm nghiệm viên: {userFullName}</span>
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
