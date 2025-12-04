@@ -270,3 +270,101 @@ WHERE tablename = 'results';
 5. **Vietnamese First** - All UI text in Vietnamese
 6. **Type Safe** - Use TypeScript and Zod strictly
 7. **Self-Documented** - Code should be clear without excessive comments
+
+## Git Workflow and Commit Messages
+
+### Conventional Commits
+
+This project follows **Conventional Commits** specification for commit messages. Writing clear, standardized commit messages is a critical skill that answers two essential questions: **What did you do?** and **Why?**
+
+### Commit Message Format
+
+The basic syntax is: `<type>: <subject>`
+
+**Type:** Describes the category of change. Use these main types:
+
+- **feat**: Add a new feature
+- **fix**: Fix a bug
+- **docs**: Update documentation
+- **refactor**: Refactor code (optimize, restructure) without adding features or fixing bugs
+- **style**: Format code (whitespace, semicolons, indentation, etc.)
+- **test**: Add or update tests
+- **chore**: Update build tasks, package manager configs, etc.
+- **perf**: Performance improvements
+
+**Subject:** A brief description (under 100 characters) of what you did. Write in imperative mood, present tense (as if giving a command).
+
+### Examples
+
+✅ **Good commit messages:**
+```
+fix: Correct login logic for admin user
+feat: Add Google login button to homepage
+docs: Update API documentation for user endpoints
+refactor: Optimize database query performance in practitioners list
+style: Fix indentation in auth components
+test: Add unit tests for credit calculation
+```
+
+❌ **Bad commit messages:**
+```
+Fixed stuff
+WIP
+Updated files
+changes
+asdfgh
+```
+
+### Commit Message Best Practices
+
+1. **Be specific:** Describe what changed, not just where
+2. **Use imperative mood:** "Add feature" not "Added feature" or "Adds feature"
+3. **Keep subject line short:** Under 100 characters
+4. **Don't end with period:** No punctuation at the end of subject line
+5. **Reference issues when relevant:** `fix: Resolve login error (#123)`
+
+### Extended Format (Optional)
+
+For more complex changes, you can use the extended format with body and footer:
+
+```
+<type>: <subject>
+
+<body>
+
+<footer>
+```
+
+**Example:**
+```
+feat: Add bulk practitioner import functionality
+
+Implement Excel file upload and validation for importing multiple
+practitioners at once. Includes error handling and progress tracking.
+
+Closes #45
+```
+
+### When to Use Each Type
+
+- **feat** - Adding any new functionality users can see or use
+- **fix** - Fixing broken functionality that wasn't working as intended
+- **docs** - ONLY documentation changes (README, guides, comments)
+- **refactor** - Code changes that neither fix bugs nor add features (performance, readability)
+- **style** - Code formatting only (no logic changes)
+- **test** - Adding missing tests or correcting existing tests
+- **chore** - Tooling changes (dependencies, configs, build scripts)
+
+### Git Operations Reference
+
+When creating commits in this project:
+
+1. **Always use Conventional Commits format**
+2. **Verify changes before committing:** `git status` and `git diff`
+3. **Stage relevant files:** `git add <files>`
+4. **Create commit with proper format:** `git commit -m "type: subject"`
+5. **Review commit history for context:** `git log --oneline`
+
+See the [Development Workflow](#development-workflow) section for detailed git operations and the full commit creation process.
+
+---
