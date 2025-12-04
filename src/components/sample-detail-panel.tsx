@@ -7,13 +7,11 @@ import {
     FileText,
     Calendar,
     User,
-    Hash,
     Building2,
     Clock,
     Pencil
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useState } from 'react'
 import { SampleEditDialog } from '@/components/sample-edit-dialog'
 import { useRouter } from 'next/navigation'
@@ -41,75 +39,71 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
 
     return (
         <div className="h-full flex flex-col bg-white dark:bg-slate-950 border rounded-lg overflow-hidden shadow-sm">
-            <div className="px-6 py-4 border-b bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between sticky top-0 z-10">
-                <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+            <div className="px-4 py-3 border-b bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between sticky top-0 z-10">
+                <div className="flex items-center gap-3 overflow-hidden">
+                    <div className="h-8 w-8 rounded-full bg-sky-50 dark:bg-sky-900/20 flex items-center justify-center text-sky-600 dark:text-sky-400 shrink-0">
                         <FileText className="h-4 w-4" />
                     </div>
-                    <div>
-                        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                            Chi tiết mẫu
-                        </h3>
-                        <p className="text-xs text-muted-foreground">
+                    <div className="min-w-0">
+                        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate font-mono">
                             {sample.sample_id}
+                        </h3>
+                        <p className="text-xs text-muted-foreground truncate">
+                            Chi tiết mẫu
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                     <SampleStatusBadge status={sample.status} />
                     <Button
                         variant="ghost"
                         size="icon-sm"
                         onClick={() => setEditDialogOpen(true)}
                         title="Chỉnh sửa thông tin"
+                        className="h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50"
                     >
                         <Pencil className="h-4 w-4" />
                     </Button>
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6">
-                <div className="grid grid-cols-1 gap-6">
-                    <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            <Hash className="h-3.5 w-3.5" />
-                            Mã mẫu
-                        </div>
-                        <div className="font-mono font-medium text-base pl-6">{sample.sample_id}</div>
-                    </div>
-
-                    <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <div className="flex-1 overflow-y-auto p-4">
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2 space-y-1.5">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                             <Building2 className="h-3.5 w-3.5" />
                             Khách hàng
                         </div>
-                        <div className="font-medium pl-6">{sample.client_name || 'N/A'}</div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-6">
-                        <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                <Calendar className="h-3.5 w-3.5" />
-                                Ngày nhận
-                            </div>
-                            <div className="pl-6 text-sm">{formatDate(sample.received_at)}</div>
-                        </div>
-
-                        <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                <User className="h-3.5 w-3.5" />
-                                Người nhận
-                            </div>
-                            <div className="pl-6 text-sm">{sample.received_by_name || 'N/A'}</div>
+                        <div className="font-medium text-sm truncate" title={sample.client_name || ''}>
+                            {sample.client_name || 'N/A'}
                         </div>
                     </div>
 
-                    <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            <Clock className="h-3.5 w-3.5" />
-                            Cập nhật cuối
+                    <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                            <Calendar className="h-3.5 w-3.5" />
+                            Ngày nhận
                         </div>
-                        <div className="pl-6 text-sm text-muted-foreground">{formatDate(sample.updated_at)}</div>
+                        <div className="text-sm">
+                            {formatDate(sample.received_at)}
+                        </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                            <User className="h-3.5 w-3.5" />
+                            Người nhận
+                        </div>
+                        <div className="text-sm truncate" title={sample.received_by_name || ''}>
+                            {sample.received_by_name || 'N/A'}
+                        </div>
+                    </div>
+
+                    <div className="col-span-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            <span>Cập nhật: {formatDate(sample.updated_at)}</span>
+                        </div>
                     </div>
                 </div>
             </div>

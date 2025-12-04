@@ -85,7 +85,7 @@ export function SampleEditDialog({
                 <DialogHeader>
                     <DialogTitle>Chỉnh sửa mẫu</DialogTitle>
                     <DialogDescription>
-                        Cập nhật thông tin cho mẫu {sample.sample_id}
+                        Cập nhật thông tin cho mẫu <span className="font-mono font-medium text-foreground">{sample.sample_id}</span>
                     </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
@@ -97,7 +97,7 @@ export function SampleEditDialog({
                                 <FormItem>
                                     <FormLabel>Tên khách hàng</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Nhập tên khách hàng" {...field} />
+                                        <Input placeholder="Nhập tên khách hàng" className="shadow-sm" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

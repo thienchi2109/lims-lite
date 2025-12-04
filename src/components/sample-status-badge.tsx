@@ -17,27 +17,27 @@ const statusConfig: Record<
     received: {
         label: 'Đã nhận',
         className:
-            'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-200 dark:border-yellow-800',
+            'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800',
     },
     assigned: {
         label: 'Đã chỉ định',
         className:
-            'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-200 dark:border-green-800',
+            'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/20 dark:text-sky-400 dark:border-sky-800',
     },
     in_progress: {
         label: 'Đang thực hiện',
         className:
-            'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-200 dark:border-orange-800',
+            'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-800',
     },
     review: {
         label: 'Chờ duyệt',
         className:
-            'bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-900/30 dark:text-sky-200 dark:border-sky-800',
+            'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800',
     },
     completed: {
         label: 'Hoàn thành',
         className:
-            'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-200 dark:border-blue-800',
+            'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800',
     },
 }
 
@@ -47,7 +47,7 @@ export function SampleStatusBadge({ status }: SampleStatusBadgeProps) {
     return (
         <Badge
             variant="outline"
-            className={`capitalize rounded-full px-3 py-1 text-xs font-semibold ${config.className}`}
+            className={`capitalize rounded-full px-2.5 py-0.5 text-[11px] font-medium shadow-sm ${config.className}`}
         >
             {config.label}
         </Badge>

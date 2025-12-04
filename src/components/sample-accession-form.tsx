@@ -126,13 +126,13 @@ export function SampleAccessionForm() {
                         {/* Client Name Field */}
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
-                                <Label htmlFor="client_name">Tên khách hàng *</Label>
+                                <Label htmlFor="client_name" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Tên khách hàng *</Label>
                                 <Button
                                     type="button"
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => setShowScanner(!showScanner)}
-                                    className="h-6 px-2 text-xs"
+                                    className="h-6 px-2 text-xs text-sky-600 hover:text-sky-700 hover:bg-sky-50"
                                 >
                                     <Scan className="h-3 w-3 mr-1" />
                                     {showScanner ? 'Ẩn' : 'Quét QR'}
@@ -143,6 +143,7 @@ export function SampleAccessionForm() {
                                 {...register('client_name')}
                                 placeholder="Nhập tên khách hàng"
                                 autoFocus
+                                className="shadow-sm"
                             />
                             {errors.client_name && (
                                 <p className="text-sm text-destructive">{errors.client_name.message}</p>
@@ -161,11 +162,12 @@ export function SampleAccessionForm() {
 
                         {/* Received At Field (Optional) */}
                         <div className="space-y-2">
-                            <Label htmlFor="received_at">Thời gian nhận</Label>
+                            <Label htmlFor="received_at" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Thời gian nhận</Label>
                             <Input
                                 id="received_at"
                                 type="datetime-local"
                                 {...register('received_at')}
+                                className="shadow-sm"
                             />
                             <p className="text-xs text-muted-foreground">
                                 Tùy chọn. Mặc định là hiện tại.
@@ -187,15 +189,15 @@ export function SampleAccessionForm() {
 
                         {/* Success Message */}
                         {submitSuccess && (
-                            <div className="bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 p-3 rounded-md text-sm flex flex-col gap-2">
-                                <div className="flex items-center gap-2">
+                            <div className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 p-3 rounded-md text-sm flex flex-col gap-2 border border-emerald-200 dark:border-emerald-800">
+                                <div className="flex items-center gap-2 font-medium">
                                     <CheckCircle2 className="h-4 w-4" />
                                     {submitSuccess}
                                 </div>
                                 {lastSampleId && (
                                     <div className="flex gap-2">
                                         <Link href={`/analyst/samples?sampleId=${lastSampleId}`} className="w-full">
-                                            <Button variant="secondary" className="w-full">
+                                            <Button variant="secondary" className="w-full bg-white shadow-sm hover:bg-slate-50 text-emerald-700 border border-emerald-200">
                                                 Mở chi tiết mẫu
                                             </Button>
                                         </Link>

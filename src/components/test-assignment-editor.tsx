@@ -136,8 +136,8 @@ export function TestAssignmentEditor({
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center h-full bg-slate-50/50 dark:bg-slate-900/50 border rounded-lg">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="flex items-center justify-center h-full bg-white dark:bg-slate-950 border rounded-lg shadow-sm">
+                <Loader2 className="h-8 w-8 animate-spin text-sky-600 dark:text-sky-400" />
             </div>
         )
     }

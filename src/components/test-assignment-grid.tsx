@@ -67,8 +67,8 @@ interface TestAssignmentGridProps {
 const SortIcon = ({ column, sortConfig }: { column: string, sortConfig: any }) => {
     if (sortConfig?.key !== column) return <ArrowUpDown size={14} className="text-slate-300 opacity-0 group-hover:opacity-50" />
     return sortConfig.direction === 'asc'
-        ? <ArrowUp size={14} className="text-blue-600" />
-        : <ArrowDown size={14} className="text-blue-600" />
+        ? <ArrowUp size={14} className="text-sky-600" />
+        : <ArrowDown size={14} className="text-sky-600" />
 }
 
 export function TestAssignmentGrid({
@@ -224,8 +224,8 @@ export function TestAssignmentGrid({
                 LEFT PANE: CONTEXT
             ----------------------------------------------------------------- */}
             <aside className="w-full lg:w-72 bg-slate-50 dark:bg-slate-900 border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800 flex flex-col z-20 shrink-0">
-                <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900">
-                    <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400 mb-1">
+                <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                    <div className="flex items-center gap-2 text-sky-700 dark:text-sky-400 mb-1">
                         <FlaskConical size={18} />
                         <span className="font-bold tracking-tight text-sm">LIMS<span className="text-slate-900 dark:text-slate-100">Pro</span> Grid</span>
                     </div>
@@ -336,21 +336,21 @@ export function TestAssignmentGrid({
                                                 className={`
                                                     transition-colors border-b border-slate-100 dark:border-slate-800 last:border-0 
                                                     ${isDisabled ? 'opacity-50 cursor-not-allowed bg-slate-50 dark:bg-slate-900' : 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900'}
-                                                    ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30' : index % 2 === 0 ? 'bg-white dark:bg-slate-950' : 'bg-slate-50/30 dark:bg-slate-900/30'}
+                                                    ${isSelected ? 'bg-sky-50 dark:bg-sky-900/20 hover:bg-sky-100 dark:hover:bg-sky-900/30' : index % 2 === 0 ? 'bg-white dark:bg-slate-950' : 'bg-slate-50/30 dark:bg-slate-900/30'}
                                                 `}
                                             >
                                                 <td className="p-3 text-center">
                                                     {isDisabled ? (
                                                         <CheckCircle2 size={18} className="text-slate-300 dark:text-slate-600 inline-block" />
                                                     ) : isSelected ? (
-                                                        <CheckSquare size={18} className="text-blue-600 dark:text-blue-400 inline-block" />
+                                                        <CheckSquare size={18} className="text-sky-600 dark:text-sky-400 inline-block" />
                                                     ) : (
                                                         <Square size={18} className="text-slate-300 dark:text-slate-600 inline-block" />
                                                     )}
                                                 </td>
                                                 <td className="p-3">
                                                     <div className="flex flex-col">
-                                                        <span className={`text-sm font-medium ${isSelected ? 'text-blue-900 dark:text-blue-100' : 'text-slate-800 dark:text-slate-200'}`}>{test.name}</span>
+                                                        <span className={`text-sm font-medium ${isSelected ? 'text-sky-900 dark:text-sky-100' : 'text-slate-800 dark:text-slate-200'}`}>{test.name}</span>
                                                     </div>
                                                 </td>
                                                 <td className="p-3" onClick={(e) => e.stopPropagation()}>

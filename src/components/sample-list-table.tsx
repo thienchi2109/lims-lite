@@ -111,7 +111,7 @@ export function SampleListTable({
             accessorKey: 'sample_id',
             header: 'Mã mẫu',
             cell: ({ row }) => (
-                <span className="font-mono font-medium">{row.original.sample_id}</span>
+                <span className="font-mono font-medium text-slate-700 dark:text-slate-200">{row.original.sample_id}</span>
             ),
         },
         {
@@ -139,23 +139,23 @@ export function SampleListTable({
                     <Button
                         variant="ghost"
                         onClick={() => handleSort('received_at')}
-                        className="-ml-4 h-8 data-[state=open]:bg-accent"
+                        className="-ml-4 h-8 data-[state=open]:bg-accent text-xs font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-700 hover:bg-transparent"
                     >
                         Ngày nhận
                         {sortBy === 'received_at' ? (
                             sortOrder === 'asc' ? (
-                                <ArrowUp className="ml-2 h-4 w-4" />
+                                <ArrowUp className="ml-2 h-3 w-3" />
                             ) : (
-                                <ArrowDown className="ml-2 h-4 w-4" />
+                                <ArrowDown className="ml-2 h-3 w-3" />
                             )
                         ) : (
-                            <ArrowUpDown className="ml-2 h-4 w-4" />
+                            <ArrowUpDown className="ml-2 h-3 w-3 opacity-50" />
                         )}
                     </Button>
                 )
             },
             cell: ({ row }) => (
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm text-muted-foreground font-mono">
                     {formatDate(row.original.received_at)}
                 </span>
             ),
@@ -164,7 +164,7 @@ export function SampleListTable({
             accessorKey: 'received_by_name',
             header: 'Người nhận',
             cell: ({ row }) => (
-                <span className="text-sm">{row.original.received_by_name || 'N/A'}</span>
+                <span className="text-sm text-slate-600 dark:text-slate-400">{row.original.received_by_name || 'N/A'}</span>
             ),
         },
     ]
@@ -185,6 +185,7 @@ export function SampleListTable({
                                 size="icon-sm"
                                 onClick={() => window.location.href = `/manager/results/${row.original.id}`}
                                 title="Xem kết quả"
+                                className="h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50"
                             >
                                 <Eye className="h-4 w-4" />
                             </Button>
@@ -210,6 +211,7 @@ export function SampleListTable({
                                 size="icon-sm"
                                 onClick={() => handleEditSample(row.original)}
                                 title="Chỉnh sửa"
+                                className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50"
                             >
                                 <Pencil className="h-4 w-4" />
                             </Button>
@@ -220,6 +222,7 @@ export function SampleListTable({
                                 size="icon-sm"
                                 onClick={() => window.location.href = `/analyst/results/${row.original.id}`}
                                 title="Nhập kết quả"
+                                className="h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50"
                             >
                                 <ClipboardPen className="h-4 w-4" />
                             </Button>
@@ -241,20 +244,23 @@ export function SampleListTable({
     return (
         <div className="space-y-4 h-full flex flex-col">
             {/* Table */}
-            <div className="rounded-md border flex-1 overflow-auto bg-white dark:bg-slate-950 relative">
+            <div className="rounded-lg border border-slate-200 dark:border-slate-800 flex-1 overflow-auto bg-white dark:bg-slate-950 relative shadow-sm">
                 {error ? (
                     <div className="p-8 text-center text-destructive">{error}</div>
                 ) : samples.length === 0 ? (
-                    <div className="p-8 text-center text-muted-foreground">
-                        Không tìm thấy mẫu nào. Tạo mẫu đầu tiên để bắt đầu.
+                    <div className="p-12 text-center text-muted-foreground flex flex-col items-center gap-3">
+                        <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                            <ClipboardPen className="h-6 w-6 text-slate-400" />
+                        </div>
+                        <p>Không tìm thấy mẫu nào. Tạo mẫu đầu tiên để bắt đầu.</p>
                     </div>
                 ) : (
                     <Table>
-                        <TableHeader className="sticky top-0 bg-white dark:bg-slate-950 z-10 shadow-sm">
+                        <TableHeader className="sticky top-0 bg-slate-50/95 backdrop-blur supports-[backdrop-filter]:bg-slate-50/60 dark:bg-slate-900/95 z-10 shadow-sm border-b border-slate-200 dark:border-slate-800">
                             {table.getHeaderGroups().map((headerGroup) => (
-                                <TableRow key={headerGroup.id}>
+                                <TableRow key={headerGroup.id} className="hover:bg-transparent border-none">
                                     {headerGroup.headers.map((header) => (
-                                        <TableHead key={header.id}>
+                                        <TableHead key={header.id} className="h-10 text-xs font-semibold uppercase tracking-wider text-slate-500">
                                             {header.isPlaceholder
                                                 ? null
                                                 : flexRender(
@@ -273,10 +279,13 @@ export function SampleListTable({
                                     <TableRow
                                         key={row.id}
                                         onClick={() => handleRowClick(row.original)}
-                                        className={`cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30' : 'hover:bg-slate-50 dark:hover:bg-slate-900/50'}`}
+                                        className={`cursor-pointer transition-colors border-slate-100 dark:border-slate-800 ${isSelected
+                                                ? 'bg-sky-50 dark:bg-sky-900/20 hover:bg-sky-100 dark:hover:bg-sky-900/30'
+                                                : 'hover:bg-slate-50/80 dark:hover:bg-slate-900/50'
+                                            }`}
                                     >
                                         {row.getVisibleCells().map((cell) => (
-                                            <TableCell key={cell.id}>
+                                            <TableCell key={cell.id} className="py-3">
                                                 {flexRender(
                                                     cell.column.columnDef.cell,
                                                     cell.getContext()
@@ -293,11 +302,10 @@ export function SampleListTable({
 
             {/* Pagination */}
             {samples.length > 0 && (
-                <div className="flex items-center justify-between shrink-0">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="flex items-center justify-between shrink-0 px-1">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <span>
-                            {(page - 1) * pageSize + 1} -{' '}
-                            {Math.min(page * pageSize, totalCount)} của {totalCount} mẫu
+                            Hiển thị <span className="font-medium text-foreground">{(page - 1) * pageSize + 1}</span> - <span className="font-medium text-foreground">{Math.min(page * pageSize, totalCount)}</span> của <span className="font-medium text-foreground">{totalCount}</span> mẫu
                         </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -306,20 +314,20 @@ export function SampleListTable({
                             size="sm"
                             onClick={() => updateQuery({ page: String(Math.max(1, page - 1)) })}
                             disabled={page === 1}
+                            className="h-8 w-8 p-0"
                         >
                             <ChevronLeft className="h-4 w-4" />
-                            Trước
                         </Button>
-                        <div className="text-sm">
-                            Trang {page} của {totalPages}
+                        <div className="text-xs font-medium min-w-[3rem] text-center">
+                            {page} / {totalPages}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => updateQuery({ page: String(Math.min(totalPages, page + 1)) })}
                             disabled={page === totalPages}
+                            className="h-8 w-8 p-0"
                         >
-                            Tiếp
                             <ChevronRight className="h-4 w-4" />
                         </Button>
                     </div>

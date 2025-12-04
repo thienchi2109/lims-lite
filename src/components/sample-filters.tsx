@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { type SampleStatus } from '@/types'
 import { cn } from '@/lib/utils'
-import { Search, Calendar, SlidersHorizontal } from 'lucide-react'
+import { Search, Calendar, SlidersHorizontal, X, Filter } from 'lucide-react'
 import {
     Select,
     SelectContent,
@@ -19,6 +19,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover'
+import { Separator } from '@/components/ui/separator'
 
 type SampleFiltersProps = {
     search?: string
@@ -32,20 +33,20 @@ type SampleFiltersProps = {
     receiverOptions?: Array<{ id: string; name: string }>
 }
 
-const statusOptions: Array<{ value: SampleStatus | 'all'; label: string }> = [
-    { value: 'all', label: 'Tất cả' },
-    { value: 'received', label: 'Đã nhận' },
-    { value: 'assigned', label: 'Đã chỉ định' },
-    { value: 'in_progress', label: 'Đang thực hiện' },
-    { value: 'review', label: 'Chờ duyệt' },
-    { value: 'completed', label: 'Hoàn thành' },
+const statusOptions: Array<{ value: SampleStatus | 'all'; label: string; color: string }> = [
+    { value: 'all', label: 'Tất cả trạng thái', color: 'bg-slate-500' },
+    { value: 'received', label: 'Đã nhận', color: 'bg-yellow-500' },
+    { value: 'assigned', label: 'Đã chỉ định', color: 'bg-blue-500' },
+    { value: 'in_progress', label: 'Đang thực hiện', color: 'bg-indigo-500' },
+    { value: 'review', label: 'Chờ duyệt', color: 'bg-purple-500' },
+    { value: 'completed', label: 'Hoàn thành', color: 'bg-green-500' },
 ]
 
 const sortOptions = [
     { value: 'created_at-desc', label: 'Mới nhất' },
     { value: 'created_at-asc', label: 'Cũ nhất' },
-    { value: 'received_at-desc', label: 'Ngày nhận (Mới nhất)' },
-    { value: 'received_at-asc', label: 'Ngày nhận (Cũ nhất)' },
+    { value: 'received_at-desc', label: 'Ngày nhận (Mới)' },
+    { value: 'received_at-asc', label: 'Ngày nhận (Cũ)' },
 ]
 
 export function SampleFilters({
@@ -178,7 +179,6 @@ export function SampleFilters({
 
         switch (range) {
             case 'today':
-                // from and to are already today
                 break
             case 'yesterday':
                 from.setDate(today.getDate() - 1)
@@ -204,166 +204,178 @@ export function SampleFilters({
     const currentSortValue = `${sortBy}-${sortOrder}`
 
     return (
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between bg-white dark:bg-slate-900 p-4 rounded-lg border shadow-sm">
-            {/* Left: Search */}
-            <div className="relative w-full lg:w-72">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                    ref={searchInputRef}
-                    placeholder="Tìm kiếm..."
-                    value={searchValue}
-                    onChange={(e) => setSearchValue(e.target.value)}
-                    className="pl-9 bg-background"
-                />
-            </div>
+        <div className="flex flex-col gap-4">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+                {/* Search Bar - Prominent & Clean */}
+                <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
+                    <Input
+                        ref={searchInputRef}
+                        placeholder="Tìm kiếm theo mã mẫu, khách hàng..."
+                        value={searchValue}
+                        onChange={(e) => setSearchValue(e.target.value)}
+                        className="pl-9 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm h-10 focus-visible:ring-1 focus-visible:ring-sky-500/20 transition-all rounded-md"
+                    />
+                </div>
 
-            {/* Right: Filters & View Options */}
-            <div className="flex flex-wrap items-center gap-2">
-                {/* Status Filter */}
-                <Select value={statusValue} onValueChange={(val) => handleStatusChange(val as SampleStatus | 'all')}>
-                    <SelectTrigger className="h-9 w-[160px] border-dashed data-[state=open]:border-solid data-[value=all]:border-dashed">
-                        <div className="flex items-center gap-2">
-                            <div className={cn("h-2 w-2 rounded-full",
-                                statusValue === 'all' ? "bg-slate-400" :
-                                    statusValue === 'completed' ? "bg-blue-400" :
-                                        statusValue === 'received' ? "bg-yellow-400" :
-                                            statusValue === 'assigned' ? "bg-green-400" :
-                                                statusValue === 'review' ? "bg-sky-400" :
-                                                    "bg-orange-400"
-                            )} />
-                            <span className="truncate">
-                                {statusOptions.find(o => o.value === statusValue)?.label}
-                            </span>
-                        </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                        {statusOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-
-                {/* Receiver Filter */}
-                <Select value={receiverValue} onValueChange={handleReceiverChange}>
-                    <SelectTrigger className="h-9 w-[180px] border-dashed data-[state=open]:border-solid data-[value=all]:border-dashed">
-                        <SelectValue placeholder="Người nhận" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">Tất cả người nhận</SelectItem>
-                        {receiverOptions.map((receiver) => (
-                            <SelectItem key={receiver.id} value={receiver.id}>
-                                {receiver.name}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-
-                {/* Date Range Popover */}
-                <Popover open={isDatePopoverOpen} onOpenChange={setIsDatePopoverOpen}>
-                    <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className={cn(
-                            "h-9 border-dashed",
-                            (fromDateValue || toDateValue) && "border-solid border-primary text-primary bg-primary/5"
+                {/* Filters Group */}
+                <div className="flex flex-wrap items-center gap-2 flex-1 lg:justify-end">
+                    {/* Status Filter */}
+                    <Select value={statusValue} onValueChange={(val) => handleStatusChange(val as SampleStatus | 'all')}>
+                        <SelectTrigger className={cn(
+                            "h-9 min-w-[140px] border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm transition-colors rounded-md",
+                            statusValue !== 'all' && "border-sky-500/50 bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-400"
                         )}>
-                            <Calendar className="mr-2 h-4 w-4" />
-                            {fromDateValue || toDateValue ? 'Đã chọn ngày' : 'Ngày nhận'}
+                            <div className="flex items-center gap-2">
+                                {statusValue !== 'all' && (
+                                    <div className={cn("h-1.5 w-1.5 rounded-full",
+                                        statusOptions.find(o => o.value === statusValue)?.color
+                                    )} />
+                                )}
+                                <span className="truncate text-sm">
+                                    {statusOptions.find(o => o.value === statusValue)?.label}
+                                </span>
+                            </div>
+                        </SelectTrigger>
+                        <SelectContent>
+                            {statusOptions.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                    <div className="flex items-center gap-2">
+                                        <div className={cn("h-2 w-2 rounded-full", option.color)} />
+                                        {option.label}
+                                    </div>
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+
+                    {/* Receiver Filter */}
+                    <Select value={receiverValue} onValueChange={handleReceiverChange}>
+                        <SelectTrigger className={cn(
+                            "h-9 min-w-[140px] border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm rounded-md",
+                            receiverValue !== 'all' && "border-sky-500/50 bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-400"
+                        )}>
+                            <SelectValue placeholder="Người nhận" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Tất cả người nhận</SelectItem>
+                            {receiverOptions.map((receiver) => (
+                                <SelectItem key={receiver.id} value={receiver.id}>
+                                    {receiver.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+
+                    {/* Date Filter */}
+                    <Popover open={isDatePopoverOpen} onOpenChange={setIsDatePopoverOpen}>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className={cn(
+                                    "h-9 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm font-normal rounded-md",
+                                    (fromDateValue || toDateValue) && "border-sky-500/50 bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-400"
+                                )}
+                            >
+                                <Calendar className="mr-2 h-3.5 w-3.5" />
+                                {fromDateValue || toDateValue ? 'Đã chọn ngày' : 'Ngày nhận'}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-4" align="end">
+                            <div className="space-y-4">
+                                <div className="space-y-1">
+                                    <h4 className="font-medium text-sm">Khoảng thời gian</h4>
+                                    <p className="text-xs text-muted-foreground">
+                                        Lọc mẫu theo ngày nhận
+                                    </p>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <Button variant="outline" size="sm" onClick={() => setDateRange('today')} className="text-xs h-8">
+                                        Hôm nay
+                                    </Button>
+                                    <Button variant="outline" size="sm" onClick={() => setDateRange('yesterday')} className="text-xs h-8">
+                                        Hôm qua
+                                    </Button>
+                                    <Button variant="outline" size="sm" onClick={() => setDateRange('week')} className="text-xs h-8">
+                                        7 ngày qua
+                                    </Button>
+                                    <Button variant="outline" size="sm" onClick={() => setDateRange('month')} className="text-xs h-8">
+                                        Tháng này
+                                    </Button>
+                                </div>
+                                <Separator />
+                                <div className="grid gap-3">
+                                    <div className="grid grid-cols-3 items-center gap-2">
+                                        <label htmlFor="from" className="text-xs font-medium">Từ ngày</label>
+                                        <Input
+                                            id="from"
+                                            type="date"
+                                            value={fromDateValue}
+                                            onChange={(e) => handleDateChange('fromDate', e.target.value)}
+                                            className="col-span-2 h-8 text-xs"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-3 items-center gap-2">
+                                        <label htmlFor="to" className="text-xs font-medium">Đến ngày</label>
+                                        <Input
+                                            id="to"
+                                            type="date"
+                                            value={toDateValue}
+                                            onChange={(e) => handleDateChange('toDate', e.target.value)}
+                                            className="col-span-2 h-8 text-xs"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+
+                    <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1 hidden lg:block" />
+
+                    {/* View Options */}
+                    <div className="flex items-center gap-2">
+                        <Select value={currentSortValue} onValueChange={handleSortChange}>
+                            <SelectTrigger className="h-9 w-[130px] border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm text-xs rounded-md">
+                                <SlidersHorizontal className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+                                <SelectValue placeholder="Sắp xếp" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {sortOptions.map((option) => (
+                                    <SelectItem key={option.value} value={option.value} className="text-xs">
+                                        {option.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+
+                        <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
+                            <SelectTrigger className="h-9 w-[70px] border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm text-xs rounded-md">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {[10, 20, 50, 100].map((size) => (
+                                    <SelectItem key={size} value={String(size)} className="text-xs">
+                                        {size}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    {/* Reset Button */}
+                    {isFiltered && (
+                        <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={handleReset}
+                            className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors rounded-md"
+                            title="Xóa bộ lọc"
+                        >
+                            <X className="h-4 w-4" />
                         </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-80 p-4" align="end">
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <h4 className="font-medium leading-none">Khoảng thời gian</h4>
-                                <p className="text-sm text-muted-foreground">
-                                    Lọc mẫu theo ngày nhận
-                                </p>
-                            </div>
-
-                            {/* Quick Date Buttons */}
-                            <div className="grid grid-cols-2 gap-2">
-                                <Button variant="outline" size="sm" onClick={() => setDateRange('today')}>
-                                    Hôm nay
-                                </Button>
-                                <Button variant="outline" size="sm" onClick={() => setDateRange('yesterday')}>
-                                    Hôm qua
-                                </Button>
-                                <Button variant="outline" size="sm" onClick={() => setDateRange('week')}>
-                                    7 ngày qua
-                                </Button>
-                                <Button variant="outline" size="sm" onClick={() => setDateRange('month')}>
-                                    Tháng này
-                                </Button>
-                            </div>
-
-                            <div className="grid gap-2 pt-2 border-t">
-                                <div className="grid grid-cols-3 items-center gap-4">
-                                    <label htmlFor="from" className="text-sm">Từ ngày</label>
-                                    <Input
-                                        id="from"
-                                        type="date"
-                                        value={fromDateValue}
-                                        onChange={(e) => handleDateChange('fromDate', e.target.value)}
-                                        className="col-span-2 h-8"
-                                    />
-                                </div>
-                                <div className="grid grid-cols-3 items-center gap-4">
-                                    <label htmlFor="to" className="text-sm">Đến ngày</label>
-                                    <Input
-                                        id="to"
-                                        type="date"
-                                        value={toDateValue}
-                                        onChange={(e) => handleDateChange('toDate', e.target.value)}
-                                        className="col-span-2 h-8"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </PopoverContent>
-                </Popover>
-
-                <div className="h-4 w-[1px] bg-border mx-1" />
-
-                {/* Sort */}
-                <Select value={currentSortValue} onValueChange={handleSortChange}>
-                    <SelectTrigger className="h-9 w-[160px] border-dashed data-[state=open]:border-solid">
-                        <SlidersHorizontal className="mr-2 h-4 w-4" />
-                        <SelectValue placeholder="Sắp xếp" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {sortOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-
-                {/* Page Size */}
-                <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
-                    <SelectTrigger className="h-9 w-[110px] border-dashed data-[state=open]:border-solid">
-                        <SelectValue placeholder="Hiển thị" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {[10, 20, 50, 100].map((size) => (
-                            <SelectItem key={size} value={String(size)}>
-                                {size} dòng
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-
-                {/* Reset Button */}
-                {isFiltered && (
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleReset}
-                        className="h-9 px-2 lg:px-3 text-muted-foreground hover:text-foreground"
-                    >
-                        Xóa lọc
-                    </Button>
-                )}
+                    )}
+                </div>
             </div>
         </div>
     )
