@@ -4,10 +4,16 @@ import { logout } from '@/app/actions/auth'
 import { Button } from '@/components/ui/button'
 import { SampleListTable } from '@/components/sample-list-table'
 import { SampleFilters } from '@/components/sample-filters'
+import { SampleBottomRow } from '@/components/sample-bottom-row'
 import { fetchSamples } from '@/lib/data/samples'
+import { getSample } from '@/app/actions/samples'
 import { type SampleStatus } from '@/types'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import { Suspense } from 'react'
+
+// This page relies on cookies/session via Supabase, so force dynamic rendering
+export const dynamic = 'force-dynamic'
 
 type ManagerSamplesPageProps = {
     searchParams?: Promise<{
@@ -20,6 +26,8 @@ type ManagerSamplesPageProps = {
         sortBy?: string
         sortOrder?: string
         receiverId?: string
+        sampleId?: string
+        view?: string
     }>
 }
 
@@ -42,6 +50,7 @@ export default async function ManagerSamplesPage({ searchParams }: ManagerSample
     const sortOrder = params.sortOrder === 'asc' ? 'asc' : 'desc'
     const receiverIdParam = typeof params.receiverId === 'string' ? params.receiverId : ''
     const receiverId = receiverIdParam.match(/^[0-9a-fA-F-]{36}$/) ? receiverIdParam : ''
+    const sampleId = typeof params.sampleId === 'string' ? params.sampleId : undefined
 
     const supabase = await createClient()
 
@@ -114,20 +123,29 @@ export default async function ManagerSamplesPage({ searchParams }: ManagerSample
         })
     }
 
+    // Fetch selected sample if ID is present
+    let selectedSample = null
+    if (sampleId) {
+        const { data: sampleData } = await getSample(sampleId)
+        if (sampleData) {
+            selectedSample = sampleData
+        }
+    }
+
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-            <header className="sticky top-0 z-50 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+        <div className="h-[calc(100vh-4rem)] flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden">
+            <header className="shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm px-4 sm:px-6 lg:px-8 py-4">
+                <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
                             Hệ thống quản lý thông tin khoa Xét nghiệm
                         </h1>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                        <p className="text-xs text-slate-600 dark:text-slate-400">
                             Quản lý mẫu
                         </p>
                     </div>
                     <div className="flex items-center gap-4">
-                        <div className="text-right">
+                        <div className="text-right hidden sm:block">
                             <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
                                 {userData?.full_name}
                             </p>
@@ -144,8 +162,8 @@ export default async function ManagerSamplesPage({ searchParams }: ManagerSample
                 </div>
             </header>
 
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="mb-6">
+            <main className="flex-1 flex flex-col min-h-0 p-4 sm:px-6 lg:px-8 gap-4">
+                <div className="flex items-center gap-4 shrink-0">
                     <Link href="/manager">
                         <Button variant="ghost" size="sm">
                             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -154,31 +172,45 @@ export default async function ManagerSamplesPage({ searchParams }: ManagerSample
                     </Link>
                 </div>
 
-                <div className="mb-6">
-                    <SampleFilters
-                        search={searchTerm}
-                        status={(status ?? 'all')}
-                        fromDate={fromDate}
-                        toDate={toDate}
-                        pageSize={Number(pageSize)}
-                        sortBy={sortBy}
-                        sortOrder={sortOrder as 'asc' | 'desc'}
-                        receiverId={receiverId}
-                        receiverOptions={receiverOptions}
-                    />
+                {/* Top Row: Filters & Grid (Fixed Height ~50%) */}
+                <div className="flex flex-col gap-4 h-[50vh] min-h-[400px] shrink-0">
+                    <div className="shrink-0">
+                        <Suspense fallback={<div className="text-sm text-slate-500">Đang tải bộ lọc...</div>}>
+                            <SampleFilters
+                                search={searchTerm}
+                                status={(status ?? 'all')}
+                                fromDate={fromDate}
+                                toDate={toDate}
+                                pageSize={Number(pageSize)}
+                                sortBy={sortBy}
+                                sortOrder={sortOrder as 'asc' | 'desc'}
+                                receiverId={receiverId}
+                                receiverOptions={receiverOptions}
+                            />
+                        </Suspense>
+                    </div>
+                    <div className="flex-1 min-h-0">
+                        <Suspense fallback={<div className="text-sm text-slate-500">Đang tải danh sách mẫu...</div>}>
+                            <SampleListTable
+                                samples={samplesForDisplay || []}
+                                page={result.page || page}
+                                pageSize={result.pageSize || pageSize}
+                                totalPages={result.totalPages || 1}
+                                totalCount={result.count || 0}
+                                error={result.error || null}
+                                isManager={true}
+                                sortBy={sortBy}
+                                sortOrder={sortOrder as 'asc' | 'desc'}
+                                selectedSampleId={selectedSample?.id}
+                            />
+                        </Suspense>
+                    </div>
                 </div>
 
-                <SampleListTable
-                    samples={samplesForDisplay || []}
-                    page={result.page || page}
-                    pageSize={result.pageSize || pageSize}
-                    totalPages={result.totalPages || 1}
-                    totalCount={result.count || 0}
-                    error={result.error || null}
-                    isManager={true}
-                    sortBy={sortBy}
-                    sortOrder={sortOrder as 'asc' | 'desc'}
-                />
+                {/* Bottom Row: Detail & Assignments (Remaining Height) */}
+                <div className="flex-1 min-h-0 border-t pt-4">
+                    <SampleBottomRow sample={selectedSample} />
+                </div>
             </main>
         </div>
     )

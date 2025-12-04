@@ -5,7 +5,9 @@ import { SampleWithUser } from '@/types'
 import { SampleDetailPanel } from '@/components/sample-detail-panel'
 import { AssignedTestsPanel } from '@/components/assigned-tests-panel'
 import { TestAssignmentEditor } from '@/components/test-assignment-editor'
-import { useRouter } from 'next/navigation'
+import { SampleResultsView } from '@/components/sample-results-view'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 interface SampleBottomRowProps {
     sample: SampleWithUser | null
@@ -13,7 +15,30 @@ interface SampleBottomRowProps {
 
 export function SampleBottomRow({ sample }: SampleBottomRowProps) {
     const [isEditing, setIsEditing] = useState(false)
+    const [userRole, setUserRole] = useState<'analyst' | 'manager'>('analyst')
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const pathname = usePathname()
+    const view = searchParams.get('view')
+
+    // Fetch user role on mount
+    useEffect(() => {
+        const fetchUserRole = async () => {
+            const supabase = createClient()
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+                const { data } = await supabase
+                    .from('users')
+                    .select('role')
+                    .eq('id', user.id)
+                    .single()
+                if (data) {
+                    setUserRole(data.role as 'analyst' | 'manager')
+                }
+            }
+        }
+        fetchUserRole()
+    }, [])
 
     // Reset editing state when sample changes
     useEffect(() => {
@@ -29,6 +54,25 @@ export function SampleBottomRow({ sample }: SampleBottomRowProps) {
     const handleEditSuccess = () => {
         setIsEditing(false)
         router.refresh()
+    }
+
+    const handleCloseResults = () => {
+        const params = new URLSearchParams(searchParams.toString())
+        params.delete('view')
+        router.replace(`${pathname}?${params.toString()}`)
+    }
+
+    // If view is 'results' and we have a sample, show the full-width results view
+    if (view === 'results' && sample) {
+        return (
+            <div className="h-full">
+                <SampleResultsView
+                    sample={sample}
+                    userRole={userRole}
+                    onClose={handleCloseResults}
+                />
+            </div>
+        )
     }
 
     if (isEditing && sample) {

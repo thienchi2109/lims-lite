@@ -183,7 +183,7 @@ export function SampleListTable({
                             <Button
                                 variant="ghost"
                                 size="icon-sm"
-                                onClick={() => window.location.href = `/manager/results/${row.original.id}`}
+                                onClick={() => updateQuery({ sampleId: row.original.id, view: 'results' })}
                                 title="Xem kết quả"
                                 className="h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50"
                             >
@@ -220,7 +220,7 @@ export function SampleListTable({
                             <Button
                                 variant="ghost"
                                 size="icon-sm"
-                                onClick={() => window.location.href = `/analyst/results/${row.original.id}`}
+                                onClick={() => updateQuery({ sampleId: row.original.id, view: 'results' })}
                                 title="Nhập kết quả"
                                 className="h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50"
                             >
@@ -280,8 +280,8 @@ export function SampleListTable({
                                         key={row.id}
                                         onClick={() => handleRowClick(row.original)}
                                         className={`cursor-pointer transition-colors border-slate-100 dark:border-slate-800 ${isSelected
-                                                ? 'bg-sky-50 dark:bg-sky-900/20 hover:bg-sky-100 dark:hover:bg-sky-900/30'
-                                                : 'hover:bg-slate-50/80 dark:hover:bg-slate-900/50'
+                                            ? 'bg-sky-50 dark:bg-sky-900/20 hover:bg-sky-100 dark:hover:bg-sky-900/30'
+                                            : 'hover:bg-slate-50/80 dark:hover:bg-slate-900/50'
                                             }`}
                                     >
                                         {row.getVisibleCells().map((cell) => (
