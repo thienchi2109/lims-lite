@@ -1,5 +1,5 @@
 {
-  "name": "lims-lite",
+  "name": "cdc-lims",
   "version": "0.1.0",
   "private": true,
   "scripts": {
