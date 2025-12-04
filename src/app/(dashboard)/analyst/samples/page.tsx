@@ -8,19 +8,24 @@ import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { SampleListParamsSchema } from '@/types'
 
-interface SamplesPageProps {
-    searchParams: { [key: string]: string | string[] | undefined }
-}
+// This page relies on cookies/session via Supabase, so force dynamic rendering
+export const dynamic = 'force-dynamic'
 
-export default async function SamplesPage({ searchParams }: SamplesPageProps) {
+export default async function SamplesPage({
+    searchParams,
+}: {
+    searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+    const params = (await searchParams) || {}
+
     // Parse search params
-    const page = Number(searchParams.page) || 1
-    const pageSize = Number(searchParams.pageSize) || 10
-    const status = searchParams.status as string | undefined
-    const search = searchParams.search as string | undefined
-    const sortBy = (searchParams.sortBy as string) || 'created_at'
-    const sortOrder = (searchParams.sortOrder as 'asc' | 'desc') || 'desc'
-    const sampleId = searchParams.sampleId as string | undefined
+    const page = Number(params.page) || 1
+    const pageSize = Number(params.pageSize) || 10
+    const status = params.status as string | undefined
+    const search = params.search as string | undefined
+    const sortBy = (params.sortBy as string) || 'created_at'
+    const sortOrder = (params.sortOrder as 'asc' | 'desc') || 'desc'
+    const sampleId = params.sampleId as string | undefined
 
     // Validate params
     const validatedParams = SampleListParamsSchema.safeParse({
@@ -70,26 +75,30 @@ export default async function SamplesPage({ searchParams }: SamplesPageProps) {
                 {/* Top Row: Filters & Grid (Fixed Height ~50%) */}
                 <div className="flex flex-col gap-4 h-[50vh] min-h-[400px] shrink-0">
                     <div className="shrink-0">
-                        <SampleFilters
-                            search={search}
-                            status={status as any} // Cast to any or specific type if needed, strict check might fail if status is undefined
-                            pageSize={pageSize}
-                            sortBy={sortBy}
-                            sortOrder={sortOrder}
-                        />
+                        <Suspense fallback={<div className="text-sm text-slate-500">Đang tải bộ lọc...</div>}>
+                            <SampleFilters
+                                search={search}
+                                status={status as any} // Cast to any or specific type if needed, strict check might fail if status is undefined
+                                pageSize={pageSize}
+                                sortBy={sortBy}
+                                sortOrder={sortOrder}
+                            />
+                        </Suspense>
                     </div>
                     <div className="flex-1 min-h-0">
-                        <SampleListTable
-                            samples={result.data || []}
-                            page={page}
-                            pageSize={pageSize}
-                            totalPages={result.totalPages || 0}
-                            totalCount={result.count || 0}
-                            error={result.error}
-                            sortBy={sortBy}
-                            sortOrder={sortOrder}
-                            selectedSampleId={selectedSample?.id}
-                        />
+                        <Suspense fallback={<div className="text-sm text-slate-500">Đang tải danh sách mẫu...</div>}>
+                            <SampleListTable
+                                samples={result.data || []}
+                                page={page}
+                                pageSize={pageSize}
+                                totalPages={result.totalPages || 0}
+                                totalCount={result.count || 0}
+                                error={result.error}
+                                sortBy={sortBy}
+                                sortOrder={sortOrder}
+                                selectedSampleId={selectedSample?.id}
+                            />
+                        </Suspense>
                     </div>
                 </div>
 
