@@ -27,12 +27,12 @@ ALTER TABLE public.users ENABLE TRIGGER audit_users_trigger;
 -- ----------------------------------------------------------------------------
 INSERT INTO public.methods (id, name, description, procedure_reference) VALUES
 -- Water Quality Methods
-('m0000000-0000-0000-0000-000000000001', 'SM 9223 B', 'Enzyme Substrate Coliform Test', 'Standard Methods 23rd Ed.'),
-('m0000000-0000-0000-0000-000000000002', 'EPA 200.8', 'Determination of Trace Elements by ICP-MS', 'EPA-200.8-1994'),
-('m0000000-0000-0000-0000-000000000003', 'EPA 300.1', 'Inorganic Anions by Ion Chromatography', 'EPA-300.1-1999'),
+('a0000000-0000-0000-0000-000000000001', 'SM 9223 B', 'Enzyme Substrate Coliform Test', 'Standard Methods 23rd Ed.'),
+('a0000000-0000-0000-0000-000000000002', 'EPA 200.8', 'Determination of Trace Elements by ICP-MS', 'EPA-200.8-1994'),
+('a0000000-0000-0000-0000-000000000003', 'EPA 300.1', 'Inorganic Anions by Ion Chromatography', 'EPA-300.1-1999'),
 -- Clinical Methods
-('m0000000-0000-0000-0000-000000000004', 'CDC RT-PCR Influenza', 'Real-time RT-PCR for Influenza A/B', 'CDC-FLU-2023'),
-('m0000000-0000-0000-0000-000000000005', 'ELISA Anti-HCV', 'Enzyme Immunoassay for Hepatitis C', 'Abbott-HCV-2.0')
+('a0000000-0000-0000-0000-000000000004', 'CDC RT-PCR Influenza', 'Real-time RT-PCR for Influenza A/B', 'CDC-FLU-2023'),
+('a0000000-0000-0000-0000-000000000005', 'ELISA Anti-HCV', 'Enzyme Immunoassay for Hepatitis C', 'Abbott-HCV-2.0')
 ON CONFLICT (id) DO NOTHING;
 
 -- 3. ASSAY DEFINITIONS (Tests that can be ordered)
@@ -52,16 +52,16 @@ ON CONFLICT (id) DO NOTHING;
 -- ----------------------------------------------------------------------------
 INSERT INTO public.assay_methods (assay_id, method_id, is_default, notes) VALUES
 -- Coliforms -> SM 9223 B
-('d0000000-0000-0000-0000-000000000001', 'm0000000-0000-0000-0000-000000000001', true, 'Primary method for drinking water'),
+('d0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', true, 'Primary method for drinking water'),
 -- E. coli -> SM 9223 B
-('d0000000-0000-0000-0000-000000000002', 'm0000000-0000-0000-0000-000000000001', true, 'Simultaneous detection with Coliforms'),
+('d0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000001', true, 'Simultaneous detection with Coliforms'),
 -- Lead -> EPA 200.8
-('d0000000-0000-0000-0000-000000000003', 'm0000000-0000-0000-0000-000000000002', true, 'ICP-MS allows low detection limits'),
+('d0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000002', true, 'ICP-MS allows low detection limits'),
 -- Nitrate -> EPA 300.1
-('d0000000-0000-0000-0000-000000000004', 'm0000000-0000-0000-0000-000000000003', true, NULL),
+('d0000000-0000-0000-0000-000000000004', 'a0000000-0000-0000-0000-000000000003', true, NULL),
 -- Flu A/B -> PCR
-('d0000000-0000-0000-0000-000000000005', 'm0000000-0000-0000-0000-000000000004', true, 'High sensitivity molecular test'),
-('d0000000-0000-0000-0000-000000000006', 'm0000000-0000-0000-0000-000000000004', true, NULL)
+('d0000000-0000-0000-0000-000000000005', 'a0000000-0000-0000-0000-000000000004', true, 'High sensitivity molecular test'),
+('d0000000-0000-0000-0000-000000000006', 'a0000000-0000-0000-0000-000000000004', true, NULL)
 ON CONFLICT (assay_id, method_id) DO NOTHING;
 
 

@@ -224,13 +224,13 @@ FOR EACH ROW EXECUTE FUNCTION trigger_audit_log();
 -- Create auth users
 INSERT INTO auth.users (id, email) VALUES
 ('a0000000-0000-0000-0000-000000000001', 'analyst@cdc-lims.local'),
-('m0000000-0000-0000-0000-000000000001', 'manager@cdc-lims.local')
+('b0000000-0000-0000-0000-000000000001', 'manager@cdc-lims.local')
 ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email;
 
 -- Create public users
 INSERT INTO public.users (id, username, full_name, role) VALUES
 ('a0000000-0000-0000-0000-000000000001', 'analyst', 'Test Analyst', 'analyst'),
-('m0000000-0000-0000-0000-000000000001', 'manager', 'Test Manager', 'manager')
+('b0000000-0000-0000-0000-000000000001', 'manager', 'Test Manager', 'manager')
 ON CONFLICT (id) DO UPDATE SET
     username = EXCLUDED.username,
     full_name = EXCLUDED.full_name,
