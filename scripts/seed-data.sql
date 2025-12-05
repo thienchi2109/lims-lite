@@ -113,7 +113,7 @@ BEGIN
         VALUES (
             'CDC-SEED-' || TO_CHAR(v_received_at, 'YYMMDD') || '-' || LPAD(i::TEXT, 3, '0'),
             v_client,
-            v_status,
+            v_status::sample_status,
             analyst_id,
             v_received_at
         )
