@@ -8,10 +8,19 @@ SET search_path TO public;
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Create ENUM types
-CREATE TYPE user_role AS ENUM ('analyst', 'manager');
-CREATE TYPE sample_status AS ENUM ('received', 'assigned', 'in_progress', 'review', 'completed');
-CREATE TYPE result_status AS ENUM ('pending', 'entered', 'approved');
+-- Create ENUM types safely
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+        CREATE TYPE user_role AS ENUM ('analyst', 'manager');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'sample_status') THEN
+        CREATE TYPE sample_status AS ENUM ('received', 'assigned', 'in_progress', 'review', 'completed');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'result_status') THEN
+        CREATE TYPE result_status AS ENUM ('pending', 'entered', 'approved');
+    END IF;
+END$$;
 
 -- ============================================================================
 -- USERS TABLE (Extended Supabase Auth)
