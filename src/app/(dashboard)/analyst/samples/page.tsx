@@ -71,9 +71,9 @@ export default async function SamplesPage({
                 </div>
             </header>
 
-            <main className="flex-1 flex flex-col min-h-0 p-4 sm:px-6 lg:px-8 gap-4">
+            <main className="flex-1 flex flex-col min-h-0 p-2 sm:px-4 gap-2">
                 {/* Top Row: Filters & Grid (Fixed Height ~50%) */}
-                <div className="flex flex-col gap-4 h-[50vh] min-h-[400px] shrink-0">
+                <div className="flex flex-col gap-2 h-[50vh] min-h-[400px] shrink-0">
                     <div className="shrink-0">
                         <Suspense fallback={<div className="text-sm text-slate-500">Đang tải bộ lọc...</div>}>
                             <SampleFilters

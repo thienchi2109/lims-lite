@@ -23,7 +23,7 @@ export function SampleBottomRow({ sample }: SampleBottomRowProps) {
     }
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
             <div className="h-full min-h-0">
                 <SampleDetailPanel sample={sample} />
             </div>

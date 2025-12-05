@@ -271,7 +271,7 @@ export function AssignedTestsPanel({ sampleId }: AssignedTestsPanelProps) {
 
     return (
         <div className="relative flex h-full flex-col">
-            <div className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
+            <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
                 <div className="flex items-center gap-2">
                     <FlaskConical className="h-5 w-5 text-indigo-600" />
                     <h3 className="font-semibold text-slate-700">Chỉ định xét nghiệm</h3>
@@ -315,7 +315,7 @@ export function AssignedTestsPanel({ sampleId }: AssignedTestsPanelProps) {
                 </div>
             </div>
 
-            <div className="flex-1 overflow-auto bg-slate-50/50 p-6">
+            <div className="flex-1 overflow-auto bg-slate-50/50 p-4">
                 <Card className="border-slate-200 shadow-sm">
                     <CardContent className="p-0">
                         <Table>

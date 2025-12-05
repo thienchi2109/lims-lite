@@ -260,7 +260,7 @@ export function SampleListTable({
                             {table.getHeaderGroups().map((headerGroup) => (
                                 <TableRow key={headerGroup.id} className="hover:bg-transparent border-none">
                                     {headerGroup.headers.map((header) => (
-                                        <TableHead key={header.id} className="h-10 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                        <TableHead key={header.id} className="h-9 text-xs font-semibold uppercase tracking-wider text-slate-500">
                                             {header.isPlaceholder
                                                 ? null
                                                 : flexRender(
@@ -285,7 +285,7 @@ export function SampleListTable({
                                             }`}
                                     >
                                         {row.getVisibleCells().map((cell) => (
-                                            <TableCell key={cell.id} className="py-3">
+                                            <TableCell key={cell.id} className="py-2">
                                                 {flexRender(
                                                     cell.column.columnDef.cell,
                                                     cell.getContext()
