@@ -2,7 +2,7 @@
 
 import { SampleWithUser, ResultWithAssay } from '@/types'
 import { SampleDetailPanel } from '@/components/sample-detail-panel'
-import { ResultsGrid } from '@/components/results-grid'
+import { AssignedTestsPanel } from '@/components/assigned-tests-panel'
 import { ApprovalActions } from '@/components/approval-actions'
 import { AlertCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -39,12 +39,7 @@ export function ApprovalBottomRow({ sample, results }: ApprovalBottomRowProps) {
                 <SampleDetailPanel sample={sample} />
             </div>
             <div className="h-full min-h-0 overflow-y-auto flex flex-col gap-4 pr-1">
-                <ResultsGrid
-                    results={results}
-                    sampleId={sample.id}
-                    userRole="manager"
-                    onSaveSuccess={() => router.refresh()}
-                />
+                <AssignedTestsPanel sampleId={sample.id} />
                 <ApprovalActions sampleId={sample.id} results={results} />
             </div>
         </div>

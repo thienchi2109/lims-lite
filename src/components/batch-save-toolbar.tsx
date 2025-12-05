@@ -57,7 +57,7 @@ export function BatchSaveToolbar({
                             <>
                                 <CheckCircle className="h-5 w-5 animate-in zoom-in text-green-600" />
                                 <span className="font-medium text-green-600">
-                                    Changes saved successfully!
+                                    Đã lưu thay đổi thành công!
                                 </span>
                             </>
                         ) : (
@@ -70,10 +70,10 @@ export function BatchSaveToolbar({
                                     )}
                                 >
                                     <span className="text-lg">{pendingCount}</span>
-                                    <span>unsaved {pendingCount === 1 ? 'change' : 'changes'}</span>
+                                    <span>{pendingCount === 1 ? 'thay đổi' : 'thay đổi'} chưa lưu</span>
                                 </Badge>
                                 <span className="text-sm text-slate-600 dark:text-slate-400">
-                                    Press <kbd className="rounded-md border border-slate-300 bg-slate-100 px-1.5 py-0.5 font-mono text-xs dark:border-slate-700 dark:bg-slate-800">Ctrl+S</kbd> to save
+                                    Nhấn <kbd className="rounded-md border border-slate-300 bg-slate-100 px-1.5 py-0.5 font-mono text-xs dark:border-slate-700 dark:bg-slate-800">Ctrl+S</kbd> để lưu
                                 </span>
                             </>
                         )}
@@ -88,7 +88,7 @@ export function BatchSaveToolbar({
                             className="gap-2 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20"
                         >
                             <X className="h-4 w-4" />
-                            Discard
+                            Hủy bỏ
                         </Button>
                         <Button
                             onClick={onSave}
@@ -99,12 +99,12 @@ export function BatchSaveToolbar({
                             {isSaving ? (
                                 <>
                                     <Loader2 className="h-4 w-4 animate-spin" />
-                                    Saving...
+                                    Đang lưu...
                                 </>
                             ) : (
                                 <>
                                     <Save className="h-4 w-4" />
-                                    Save Batch
+                                    Lưu thay đổi
                                 </>
                             )}
                         </Button>

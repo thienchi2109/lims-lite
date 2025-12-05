@@ -334,6 +334,7 @@ export const ResultWithAssaySchema = ResultSchema.extend({
     method_name: z.string().nullable(),
     validation_rules: ValidationRulesSchema,
     sample_id_display: z.string(),
+    sample_status: SampleStatus.nullable(),
     entered_by_name: z.string().nullable(),
 })
 

@@ -421,6 +421,7 @@ export async function getAssayDefinitions(search?: string) {
             return {
                 ...assay,
                 method_name: methodDetail?.name || null,
+                default_method_id: defaultMethod?.method_id || null,
             }
         })
 
@@ -556,5 +557,86 @@ export async function getSamplesForApproval() {
     } catch (error) {
         console.error('Error in getSamplesForApproval:', error)
         return { error: error instanceof Error ? error.message : 'Failed to fetch samples for approval' }
+    }
+}
+
+/**
+ * Submits a sample for review (Analyst)
+ * Changes status from 'in_progress' to 'review'
+ * Requires all assigned tests to have values
+ */
+export async function submitSampleForReview(sampleId: string) {
+    try {
+        const supabase = await createClient()
+
+        // Get current user
+        const {
+            data: { user },
+        } = await supabase.auth.getUser()
+
+        if (!user) {
+            return { error: 'Unauthorized' }
+        }
+
+        // 1. Fetch sample and its results to validate
+        const { data: sample, error: sampleError } = await supabase
+            .from('samples')
+            .select(`
+                id,
+                status,
+                results (
+                    id,
+                    value,
+                    status
+                )
+            `)
+            .eq('id', sampleId)
+            .single()
+
+        if (sampleError) {
+            console.error('Error fetching sample for submission:', sampleError)
+            return { error: sampleError.message }
+        }
+
+        if (!sample) {
+            return { error: 'Sample not found' }
+        }
+
+        // 2. Validate status
+        if (sample.status !== 'in_progress') {
+            return { error: 'Sample must be in progress to submit for review' }
+        }
+
+        // 3. Validate all results have values
+        const results = sample.results || []
+        if (results.length === 0) {
+            return { error: 'Cannot submit sample with no assigned tests' }
+        }
+
+        const missingValues = results.filter((r: any) => r.value === null || r.value === '')
+        if (missingValues.length > 0) {
+            return { error: 'All tests must have results before submitting' }
+        }
+
+        // 4. Update sample status
+        const { error: updateError } = await supabase
+            .from('samples')
+            .update({ status: 'review' })
+            .eq('id', sampleId)
+
+        if (updateError) {
+            console.error('Error updating sample status:', updateError)
+            return { error: updateError.message }
+        }
+
+        // 5. Revalidate paths
+        revalidatePath('/analyst/samples')
+        revalidatePath('/manager/samples')
+        revalidatePath('/analyst/results/[sampleId]', 'page')
+
+        return { success: true }
+    } catch (error) {
+        console.error('Error in submitSampleForReview:', error)
+        return { error: error instanceof Error ? error.message : 'Failed to submit sample' }
     }
 }

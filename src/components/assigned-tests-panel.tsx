@@ -1,9 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { getSampleTests } from '@/app/actions/samples'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { useEffect, useState, useCallback } from 'react'
 import {
     Table,
     TableBody,
@@ -11,166 +8,429 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from "@/components/ui/table"
-import { Loader2, FlaskConical, Plus, TestTube2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+} from '@/components/ui/table'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import {
+    Loader2,
+    Plus,
+    FlaskConical,
+    CheckCircle,
+    Printer,
+    AlertCircle,
+} from 'lucide-react'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
+import { getResultsBySample, saveBatchResults, validateResultValue } from '@/app/actions/results'
+import { submitSampleForReview, getSample } from '@/app/actions/samples'
+import { ResultWithAssay, SampleStatus } from '@/types'
+import { ResultCellEditor } from '@/components/result-cell-editor'
+import { BatchSaveToolbar } from '@/components/batch-save-toolbar'
+import { ResultStatusBadge } from '@/components/result-status-badge'
+import { toast } from 'sonner'
+import { TestAssignmentModule } from '@/components/test-assignment-module'
+import { generatePrintTemplate } from '@/lib/print-template'
 
 interface AssignedTestsPanelProps {
-    sampleId: string | null
-    onAssignTests: () => void
+    sampleId: string
 }
 
-interface TestResult {
-    id: string
-    status: string
-    value: string | null
-    assay: {
-        id: string
-        name: string
-        units: string | null
-        method: {
-            id: string
-            name: string
-        } | null
-    }
-}
+export function AssignedTestsPanel({ sampleId }: AssignedTestsPanelProps) {
+    const [results, setResults] = useState<ResultWithAssay[]>([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
 
-export function AssignedTestsPanel({ sampleId, onAssignTests }: AssignedTestsPanelProps) {
-    const [tests, setTests] = useState<TestResult[]>([])
-    const [loading, setLoading] = useState(false)
+    // Inline editing state
+    const [resultValues, setResultValues] = useState<Record<string, string>>({})
+    const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+    const [isSaving, setIsSaving] = useState(false)
+    const [sampleStatus, setSampleStatus] = useState<SampleStatus | null>(null)
 
-    useEffect(() => {
-        if (sampleId) {
-            const fetchTests = async () => {
-                setLoading(true)
-                const { data, error } = await getSampleTests(sampleId)
-                if (data) {
-                    setTests(data as any)
+    // Submit for review state
+    const [showSubmitDialog, setShowSubmitDialog] = useState(false)
+    const [isSubmitting, setIsSubmitting] = useState(false)
+
+    // Test assignment state
+    const [showAssignmentDialog, setShowAssignmentDialog] = useState(false)
+
+    const fetchTests = useCallback(async () => {
+        try {
+            setLoading(true)
+            const { data, error } = await getResultsBySample(sampleId)
+            if (error) {
+                setError(error)
+            } else if (data) {
+                setResults(data)
+                // Set sample status from the first result (all results belong to same sample)
+                if (data.length > 0 && data[0].sample_status) {
+                    setSampleStatus(data[0].sample_status as SampleStatus)
                 }
-                setLoading(false)
             }
-            fetchTests()
-        } else {
-            setTests([])
+        } catch (err) {
+            setError('Failed to load assigned tests')
+            console.error(err)
+        } finally {
+            setLoading(false)
         }
     }, [sampleId])
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'pending': return 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800'
-            case 'entered': return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800'
-            case 'approved': return 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800'
-            case 'rejected': return 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800'
-            default: return 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+    useEffect(() => {
+        fetchTests()
+    }, [fetchTests])
+
+    // Determine if editing is allowed based on sample status
+    const isEditable = useCallback(() => {
+        if (!sampleStatus) return false
+        // Editable statuses: assigned, in_progress, review
+        return ['assigned', 'in_progress', 'review'].includes(sampleStatus)
+    }, [sampleStatus])
+
+    // Handle value changes from ResultCellEditor
+    const handleValueChange = useCallback(async (resultId: string, value: string) => {
+        setResultValues((prev) => ({
+            ...prev,
+            [resultId]: value,
+        }))
+
+        // Validate immediately
+        const result = results.find((r) => r.id === resultId)
+        if (result) {
+            const rules = result.validation_rules || {}
+            const error = await validateResultValue(value, rules)
+
+            setValidationErrors((prev) => {
+                const next = { ...prev }
+                if (error) {
+                    next[resultId] = error
+                } else {
+                    delete next[resultId]
+                }
+                return next
+            })
+        }
+    }, [results])
+
+    const handleSave = async () => {
+        if (Object.keys(validationErrors).length > 0) {
+            toast.error('Vui lòng sửa các lỗi trước khi lưu')
+            return
+        }
+
+        setIsSaving(true)
+        try {
+            const updates = Object.entries(resultValues).map(([id, value]) => ({
+                id,
+                value,
+            }))
+
+            const result = await saveBatchResults({ results: updates })
+
+            if (result.error) {
+                toast.error(result.error)
+                if (result.validationErrors) {
+                    // Update validation errors from server
+                    const serverErrors: Record<string, string> = {}
+                    result.validationErrors.forEach((err: any) => {
+                        serverErrors[err.id] = err.error
+                    })
+                    setValidationErrors(serverErrors)
+                }
+            } else {
+                toast.success('Đã lưu kết quả thành công')
+                setResultValues({})
+                setValidationErrors({})
+                fetchTests() // Refresh data
+            }
+        } catch (error) {
+            toast.error('Có lỗi xảy ra khi lưu kết quả')
+            console.error(error)
+        } finally {
+            setIsSaving(false)
         }
     }
 
-    const getStatusLabel = (status: string) => {
-        switch (status) {
-            case 'pending': return 'Chờ kết quả'
-            case 'entered': return 'Đã nhập KQ'
-            case 'approved': return 'Đã duyệt'
-            case 'rejected': return 'Từ chối'
-            default: return status
+    const handleDiscard = () => {
+        setResultValues({})
+        setValidationErrors({})
+        toast.info('Đã hủy các thay đổi')
+    }
+
+    const handleSubmitForReview = async () => {
+        setIsSubmitting(true)
+        try {
+            const result = await submitSampleForReview(sampleId)
+            if (result.error) {
+                toast.error(result.error)
+            } else {
+                toast.success('Đã gửi mẫu để duyệt')
+                setShowSubmitDialog(false)
+                fetchTests() // Refresh to update status
+            }
+        } catch (error) {
+            toast.error('Có lỗi xảy ra khi gửi duyệt')
+            console.error(error)
+        } finally {
+            setIsSubmitting(false)
         }
     }
 
-    if (!sampleId) {
+    const handlePrint = async () => {
+        try {
+            // Fetch full sample details
+            const { data: sampleData, error: sampleError } = await getSample(sampleId)
+            if (sampleError || !sampleData) {
+                toast.error('Không thể tải thông tin mẫu để in')
+                return
+            }
+
+            // Generate HTML
+            const htmlContent = generatePrintTemplate(sampleData, results)
+
+            // Open print window
+            const printWindow = window.open('', '_blank')
+            if (printWindow) {
+                printWindow.document.write(htmlContent)
+                printWindow.document.close()
+                // Wait for resources to load then print
+                printWindow.onload = () => {
+                    printWindow.print()
+                }
+            } else {
+                toast.error('Trình duyệt đã chặn cửa sổ in')
+            }
+        } catch (error) {
+            console.error(error)
+            toast.error('Có lỗi xảy ra khi in')
+        }
+    }
+
+    // Keyboard shortcut for save
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault()
+                if (Object.keys(resultValues).length > 0) {
+                    handleSave()
+                }
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [resultValues, validationErrors])
+
+    // Warn before leaving with unsaved changes
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (Object.keys(resultValues).length > 0) {
+                e.preventDefault()
+                e.returnValue = ''
+            }
+        }
+
+        window.addEventListener('beforeunload', handleBeforeUnload)
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+    }, [resultValues])
+
+    if (loading) {
         return (
-            <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-8 border rounded-lg bg-slate-50/50 dark:bg-slate-900/50">
-                <FlaskConical className="h-12 w-12 mb-4 opacity-20" />
-                <p className="text-sm font-medium">Chọn một mẫu để xem xét nghiệm</p>
+            <div className="flex h-64 items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
             </div>
         )
     }
 
-    return (
-        <div className="h-full flex flex-col bg-white dark:bg-slate-950 border rounded-lg overflow-hidden shadow-sm">
-            <div className="px-4 py-3 border-b bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between sticky top-0 z-10">
-                <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-sky-50 dark:bg-sky-900/20 flex items-center justify-center text-sky-600 dark:text-sky-400 shrink-0">
-                        <TestTube2 className="h-4 w-4" />
-                    </div>
-                    <div>
-                        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                            Danh sách xét nghiệm
-                        </h3>
-                        <p className="text-xs text-muted-foreground">
-                            {tests.length} chỉ tiêu
-                        </p>
-                    </div>
-                </div>
-                <Button size="sm" onClick={onAssignTests} className="gap-1 h-8 text-xs font-medium">
-                    <Plus className="h-3.5 w-3.5" />
-                    Chỉ định
+    if (error) {
+        return (
+            <div className="flex h-64 flex-col items-center justify-center text-red-500">
+                <AlertCircle className="mb-2 h-8 w-8" />
+                <p>{error}</p>
+                <Button variant="outline" onClick={fetchTests} className="mt-4">
+                    Thử lại
                 </Button>
             </div>
+        )
+    }
 
-            <div className="flex-1 overflow-auto">
-                <Table>
-                    <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-900/50 z-10">
-                        <TableRow className="hover:bg-transparent border-slate-100 dark:border-slate-800">
-                            <TableHead className="text-xs font-medium uppercase tracking-wider text-slate-500 h-9">Chỉ tiêu</TableHead>
-                            <TableHead className="text-xs font-medium uppercase tracking-wider text-slate-500 h-9">Phương pháp</TableHead>
-                            <TableHead className="text-xs font-medium uppercase tracking-wider text-slate-500 h-9">Kết quả</TableHead>
-                            <TableHead className="w-[120px] text-xs font-medium uppercase tracking-wider text-slate-500 h-9">Trạng thái</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {loading ? (
-                            <TableRow>
-                                <TableCell colSpan={4} className="h-32 text-center">
-                                    <div className="flex items-center justify-center gap-2 text-muted-foreground text-sm">
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                        Đang tải dữ liệu...
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ) : tests.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={4} className="h-32 text-center text-muted-foreground text-sm">
-                                    Chưa có xét nghiệm nào được chỉ định
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            tests.map((test) => (
-                                <TableRow key={test.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 border-slate-100 dark:border-slate-800">
-                                    <TableCell className="font-medium text-sm py-3">
-                                        {test.assay.name}
-                                        {test.assay.units && (
-                                            <span className="ml-1 text-xs text-muted-foreground font-normal">
-                                                ({test.assay.units})
-                                            </span>
-                                        )}
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground text-xs py-3">
-                                        {test.assay.method?.name || '-'}
-                                    </TableCell>
-                                    <TableCell className="py-3">
-                                        {test.value ? (
-                                            <span className="font-mono font-medium text-sm">
-                                                {test.value}
-                                            </span>
-                                        ) : (
-                                            <span className="text-slate-300 dark:text-slate-700 text-xs">
-                                                --
-                                            </span>
-                                        )}
-                                    </TableCell>
-                                    <TableCell className="py-3">
-                                        <Badge
-                                            variant="outline"
-                                            className={cn("font-normal whitespace-nowrap text-[10px] px-2 py-0.5 h-auto", getStatusColor(test.status))}
-                                        >
-                                            {getStatusLabel(test.status)}
-                                        </Badge>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
+    const pendingCount = Object.keys(resultValues).length
+    const canEdit = isEditable()
+
+    // Check if all results have values to enable submit button
+    const allResultsEntered = results.length > 0 && results.every(r => {
+        // Use edited value if available, otherwise original value
+        const val = resultValues[r.id] !== undefined ? resultValues[r.id] : r.value
+        return val !== null && val !== ''
+    })
+
+    return (
+        <div className="relative flex h-full flex-col">
+            <div className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
+                <div className="flex items-center gap-2">
+                    <FlaskConical className="h-5 w-5 text-indigo-600" />
+                    <h3 className="font-semibold text-slate-700">Chỉ định xét nghiệm</h3>
+                    <Badge variant="secondary" className="ml-2 bg-slate-100 text-slate-600 hover:bg-slate-200">
+                        {results.length}
+                    </Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 border-slate-200 bg-white text-slate-600 hover:border-indigo-200 hover:text-indigo-600"
+                        disabled={results.length === 0}
+                        onClick={handlePrint}
+                    >
+                        <Printer className="h-4 w-4" />
+                        Xuất Phiếu
+                    </Button>
+
+                    {/* Submit for Review Button */}
+                    {sampleStatus === 'in_progress' && allResultsEntered && (
+                        <Button
+                            size="sm"
+                            className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
+                            onClick={() => setShowSubmitDialog(true)}
+                            disabled={pendingCount > 0} // Disable if there are unsaved changes
+                        >
+                            <CheckCircle className="h-4 w-4" />
+                            Gửi duyệt
+                        </Button>
+                    )}
+
+                    <Button
+                        size="sm"
+                        className="gap-2 bg-indigo-600 hover:bg-indigo-700"
+                        onClick={() => setShowAssignmentDialog(true)}
+                    >
+                        <Plus className="h-4 w-4" />
+                        Chỉ định
+                    </Button>
+                </div>
             </div>
+
+            <div className="flex-1 overflow-auto bg-slate-50/50 p-6">
+                <Card className="border-slate-200 shadow-sm">
+                    <CardContent className="p-0">
+                        <Table>
+                            <TableHeader className="bg-slate-50">
+                                <TableRow>
+                                    <TableHead className="w-[25%] font-semibold text-slate-700">Xét nghiệm</TableHead>
+                                    <TableHead className="w-[15%] font-semibold text-slate-700">Phương pháp</TableHead>
+                                    <TableHead className="w-[20%] font-semibold text-slate-700">Kết quả</TableHead>
+                                    <TableHead className="w-[10%] font-semibold text-slate-700">Đơn vị</TableHead>
+                                    <TableHead className="w-[15%] font-semibold text-slate-700">Trạng thái</TableHead>
+                                    <TableHead className="w-[15%] font-semibold text-slate-700">Người nhập</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {results.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="h-32 text-center text-slate-500">
+                                            Chưa có xét nghiệm nào được chỉ định
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    results.map((result) => (
+                                        <TableRow key={result.id} className="group hover:bg-slate-50/50">
+                                            <TableCell className="font-medium text-slate-700">
+                                                {result.assay_name}
+                                            </TableCell>
+                                            <TableCell className="text-slate-600">
+                                                {result.method_name || '-'}
+                                            </TableCell>
+                                            <TableCell>
+                                                <ResultCellEditor
+                                                    value={resultValues[result.id] ?? result.value ?? ''}
+                                                    onChange={(val) => handleValueChange(result.id, val)}
+                                                    isEditable={canEdit && result.status !== 'approved'}
+                                                    validationError={validationErrors[result.id]}
+                                                    isPending={resultValues[result.id] !== undefined}
+                                                />
+                                            </TableCell>
+                                            <TableCell className="text-slate-500">
+                                                {result.assay_units || '-'}
+                                            </TableCell>
+                                            <TableCell>
+                                                <ResultStatusBadge status={result.status} />
+                                            </TableCell>
+                                            <TableCell className="text-xs text-slate-500">
+                                                {result.entered_by_name ? (
+                                                    <div className="flex flex-col">
+                                                        <span className="font-medium text-slate-700">
+                                                            {result.entered_by_name}
+                                                        </span>
+                                                        <span className="text-[10px] text-slate-400">
+                                                            {result.entered_at
+                                                                ? new Date(result.entered_at).toLocaleDateString('vi-VN')
+                                                                : '-'}
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    '-'
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <BatchSaveToolbar
+                pendingCount={pendingCount}
+                onSave={handleSave}
+                onDiscard={handleDiscard}
+                isSaving={isSaving}
+                isVisible={pendingCount > 0}
+            />
+
+            <Dialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Xác nhận gửi duyệt</DialogTitle>
+                        <DialogDescription>
+                            Bạn có chắc chắn muốn gửi mẫu này để duyệt không? Trạng thái mẫu sẽ chuyển sang "Chờ duyệt" và bạn sẽ không thể chỉnh sửa kết quả cho đến khi quản lý phản hồi.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowSubmitDialog(false)} disabled={isSubmitting}>
+                            Hủy
+                        </Button>
+                        <Button onClick={handleSubmitForReview} disabled={isSubmitting} className="bg-emerald-600 hover:bg-emerald-700">
+                            {isSubmitting ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Đang gửi...
+                                </>
+                            ) : (
+                                'Xác nhận gửi'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={showAssignmentDialog} onOpenChange={setShowAssignmentDialog}>
+                <DialogContent className="max-w-fit p-0 overflow-hidden border-none bg-transparent shadow-none sm:max-w-[950px]">
+                    <DialogTitle className="sr-only">Chỉ định xét nghiệm</DialogTitle>
+                    <TestAssignmentModule
+                        sampleId={sampleId}
+                        onClose={() => setShowAssignmentDialog(false)}
+                        onSuccess={() => {
+                            fetchTests()
+                        }}
+                    />
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

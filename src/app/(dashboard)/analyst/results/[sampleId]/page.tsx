@@ -2,7 +2,7 @@ import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getResultsBySample } from '@/app/actions/results'
-import { ResultsGrid } from '@/components/results-grid'
+import { AssignedTestsPanel } from '@/components/assigned-tests-panel'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, RefreshCcw } from 'lucide-react'
 import Link from 'next/link'
@@ -96,11 +96,7 @@ export default async function AnalystResultsPage({ params }: PageProps) {
                 </Button>
             </div>
 
-            <ResultsGrid
-                results={results}
-                sampleId={resolvedParams.sampleId}
-                userRole="analyst"
-            />
+            <AssignedTestsPanel sampleId={resolvedParams.sampleId} />
         </div>
     )
 }

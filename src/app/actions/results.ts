@@ -44,7 +44,7 @@ export async function getResultsBySample(sampleId: string) {
                 method:methods!results_method_id_fkey(
                     name
                 ),
-                sample:samples!results_sample_id_fkey(sample_id),
+                sample:samples!results_sample_id_fkey(sample_id, status),
                 entered_by_user:users!results_entered_by_fkey(full_name)
             `
             )
@@ -64,6 +64,7 @@ export async function getResultsBySample(sampleId: string) {
             method_name: result.method?.name || null,
             validation_rules: result.assay?.validation_rules || {},
             sample_id_display: result.sample?.sample_id || '',
+            sample_status: result.sample?.status || null,
             entered_by_name: result.entered_by_user?.full_name || null,
         }))
 
