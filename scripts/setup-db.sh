@@ -1,42 +1,52 @@
 #!/bin/bash
-# Complete database setup script
-# Run this to apply all migrations and seed data
 
-echo "==================================="
-echo "CDC-LIMS Database Setup"
-echo "==================================="
+# Load environment variables if .env exists
+if [ -f .env ]; then
+    export $(cat .env | grep -v '^#' | xargs)
+fi
 
-# Step 1: Enable uuid-ossp extension
-echo "Step 1: Enabling uuid-ossp extension..."
-docker exec lims-postgres psql -U postgres postgres -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+# Check if POSTGRES_PASSWORD is set
+if [ -z "$POSTGRES_PASSWORD" ]; then
+    echo "Error: POSTGRES_PASSWORD is not set in .env"
+    echo "Please run ./scripts/setup-codespace.sh first."
+    exit 1
+fi
 
-# Step 2: Create auth schema helpers (simplified)
-echo "Step 2: Creating auth.uid() function..."
-docker exec lims-postgres psql -U postgres postgres -c "
-CREATE OR REPLACE FUNCTION auth.uid() RETURNS UUID AS \$\$
-    SELECT '00000000-0000-0000-0000-000000000000'::UUID;
-\$\$ LANGUAGE SQL STABLE;
-"
+echo "Waiting for database to be ready..."
+until docker exec lims-postgres pg_isready -U postgres; do
+    echo "Postgres is unavailable - sleeping"
+    sleep 1
+done
 
-# Step 3: Apply migrations
-echo "Step 3: Applying migration 001 (schema)..."
-docker exec lims-postgres psql -U postgres postgres -f /tmp/migrations/001_initial_schema.sql > /dev/null 2>&1
+echo "Database is ready! Starting migrations..."
 
-echo "Step 4: Applying migration 002 (audit triggers)..."
-docker exec lims-postgres psql -U postgres postgres -f /tmp/migrations/002_audit_triggers.sql > /dev/null 2>&1
+# Export password for psql
+export PGPASSWORD="$POSTGRES_PASSWORD"
 
-echo "Step 5: Applying migration 003 (RLS policies)..."
-docker exec lims-postgres psql -U postgres postgres -f /tmp/migrations/003_rls_policies.sql > /dev/null 2>&1
+# Function to run SQL file
+run_sql() {
+    local file=$1
+    echo "Applying $file..."
+    docker exec -i lims-postgres psql -U postgres -d postgres -v ON_ERROR_STOP=1 < "$file"
+    
+    if [ $? -ne 0 ]; then
+        echo "Error applying $file"
+        exit 1
+    fi
+}
 
-# Step 6: Seed data
-echo "Step 6: Seeding database with test users and sample data..."
-docker exec lims-postgres psql -U postgres postgres -f /tmp/migrations/006_complete_seed.sql
+# 1. Apply all migrations in order
+for file in supabase/migrations/*.sql; do
+    [ -e "$file" ] || continue
+    run_sql "$file"
+done
 
-echo ""
-echo "==================================="
-echo "Setup Complete!"
-echo "==================================="
-echo "Test Accounts Created:"
-echo "  Analyst: analyst@cdc-lims.local / password123"
-echo "  Manager: manager@cdc-lims.local / password123"
-echo "==================================="
+# 2. Apply the specific seed-data.sql requested
+if [ -f "scripts/seed-data.sql" ]; then
+    echo "Applying final seed data (scripts/seed-data.sql)..."
+    run_sql "scripts/seed-data.sql"
+fi
+
+echo "----------------------------------------"
+echo "✅ Database setup complete!"
+echo "----------------------------------------"
