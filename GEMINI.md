@@ -37,8 +37,12 @@ The project follows a standard Next.js App Router architecture. It leverages **S
 ### Core UI Components
 *   **SampleAccessionForm** (`src/components/sample-accession-form.tsx`): Handles new sample creation/accessioning.
 *   **SampleListTable** (`src/components/sample-list-table.tsx`): A reusable data table for displaying samples with pagination and filtering.
+    *   Includes `updated_at` column for tracking sample modifications
+    *   Supports sorting by update timestamp
+    *   Auto-highlights recently assigned samples
 *   **QrScanner** (`src/components/qr-scanner.tsx`): Integrates camera functionality to scan sample QR codes.
-*   **TestAssignmentDialog** (`src/components/test-assignment-dialog.tsx`): Modal for managers to assign assays to samples.
+*   **TestAssignmentModule** (`src/components/test-assignment-module.tsx`): Module for managers to assign tests to samples with auto-focus functionality.
+*   **AssignedTestsPanel** (`src/components/assigned-tests-panel.tsx`): Shows tests assigned to a specific sample with tooltips for better UX.
 
 ### Database Schema
 *   **users:** Extended user profiles linked to Supabase Auth `auth.users`. Stores `role` ('analyst' or 'manager').
@@ -79,10 +83,13 @@ This project uses Next.js Server Actions as the API layer. These functions are c
 *   **`getSamples(params: SampleListParams)`**
     *   Fetches a paginated list of samples.
     *   Supports filtering by `status` and searching by `sample_id` or `client_name`.
+    *   Includes sorting by `updated_at` timestamp.
 *   **`assignTests(data: AssignTests)`**
     *   **Manager Only.**
     *   Creates `results` records (status: 'pending') for selected assays linked to a sample.
     *   Updates sample status to 'assigned'.
+    *   Updates sample `updated_at` timestamp to bring it to the top of the list.
+    *   Returns the sample ID for auto-focus after assignment.
 *   **`getAssayDefinitions()`**
     *   Returns a list of all available assays for assignment.
 *   **`getSampleTests(sampleId)`**

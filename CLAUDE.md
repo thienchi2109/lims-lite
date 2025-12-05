@@ -16,6 +16,10 @@ This project is in active development with core features implemented:
   - Configuration: `GOTRUE_JWT_EXP=3600`, `GOTRUE_REFRESH_TOKEN_EXPIRY=14400`
 - ✅ Sample Accessioning (Manual & QR Scanner)
 - ✅ Test Assignment (POS-style UI with server-side search)
+  - Auto-focus on assigned sample with timestamp update
+  - Updated_at column in sample grid with sorting options
+  - Tooltips for better UX
+- ✅ Print Order Form (A5 format with optimized layout)
 - ✅ Results Grid (TanStack Table with editable cells)
 - ✅ Approval Queue & Workflow
 - ✅ Audit Logging (Database triggers)
@@ -129,6 +133,7 @@ lims-lite/
 - `@tanstack/react-table` v8 for data grids
 - Editable cells via `react-hook-form` integration
 - Keyboard navigation support (Tab, Arrow keys)
+- Tooltips via `@radix-ui/react-tooltip` for enhanced UX
 
 ### **Styling**
 - Tailwind CSS v4 utility classes

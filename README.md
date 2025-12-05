@@ -124,18 +124,34 @@ lims-lite/
 
 ## 🛠️ Tech Stack
 
-- **Frontend:** Next.js 16 (App Router), TypeScript, Tailwind CSS
+- **Frontend:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4
 - **UI Components:** Shadcn UI (Radix UI + Tailwind)
 - **Backend:** Supabase (PostgreSQL + GoTrue Auth + PostgREST)
 - **State Management:** React Server Components + Server Actions
 - **Form Handling:** React Hook Form + Zod
+- **Data Tables:** TanStack Table v8 with tooltips
 - **Deployment:** Docker Compose (local), Railway/Render (production)
 
 ## 📚 Documentation
 
+- **[CLAUDE.md](./CLAUDE.md)** - Comprehensive project documentation for Claude
 - **[GEMINI.md](./GEMINI.md)** - Architecture and development guide
+- **[AGENTS.md](./AGENTS.md)** - AI assistant instructions and OpenSpec workflow
 - **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)** - Common issues and solutions
 - **[SUPABASE_CLOUD_DEPLOYMENT.md](./SUPABASE_CLOUD_DEPLOYMENT.md)** - Production deployment guide
+
+## ✨ Recent Features
+
+### Test Assignment Enhancement (Latest)
+- **Auto-focus on assigned samples:** After assigning tests, the sample automatically moves to the top of the list and is highlighted
+- **Updated timestamp tracking:** Sample `updated_at` field is updated on test assignment
+- **Enhanced UI/UX:** Added tooltips throughout the interface for better user guidance
+- **Sorting options:** Added `updated_at` sorting in sample filters
+
+### Print Order Form
+- A5 format print template for sample order forms
+- 95% zoom scale for optimal fit and readability
+- Browser print dialog integration
 
 ## 🐛 Troubleshooting
 
