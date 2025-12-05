@@ -41,7 +41,8 @@ BEGIN
     END LOOP;
     
     RAISE NOTICE 'Migrated % assay-method relationships', migrated_count;
-END $$;
+END
+$$ LANGUAGE plpgsql;
 
 -- ============================================================================
 -- STEP 2: VERIFY ALL ASSAYS HAVE AT LEAST ONE METHOD
@@ -73,7 +74,8 @@ BEGIN
     ELSE
         RAISE NOTICE '✓ All active assays have at least one method';
     END IF;
-END $$;
+END
+$$ LANGUAGE plpgsql;
 
 -- ============================================================================
 -- STEP 3: DROP OLD COLUMN
@@ -83,9 +85,11 @@ END $$;
 ALTER TABLE public.assay_definitions
 DROP COLUMN IF EXISTS method_id;
 
-DO $$ BEGIN
+DO $$
+BEGIN
     RAISE NOTICE '✓ Removed method_id column from assay_definitions';
-END $$;
+END
+$$ LANGUAGE plpgsql;
 
 -- ============================================================================
 -- VERIFICATION QUERY
@@ -117,7 +121,8 @@ BEGIN
     RAISE NOTICE 'Total assay-method relationships: %', total_relationships;
     RAISE NOTICE 'Average methods per assay: %', ROUND(avg_methods_per_assay, 2);
     RAISE NOTICE '============================================================================';
-END $$;
+END
+$$ LANGUAGE plpgsql;
 
 -- ============================================================================
 -- ROLLBACK INSTRUCTIONS (if needed)
