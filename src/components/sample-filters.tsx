@@ -45,6 +45,8 @@ const statusOptions: Array<{ value: SampleStatus | 'all'; label: string; color: 
 const sortOptions = [
     { value: 'created_at-desc', label: 'Mới nhất' },
     { value: 'created_at-asc', label: 'Cũ nhất' },
+    { value: 'updated_at-desc', label: 'Mới cập nhật' },
+    { value: 'updated_at-asc', label: 'Cập nhật cũ' },
     { value: 'received_at-desc', label: 'Ngày nhận (Mới)' },
     { value: 'received_at-asc', label: 'Ngày nhận (Cũ)' },
 ]

@@ -216,7 +216,9 @@ export async function getSample(id: string) {
 }
 
 /**
- * Assigns tests to a sample (Manager only)
+ * Assigns tests to a sample
+ * - Managers: Can assign at any status
+ * - Analysts: Can only assign when status is 'received' or 'assigned'
  */
 export async function assignTests(data: AssignTests) {
     try {
@@ -231,19 +233,38 @@ export async function assignTests(data: AssignTests) {
             return { error: 'Unauthorized' }
         }
 
-        // Check if user is a manager
+        // Check user role
         const { data: userData } = await supabase
             .from('users')
             .select('role')
             .eq('id', user.id)
             .single()
 
-        if (userData?.role !== 'manager') {
-            return { error: 'Only managers can assign tests' }
+        if (!userData || !['analyst', 'manager'].includes(userData.role)) {
+            return { error: 'Không có quyền chỉ định xét nghiệm' }
         }
 
         // Validate input
         const validatedData = AssignTestsSchema.parse(data)
+
+        // If user is analyst, check sample status restrictions
+        if (userData.role === 'analyst') {
+            const { data: sampleData } = await supabase
+                .from('samples')
+                .select('status')
+                .eq('id', validatedData.sampleId)
+                .single()
+
+            if (!sampleData) {
+                return { error: 'Không tìm thấy mẫu' }
+            }
+
+            // Analysts can only assign when status is 'received' or 'assigned'
+            if (!['received', 'assigned'].includes(sampleData.status)) {
+                return { error: 'Chỉ có thể chỉ định xét nghiệm khi mẫu ở trạng thái "Đã nhận" hoặc "Đã chỉ định"' }
+            }
+        }
+        // Managers have no status restrictions
 
         // Create result records for each test (assay + method combination)
         const resultInserts = validatedData.tests.map((test) => ({
@@ -260,10 +281,24 @@ export async function assignTests(data: AssignTests) {
             return { error: insertError.message }
         }
 
-        // Update sample status to 'assigned'
+        // Update sample status to 'assigned' if it was 'received', otherwise just touch updated_at
+        const { data: currentSample } = await supabase
+            .from('samples')
+            .select('status')
+            .eq('id', validatedData.sampleId)
+            .single()
+
+        const updateData: { status?: string; updated_at: string } = {
+            updated_at: new Date().toISOString(),
+        }
+
+        if (currentSample?.status === 'received') {
+            updateData.status = 'assigned'
+        }
+
         const { error: updateError } = await supabase
             .from('samples')
-            .update({ status: 'assigned' })
+            .update(updateData)
             .eq('id', validatedData.sampleId)
 
         if (updateError) {

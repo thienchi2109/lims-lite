@@ -28,6 +28,7 @@ interface TestAssignmentModuleProps {
     sampleId: string
     onClose: () => void
     onSuccess: () => void
+    onRefocus?: (sampleId: string) => void // Optional callback to refocus on the sample
 }
 
 interface Assay {
@@ -47,7 +48,7 @@ const CATEGORIES = [
     { id: 'molecular', label: 'Sinh học phân tử', icon: Dna },
 ]
 
-export function TestAssignmentModule({ sampleId, onClose, onSuccess }: TestAssignmentModuleProps) {
+export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus }: TestAssignmentModuleProps) {
     const [assays, setAssays] = useState<Assay[]>([])
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
@@ -134,6 +135,10 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess }: TestAssig
                 toast.success('Đã chỉ định xét nghiệm thành công')
                 onSuccess()
                 onClose()
+                // Refocus on the sample after successful assignment
+                if (onRefocus) {
+                    onRefocus(sampleId)
+                }
             }
         } catch (error) {
             console.error(error)

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import {
     Table,
     TableBody,
@@ -43,6 +44,7 @@ interface AssignedTestsPanelProps {
 }
 
 export function AssignedTestsPanel({ sampleId }: AssignedTestsPanelProps) {
+    const router = useRouter()
     const [results, setResults] = useState<ResultWithAssay[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -209,6 +211,18 @@ export function AssignedTestsPanel({ sampleId }: AssignedTestsPanelProps) {
             console.error(error)
             toast.error('Có lỗi xảy ra khi in')
         }
+    }
+
+    const handleRefocus = (targetSampleId: string) => {
+        // Navigate to the samples page with updated_at sorting and the sample selected
+        // This will make the newly assigned sample appear at the top of the list
+        const params = new URLSearchParams({
+            sortBy: 'updated_at',
+            sortOrder: 'desc',
+            sampleId: targetSampleId,
+        })
+        router.push(`?${params.toString()}`)
+        router.refresh()
     }
 
     // Keyboard shortcut for save
@@ -431,6 +445,7 @@ export function AssignedTestsPanel({ sampleId }: AssignedTestsPanelProps) {
                         onSuccess={() => {
                             fetchTests()
                         }}
+                        onRefocus={handleRefocus}
                     />
                 </DialogContent>
             </Dialog>

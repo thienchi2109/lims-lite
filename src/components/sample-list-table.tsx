@@ -167,6 +167,34 @@ export function SampleListTable({
                 <span className="text-sm text-slate-600 dark:text-slate-400">{row.original.received_by_name || 'N/A'}</span>
             ),
         },
+        {
+            accessorKey: 'updated_at',
+            header: ({ column }) => {
+                return (
+                    <Button
+                        variant="ghost"
+                        onClick={() => handleSort('updated_at')}
+                        className="-ml-4 h-8 data-[state=open]:bg-accent text-xs font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-700 hover:bg-transparent"
+                    >
+                        Ngày cập nhật
+                        {sortBy === 'updated_at' ? (
+                            sortOrder === 'asc' ? (
+                                <ArrowUp className="ml-2 h-3 w-3" />
+                            ) : (
+                                <ArrowDown className="ml-2 h-3 w-3" />
+                            )
+                        ) : (
+                            <ArrowUpDown className="ml-2 h-3 w-3 opacity-50" />
+                        )}
+                    </Button>
+                )
+            },
+            cell: ({ row }) => (
+                <span className="text-sm text-muted-foreground font-mono">
+                    {formatDate(row.original.updated_at)}
+                </span>
+            ),
+        },
     ]
 
     // Add actions column based on role
