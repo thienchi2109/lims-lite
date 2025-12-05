@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback, useTransition, useDeferredValue } from 'react'
 import {
     Search,
     FlaskConical,
@@ -52,8 +52,10 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess }: TestAssig
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
+    const deferredSearchQuery = useDeferredValue(searchQuery)
     const [selectedCategory, setSelectedCategory] = useState('all')
     const [selectedAssayIds, setSelectedAssayIds] = useState<Set<string>>(new Set())
+    const [isPending, startTransition] = useTransition()
 
     useEffect(() => {
         async function fetchAssays() {
@@ -77,8 +79,8 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess }: TestAssig
 
     const filteredAssays = useMemo(() => {
         return assays.filter((assay) => {
-            const matchesSearch = assay.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (assay.method_name && assay.method_name.toLowerCase().includes(searchQuery.toLowerCase()))
+            const matchesSearch = assay.name.toLowerCase().includes(deferredSearchQuery.toLowerCase()) ||
+                (assay.method_name && assay.method_name.toLowerCase().includes(deferredSearchQuery.toLowerCase()))
 
             // Mock category logic: Randomly assign for demo purposes if not present
             // In real app, this would check assay.category_id
@@ -86,21 +88,25 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess }: TestAssig
 
             return matchesSearch && matchesCategory
         })
-    }, [assays, searchQuery, selectedCategory])
+    }, [assays, deferredSearchQuery, selectedCategory])
 
     const selectedAssaysList = useMemo(() => {
         return assays.filter((a) => selectedAssayIds.has(a.id))
     }, [assays, selectedAssayIds])
 
-    const toggleAssay = (id: string) => {
-        const next = new Set(selectedAssayIds)
-        if (next.has(id)) {
-            next.delete(id)
-        } else {
-            next.add(id)
-        }
-        setSelectedAssayIds(next)
-    }
+    const toggleAssay = useCallback((id: string) => {
+        startTransition(() => {
+            setSelectedAssayIds((prev) => {
+                const next = new Set(prev)
+                if (next.has(id)) {
+                    next.delete(id)
+                } else {
+                    next.add(id)
+                }
+                return next
+            })
+        })
+    }, [])
 
     const handleConfirm = async () => {
         if (selectedAssayIds.size === 0) return
@@ -189,7 +195,7 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess }: TestAssig
                             <p>Không tìm thấy xét nghiệm phù hợp</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-2 gap-3" style={{ willChange: isPending ? 'contents' : 'auto' }}>
                             {filteredAssays.map((assay) => {
                                 const isSelected = selectedAssayIds.has(assay.id)
                                 return (
@@ -202,6 +208,7 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess }: TestAssig
                                                 ? "border-indigo-600 bg-indigo-50/50 ring-1 ring-indigo-600"
                                                 : "border-slate-200 bg-white hover:border-indigo-200"
                                         )}
+                                        style={{ willChange: 'transform' }}
                                     >
                                         <div className="flex items-start justify-between gap-2">
                                             <h4 className={cn(
