@@ -18,7 +18,29 @@ until docker exec lims-postgres pg_isready -U postgres; do
     sleep 1
 done
 
-echo "Database is ready! Starting migrations..."
+echo "Database is ready! Waiting for Supabase Auth schema to be initialized..."
+echo "(This ensures the 'auth' container has finished its own migrations)"
+
+# Loop until auth.users exists
+MAX_RETRIES=60
+COUNT=0
+while [ $COUNT -lt $MAX_RETRIES ]; do
+    if docker exec lims-postgres psql -U postgres -d postgres -c "SELECT 1 FROM information_schema.tables WHERE table_schema = 'auth' AND table_name = 'users';" | grep -q 1; then
+        echo "✅ Supabase Auth schema detected!"
+        break
+    fi
+    echo "Waiting for auth.users table... ($COUNT/$MAX_RETRIES)"
+    sleep 2
+    COUNT=$((COUNT+1))
+done
+
+if [ $COUNT -eq $MAX_RETRIES ]; then
+    echo "❌ Error: Timed out waiting for Supabase Auth schema."
+    echo "Please check if the 'auth' container is running: docker compose ps"
+    exit 1
+fi
+
+echo "Starting app migrations..."
 
 # Export password for psql
 export PGPASSWORD="$POSTGRES_PASSWORD"
