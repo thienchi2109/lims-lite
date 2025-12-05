@@ -112,13 +112,13 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
 -- ============================================================================
 -- INDEXES for Performance
 -- ============================================================================
-CREATE INDEX idx_samples_sample_id ON public.samples(sample_id);
-CREATE INDEX idx_samples_status ON public.samples(status);
-CREATE INDEX idx_samples_deleted_at ON public.samples(deleted_at);
-CREATE INDEX idx_results_sample_id ON public.results(sample_id);
-CREATE INDEX idx_results_status ON public.results(status);
-CREATE INDEX idx_audit_logs_table_record ON public.audit_logs(table_name, record_id);
-CREATE INDEX idx_audit_logs_changed_at ON public.audit_logs(changed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_samples_sample_id ON public.samples(sample_id);
+CREATE INDEX IF NOT EXISTS idx_samples_status ON public.samples(status);
+CREATE INDEX IF NOT EXISTS idx_samples_deleted_at ON public.samples(deleted_at);
+CREATE INDEX IF NOT EXISTS idx_results_sample_id ON public.results(sample_id);
+CREATE INDEX IF NOT EXISTS idx_results_status ON public.results(status);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_table_record ON public.audit_logs(table_name, record_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_changed_at ON public.audit_logs(changed_at DESC);
 
 -- ============================================================================
 -- UPDATED_AT TRIGGER FUNCTION
@@ -131,21 +131,30 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Apply updated_at trigger to all tables
-CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_methods_updated_at BEFORE UPDATE ON public.methods
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_assay_definitions_updated_at BEFORE UPDATE ON public.assay_definitions
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_samples_updated_at BEFORE UPDATE ON public.samples
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_results_updated_at BEFORE UPDATE ON public.results
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Apply updated_at trigger to all tables safely
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_users_updated_at') THEN
+        CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_methods_updated_at') THEN
+        CREATE TRIGGER update_methods_updated_at BEFORE UPDATE ON public.methods
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_assay_definitions_updated_at') THEN
+        CREATE TRIGGER update_assay_definitions_updated_at BEFORE UPDATE ON public.assay_definitions
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_samples_updated_at') THEN
+        CREATE TRIGGER update_samples_updated_at BEFORE UPDATE ON public.samples
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_results_updated_at') THEN
+        CREATE TRIGGER update_results_updated_at BEFORE UPDATE ON public.results
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END$$;
 
 -- ============================================================================
 -- COMMENTS for Documentation
