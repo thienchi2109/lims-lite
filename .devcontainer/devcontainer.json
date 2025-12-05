@@ -18,5 +18,5 @@
     }
   },
   "forwardPorts": [3000, 8000, 3002, 5432, 5000],
-  "postCreateCommand": "npm install"
+  "postCreateCommand": "chmod +x scripts/setup-codespace.sh && ./scripts/setup-codespace.sh && npm install"
 }
