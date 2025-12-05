@@ -83,7 +83,9 @@ END $$;
 ALTER TABLE public.assay_definitions
 DROP COLUMN IF EXISTS method_id;
 
-RAISE NOTICE '✓ Removed method_id column from assay_definitions';
+DO $$ BEGIN
+    RAISE NOTICE '✓ Removed method_id column from assay_definitions';
+END $$;
 
 -- ============================================================================
 -- VERIFICATION QUERY
