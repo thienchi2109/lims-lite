@@ -29,71 +29,66 @@ The project follows a standard Next.js App Router architecture. It leverages **S
 ### Pages (Routes)
 *   **Login:** `src/app/(auth)/login/page.tsx` - Entry point for authentication.
 *   **Analyst Dashboard:** `src/app/(dashboard)/analyst/page.tsx` - Main view for laboratory analysts.
-    *   **Accession:** `src/app/(dashboard)/analyst/accession/page.tsx` - Form to receive new samples.
+    *   **Accession:** `src/app/(dashboard)/analyst/accession/page.tsx` - Form to receive new samples and optionally assign initial tests.
     *   **Samples:** `src/app/(dashboard)/analyst/samples/page.tsx` - List of samples for analysts.
+    *   **Results:** `src/app/(dashboard)/analyst/results/page.tsx` - Interface for analysts to enter and save test results.
 *   **Manager Dashboard:** `src/app/(dashboard)/manager/page.tsx` - Overview for lab managers.
     *   **Sample Management:** `src/app/(dashboard)/manager/samples/page.tsx` - Advanced sample control (e.g., test assignment).
+    *   **Approvals:** `src/app/(dashboard)/manager/approvals/page.tsx` - Queue for reviewing and approving/rejecting pending results.
+    *   **Assay Management:** `src/app/(dashboard)/manager/assays/page.tsx` - CRUD interface for assay definitions and method links.
 
 ### Core UI Components
-*   **SampleAccessionForm** (`src/components/sample-accession-form.tsx`): Handles new sample creation/accessioning.
+*   **SampleAccessionForm** (`src/components/sample-accession-form.tsx`): Handles new sample creation and optional test assignment.
 *   **SampleListTable** (`src/components/sample-list-table.tsx`): A reusable data table for displaying samples with pagination and filtering.
     *   Includes `updated_at` column for tracking sample modifications
     *   Supports sorting by update timestamp
     *   Auto-highlights recently assigned samples
 *   **QrScanner** (`src/components/qr-scanner.tsx`): Integrates camera functionality to scan sample QR codes.
 *   **TestAssignmentModule** (`src/components/test-assignment-module.tsx`): Module for managers to assign tests to samples with auto-focus functionality.
-*   **AssignedTestsPanel** (`src/components/assigned-tests-panel.tsx`): Shows tests assigned to a specific sample with tooltips for better UX.
+*   **AssignedTestsPanel** (`src/components/assigned-tests-panel.tsx`): Shows tests assigned to a specific sample with tooltips.
+*   **AssayDefinitionsTable** (`src/components/assay-definitions-table.tsx`): Data table for managing assay definitions.
+*   **ApprovalQueueTable** (`src/components/approval-queue-table.tsx`): Table for managers to review results requiring approval.
+*   **ResultCellEditor** (`src/components/result-cell-editor.tsx`): Inline editor for entering result values with validation.
+*   **AssayMethodsList** (`src/components/assay-methods-list.tsx`): Manages the many-to-many relationship between assays and methods.
 
 ### Database Schema
 *   **users:** Extended user profiles linked to Supabase Auth `auth.users`. Stores `role` ('analyst' or 'manager').
-*   **samples:** The core entity. Tracks `sample_id` (human-readable), `client_name`, `status`, and `received_by`.
+*   **samples:** The core entity. Tracks `sample_id`, `client_name`, `status`, `received_by`, etc.
 *   **methods:** Stores laboratory test methods/procedures.
-*   **assay_definitions:** Defines specific assays/tests that can be performed (linked to methods).
-*   **results:** Stores the actual test data for a sample + assay combination.
+*   **assay_definitions:** Defines specific assays/tests.
+*   **assay_methods:** Junction table managing the many-to-many relationship between assays and methods (supports defaults).
+*   **results:** Stores test data (`value`, `status`) for a sample + assay combination. Supports 'pending', 'entered', 'approved' statuses.
 *   **audit_logs:** Tracks all changes for 21 CFR Part 11 compliance.
 
 ## 3. API Endpoints (Server Actions)
 
-This project uses Next.js Server Actions as the API layer. These functions are called directly from client components.
+This project uses Next.js Server Actions as the API layer.
 
 ### Authentication (`src/app/actions/auth.ts`)
-*   **`login(formData)`**
-    *   Authenticates a user against Supabase Auth.
-    *   Checks the `users` table for the role.
-    *   Redirects to the appropriate dashboard based on role.
-*   **`logout()`**
-    *   Signs the user out and redirects to the login page.
+*   **`login(formData)`**: Authenticates user, checks role, redirects to dashboard.
+*   **`logout()`**: Signs out user.
 
 **Token Expiry Configuration:**
-*   **Access Token (JWT):** Expires after 1 hour (3600s) - `GOTRUE_JWT_EXP=3600`
-*   **Refresh Token:** Expires after 4 hours (14400s) - `GOTRUE_REFRESH_TOKEN_EXPIRY=14400`
-*   **Behavior:**
-    *   Access tokens are automatically refreshed by the Supabase client using the refresh token
-    *   After 4 hours, the refresh token expires and users must re-login
-    *   Middleware (`src/middleware.ts`) enforces authentication and triggers token refresh on each request
-*   **Security:** This configuration ensures sessions timeout after 4 hours of inactivity, meeting audit requirements while maintaining good UX
+*   **Access Token (JWT):** 1 hour (3600s).
+*   **Refresh Token:** 4 hours (14400s).
+*   **Behavior:** Auto-refresh via middleware; session timeout after 4 hours inactivity.
 
 ### Sample Management (`src/app/actions/samples.ts`)
-*   **`createSample(data: CreateSample)`**
-    *   Generates a sequential sample ID (e.g., `20231027-001`).
-    *   Inserts a new record into the `samples` table.
-    *   Revalidates relevant dashboard paths.
-*   **`updateSample(data: UpdateSample)`**
-    *   Updates fields like `client_name` or `status`.
-*   **`getSamples(params: SampleListParams)`**
-    *   Fetches a paginated list of samples.
-    *   Supports filtering by `status` and searching by `sample_id` or `client_name`.
-    *   Includes sorting by `updated_at` timestamp.
-*   **`assignTests(data: AssignTests)`**
-    *   **Manager Only.**
-    *   Creates `results` records (status: 'pending') for selected assays linked to a sample.
-    *   Updates sample status to 'assigned'.
-    *   Updates sample `updated_at` timestamp to bring it to the top of the list.
-    *   Returns the sample ID for auto-focus after assignment.
-*   **`getAssayDefinitions()`**
-    *   Returns a list of all available assays for assignment.
-*   **`getSampleTests(sampleId)`**
-    *   Returns all tests (results) currently assigned to a specific sample.
+*   **`createSample(data)`**: Creates sample, optionally with initial test assignments.
+*   **`updateSample(data)`**: Updates sample details.
+*   **`getSamples(params)`**: Fetches paginated, filtered, sorted samples.
+*   **`assignTests(data)`**: Creates pending results for a sample, updates status/timestamps.
+*   **`getSampleTests(sampleId)`**: Returns assigned tests (results).
+
+### Assay Management (`src/app/actions/assays.ts`, `src/app/actions/assay-methods.ts`)
+*   **`createAssayDefinition`, `updateAssayDefinition`, `deleteAssayDefinition`**: CRUD for assays.
+*   **`getAssayDefinitions`**: Lists assays with their linked methods.
+*   **`addMethodToAssay`, `removeMethodFromAssay`**: Manages the M2M relationship.
+
+### Results Management (`src/app/actions/results.ts`)
+*   **`saveBatchResults(data)`**: Batch saves result values, updates status to 'entered'.
+*   **`approveResults(data)`**: (Manager) Approves selected results, locks them.
+*   **`cancelApproval(data)`**: (Manager) Revokes approval, returns results to 'entered' or 'pending'.
 
 ## 4. Development Workflow
 
