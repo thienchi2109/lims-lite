@@ -18,7 +18,15 @@ until docker exec lims-postgres pg_isready -U postgres; do
     sleep 1
 done
 
-echo "Database is ready! Waiting for Supabase Auth schema to be initialized..."
+echo "Database is ready!"
+
+# CRITICAL FIX: Create the 'auth' schema manually.
+# The Supabase GoTrue (Auth) service crashes if the 'auth' schema doesn't exist
+# when 'search_path=auth' is used in the connection string.
+echo "Ensuring 'auth' schema exists..."
+docker exec lims-postgres psql -U postgres -d postgres -c "CREATE SCHEMA IF NOT EXISTS auth;"
+
+echo "Waiting for Supabase Auth service to initialize tables..."
 echo "(This ensures the 'auth' container has finished its own migrations)"
 
 # Loop until auth.users exists
