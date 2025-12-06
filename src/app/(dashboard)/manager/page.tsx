@@ -1,10 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { logout } from '@/app/actions/auth'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 import { FlaskConical, CheckCircle2, ClipboardList, User } from 'lucide-react'
+import { LogoutButton } from '@/components/logout-button'
 
 export default async function ManagerDashboard() {
     const supabase = await createClient()
@@ -44,11 +43,7 @@ export default async function ManagerDashboard() {
                                 {userData?.role}
                             </p>
                         </div>
-                        <form action={logout}>
-                            <Button variant="outline" size="sm" type="submit">
-                                Đăng xuất
-                            </Button>
-                        </form>
+                        <LogoutButton />
                     </div>
                 </div>
             </header>

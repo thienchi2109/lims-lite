@@ -1,10 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { logout } from '@/app/actions/auth'
 import { Button } from '@/components/ui/button'
 import { SampleAccessionForm } from '@/components/sample-accession-form'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import { LogoutButton } from '@/components/logout-button'
 
 export default async function AccessionPage() {
     const supabase = await createClient()
@@ -44,11 +44,7 @@ export default async function AccessionPage() {
                                 {userData?.role}
                             </p>
                         </div>
-                        <form action={logout}>
-                            <Button variant="outline" size="sm" type="submit">
-                                Đăng xuất
-                            </Button>
-                        </form>
+                        <LogoutButton />
                     </div>
                 </div>
             </header>

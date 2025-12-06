@@ -1,12 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { logout } from '@/app/actions/auth'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { getUsers } from '@/app/actions/users'
 import { UserListTable } from '@/components/user-list-table'
+import { LogoutButton } from '@/components/logout-button'
 
 export default async function UsersPage({
     searchParams,
@@ -78,11 +78,7 @@ export default async function UsersPage({
                                 {userData?.role}
                             </p>
                         </div>
-                        <form action={logout}>
-                            <Button variant="outline" size="sm" type="submit">
-                                Đăng xuất
-                            </Button>
-                        </form>
+                        <LogoutButton />
                     </div>
                 </div>
             </header>

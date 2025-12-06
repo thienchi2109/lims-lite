@@ -100,43 +100,17 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
         }
     }, [])
 
+    // Auto-start scanning when component mounts
+    useEffect(() => {
+        if (!isScanning && !isInitializing) {
+            setIsInitializing(true)
+            setIsScanning(true)
+        }
+    }, [])
+
     return (
         <div className="space-y-4">
-            {!isScanning && !isInitializing ? (
-                <div className="space-y-3">
-                    {/* Info Card */}
-                    <div className="bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-lg p-4">
-                        <div className="flex items-start gap-3">
-                            <div className="shrink-0 mt-0.5">
-                                <ScanLine className="h-5 w-5 text-sky-600 dark:text-sky-400" />
-                            </div>
-                            <div className="space-y-1 min-w-0">
-                                <p className="text-sm font-medium text-sky-900 dark:text-sky-100">
-                                    Quét mã QR trên mẫu
-                                </p>
-                                <p className="text-xs text-sky-700 dark:text-sky-300">
-                                    Đưa mã QR vào khung hình để tự động tìm kiếm
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Start Button - Touch Friendly */}
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                            setIsInitializing(true)
-                            setIsScanning(true)
-                        }}
-                        className="w-full min-h-[48px] text-base font-medium hover:bg-sky-50 hover:text-sky-700 hover:border-sky-300 dark:hover:bg-sky-900/20 dark:hover:text-sky-300 dark:hover:border-sky-700 transition-colors duration-200"
-                        aria-label="Bắt đầu quét mã QR"
-                    >
-                        <Camera className="mr-2 h-5 w-5" />
-                        Bắt đầu quét
-                    </Button>
-                </div>
-            ) : (
+            {isScanning || isInitializing ? (
                 <div className="space-y-3">
                     {/* Camera Preview with Glassmorphism Border */}
                     <div className="relative rounded-xl overflow-hidden border-2 border-sky-500 dark:border-sky-400 shadow-lg">
@@ -172,7 +146,7 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
                         Dừng quét
                     </Button>
                 </div>
-            )}
+            ) : null}
 
             {/* Error Display with Better Styling */}
             {error && (

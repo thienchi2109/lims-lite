@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { logout } from '@/app/actions/auth'
 import { Button } from '@/components/ui/button'
 import { SampleListTable } from '@/components/sample-list-table'
 import { SampleFilters } from '@/components/sample-filters'
@@ -8,6 +7,7 @@ import { SampleBottomRow } from '@/components/sample-bottom-row'
 import { fetchSamples } from '@/lib/data/samples'
 import { getSample } from '@/app/actions/samples'
 import { type SampleStatus } from '@/types'
+import { LogoutButton } from '@/components/logout-button'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { Suspense } from 'react'
@@ -153,11 +153,7 @@ export default async function ManagerSamplesPage({ searchParams }: ManagerSample
                                 {userData?.role}
                             </p>
                         </div>
-                        <form action={logout}>
-                            <Button variant="outline" size="sm" type="submit">
-                                Đăng xuất
-                            </Button>
-                        </form>
+                        <LogoutButton />
                     </div>
                 </div>
             </header>
