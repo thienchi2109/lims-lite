@@ -22,8 +22,11 @@ export const UserSchema = z.object({
     username: z.string().min(3).max(50),
     full_name: z.string().min(1).max(100),
     role: UserRole,
+    email: z.string().email().nullable().optional(),
+    lab: z.string().nullable().optional(),
     created_at: z.string().datetime(),
     updated_at: z.string().datetime(),
+    deleted_at: z.string().datetime().nullable().optional(),
 })
 
 export type User = z.infer<typeof UserSchema>
@@ -31,11 +34,24 @@ export type User = z.infer<typeof UserSchema>
 export const CreateUserSchema = z.object({
     username: z.string().min(3).max(50),
     full_name: z.string().min(1).max(100),
+    email: z.string().email().optional(),
+    lab: z.string().optional(),
     password: z.string().min(8),
     role: UserRole,
 })
 
 export type CreateUser = z.infer<typeof CreateUserSchema>
+
+export const UpdateUserSchema = z.object({
+    id: z.string().uuid(),
+    full_name: z.string().min(1).max(100).optional(),
+    email: z.string().email().optional(),
+    lab: z.string().optional(),
+    role: UserRole.optional(),
+    password: z.string().min(8).optional(),
+})
+
+export type UpdateUser = z.infer<typeof UpdateUserSchema>
 
 // ============================================================================
 // METHOD SCHEMAS

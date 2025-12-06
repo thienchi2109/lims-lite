@@ -4,7 +4,7 @@ import { logout } from '@/app/actions/auth'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
-import { FlaskConical, CheckCircle2, ClipboardList } from 'lucide-react'
+import { FlaskConical, CheckCircle2, ClipboardList, User } from 'lucide-react'
 
 export default async function ManagerDashboard() {
     const supabase = await createClient()
@@ -122,6 +122,30 @@ export default async function ManagerDashboard() {
                             <CardContent>
                                 <p className="text-sm text-muted-foreground">
                                     Thêm, sửa, xóa chỉ tiêu xét nghiệm trong hệ thống
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </Link>
+
+                    {/* User Management Card */}
+                    <Link href="/manager/users">
+                        <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                            <CardHeader>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-purple-600/10 rounded-lg">
+                                        <User className="h-6 w-6 text-purple-600" />
+                                    </div>
+                                    <div>
+                                        <CardTitle>Quản lý người dùng</CardTitle>
+                                        <CardDescription>
+                                            Quản lý tài khoản và phân quyền
+                                        </CardDescription>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-sm text-muted-foreground">
+                                    Thêm, sửa, xóa người dùng và quản lý vai trò trong hệ thống
                                 </p>
                             </CardContent>
                         </Card>
