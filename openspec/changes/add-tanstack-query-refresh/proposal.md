@@ -20,6 +20,16 @@ Root cause: The samples page uses Server Components with props-based data flow, 
 **BREAKING**: Samples page will no longer use Server Components for data fetching. All data fetching will happen client-side via TanStack Query. This increases bundle size by ~50KB (15KB gzipped) but provides 100% reliable auto-refresh and better UX.
 
 ## Impact
+### Enhancements to ensure reliable refresh
+- **Stable query keys + invalidation**: Define `['samples', filters/sort]` and `['sample', id]`; invalidate both (and any derived counts/badges) after `useAssignTests` succeeds.
+- **Optimistic UI**: Optimistically set status to "Đã chỉ định" and, when sorted by recent assignment, bump the row to the top; roll back on error.
+- **Server-authoritative sort**: Keep sort on the API so refetches always return correctly ordered data (avoid stale local sort snapshots).
+- **Refetch triggers**: Enable `refetchOnWindowFocus`/`refetchOnReconnect`; optionally add a short `refetchInterval` while the assignment dialog is open if needed.
+- **QueryClient config**: Set intentional `staleTime/gcTime` (e.g., 5m/30m) and backoff retries; wrap provider at root; DevTools only in dev.
+- **Mutation error UX**: Show Vietnamese toast on failure; distinguish 401/403 (session vs RLS) and rollback optimistic cache updates.
+- **Data shape consistency**: Ensure the assignment API returns the updated status/timestamps so optimistic updates match server truth.
+- **Prefetch/hydrate**: If SSR layout remains, use `dehydrate` to avoid blank-grid flash on first load.
+- **Test plan**: Verify (1) grid reorders after assign, (2) status badge flips immediately, (3) error path rolls back and shows toast, (4) focus/blur refetch keeps data fresh.
 
 **Affected specs:**
 - `sample-management` (new spec) - Covers sample listing, filtering, test assignment, and real-time updates
