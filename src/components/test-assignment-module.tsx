@@ -17,11 +17,11 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
-import { getAssayDefinitions, assignTests } from '@/app/actions/samples'
+import { assignTests } from '@/app/actions/samples'
+import { getAssayDefinitions } from '@/app/actions/assays'
 import { toast } from 'sonner'
 
 interface TestAssignmentModuleProps {
@@ -53,68 +53,93 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus }
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
-    const deferredSearchQuery = useDeferredValue(searchQuery)
     const [selectedCategory, setSelectedCategory] = useState('all')
     const [selectedAssayIds, setSelectedAssayIds] = useState<Set<string>>(new Set())
     const [isPending, startTransition] = useTransition()
 
     useEffect(() => {
-        async function fetchAssays() {
-            try {
-                const { data, error } = await getAssayDefinitions()
-                if (error) {
-                    toast.error('Không thể tải danh sách xét nghiệm')
-                    console.error(error)
-                } else if (data) {
-                    setAssays(data as Assay[])
-                }
-            } catch (err) {
-                console.error(err)
-                toast.error('Lỗi kết nối')
-            } finally {
-                setLoading(false)
+        const timer = setTimeout(() => {
+            fetchAssays(searchQuery)
+        }, 300)
+
+        return () => clearTimeout(timer)
+    }, [searchQuery])
+
+    async function fetchAssays(search: string) {
+        setLoading(true)
+        try {
+            const { data, error } = await getAssayDefinitions({ search, pageSize: 100 })
+            if (error) {
+                toast.error('Không thể tải danh sách xét nghiệm')
+                console.error(error)
+            } else if (data) {
+                // Transform data to match Assay interface
+                const transformedAssays = data.map((a: any) => {
+                    // Find default method or first method
+                    const defaultMethod = a.methods.find((m: any) => m.is_default) || a.methods[0]
+                    return {
+                        id: a.id,
+                        name: a.name,
+                        method_name: defaultMethod?.name || null,
+                        default_method_id: defaultMethod?.method_id || null,
+                        units: a.units,
+                    }
+                })
+                setAssays(transformedAssays)
             }
+        } catch (err) {
+            console.error(err)
+            toast.error('Lỗi kết nối')
+        } finally {
+            setLoading(false)
         }
-        fetchAssays()
-    }, [])
-
-    const filteredAssays = useMemo(() => {
-        return assays.filter((assay) => {
-            const matchesSearch = assay.name.toLowerCase().includes(deferredSearchQuery.toLowerCase()) ||
-                (assay.method_name && assay.method_name.toLowerCase().includes(deferredSearchQuery.toLowerCase()))
-
-            // Mock category logic: Randomly assign for demo purposes if not present
-            // In real app, this would check assay.category_id
-            const matchesCategory = selectedCategory === 'all' || true
-
-            return matchesSearch && matchesCategory
-        })
-    }, [assays, deferredSearchQuery, selectedCategory])
+    }
 
     const selectedAssaysList = useMemo(() => {
+        // Only filter from currently loaded assays (which might be incomplete if searched)
+        // Ideally, we should keep a separate list of selected assays to persist them across searches
+        // For now, we assume the user selects from the current view
+        // But to be safe, we should probably keep selected items in a separate map or fetch them if missing
+        // However, simple implementation:
         return assays.filter((a) => selectedAssayIds.has(a.id))
     }, [assays, selectedAssayIds])
 
-    const toggleAssay = useCallback((id: string) => {
+    // To persist selected items across searches, we need to store the full assay object when selected
+    const [selectedAssayObjects, setSelectedAssayObjects] = useState<Map<string, Assay>>(new Map())
+
+    const toggleAssay = useCallback((assay: Assay) => {
         startTransition(() => {
-            setSelectedAssayIds((prev) => {
-                const next = new Set(prev)
-                if (next.has(id)) {
-                    next.delete(id)
+            setSelectedAssayObjects((prev) => {
+                const next = new Map(prev)
+                if (next.has(assay.id)) {
+                    next.delete(assay.id)
+                    setSelectedAssayIds(prevIds => {
+                        const nextIds = new Set(prevIds)
+                        nextIds.delete(assay.id)
+                        return nextIds
+                    })
                 } else {
-                    next.add(id)
+                    next.set(assay.id, assay)
+                    setSelectedAssayIds(prevIds => {
+                        const nextIds = new Set(prevIds)
+                        nextIds.add(assay.id)
+                        return nextIds
+                    })
                 }
                 return next
             })
         })
     }, [])
 
+    // Update selectedAssayIds to be in sync (actually we can derive it, but let's keep the set for O(1) lookup)
+    // Actually, let's simplify. Just use selectedAssayObjects map.
+
     const handleConfirm = async () => {
-        if (selectedAssayIds.size === 0) return
+        if (selectedAssayObjects.size === 0) return
 
         setSubmitting(true)
         try {
-            const testsToAssign = selectedAssaysList.map(a => {
+            const testsToAssign = Array.from(selectedAssayObjects.values()).map(a => {
                 if (!a.default_method_id) {
                     throw new Error(`Xét nghiệm "${a.name}" chưa có phương pháp mặc định`)
                 }
@@ -149,7 +174,7 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus }
     }
 
     return (
-        <div className="flex h-[600px] w-[900px] overflow-hidden rounded-lg border bg-white shadow-xl">
+        <div className="flex h-[80vh] w-full overflow-hidden rounded-lg border bg-white shadow-xl">
             {/* Left Panel: Catalog */}
             <div className="flex w-2/3 flex-col border-r bg-slate-50/50">
                 <div className="flex flex-col gap-4 p-4">
@@ -189,24 +214,24 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus }
 
                 <Separator />
 
-                <ScrollArea className="flex-1 p-4">
+                <div className="flex-1 p-4 overflow-y-auto">
                     {loading ? (
                         <div className="flex h-full items-center justify-center">
                             <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
                         </div>
-                    ) : filteredAssays.length === 0 ? (
+                    ) : assays.length === 0 ? (
                         <div className="flex h-full flex-col items-center justify-center text-slate-500">
                             <Search className="mb-2 h-8 w-8 opacity-20" />
                             <p>Không tìm thấy xét nghiệm phù hợp</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 gap-3" style={{ willChange: isPending ? 'contents' : 'auto' }}>
-                            {filteredAssays.map((assay) => {
-                                const isSelected = selectedAssayIds.has(assay.id)
+                            {assays.map((assay) => {
+                                const isSelected = selectedAssayObjects.has(assay.id)
                                 return (
                                     <div
                                         key={assay.id}
-                                        onClick={() => toggleAssay(assay.id)}
+                                        onClick={() => toggleAssay(assay)}
                                         className={cn(
                                             "group relative flex cursor-pointer flex-col gap-1 rounded-lg border p-3 transition-all hover:shadow-md",
                                             isSelected
@@ -239,20 +264,20 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus }
                             })}
                         </div>
                     )}
-                </ScrollArea>
+                </div>
             </div>
 
             {/* Right Panel: Summary */}
             <div className="flex w-1/3 flex-col bg-white">
-                <div className="flex items-center justify-between border-b p-4">
+                <div className="flex items-center justify-between border-b p-4 pr-12">
                     <h3 className="font-semibold text-slate-800">Đã chọn</h3>
                     <Badge variant="secondary" className="bg-indigo-50 text-indigo-700">
-                        {selectedAssayIds.size}
+                        {selectedAssayObjects.size}
                     </Badge>
                 </div>
 
-                <ScrollArea className="flex-1 p-4">
-                    {selectedAssaysList.length === 0 ? (
+                <div className="flex-1 p-4 overflow-y-auto">
+                    {selectedAssayObjects.size === 0 ? (
                         <div className="flex h-full flex-col items-center justify-center text-center text-slate-400">
                             <FlaskConical className="mb-3 h-10 w-10 opacity-20" />
                             <p className="text-sm">Chưa chọn xét nghiệm nào</p>
@@ -260,7 +285,7 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus }
                         </div>
                     ) : (
                         <div className="flex flex-col gap-2">
-                            {selectedAssaysList.map((assay) => (
+                            {Array.from(selectedAssayObjects.values()).map((assay) => (
                                 <div
                                     key={assay.id}
                                     className="flex items-center justify-between gap-2 rounded-md border border-slate-100 bg-slate-50 p-2 text-sm group hover:border-red-200 hover:bg-red-50 transition-colors"
@@ -274,7 +299,7 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus }
                                         </span>
                                     </div>
                                     <button
-                                        onClick={() => toggleAssay(assay.id)}
+                                        onClick={() => toggleAssay(assay)}
                                         className="rounded-full p-1 text-slate-400 hover:bg-red-100 hover:text-red-600"
                                     >
                                         <X className="h-4 w-4" />
@@ -283,7 +308,7 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus }
                             ))}
                         </div>
                     )}
-                </ScrollArea>
+                </div>
 
                 <div className="border-t bg-slate-50 p-4">
                     <div className="flex gap-3">
@@ -292,7 +317,7 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus }
                         </Button>
                         <Button
                             className="flex-1 bg-indigo-600 hover:bg-indigo-700"
-                            disabled={selectedAssayIds.size === 0 || submitting}
+                            disabled={selectedAssayObjects.size === 0 || submitting}
                             onClick={handleConfirm}
                         >
                             {submitting ? (
@@ -303,7 +328,7 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus }
                             ) : (
                                 <>
                                     <Plus className="mr-2 h-4 w-4" />
-                                    Chỉ định ({selectedAssayIds.size})
+                                    Chỉ định ({selectedAssayObjects.size})
                                 </>
                             )}
                         </Button>

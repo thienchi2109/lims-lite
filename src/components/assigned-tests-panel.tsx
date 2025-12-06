@@ -434,7 +434,7 @@ export function AssignedTestsPanel({ sampleId }: AssignedTestsPanelProps) {
             </Dialog>
 
             <Dialog open={showAssignmentDialog} onOpenChange={setShowAssignmentDialog}>
-                <DialogContent className="max-w-fit p-0 overflow-hidden border-none bg-transparent shadow-none sm:max-w-[950px]">
+                <DialogContent className="max-w-[90vw] p-0 overflow-hidden border-none bg-transparent shadow-none sm:max-w-[1200px]">
                     <DialogTitle className="sr-only">Chỉ định xét nghiệm</DialogTitle>
                     <DialogDescription className="sr-only">
                         Chọn các xét nghiệm cần chỉ định cho mẫu này

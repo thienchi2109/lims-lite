@@ -92,13 +92,22 @@ export function TestAssignmentGrid({
     // Initial Load
     useEffect(() => {
         loadMethods()
-        loadAssays()
+        // loadAssays is called by the debounce effect below
     }, [])
 
     // Reload assays when method filter changes
     useEffect(() => {
-        loadAssays()
+        loadAssays(searchQuery)
     }, [selectedMethodId])
+
+    // Debounce Search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            loadAssays(searchQuery)
+        }, 300)
+
+        return () => clearTimeout(timer)
+    }, [searchQuery])
 
     const loadMethods = async () => {
         const result = await getMethods()
@@ -107,13 +116,14 @@ export function TestAssignmentGrid({
         }
     }
 
-    const loadAssays = async () => {
+    const loadAssays = async (search: string = '') => {
         setIsLoading(true)
         try {
-            // Fetch assays with method filter
+            // Fetch assays with method filter and search
             const result = await getAssayDefinitions({
                 pageSize: 100,
-                methodId: selectedMethodId
+                methodId: selectedMethodId,
+                search: search
             })
             if (result.data) {
                 setAvailableAssays(result.data as AssayDefinitionWithMethods[])
@@ -139,10 +149,9 @@ export function TestAssignmentGrid({
 
     // Derived State
     const processedTests = useMemo(() => {
-        let data = availableAssays.filter(test => {
-            const matchesSearch = test.name.toLowerCase().includes(searchQuery.toLowerCase())
-            return matchesSearch
-        })
+        // Filter by search is now done on server
+        // Just apply sorting here
+        let data = [...availableAssays]
 
         if (sortConfig) {
             data.sort((a, b) => {
@@ -156,7 +165,7 @@ export function TestAssignmentGrid({
             })
         }
         return data
-    }, [availableAssays, searchQuery, sortConfig])
+    }, [availableAssays, sortConfig])
 
     const disabledSet = useMemo(() => new Set(disabledAssayIds), [disabledAssayIds])
 
