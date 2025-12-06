@@ -181,6 +181,9 @@ This project uses **self-hosted Supabase** running in Docker, NOT Supabase Cloud
    # Apply to local Docker
    Get-Content migration.sql | docker exec -i lims-postgres psql -U postgres -d postgres
    
+   # Run security tests
+   docker exec lims-postgres psql -U postgres -d postgres -c "SELECT * FROM run_security_tests();"
+   
    # Verify with typecheck
    npm run typecheck
    
@@ -192,6 +195,8 @@ This project uses **self-hosted Supabase** running in Docker, NOT Supabase Cloud
    - Always include role checks in RLS policies
    - Use `get_user_role()` helper function
    - Test with different user roles
+   - **Follow the Migration Security Checklist** (`MIGRATION_SECURITY_CHECKLIST.md`)
+   - Run automated security tests after migration
    - Example:
    ```sql
    CREATE POLICY "Analysts can insert"

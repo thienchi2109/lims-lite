@@ -148,6 +148,9 @@ docker exec lims-postgres psql -U postgres -d postgres -c "\d samples"
 # Check policies
 docker exec lims-postgres psql -U postgres -d postgres -c "SELECT * FROM pg_policies WHERE tablename = 'samples';"
 
+# Run automated security tests
+docker exec lims-postgres psql -U postgres -d postgres -c "SELECT * FROM run_security_tests();"
+
 # Verify application
 npm run typecheck
 npm run dev
