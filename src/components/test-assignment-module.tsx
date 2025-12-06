@@ -156,14 +156,26 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus }
 
             if (result.error) {
                 toast.error(result.error)
-            } else {
-                toast.success('Đã chỉ định xét nghiệm thành công')
-                onSuccess()
-                onClose()
-                // Refocus on the sample after successful assignment
-                if (onRefocus) {
-                    onRefocus(sampleId)
-                }
+                return
+            }
+
+            const insertedCount = result.data?.inserted_count ?? 0
+
+            if (insertedCount === 0) {
+                toast.info('Các xét nghiệm này đã được chỉ định trước đó, không có thay đổi mới')
+                return
+            }
+
+            const message = insertedCount === 1
+                ? 'Đã chỉ định 1 xét nghiệm mới'
+                : `Đã chỉ định ${insertedCount} xét nghiệm mới`
+
+            toast.success(message)
+            onSuccess()
+            onClose()
+            // Refocus on the sample after successful assignment
+            if (onRefocus) {
+                onRefocus(sampleId)
             }
         } catch (error) {
             console.error(error)

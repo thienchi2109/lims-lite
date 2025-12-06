@@ -49,6 +49,9 @@ export async function createSample(data: CreateSample) {
         // Generate sample ID
         const sampleId = generateSampleId(count || 0)
 
+        const nowIso = new Date().toISOString()
+        const receivedAt = validatedData.received_at || nowIso
+
         // Create sample
         const { data: sample, error } = await supabase
             .from('samples')
@@ -56,7 +59,8 @@ export async function createSample(data: CreateSample) {
                 sample_id: sampleId,
                 client_name: validatedData.client_name,
                 received_by: user.id,
-                received_at: validatedData.received_at || new Date().toISOString(),
+                received_at: receivedAt,
+                updated_at: nowIso,
                 status: 'received',
             })
             .select()
@@ -247,69 +251,27 @@ export async function assignTests(data: AssignTests) {
         // Validate input
         const validatedData = AssignTestsSchema.parse(data)
 
-        // If user is analyst, check sample status restrictions
-        if (userData.role === 'analyst') {
-            const { data: sampleData } = await supabase
-                .from('samples')
-                .select('status')
-                .eq('id', validatedData.sampleId)
-                .single()
+        // Execute RPC to insert results + update sample status atomically
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('assign_tests_to_sample', {
+            p_sample_id: validatedData.sampleId,
+            p_tests: validatedData.tests,
+        })
 
-            if (!sampleData) {
-                return { error: 'Không tìm thấy mẫu' }
-            }
-
-            // Analysts can only assign when status is 'received' or 'assigned'
-            if (!['received', 'assigned'].includes(sampleData.status)) {
-                return { error: 'Chỉ có thể chỉ định xét nghiệm khi mẫu ở trạng thái "Đã nhận" hoặc "Đã chỉ định"' }
-            }
-        }
-        // Managers have no status restrictions
-
-        // Create result records for each test (assay + method combination)
-        const resultInserts = validatedData.tests.map((test) => ({
-            sample_id: validatedData.sampleId,
-            assay_id: test.assayId,
-            method_id: test.methodId,
-            status: 'pending',
-        }))
-
-        const { error: insertError } = await supabase.from('results').insert(resultInserts)
-
-        if (insertError) {
-            console.error('Error creating results:', insertError)
-            return { error: insertError.message }
+        if (rpcError) {
+            console.error('Error in assign_tests_to_sample RPC:', rpcError)
+            return { error: rpcError.message }
         }
 
-        // Update sample status to 'assigned' if it was 'received', otherwise just touch updated_at
-        const { data: currentSample } = await supabase
-            .from('samples')
-            .select('status')
-            .eq('id', validatedData.sampleId)
-            .single()
-
-        const updateData: { status?: string; updated_at: string } = {
-            updated_at: new Date().toISOString(),
+        if (!rpcResult) {
+            return { error: 'Không thể chỉ định xét nghiệm, vui lòng thử lại' }
         }
 
-        if (currentSample?.status === 'received') {
-            updateData.status = 'assigned'
+        if ((rpcResult.inserted_count ?? 0) > 0) {
+            revalidatePath('/analyst/samples')
+            revalidatePath('/manager/samples')
         }
 
-        const { error: updateError } = await supabase
-            .from('samples')
-            .update(updateData)
-            .eq('id', validatedData.sampleId)
-
-        if (updateError) {
-            console.error('Error updating sample status:', updateError)
-            return { error: updateError.message }
-        }
-
-        revalidatePath('/analyst/samples')
-        revalidatePath('/manager/samples')
-
-        return { success: true }
+        return { success: true, data: rpcResult }
     } catch (error) {
         console.error('Error in assignTests:', error)
         return { error: error instanceof Error ? error.message : 'Failed to assign tests' }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
     Table,
     TableBody,
@@ -45,6 +45,7 @@ interface AssignedTestsPanelProps {
 
 export function AssignedTestsPanel({ sampleId }: AssignedTestsPanelProps) {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const [results, setResults] = useState<ResultWithAssay[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -214,13 +215,12 @@ export function AssignedTestsPanel({ sampleId }: AssignedTestsPanelProps) {
     }
 
     const handleRefocus = (targetSampleId: string) => {
-        // Navigate to the samples page with updated_at sorting and the sample selected
-        // This will make the newly assigned sample appear at the top of the list
-        const params = new URLSearchParams({
-            sortBy: 'updated_at',
-            sortOrder: 'desc',
-            sampleId: targetSampleId,
-        })
+        // Navigate to the samples page with updated_at sorting, focus on the sample, and reset to first page
+        const params = new URLSearchParams(searchParams?.toString() ?? '')
+        params.set('sortBy', 'updated_at')
+        params.set('sortOrder', 'desc')
+        params.set('sampleId', targetSampleId)
+        params.set('page', '1')
         router.push(`?${params.toString()}`)
         router.refresh()
     }
