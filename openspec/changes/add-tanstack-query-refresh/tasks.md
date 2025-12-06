@@ -1,14 +1,16 @@
-## 1. Setup & Dependencies
-- [ ] 1.1 Install `@tanstack/react-query` and `@tanstack/react-query-devtools` packages
-- [ ] 1.2 Create `src/lib/query-client.ts` with QueryClient configuration
-- [ ] 1.3 Create `src/components/query-provider.tsx` wrapper component
-- [ ] 1.4 Update `src/app/layout.tsx` to wrap app with QueryProvider
+## 1. Setup & Dependencies ✅
+- [x] 1.1 Install `@tanstack/react-query` and `@tanstack/react-query-devtools` packages
+- [x] 1.2 Create `src/lib/query-client.ts` with QueryClient configuration
+- [x] 1.3 Create `src/components/query-provider.tsx` wrapper component
+- [x] 1.4 Update `src/app/layout.tsx` to wrap app with QueryProvider
 
-## 2. Query Hooks
-- [ ] 2.1 Create `src/hooks/use-samples.ts` for fetching samples with filters
-- [ ] 2.2 Create `src/hooks/use-sample-detail.ts` for fetching single sample
-- [ ] 2.3 Create `src/hooks/use-assign-tests.ts` mutation hook with cache invalidation
-- [ ] 2.4 Add TypeScript types for query keys in `src/types/query-keys.ts`
+## 2. Query Hooks ✅
+- [x] 2.1 Create `src/hooks/use-samples.ts` for fetching samples with filters
+- [x] 2.2 Create `src/hooks/use-sample-detail.ts` for fetching single sample
+- [x] 2.3 Create `src/hooks/use-assign-tests.ts` mutation hook with cache invalidation
+- [x] 2.4 Add TypeScript types for query keys in `src/types/query-keys.ts`
+- [x] 2.5 Create `src/hooks/use-sample-tests.ts` for fetching assigned tests (bonus)
+- [x] 2.6 Create `src/hooks/index.ts` barrel export (bonus)
 
 ## 3. Page Refactoring
 - [ ] 3.1 Create `src/components/samples-page-client.tsx` client component
