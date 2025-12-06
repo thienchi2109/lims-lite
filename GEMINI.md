@@ -9,10 +9,26 @@
 *   **UI Components:** Shadcn UI (built on Radix UI + Tailwind)
 *   **State Management:** React Server Components + Server Actions (Server-side), React Hooks (Client-side)
 *   **Form Handling:** React Hook Form + Zod
-*   **Database:** Supabase (PostgreSQL)
-*   **Authentication:** Supabase Auth
+*   **Database:** Supabase (PostgreSQL) - **SELF-HOSTED via Docker**
+*   **Authentication:** Supabase Auth (GoTrue)
 *   **ORM/Client:** Supabase JS Client
 *   **UI Language:** Vietnamese (All user-facing text must be in Vietnamese)
+
+**Backend Infrastructure:**
+*   **Deployment:** Self-hosted Supabase stack via Docker Compose
+*   **Database:** PostgreSQL 15 (container: `lims-postgres`, port: 5432)
+*   **Auth Service:** GoTrue v2.143.0 (container: `lims-auth`, port: 9999)
+*   **REST API:** PostgREST v12.0.2 (container: `lims-rest`, port: 3001)
+*   **API Gateway:** Kong 2.8.1 (container: `lims-kong`, port: 8000)
+*   **Storage:** Supabase Storage API (container: `lims-storage`, port: 5000)
+*   **Admin UI:** Supabase Studio (container: `lims-studio`, port: 3002)
+*   **Migration Method:** Manual SQL execution via Docker (NOT Supabase CLI)
+
+**Key URLs (Local Development):**
+*   Application: `http://localhost:3000`
+*   Supabase API: `http://localhost:8000` (Kong gateway)
+*   Supabase Studio: `http://localhost:3002` (Database UI)
+*   Direct PostgreSQL: `localhost:5432`
 
 **Architecture Pattern:**
 The project follows a standard Next.js App Router architecture. It leverages **Server Components** for data fetching and **Server Actions** for mutations (API layer), minimizing client-side JavaScript.
@@ -90,7 +106,110 @@ This project uses Next.js Server Actions as the API layer.
 *   **`approveResults(data)`**: (Manager) Approves selected results, locks them.
 *   **`cancelApproval(data)`**: (Manager) Revokes approval, returns results to 'entered' or 'pending'.
 
-## 4. Development Workflow
+## 4. Database Migration Workflow
+
+**CRITICAL:** This project uses **self-hosted Supabase via Docker**, NOT Supabase Cloud or Supabase CLI.
+
+### How to Apply Migrations
+
+**Step 1: Create Migration File**
+```bash
+# Naming: XXX_description.sql (e.g., 026_add_column.sql)
+touch supabase/migrations/026_add_column.sql
+```
+
+**Step 2: Write Migration SQL**
+```sql
+-- Migration 026: Description
+SET search_path TO public;
+
+-- Your changes here
+ALTER TABLE samples ADD COLUMN IF NOT EXISTS priority TEXT;
+
+-- Always include RLS policies if creating tables
+ALTER TABLE new_table ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "policy_name" ON new_table FOR SELECT USING (auth.uid() IS NOT NULL);
+```
+
+**Step 3: Apply to Database**
+```bash
+# PowerShell (Windows)
+Get-Content supabase\migrations\026_add_column.sql | docker exec -i lims-postgres psql -U postgres -d postgres
+
+# Bash/WSL
+cat supabase/migrations/026_add_column.sql | docker exec -i lims-postgres psql -U postgres -d postgres
+```
+
+**Step 4: Verify**
+```bash
+# Check table structure
+docker exec lims-postgres psql -U postgres -d postgres -c "\d samples"
+
+# Check policies
+docker exec lims-postgres psql -U postgres -d postgres -c "SELECT * FROM pg_policies WHERE tablename = 'samples';"
+
+# Verify application
+npm run typecheck
+npm run dev
+```
+
+### Migration Best Practices
+
+1. **Always use `IF NOT EXISTS` / `IF EXISTS`** for idempotency
+2. **Always include RLS policies** for new tables
+3. **Always use role checks** in policies: `get_user_role() IN ('analyst', 'manager')`
+4. **Test locally first** before production
+5. **Never use Supabase Studio** for schema changes (use migrations)
+
+### Common Migration Patterns
+
+**Add Column:**
+```sql
+ALTER TABLE table_name ADD COLUMN IF NOT EXISTS column_name TYPE DEFAULT value;
+```
+
+**Add RLS Policy:**
+```sql
+CREATE POLICY "policy_name"
+ON table_name FOR operation
+USING (condition)
+WITH CHECK (condition);
+```
+
+**Create RPC Function:**
+```sql
+CREATE OR REPLACE FUNCTION function_name(params)
+RETURNS return_type
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    -- Function body
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION function_name TO authenticated;
+```
+
+**Security-Critical Policy Example:**
+```sql
+-- ✅ CORRECT: Includes role check
+CREATE POLICY "Analysts can insert"
+WITH CHECK (
+    get_user_role() IN ('analyst', 'manager')  -- Role check
+    AND status = 'pending'
+);
+
+-- ❌ WRONG: No role check (security vulnerability)
+CREATE POLICY "Anyone can insert"
+WITH CHECK (
+    auth.uid() IS NOT NULL  -- Only checks authentication
+    AND status = 'pending'
+);
+```
+
+## 5. Development Workflow
 
 *   **Validation:** Use `npm run typecheck` to validate code changes instead of `npm run build`.
 

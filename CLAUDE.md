@@ -64,12 +64,249 @@ npm run dev              # Start Next.js dev server (port 3000)
 npm run build            # Production build
 npm run start            # Start production server
 npm run lint             # Run ESLint
-npm run typecheck        # TypeScript type checking
+npm run typecheck        # TypeScript type checking (PREFERRED over build for validation)
 
 # Database (Docker)
 docker compose up -d     # Start Supabase stack
 docker compose down      # Stop Supabase stack
 docker compose logs -f   # View logs
+docker compose ps        # Check container status
+```
+
+## **Backend Infrastructure (Self-Hosted Supabase)**
+
+### **Architecture Overview**
+
+This project uses **self-hosted Supabase** running in Docker, NOT Supabase Cloud. This is critical for understanding the deployment and migration workflow.
+
+**Docker Services (docker-compose.yml):**
+- **postgres** (`lims-postgres`): PostgreSQL 15 database on port 5432
+- **auth** (`lims-auth`): GoTrue authentication service on port 9999
+- **rest** (`lims-rest`): PostgREST API on port 3001
+- **storage** (`lims-storage`): Storage API on port 5000
+- **kong** (`lims-kong`): API Gateway on port 8000
+- **meta** (`lims-meta`): Postgres Meta API on port 8080
+- **studio** (`lims-studio`): Supabase Studio on port 3002
+
+**Key Configuration:**
+- Database: `postgres://postgres:PASSWORD@localhost:5432/postgres`
+- API URL: `http://localhost:8000` (Kong gateway)
+- Studio: `http://localhost:3002` (Database management UI)
+- Default passwords in `docker-compose.yml` (change in production!)
+
+### **Database Migration Workflow**
+
+**IMPORTANT:** We do NOT use Supabase CLI for migrations. All migrations are applied manually via Docker.
+
+#### **Creating a New Migration**
+
+1. **Create Migration File:**
+   ```bash
+   # Naming convention: XXX_description.sql
+   # Example: 026_add_user_preferences.sql
+   touch supabase/migrations/026_add_user_preferences.sql
+   ```
+
+2. **Write Migration SQL:**
+   ```sql
+   -- Migration 026: Add user preferences
+   -- Description of what this migration does
+   
+   SET search_path TO public;
+   
+   -- Your SQL here
+   CREATE TABLE IF NOT EXISTS user_preferences (
+       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+       user_id UUID REFERENCES users(id),
+       preferences JSONB DEFAULT '{}'
+   );
+   
+   -- Enable RLS
+   ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
+   
+   -- Add policies
+   CREATE POLICY "Users can read own preferences"
+   ON user_preferences FOR SELECT
+   USING (user_id = auth.uid());
+   ```
+
+3. **Apply Migration:**
+   ```bash
+   # Method 1: Using PowerShell (Windows)
+   Get-Content supabase\migrations\026_add_user_preferences.sql | docker exec -i lims-postgres psql -U postgres -d postgres
+   
+   # Method 2: Using bash/WSL
+   cat supabase/migrations/026_add_user_preferences.sql | docker exec -i lims-postgres psql -U postgres -d postgres
+   
+   # Method 3: Direct execution
+   docker exec -i lims-postgres psql -U postgres -d postgres -f /path/to/migration.sql
+   ```
+
+4. **Verify Migration:**
+   ```bash
+   # Check if table exists
+   docker exec lims-postgres psql -U postgres -d postgres -c "\d user_preferences"
+   
+   # Check policies
+   docker exec lims-postgres psql -U postgres -d postgres -c "SELECT * FROM pg_policies WHERE tablename = 'user_preferences';"
+   ```
+
+#### **Migration Best Practices**
+
+1. **Always Use Migrations for Schema Changes**
+   - ❌ DON'T: Make changes via Supabase Studio UI
+   - ✅ DO: Create migration files and apply via Docker
+   - Why: Migrations are version-controlled and reproducible
+
+2. **Include RLS Policies in Migrations**
+   ```sql
+   -- Always enable RLS for new tables
+   ALTER TABLE new_table ENABLE ROW LEVEL SECURITY;
+   
+   -- Always add appropriate policies
+   CREATE POLICY "policy_name" ON new_table ...
+   ```
+
+3. **Use Idempotent SQL**
+   ```sql
+   -- Use IF NOT EXISTS / IF EXISTS
+   CREATE TABLE IF NOT EXISTS ...
+   DROP POLICY IF EXISTS ...
+   
+   -- Safe for re-running migrations
+   ```
+
+4. **Test Migrations Locally First**
+   ```bash
+   # Apply to local Docker
+   Get-Content migration.sql | docker exec -i lims-postgres psql -U postgres -d postgres
+   
+   # Verify with typecheck
+   npm run typecheck
+   
+   # Test application
+   npm run dev
+   ```
+
+5. **Security-Critical Migrations**
+   - Always include role checks in RLS policies
+   - Use `get_user_role()` helper function
+   - Test with different user roles
+   - Example:
+   ```sql
+   CREATE POLICY "Analysts can insert"
+   WITH CHECK (
+       get_user_role() IN ('analyst', 'manager')  -- ✅ Role check
+       AND status = 'pending'
+   );
+   ```
+
+#### **Common Migration Patterns**
+
+**Adding a Column:**
+```sql
+ALTER TABLE samples 
+ADD COLUMN IF NOT EXISTS priority TEXT DEFAULT 'normal';
+```
+
+**Creating an Index:**
+```sql
+CREATE INDEX IF NOT EXISTS idx_samples_priority 
+ON samples(priority) WHERE deleted_at IS NULL;
+```
+
+**Adding RLS Policy:**
+```sql
+CREATE POLICY "policy_name"
+ON table_name FOR operation
+USING (condition)
+WITH CHECK (condition);
+```
+
+**Creating RPC Function:**
+```sql
+CREATE OR REPLACE FUNCTION function_name(params)
+RETURNS return_type
+LANGUAGE plpgsql
+SECURITY DEFINER  -- Runs with elevated privileges
+SET search_path = public
+AS $$
+BEGIN
+    -- Function body
+END;
+$$;
+
+-- Grant permissions
+GRANT EXECUTE ON FUNCTION function_name TO authenticated;
+```
+
+### **Database Access Methods**
+
+1. **Via Application (Recommended):**
+   - Use Supabase JS Client in Server Actions
+   - RLS policies automatically enforced
+   - Audit logs triggered
+
+2. **Via Docker CLI (Admin/Debugging):**
+   ```bash
+   # Interactive psql
+   docker exec -it lims-postgres psql -U postgres -d postgres
+   
+   # Single query
+   docker exec lims-postgres psql -U postgres -d postgres -c "SELECT * FROM users;"
+   ```
+
+3. **Via Supabase Studio (Read-Only Recommended):**
+   - Access: `http://localhost:3002`
+   - Good for: Viewing data, testing queries
+   - Avoid: Making schema changes (use migrations instead)
+
+### **Troubleshooting Database Issues**
+
+**Container Not Running:**
+```bash
+docker compose ps
+docker compose logs postgres
+docker compose restart postgres
+```
+
+**Migration Failed:**
+```bash
+# Check error message
+docker compose logs postgres | tail -n 50
+
+# Common issues:
+# - Syntax error: Check SQL syntax
+# - Policy conflict: Drop old policy first
+# - Permission denied: Check RLS policies
+```
+
+**RLS Policy Debugging:**
+```sql
+-- View all policies for a table
+SELECT * FROM pg_policies WHERE tablename = 'results';
+
+-- Check policy expression
+SELECT polname, pg_get_expr(polwithcheck, polrelid) 
+FROM pg_policy 
+WHERE polrelid = 'public.results'::regclass;
+
+-- Test as specific user (in psql)
+SET ROLE authenticated;
+SET request.jwt.claims TO '{"sub": "user-uuid"}';
+SELECT * FROM results;  -- Will respect RLS
+```
+
+**Connection Issues:**
+```bash
+# Check if port 5432 is exposed
+docker compose ps
+
+# Test connection
+docker exec lims-postgres pg_isready -U postgres
+
+# Check environment variables
+docker exec lims-postgres env | grep POSTGRES
 ```
 
 ## **Project Structure**
