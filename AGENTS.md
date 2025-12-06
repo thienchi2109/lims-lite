@@ -17,6 +17,21 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 
 <!-- OPENSPEC:END -->
 
+## Project Orientation (see `CLAUDE.md`)
+
+- `CLAUDE.md` is the primary brief: Next.js 16 + React 19, self-hosted Supabase/PostgreSQL; goal is a 21 CFR Part 11 compliant LIMS MVP.
+- Compliance first: prefer soft delete/void over hard delete; all mutations must be auditable and respect RLS.
+- Database work only via SQL migrations in `supabase/migrations`; include RLS policies/triggers and apply through Docker (not the Supabase dashboard).
+- All UI text is Vietnamese; use `docs/vietnamese_dictionary.md` and keep validation/type safety with Zod schemas and strict TypeScript.
+- Build incrementally: validate inputs in Server Actions, lean on existing patterns/components listed in `CLAUDE.md`.
+
+## Superpowers Skills
+
+- Superpowers are installed; run `~/.codex/superpowers/.codex/superpowers-codex bootstrap` at session start to list available skills.
+- Before starting a task, check for applicable skills (especially `using-superpowers`, `brainstorming`, `test-driven-development`, `systematic-debugging`) and load them with `~/.codex/superpowers/.codex/superpowers-codex use-skill <skill>`.
+- Follow skill checklists with `update_plan` todos when required; do not skip mandatory workflows (brainstorm before coding, evidence before completion).
+- Personal skills live in `~/.codex/skills`; superpowers skills live in `~/.codex/superpowers/skills`.
+
 ## Git Workflow and Commit Messages
 
 ### Conventional Commits
