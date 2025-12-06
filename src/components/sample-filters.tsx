@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { type SampleStatus } from '@/types'
 import { cn } from '@/lib/utils'
-import { Search, Calendar, SlidersHorizontal, X, Filter } from 'lucide-react'
+import { Search, Calendar, SlidersHorizontal, X, Filter, QrCode } from 'lucide-react'
 import {
     Select,
     SelectContent,
@@ -20,6 +20,14 @@ import {
     PopoverTrigger,
 } from '@/components/ui/popover'
 import { Separator } from '@/components/ui/separator'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
+import { QRScanner } from '@/components/qr-scanner'
 
 type SampleFiltersProps = {
     search?: string
@@ -67,6 +75,7 @@ export function SampleFilters({
     const [fromDateValue, setFromDateValue] = useState(fromDate)
     const [toDateValue, setToDateValue] = useState(toDate)
     const [receiverValue, setReceiverValue] = useState(receiverId || 'all')
+    const [isScannerOpen, setIsScannerOpen] = useState(false)
     const searchInputRef = useRef<HTMLInputElement | null>(null)
 
     const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false)
@@ -163,6 +172,28 @@ export function SampleFilters({
         updateUrl({ receiverId: nextValue || null })
     }
 
+    const handleQRScan = (decodedText: string) => {
+        // Set search value and trigger immediate search
+        setSearchValue(decodedText)
+        setIsScannerOpen(false)
+        
+        // Immediately update URL (bypass debounce for instant results)
+        const params = new URLSearchParams(searchParamsString)
+        if (decodedText) {
+            params.set('search', decodedText)
+        } else {
+            params.delete('search')
+        }
+        params.set('page', '1')
+        const query = params.toString()
+        router.replace(query ? `${pathname}?${query}` : pathname)
+        
+        // Focus the search input to show the scanned value
+        setTimeout(() => {
+            searchInputRef.current?.focus()
+        }, 100)
+    }
+
     const isFiltered = statusValue !== 'all' || fromDateValue || toDateValue || searchValue || receiverValue !== 'all'
 
     const handleReset = () => {
@@ -208,16 +239,28 @@ export function SampleFilters({
     return (
         <div className="flex flex-col gap-4">
             <div className="flex flex-col lg:flex-row lg:items-center gap-3">
-                {/* Search Bar - Prominent & Clean */}
+                {/* Search Bar - Prominent & Clean with QR Scanner */}
                 <div className="relative flex-1 max-w-md">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70 pointer-events-none" />
                     <Input
                         ref={searchInputRef}
                         placeholder="Tìm kiếm theo mã mẫu, khách hàng..."
                         value={searchValue}
                         onChange={(e) => setSearchValue(e.target.value)}
-                        className="pl-9 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm h-10 focus-visible:ring-1 focus-visible:ring-sky-500/20 transition-all rounded-md"
+                        className="pl-9 pr-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm h-10 focus-visible:ring-1 focus-visible:ring-sky-500/20 transition-all rounded-md"
                     />
+                    {/* QR Scanner Button - Touch Friendly */}
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => setIsScannerOpen(true)}
+                        className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50 dark:hover:text-sky-400 dark:hover:bg-sky-900/20 transition-colors duration-200 rounded-md"
+                        aria-label="Quét mã QR để tìm kiếm"
+                        title="Quét mã QR"
+                    >
+                        <QrCode className="h-4 w-4" />
+                    </Button>
                 </div>
 
                 {/* Filters Group */}
@@ -373,12 +416,35 @@ export function SampleFilters({
                             onClick={handleReset}
                             className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors rounded-md"
                             title="Xóa bộ lọc"
+                            aria-label="Xóa tất cả bộ lọc"
                         >
                             <X className="h-4 w-4" />
                         </Button>
                     )}
                 </div>
             </div>
+
+            {/* QR Scanner Dialog - Mobile Optimized */}
+            <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
+                <DialogContent className="sm:max-w-md max-w-[calc(100%-2rem)] p-0 gap-0 overflow-hidden">
+                    <DialogHeader className="p-6 pb-4 space-y-2">
+                        <DialogTitle className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+                            Quét mã QR mẫu
+                        </DialogTitle>
+                        <DialogDescription className="text-sm text-slate-600 dark:text-slate-400">
+                            Hướng camera vào mã QR trên nhãn mẫu để tự động tìm kiếm
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="p-6 pt-0">
+                        <QRScanner 
+                            onScan={handleQRScan}
+                            onError={(error) => {
+                                console.error('QR Scanner error:', error)
+                            }}
+                        />
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
