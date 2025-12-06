@@ -30,7 +30,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "html5-qrcode": "^2.3.8",
-    "jsonwebtoken": "^9.0.2",
+    "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.554.0",
     "next": "^16.0.7",
     "react": "19.2.0",
