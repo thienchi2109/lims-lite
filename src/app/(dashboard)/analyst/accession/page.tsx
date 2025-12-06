@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { SampleAccessionForm } from '@/components/sample-accession-form'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
-import { LogoutButton } from '@/components/logout-button'
+import { DashboardHeader } from '@/components/dashboard-header'
 
 export default async function AccessionPage() {
     const supabase = await createClient()
@@ -25,29 +25,10 @@ export default async function AccessionPage() {
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-            <header className="sticky top-0 z-50 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-                    <div>
-                        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                            Hệ thống quản lý thông tin khoa Xét nghiệm
-                        </h1>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
-                            Tiếp nhận mẫu
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <div className="text-right">
-                            <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                                {userData?.full_name}
-                            </p>
-                            <p className="text-xs text-slate-600 dark:text-slate-400 capitalize">
-                                {userData?.role}
-                            </p>
-                        </div>
-                        <LogoutButton />
-                    </div>
-                </div>
-            </header>
+            <DashboardHeader 
+                subtitle="Tiếp nhận mẫu"
+                user={userData}
+            />
 
             <main className="w-full px-4 sm:px-6 lg:px-8 py-8">
                 <div className="mb-6">

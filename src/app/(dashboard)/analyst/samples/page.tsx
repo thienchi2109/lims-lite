@@ -55,16 +55,17 @@ export default async function SamplesPage({
 
     return (
         <div className="h-[calc(100vh-4rem)] flex flex-col bg-slate-100 dark:bg-slate-950 overflow-hidden">
-            <header className="shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm px-4 sm:px-6 lg:px-8 py-4">
-                <div className="flex items-center justify-between">
+            <header className="shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-sm px-4 sm:px-6 lg:px-8 py-4 transition-all duration-200">
+                <div className="flex items-center justify-between max-w-[1920px] mx-auto">
                     <div className="flex items-center gap-4">
                         <Link href="/analyst">
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" className="hover:bg-slate-100 dark:hover:bg-slate-800">
                                 <ArrowLeft className="h-4 w-4 mr-2" />
                                 Quay lại
                             </Button>
                         </Link>
-                        <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+                        <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800" />
+                        <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-blue-700 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
                             Quản lý mẫu
                         </h1>
                     </div>

@@ -74,21 +74,23 @@ export default async function AnalystResultsPage({ params }: PageProps) {
                 <div className="space-y-1">
                     <div className="flex items-center gap-2">
                         <Link href="/analyst/samples">
-                            <Button variant="ghost" size="sm" className="gap-2">
+                            <Button variant="ghost" size="sm" className="gap-2 hover:bg-slate-100 dark:hover:bg-slate-800">
                                 <ArrowLeft className="h-4 w-4" />
                                 Quay lại danh sách mẫu
                             </Button>
                         </Link>
                     </div>
                     <div className="flex items-center gap-3">
-                        <h1 className="text-3xl font-bold tracking-tight">Nhập kết quả</h1>
+                        <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-700 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
+                            Nhập kết quả
+                        </h1>
                         <SampleStatusBadge status={sample.status} />
                     </div>
-                    <p className="text-muted-foreground">
-                        Kiểm nghiệm viên: {userData.full_name}
+                    <p className="text-muted-foreground font-medium">
+                        Kiểm nghiệm viên: <span className="text-foreground">{userData.full_name}</span>
                     </p>
                 </div>
-                <Button variant="outline" size="icon" asChild>
+                <Button variant="outline" size="icon" asChild className="hover:bg-slate-100 dark:hover:bg-slate-800">
                     <a href={`/analyst/results/${resolvedParams.sampleId}`}>
                         <RefreshCcw className="h-4 w-4" />
                         <span className="sr-only">Làm mới</span>

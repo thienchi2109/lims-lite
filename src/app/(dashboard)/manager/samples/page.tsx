@@ -7,7 +7,7 @@ import { SampleBottomRow } from '@/components/sample-bottom-row'
 import { fetchSamples } from '@/lib/data/samples'
 import { getSample } from '@/app/actions/samples'
 import { type SampleStatus } from '@/types'
-import { LogoutButton } from '@/components/logout-button'
+import { DashboardHeader } from '@/components/dashboard-header'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { Suspense } from 'react'
@@ -134,29 +134,11 @@ export default async function ManagerSamplesPage({ searchParams }: ManagerSample
 
     return (
         <div className="h-[calc(100vh-4rem)] flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden">
-            <header className="shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm px-4 sm:px-6 lg:px-8 py-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                            Hệ thống quản lý thông tin khoa Xét nghiệm
-                        </h1>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">
-                            Quản lý mẫu
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <div className="text-right hidden sm:block">
-                            <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                                {userData?.full_name}
-                            </p>
-                            <p className="text-xs text-slate-600 dark:text-slate-400 capitalize">
-                                {userData?.role}
-                            </p>
-                        </div>
-                        <LogoutButton />
-                    </div>
-                </div>
-            </header>
+            <DashboardHeader 
+                subtitle="Quản lý mẫu"
+                user={userData}
+                className="shrink-0"
+            />
 
             <main className="flex-1 flex flex-col min-h-0 p-2 sm:px-4 gap-2">
                 <div className="flex items-center gap-4 shrink-0">

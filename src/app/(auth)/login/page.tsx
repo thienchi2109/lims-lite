@@ -44,9 +44,11 @@ export default function LoginPage() {
 
                 <Card className="border-border/50 shadow-xl">
                     <CardHeader className="space-y-1 pb-6">
-                        <CardTitle className="text-lg md:text-xl text-center leading-6 md:leading-7">Hệ thống quản lý thông tin khoa Xét nghiệm</CardTitle>
+                        <CardTitle className="text-lg md:text-xl text-center leading-6 md:leading-7 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-600 dark:from-blue-400 dark:via-blue-300 dark:to-indigo-400 bg-clip-text text-transparent font-bold">
+                            Hệ thống quản lý thông tin khoa Xét nghiệm
+                        </CardTitle>
                         <CardDescription className="text-center">
-                            Hệ thống Quản lý Thông tin khoa Xét nghiệm
+                            Trung tâm Kiểm soát Bệnh tật (CDC)
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
