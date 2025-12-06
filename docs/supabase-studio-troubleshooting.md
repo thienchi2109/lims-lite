@@ -33,4 +33,4 @@ These are now set in `docker-compose.yml`.
    ```
 
 ## Note on Healthcheck
-Studio’s healthcheck probes `127.0.0.1:3000`, but the server responds on the container hostname. Functionality works; if you need a green health status, adjust the Studio healthcheck or set `HOST=0.0.0.0` accordingly.
+Studio now includes a custom healthcheck that pings `http://$HOSTNAME:3000` (root path) to reflect the real bind address. If you tweak ports/hostnames, update the healthcheck to match.
