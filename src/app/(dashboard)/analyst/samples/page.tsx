@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { SampleListParamsSchema } from '@/types'
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { DashboardHeader } from '@/components/dashboard-header'
 
 // This page relies on cookies/session via Supabase, so force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -16,6 +19,22 @@ export default async function SamplesPage({
 }: {
     searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
+    const supabase = await createClient()
+
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+        redirect('/login')
+    }
+
+    const { data: userData } = await supabase
+        .from('users')
+        .select('full_name, role')
+        .eq('id', user.id)
+        .single()
+
     const params = (await searchParams) || {}
 
     // Parse search params
@@ -55,24 +74,22 @@ export default async function SamplesPage({
 
     return (
         <div className="h-[calc(100vh-4rem)] flex flex-col bg-slate-100 dark:bg-slate-950 overflow-hidden">
-            <header className="shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-sm px-4 sm:px-6 lg:px-8 py-4 transition-all duration-200">
-                <div className="flex items-center justify-between max-w-[1920px] mx-auto">
-                    <div className="flex items-center gap-4">
-                        <Link href="/analyst">
-                            <Button variant="ghost" size="sm" className="hover:bg-slate-100 dark:hover:bg-slate-800">
-                                <ArrowLeft className="h-4 w-4 mr-2" />
-                                Quay lại
-                            </Button>
-                        </Link>
-                        <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800" />
-                        <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-blue-700 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
-                            Quản lý mẫu
-                        </h1>
-                    </div>
-                </div>
-            </header>
+            <DashboardHeader 
+                subtitle="Quản lý mẫu" 
+                user={userData}
+                className="shrink-0"
+            />
 
             <main className="flex-1 flex flex-col min-h-0 p-2 sm:px-4 gap-2">
+                <div className="flex items-center gap-4 shrink-0">
+                    <Link href="/analyst">
+                        <Button variant="ghost" size="sm" className="hover:bg-slate-200 dark:hover:bg-slate-800">
+                            <ArrowLeft className="h-4 w-4 mr-2" />
+                            Quay lại
+                        </Button>
+                    </Link>
+                </div>
+
                 {/* Top Row: Filters & Grid (Fixed Height ~50%) */}
                 <div className="flex flex-col gap-2 h-[50vh] min-h-[400px] shrink-0">
                     <div className="shrink-0">
