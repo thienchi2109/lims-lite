@@ -340,17 +340,20 @@ export function SampleListTable({
                     </div>
                 ) : (
                     <Table>
-                        <TableHeader className="sticky top-0 bg-slate-50/95 backdrop-blur supports-[backdrop-filter]:bg-slate-50/60 dark:bg-slate-900/95 z-10 shadow-sm border-b border-slate-200 dark:border-slate-800">
+                        <TableHeader className="bg-slate-50/95 backdrop-blur supports-[backdrop-filter]:bg-slate-50/60 dark:bg-slate-900/95 shadow-sm border-b border-slate-200 dark:border-slate-800">
                             {table.getHeaderGroups().map((headerGroup) => (
                                 <TableRow key={headerGroup.id} className="hover:bg-transparent border-none">
                                     {headerGroup.headers.map((header) => (
-                                        <TableHead key={header.id} className="h-9 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                        <TableHead
+                                            key={header.id}
+                                            className="sticky top-0 z-10 h-9 bg-slate-50/95 text-xs font-semibold uppercase tracking-wider text-slate-500 backdrop-blur supports-[backdrop-filter]:bg-slate-50/80 dark:bg-slate-900/95"
+                                        >
                                             {header.isPlaceholder
                                                 ? null
                                                 : flexRender(
                                                     header.column.columnDef.header,
                                                     header.getContext()
-                                                )}
+                                            )}
                                         </TableHead>
                                     ))}
                                 </TableRow>

@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { Input } from '@/components/ui/input'
-import { Loader2, Check, X } from 'lucide-react'
-import { debounce } from '@/lib/utils-lims'
+import { Loader2, PencilLine } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface EditableCellProps {
     value: string
@@ -58,17 +58,28 @@ export function EditableCell({ value, onSave, disabled = false }: EditableCellPr
 
     if (!isEditing) {
         return (
-            <div
+            <button
+                type="button"
                 onClick={(e) => {
                     e.stopPropagation()
                     setIsEditing(true)
                 }}
-                className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 px-2 py-1 rounded min-h-[2rem] flex items-center"
-                title="Click to edit"
+                className="group relative w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-left shadow-inner transition hover:border-sky-400 hover:ring-1 hover:ring-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/40 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-sky-500 dark:hover:ring-sky-800"
+                title="Chỉnh sửa tên khách hàng"
                 data-stop-row-click="true"
             >
-                {value || <span className="text-muted-foreground italic">Click to edit</span>}
-            </div>
+                <span
+                    className={cn(
+                        'block truncate pr-6 text-sm text-slate-800 dark:text-slate-100',
+                        !value && 'italic text-slate-400 dark:text-slate-500'
+                    )}
+                >
+                    {value || 'Nhập tên khách hàng'}
+                </span>
+                <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-slate-300 transition group-hover:text-sky-500 dark:text-slate-600 dark:group-hover:text-sky-400">
+                    <PencilLine className="h-4 w-4" />
+                </span>
+            </button>
         )
     }
 
@@ -78,7 +89,7 @@ export function EditableCell({ value, onSave, disabled = false }: EditableCellPr
             data-stop-row-click="true"
             onClick={(e) => e.stopPropagation()}
         >
-            <div className="flex items-center gap-2">
+            <div className="relative flex items-center">
                 <Input
                     value={currentValue}
                     onChange={(e) => setCurrentValue(e.target.value)}
@@ -86,9 +97,16 @@ export function EditableCell({ value, onSave, disabled = false }: EditableCellPr
                     onBlur={handleSave}
                     autoFocus
                     disabled={isSaving}
-                    className="h-8"
+                    className="h-9 pr-10 font-medium transition-all focus-visible:ring-2 focus-visible:ring-sky-500/30 focus-visible:border-sky-500"
+                    placeholder="Nhập tên khách hàng..."
                 />
-                {isSaving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-400">
+                    {isSaving ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    ) : (
+                        <PencilLine className="h-4 w-4" />
+                    )}
+                </div>
             </div>
             {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
