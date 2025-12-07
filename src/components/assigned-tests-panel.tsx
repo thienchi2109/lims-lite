@@ -158,6 +158,9 @@ export function AssignedTestsPanel({ sampleId }: AssignedTestsPanelProps) {
                 setResultValues({})
                 setValidationErrors({})
                 fetchTests() // Refresh data
+                
+                // Refresh sample list and move to top (sort by updated_at)
+                handleRefocus(sampleId)
             }
         } catch (error) {
             toast.error('Có lỗi xảy ra khi lưu kết quả')
