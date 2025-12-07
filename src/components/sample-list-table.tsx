@@ -340,13 +340,13 @@ export function SampleListTable({
                     </div>
                 ) : (
                     <table className="w-full caption-bottom text-sm">
-                        <TableHeader className="bg-slate-50/95 backdrop-blur supports-[backdrop-filter]:bg-slate-50/60 dark:bg-slate-900/95 shadow-sm border-b border-slate-200 dark:border-slate-800">
+                        <TableHeader className="bg-slate-50/95 backdrop-blur supports-[backdrop-filter]:bg-slate-50/60 dark:bg-slate-900/95">
                             {table.getHeaderGroups().map((headerGroup) => (
                                 <TableRow key={headerGroup.id} className="hover:bg-transparent border-none">
                                     {headerGroup.headers.map((header) => (
                                         <TableHead
                                             key={header.id}
-                                            className="sticky top-0 z-10 h-9 bg-slate-50/95 text-xs font-semibold uppercase tracking-wider text-slate-500 backdrop-blur supports-[backdrop-filter]:bg-slate-50/80 dark:bg-slate-900/95"
+                                            className="sticky top-0 z-20 h-9 bg-slate-50/95 text-xs font-semibold uppercase tracking-wider text-slate-500 backdrop-blur supports-[backdrop-filter]:bg-slate-50/80 dark:bg-slate-900/95 border-b border-slate-200 dark:border-slate-800"
                                         >
                                             {header.isPlaceholder
                                                 ? null

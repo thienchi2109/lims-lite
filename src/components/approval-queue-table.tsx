@@ -183,7 +183,7 @@ export function ApprovalQueueTable({ data, selectedSampleId }: ApprovalQueueTabl
                     </div>
                 ) : (
                     <table className="w-full caption-bottom text-sm">
-                        <TableHeader className="sticky top-0 bg-slate-50/95 backdrop-blur supports-[backdrop-filter]:bg-slate-50/60 dark:bg-slate-900/95 z-10 shadow-sm border-b border-slate-200 dark:border-slate-800">
+                        <TableHeader className="sticky top-0 bg-slate-50/95 backdrop-blur supports-[backdrop-filter]:bg-slate-50/60 dark:bg-slate-900/95 z-20 shadow-sm border-b border-slate-200 dark:border-slate-800">
                             {table.getHeaderGroups().map((headerGroup) => (
                                 <TableRow key={headerGroup.id} className="hover:bg-transparent border-none">
                                     {headerGroup.headers.map((header) => (
