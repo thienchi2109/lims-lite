@@ -117,6 +117,7 @@ export async function saveBatchResults(data: SaveBatchResults) {
                 `
                 id,
                 status,
+                sample_id,
                 assay:assay_definitions!results_assay_id_fkey(
                     validation_rules
                 )
@@ -194,6 +195,29 @@ export async function saveBatchResults(data: SaveBatchResults) {
                 error: 'Some updates failed',
                 details: errors.map((e) => e.error?.message),
             }
+        }
+
+        // Update sample status from 'assigned' to 'in_progress'
+        try {
+            const sampleIds = [...new Set(existingResults.map((r: any) => r.sample_id))]
+
+            // Find samples that are currently 'assigned'
+            const { data: samplesToUpdate } = await supabase
+                .from('samples')
+                .select('id, status')
+                .in('id', sampleIds)
+                .eq('status', 'assigned')
+
+            if (samplesToUpdate && samplesToUpdate.length > 0) {
+                const idsToUpdate = samplesToUpdate.map((s: any) => s.id)
+                await supabase
+                    .from('samples')
+                    .update({ status: 'in_progress' })
+                    .in('id', idsToUpdate)
+            }
+        } catch (statusError) {
+            // Non-blocking error
+            console.error('Error updating sample status:', statusError)
         }
 
         // Revalidate paths
