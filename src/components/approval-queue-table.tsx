@@ -8,7 +8,7 @@ import {
     getPaginationRowModel,
     useReactTable,
 } from '@tanstack/react-table'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
@@ -182,7 +182,7 @@ export function ApprovalQueueTable({ data, selectedSampleId }: ApprovalQueueTabl
                         <p>Không có mẫu nào chờ phê duyệt</p>
                     </div>
                 ) : (
-                    <Table>
+                    <table className="w-full caption-bottom text-sm">
                         <TableHeader className="sticky top-0 bg-slate-50/95 backdrop-blur supports-[backdrop-filter]:bg-slate-50/60 dark:bg-slate-900/95 z-10 shadow-sm border-b border-slate-200 dark:border-slate-800">
                             {table.getHeaderGroups().map((headerGroup) => (
                                 <TableRow key={headerGroup.id} className="hover:bg-transparent border-none">
@@ -223,7 +223,7 @@ export function ApprovalQueueTable({ data, selectedSampleId }: ApprovalQueueTabl
                                 )
                             })}
                         </TableBody>
-                    </Table>
+                    </table>
                 )}
             </div>
 

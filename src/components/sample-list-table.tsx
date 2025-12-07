@@ -11,7 +11,7 @@ import { updateSampleClient } from '@/lib/api-client'
 import { type SampleWithUser } from '@/types'
 import { formatDate } from '@/lib/utils-lims'
 import { Button } from '@/components/ui/button'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { SampleStatusBadge } from '@/components/sample-status-badge'
 import { EditableCell } from '@/components/editable-cell'
 import { SampleEditDialog } from '@/components/sample-edit-dialog'
@@ -339,7 +339,7 @@ export function SampleListTable({
                         <p>Không tìm thấy mẫu nào. Tạo mẫu đầu tiên để bắt đầu.</p>
                     </div>
                 ) : (
-                    <Table>
+                    <table className="w-full caption-bottom text-sm">
                         <TableHeader className="bg-slate-50/95 backdrop-blur supports-[backdrop-filter]:bg-slate-50/60 dark:bg-slate-900/95 shadow-sm border-b border-slate-200 dark:border-slate-800">
                             {table.getHeaderGroups().map((headerGroup) => (
                                 <TableRow key={headerGroup.id} className="hover:bg-transparent border-none">
@@ -383,7 +383,7 @@ export function SampleListTable({
                                 )
                             })}
                         </TableBody>
-                    </Table>
+                    </table>
                 )}
             </div>
 
