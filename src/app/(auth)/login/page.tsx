@@ -1,12 +1,13 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { login } from '@/app/actions/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import Image from 'next/image'
-import { Lock, User, Loader2, AlertCircle } from 'lucide-react'
+import { Lock, User, Loader2, AlertCircle, Eye, EyeOff, HelpCircle, Phone, ShieldCheck } from 'lucide-react'
 
 type FormState = {
     error?: {
@@ -18,6 +19,7 @@ type FormState = {
 
 export default function LoginPage() {
     const [state, formAction, isPending] = useActionState<FormState, FormData>(login, null)
+    const [showPassword, setShowPassword] = useState(false)
 
     return (
         <div className="min-h-screen w-full grid grid-cols-1 lg:grid-cols-2">
@@ -29,6 +31,7 @@ export default function LoginPage() {
                     fill
                     className="object-cover"
                     priority
+                    sizes="(max-width: 1023px) 0px, 50vw"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/50 to-transparent" />
                 
@@ -106,14 +109,25 @@ export default function LoginPage() {
                                 <Input
                                     id="password"
                                     name="password"
-                                    type="password"
+                                    type={showPassword ? "text" : "password"}
                                     placeholder="••••••••"
                                     required
                                     disabled={isPending}
-                                    className="pl-10 border-slate-200 dark:border-slate-800 focus-visible:ring-blue-500 transition-all duration-200 bg-slate-50/50 dark:bg-slate-900/50"
+                                    className="pl-10 pr-10 border-slate-200 dark:border-slate-800 focus-visible:ring-blue-500 transition-all duration-200 bg-slate-50/50 dark:bg-slate-900/50"
                                     aria-invalid={!!state?.error?.password}
                                     aria-describedby={state?.error?.password ? "password-error" : undefined}
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 focus:outline-none"
+                                >
+                                    {showPassword ? (
+                                        <EyeOff className="h-4 w-4" />
+                                    ) : (
+                                        <Eye className="h-4 w-4" />
+                                    )}
+                                </button>
                             </div>
                             {state?.error?.password && (
                                 <p id="password-error" className="text-sm text-destructive flex items-center gap-1 mt-1 animate-in slide-in-from-top-1">
@@ -147,7 +161,7 @@ export default function LoginPage() {
                     </form>
 
                     {/* Footer */}
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                         <div className="relative">
                             <div className="absolute inset-0 flex items-center">
                                 <span className="w-full border-t border-slate-200 dark:border-slate-800" />
@@ -158,9 +172,50 @@ export default function LoginPage() {
                                 </span>
                             </div>
                         </div>
-                        <p className="text-center text-xs text-slate-400">
-                            &copy; {new Date().getFullYear()} Khoa Xét nghiệm - CDC.
-                        </p>
+                        
+                        <div className="flex flex-col items-center gap-2">
+                             <p className="text-center text-xs text-slate-400">
+                                &copy; {new Date().getFullYear()} Khoa Xét nghiệm - CDC.
+                            </p>
+                            
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        className="h-9 rounded-full border-slate-200/60 bg-gradient-to-r from-slate-50/50 to-white pl-3 pr-4 text-xs font-medium text-slate-500 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-200 hover:from-blue-50/50 hover:to-white hover:text-blue-600 hover:shadow-md dark:border-slate-800 dark:from-slate-900 dark:to-slate-900/50 dark:text-slate-400 dark:hover:border-blue-900/50 dark:hover:from-blue-900/20 dark:hover:to-slate-900 dark:hover:text-blue-400 gap-2"
+                                    >
+                                        <HelpCircle className="h-3.5 w-3.5" />
+                                        Hỗ trợ kỹ thuật
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-80 p-0 border-none shadow-lg shadow-blue-500/10">
+                                    <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-lg overflow-hidden">
+                                        <div className="bg-slate-50 dark:bg-slate-800/50 p-4 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
+                                            <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-full">
+                                                <ShieldCheck className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-semibold text-sm text-slate-900 dark:text-slate-100">Thông tin hỗ trợ</h4>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400">Liên hệ quản trị viên</p>
+                                            </div>
+                                        </div>
+                                        <div className="p-4 space-y-4">
+                                            <div className="space-y-1">
+                                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Nguyễn Thiện Chí</p>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400">Phát triển và quản trị hệ thống</p>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-md border border-slate-100 dark:border-slate-800">
+                                                <Phone className="h-4 w-4 text-blue-500" />
+                                                <a href="tel:0907984746" className="hover:text-blue-600 hover:underline font-medium transition-colors">
+                                                    090 798 4746
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                        </div>
                     </div>
                 </div>
             </div>
