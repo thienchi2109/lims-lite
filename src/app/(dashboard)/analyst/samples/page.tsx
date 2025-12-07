@@ -1,26 +1,21 @@
-import { Suspense } from 'react'
-import { getSamples, getSample } from '@/app/actions/samples'
-import { SampleListTable } from '@/components/sample-list-table'
-import { SampleFilters } from '@/components/sample-filters'
-import { SampleBottomRow } from '@/components/sample-bottom-row'
-import { Button } from '@/components/ui/button'
-import { ArrowLeft } from 'lucide-react'
-import Link from 'next/link'
-import { SampleListParamsSchema } from '@/types'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { DashboardHeader } from '@/components/dashboard-header'
 
 // This page relies on cookies/session via Supabase, so force dynamic rendering
 export const dynamic = 'force-dynamic'
 
-export default async function SamplesPage({
+/**
+ * Legacy route for analyst samples page.
+ * Redirects to unified /samples page while preserving query parameters.
+ */
+export default async function AnalystSamplesRedirect({
     searchParams,
 }: {
     searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
     const supabase = await createClient()
 
+    // 1. Authenticate user
     const {
         data: { user },
     } = await supabase.auth.getUser()
@@ -29,102 +24,20 @@ export default async function SamplesPage({
         redirect('/login')
     }
 
+    // 2. Verify analyst role
     const { data: userData } = await supabase
         .from('users')
-        .select('full_name, role')
+        .select('role')
         .eq('id', user.id)
         .single()
 
-    const params = (await searchParams) || {}
-
-    // Parse search params
-    const page = Number(params.page) || 1
-    const pageSize = Number(params.pageSize) || 10
-    const status = params.status as string | undefined
-    const search = params.search as string | undefined
-    const sortBy = (params.sortBy as string) || 'created_at'
-    const sortOrder = (params.sortOrder as 'asc' | 'desc') || 'desc'
-    const sampleId = params.sampleId as string | undefined
-
-    // Validate params
-    const validatedParams = SampleListParamsSchema.safeParse({
-        page,
-        pageSize,
-        status,
-        search,
-        sortBy,
-        sortOrder,
-    })
-
-    if (!validatedParams.success) {
-        return <div>Invalid parameters</div>
+    if (userData?.role !== 'analyst') {
+        redirect('/login')
     }
 
-    // Fetch samples list
-    const result = await getSamples(validatedParams.data)
+    // 3. Preserve query parameters and redirect to unified page
+    const params = await searchParams
+    const queryString = new URLSearchParams(params as any).toString()
 
-    // Fetch selected sample if ID is present
-    let selectedSample = null
-    if (sampleId) {
-        const { data: sampleData } = await getSample(sampleId)
-        if (sampleData) {
-            selectedSample = sampleData
-        }
-    }
-
-    return (
-        <div className="h-[calc(100vh-4rem)] flex flex-col bg-slate-100 dark:bg-slate-950 overflow-hidden">
-            <DashboardHeader 
-                subtitle="Quản lý mẫu" 
-                user={userData}
-                className="shrink-0"
-            />
-
-            <main className="flex-1 flex flex-col min-h-0 p-2 sm:px-4 gap-2">
-                <div className="flex items-center gap-4 shrink-0">
-                    <Link href="/analyst">
-                        <Button variant="ghost" size="sm" className="hover:bg-slate-200 dark:hover:bg-slate-800">
-                            <ArrowLeft className="h-4 w-4 mr-2" />
-                            Quay lại
-                        </Button>
-                    </Link>
-                </div>
-
-                {/* Top Row: Filters & Grid (Fixed Height ~50%) */}
-                <div className="flex flex-col gap-2 h-[50vh] min-h-[400px] shrink-0">
-                    <div className="shrink-0">
-                        <Suspense fallback={<div className="text-sm text-slate-500">Đang tải bộ lọc...</div>}>
-                            <SampleFilters
-                                search={search}
-                                status={status as any} // Cast to any or specific type if needed, strict check might fail if status is undefined
-                                pageSize={pageSize}
-                                sortBy={sortBy}
-                                sortOrder={sortOrder}
-                            />
-                        </Suspense>
-                    </div>
-                    <div className="flex-1 min-h-0">
-                        <Suspense fallback={<div className="text-sm text-slate-500">Đang tải danh sách mẫu...</div>}>
-                            <SampleListTable
-                                samples={result.data || []}
-                                page={page}
-                                pageSize={pageSize}
-                                totalPages={result.totalPages || 0}
-                                totalCount={result.count || 0}
-                                error={result.error}
-                                sortBy={sortBy}
-                                sortOrder={sortOrder}
-                                selectedSampleId={selectedSample?.id}
-                            />
-                        </Suspense>
-                    </div>
-                </div>
-
-                {/* Bottom Row: Detail & Assignments (Remaining Height) */}
-                <div className="flex-1 min-h-0 border-t pt-4">
-                    <SampleBottomRow sample={selectedSample} />
-                </div>
-            </main>
-        </div>
-    )
+    redirect(`/samples${queryString ? `?${queryString}` : ''}`)
 }

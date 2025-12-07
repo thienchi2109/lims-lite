@@ -74,6 +74,7 @@ export async function createSample(data: CreateSample) {
         revalidatePath('/analyst/samples')
         revalidatePath('/analyst/accession')
         revalidatePath('/manager/samples')
+        revalidatePath('/samples')
 
         return { data: sample }
     } catch (error) {
@@ -116,6 +117,7 @@ export async function accessionAndAssignTests(data: CreateSampleWithAssignments)
         revalidatePath('/analyst/samples')
         revalidatePath('/analyst/accession')
         revalidatePath('/manager/samples')
+        revalidatePath('/samples')
 
         return { data: rpcResult }
     } catch (error) {
@@ -155,17 +157,22 @@ export async function updateSample(data: UpdateSample) {
             .update(updateData)
             .eq('id', validatedData.id)
             .select()
-            .single()
 
+        // Check if update was blocked by RLS or sample doesn't exist
         if (error) {
             console.error('Error updating sample:', error)
             return { error: error.message }
         }
 
+        if (!sample || sample.length === 0) {
+            return { error: 'Sample not found or you do not have permission to update it' }
+        }
+
         revalidatePath('/analyst/samples')
         revalidatePath('/manager/samples')
+        revalidatePath('/samples')
 
-        return { data: sample }
+        return { data: sample[0] }
     } catch (error) {
         console.error('Error in updateSample:', error)
         return { error: error instanceof Error ? error.message : 'Failed to update sample' }
@@ -269,6 +276,7 @@ export async function assignTests(data: AssignTests) {
         if ((rpcResult.inserted_count ?? 0) > 0) {
             revalidatePath('/analyst/samples')
             revalidatePath('/manager/samples')
+            revalidatePath('/samples')
         }
 
         return { success: true, data: rpcResult }
@@ -342,6 +350,7 @@ export async function unassignTests(data: AssignTests) {
 
         revalidatePath('/analyst/samples')
         revalidatePath('/manager/samples')
+        revalidatePath('/samples')
 
         return { success: true }
     } catch (error) {
@@ -630,6 +639,7 @@ export async function submitSampleForReview(sampleId: string) {
         // 5. Revalidate paths
         revalidatePath('/analyst/samples')
         revalidatePath('/manager/samples')
+        revalidatePath('/samples')
         revalidatePath('/analyst/results/[sampleId]', 'page')
 
         return { success: true }

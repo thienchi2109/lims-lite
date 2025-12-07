@@ -15,8 +15,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { SampleStatusBadge } from '@/components/sample-status-badge'
 import { EditableCell } from '@/components/editable-cell'
 import { SampleEditDialog } from '@/components/sample-edit-dialog'
-import { ChevronLeft, ChevronRight, Eye, Pencil, ArrowUpDown, ArrowUp, ArrowDown, ClipboardPen } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Eye, Pencil, ArrowUpDown, ArrowUp, ArrowDown, ClipboardPen, XCircle } from 'lucide-react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
+import { sampleKeys } from '@/types/query-keys'
 
 interface SampleListTableProps {
     samples: SampleWithUser[]
@@ -24,7 +26,13 @@ interface SampleListTableProps {
     pageSize: number
     totalPages: number
     totalCount: number
-    isManager?: boolean
+    permissions?: {
+        canReject: boolean
+        canIgnore: boolean
+        canEdit: boolean
+        canViewResults: boolean
+        canEnterResults: boolean
+    }
     error?: string | null
     sortBy?: string
     sortOrder?: 'asc' | 'desc'
@@ -37,7 +45,7 @@ export function SampleListTable({
     pageSize,
     totalPages,
     totalCount,
-    isManager = false,
+    permissions,
     error,
     sortBy = 'created_at',
     sortOrder = 'desc',
@@ -50,6 +58,7 @@ export function SampleListTable({
     const router = useRouter()
     const searchParams = useSearchParams()
     const pathname = usePathname()
+    const queryClient = useQueryClient()
 
     // Keep local state in sync with server data on navigation
     useEffect(() => {
@@ -63,10 +72,22 @@ export function SampleListTable({
         })
 
         if (!result.error) {
-            // Update local state
+            // Update local state for optimistic UI
             setSamples((prev) =>
                 prev.map((s) => (s.id === sampleId ? { ...s, [field]: value } : s))
             )
+
+            // Apply the same refresh pattern as result saving:
+            // 1. Update URL params to sort by updated_at DESC and navigate to page 1
+            const params = new URLSearchParams(searchParams?.toString() ?? '')
+            params.set('sortBy', 'updated_at')
+            params.set('sortOrder', 'desc')
+            params.set('sampleId', sampleId)
+            params.set('page', '1')
+            router.push(`${pathname}?${params.toString()}`)
+
+            // 2. Invalidate TanStack Query cache to trigger refetch
+            queryClient.invalidateQueries({ queryKey: sampleKeys.all })
         }
 
         return result
@@ -78,8 +99,19 @@ export function SampleListTable({
     }
 
     const handleEditSuccess = () => {
-        // TanStack Query will handle refresh via cache invalidation
-        // No need for router.refresh()
+        if (!selectedSampleForEdit) return
+
+        // Apply the same refresh pattern as result saving and inline edit:
+        // 1. Update URL params to sort by updated_at DESC and navigate to page 1
+        const params = new URLSearchParams(searchParams?.toString() ?? '')
+        params.set('sortBy', 'updated_at')
+        params.set('sortOrder', 'desc')
+        params.set('sampleId', selectedSampleForEdit.id)
+        params.set('page', '1')
+        router.push(`${pathname}?${params.toString()}`)
+
+        // 2. Invalidate TanStack Query cache to trigger refetch
+        queryClient.invalidateQueries({ queryKey: sampleKeys.all })
     }
 
     const updateQuery = (updates: Record<string, string | null>) => {
@@ -103,7 +135,13 @@ export function SampleListTable({
         })
     }
 
-    const handleRowClick = (sample: SampleWithUser) => {
+    const handleRowClick = (sample: SampleWithUser, event: React.MouseEvent<HTMLTableRowElement>) => {
+        const target = event.target as HTMLElement | null
+        const isInteractiveClick = target?.closest('button, a, input, textarea, select, [role="button"], [data-stop-row-click="true"]')
+        if (isInteractiveClick) {
+            return
+        }
+
         updateQuery({ sampleId: sample.id })
     }
 
@@ -124,7 +162,7 @@ export function SampleListTable({
                     onSave={(newValue) =>
                         handleUpdateCell(row.original.id, 'client_name', newValue)
                     }
-                    disabled={!isManager && row.original.status !== 'received'}
+                    disabled={!permissions?.canEdit && row.original.status !== 'received'}
                 />
             ),
         },
@@ -198,69 +236,86 @@ export function SampleListTable({
         },
     ]
 
-    // Add actions column based on role
-    if (isManager) {
-        columns.push({
-            id: 'actions',
-            header: 'Hành động',
-            cell: ({ row }) => {
-                const canViewResults = ['assigned', 'in_progress', 'review', 'completed'].includes(row.original.status)
+    // Add unified actions column with permission-based gating
+    columns.push({
+        id: 'actions',
+        header: 'Hành động',
+        cell: ({ row }) => {
+            const status = row.original.status
 
-                return (
-                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                        {canViewResults && (
-                            <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                onClick={() => updateQuery({ sampleId: row.original.id, view: 'results' })}
-                                title="Xem kết quả"
-                                className="h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50"
-                            >
-                                <Eye className="h-4 w-4" />
-                            </Button>
-                        )}
-                    </div>
-                )
-            },
-        })
-    } else {
-        // Analyst actions
-        columns.push({
-            id: 'actions',
-            header: 'Hành động',
-            cell: ({ row }) => {
-                const canEnterResults = ['assigned', 'in_progress'].includes(row.original.status)
-                const isReceived = row.original.status === 'received'
+            // Calculate granular permissions based on status
+            const canEdit = permissions?.canEdit && status === 'received'
+            const canEnterResults = permissions?.canEnterResults &&
+                ['assigned', 'in_progress'].includes(status)
+            const canViewResults = permissions?.canViewResults &&
+                ['assigned', 'in_progress', 'review', 'completed'].includes(status)
+            const canReject = permissions?.canReject &&
+                ['received', 'assigned'].includes(status)
 
-                return (
-                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                        {isReceived && (
-                            <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                onClick={() => handleEditSample(row.original)}
-                                title="Chỉnh sửa"
-                                className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-                            >
-                                <Pencil className="h-4 w-4" />
-                            </Button>
-                        )}
-                        {canEnterResults && (
-                            <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                onClick={() => updateQuery({ sampleId: row.original.id, view: 'results' })}
-                                title="Nhập kết quả"
-                                className="h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50"
-                            >
-                                <ClipboardPen className="h-4 w-4" />
-                            </Button>
-                        )}
-                    </div>
-                )
-            },
-        })
-    }
+            return (
+                <div
+                    className="flex items-center gap-1"
+                    onClick={(e) => e.stopPropagation()}
+                    data-stop-row-click="true"
+                >
+                    {/* Edit button - Both roles, status-gated */}
+                    {canEdit && (
+                        <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => handleEditSample(row.original)}
+                            title="Chỉnh sửa"
+                            className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                        >
+                            <Pencil className="h-4 w-4" />
+                        </Button>
+                    )}
+
+                    {/* Enter Results button - Analyst only */}
+                    {canEnterResults && (
+                        <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => updateQuery({ sampleId: row.original.id, view: 'results' })}
+                            title="Nhập kết quả"
+                            className="h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50"
+                        >
+                            <ClipboardPen className="h-4 w-4" />
+                        </Button>
+                    )}
+
+                    {/* View Results button - Manager only (when can't enter) */}
+                    {canViewResults && !canEnterResults && (
+                        <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => updateQuery({ sampleId: row.original.id, view: 'results' })}
+                            title="Xem kết quả"
+                            className="h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50"
+                        >
+                            <Eye className="h-4 w-4" />
+                        </Button>
+                    )}
+
+                    {/* Reject button - Manager only, status-gated */}
+                    {canReject && (
+                        <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => {
+                                // TODO: Implement reject dialog
+                                console.log('Reject sample:', row.original.id)
+                            }}
+                            title="Từ chối"
+                            className="h-8 w-8 text-slate-500 hover:text-red-600 hover:bg-red-50"
+                        >
+                            <XCircle className="h-4 w-4" />
+                        </Button>
+                    )}
+                </div>
+            )
+        },
+    })
 
     const table = useReactTable({
         data: samples,
@@ -307,7 +362,7 @@ export function SampleListTable({
                                 return (
                                     <TableRow
                                         key={row.id}
-                                        onClick={() => handleRowClick(row.original)}
+                                        onClick={(event) => handleRowClick(row.original, event)}
                                         className={`cursor-pointer transition-colors border-slate-100 dark:border-slate-800 ${isSelected
                                             ? 'bg-sky-50 dark:bg-sky-900/20 hover:bg-sky-100 dark:hover:bg-sky-900/30'
                                             : 'hover:bg-slate-50/80 dark:hover:bg-slate-900/50'

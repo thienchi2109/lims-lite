@@ -225,6 +225,7 @@ export async function saveBatchResults(data: SaveBatchResults) {
         revalidatePath('/manager/results/[sampleId]', 'page')
         revalidatePath('/analyst/samples')
         revalidatePath('/manager/samples')
+        revalidatePath('/samples')
 
         return { success: true, updatedCount: updates.length }
     } catch (error) {

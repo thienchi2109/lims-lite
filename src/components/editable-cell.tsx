@@ -59,9 +59,13 @@ export function EditableCell({ value, onSave, disabled = false }: EditableCellPr
     if (!isEditing) {
         return (
             <div
-                onClick={() => setIsEditing(true)}
+                onClick={(e) => {
+                    e.stopPropagation()
+                    setIsEditing(true)
+                }}
                 className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 px-2 py-1 rounded min-h-[2rem] flex items-center"
                 title="Click to edit"
+                data-stop-row-click="true"
             >
                 {value || <span className="text-muted-foreground italic">Click to edit</span>}
             </div>
@@ -69,7 +73,11 @@ export function EditableCell({ value, onSave, disabled = false }: EditableCellPr
     }
 
     return (
-        <div className="space-y-1">
+        <div
+            className="space-y-1"
+            data-stop-row-click="true"
+            onClick={(e) => e.stopPropagation()}
+        >
             <div className="flex items-center gap-2">
                 <Input
                     value={currentValue}

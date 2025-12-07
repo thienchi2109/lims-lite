@@ -1,21 +1,122 @@
-## 1. Discovery
-- [ ] 1.1 Review existing TanStack Query flow (add-tanstack-query-refresh change, `useSamples`, `useSampleDetail`, `/api/client-actions` `getSamples`) for compatibility.
-- [ ] 1.2 Confirm manager-only actions (reject/ignore limited to `Đã nhận`/`Đã chỉ định`) and that approvals remain on the dedicated page.
+## Phase 1: Current State Analysis ✅
 
-## 2. Routing and auth
-- [ ] 2.1 Add unified `/samples` server page (force-dynamic) that authenticates, reads role, builds `permissions`/`homeHref`, fetches receiver options, and renders the client shell.
-- [ ] 2.2 Add thin wrappers for `/analyst/samples` and `/manager/samples` that enforce auth/role and redirect to `/samples` preserving query strings.
+- [x] 1.1 Audit manager samples page architecture (TanStack Query confirmed)
+- [x] 1.2 Audit analyst samples page architecture (legacy server-rendering confirmed)
+- [x] 1.3 Review existing TanStack Query implementation from `add-tanstack-query-refresh`
+- [x] 1.4 Document differences between analyst and manager implementations
+- [x] 1.5 Identify shared components that need updates
 
-## 3. Client shell and components
-- [ ] 3.1 Extend `SamplesPageClient` (or successor) to accept `role`/`permissions`/`homeHref` props while retaining TanStack Query data fetching.
-- [ ] 3.2 Update shared sample components to gate actions by permissions + status (manager-only reject/ignore), removing duplicate manager/analyst logic.
-- [ ] 3.3 Ensure Vietnamese copy/back links remain correct for each role.
+## Phase 2: Create Unified Server Component
 
-## 4. Actions and data consistency
-- [ ] 4.1 Verify `getSamples`/`getSample` RLS/filters and any role branching still behave for both roles in the unified page.
-- [ ] 4.2 Add `/samples` to revalidation paths alongside existing manager/analyst paths.
+- [ ] 2.1 Create `src/app/samples/page.tsx` with force-dynamic export
+- [ ] 2.2 Implement authentication and role checking
+- [ ] 2.3 Build permissions object based on role
+- [ ] 2.4 Fetch receiver options server-side
+- [ ] 2.5 Determine homeHref based on role
+- [ ] 2.6 Render SamplesPageClient with all required props
+- [ ] 2.7 Add proper TypeScript types for permissions
 
-## 5. Validation
-- [ ] 5.1 Update docs/change notes if needed.
-- [ ] 5.2 Run relevant checks (lint/tests/manual as analyst+manager for list/detail/reject/ignore).
-- [ ] 5.3 Run `openspec validate consolidate-samples-pages --strict`.
+## Phase 3: Update SamplesPageClient Component
+
+- [ ] 3.1 Add new props to SamplesPageClientProps interface (role, permissions, homeHref)
+- [ ] 3.2 Update back link to use homeHref instead of isManager conditional
+- [ ] 3.3 Pass permissions to SampleListTable
+- [ ] 3.4 Pass permissions to SampleBottomRow
+- [ ] 3.5 Keep existing TanStack Query hooks (useSamples, useSampleDetail)
+- [ ] 3.6 Test data fetching works for both roles
+
+## Phase 4: Update Shared Components
+
+- [ ] 4.1 Update SampleListTable to accept permissions prop instead of isManager
+- [ ] 4.2 Update actions column logic to check granular permissions
+- [ ] 4.3 Update SampleBottomRow to accept and pass permissions
+- [ ] 4.4 Update SampleDetailPanel to gate edit/reject/ignore by permissions
+- [ ] 4.5 Ensure Vietnamese text remains unchanged
+- [ ] 4.6 Remove route-based permission checks (pathname.includes)
+
+## Phase 5: Create Legacy Route Redirects
+
+- [ ] 5.1 Convert `/analyst/samples/page.tsx` to thin redirect wrapper
+- [ ] 5.2 Convert `/manager/samples/page.tsx` to thin redirect wrapper
+- [ ] 5.3 Implement query string preservation in redirects
+- [ ] 5.4 Test redirect with various query parameter combinations
+- [ ] 5.5 Ensure authentication still required before redirect
+
+## Phase 6: Update Server Actions
+
+- [ ] 6.1 Add `/samples` to revalidatePath in createSample (line 74-76)
+- [ ] 6.2 Add `/samples` to revalidatePath in accessionAndAssignTests (line 116-118)
+- [ ] 6.3 Add `/samples` to revalidatePath in updateSample (line 165-166)
+- [ ] 6.4 Add `/samples` to revalidatePath in assignTests (line 270-271)
+- [ ] 6.5 Add `/samples` to revalidatePath in unassignTests (line 343-344)
+- [ ] 6.6 Add `/samples` to revalidatePath in submitSampleForReview (line 631-632)
+- [ ] 6.7 Keep existing paths for backward compatibility
+
+## Phase 7: Testing - Analyst Role
+
+- [ ] 7.1 Login as analyst, navigate to /analyst/samples (should redirect)
+- [ ] 7.2 Verify redirect preserves query parameters
+- [ ] 7.3 Verify can view samples list with all filters
+- [ ] 7.4 Verify can edit sample when status=received
+- [ ] 7.5 Verify can enter results when status=assigned/in_progress
+- [ ] 7.6 Verify CANNOT see reject/ignore buttons
+- [ ] 7.7 Verify auto-refresh after test assignment navigates to page 1
+- [ ] 7.8 Verify status badge updates instantly
+- [ ] 7.9 Test pagination, sorting, search, filters
+- [ ] 7.10 Test sample detail panel loads correctly
+- [ ] 7.11 Verify back link points to /analyst dashboard
+
+## Phase 8: Testing - Manager Role
+
+- [ ] 8.1 Login as manager, navigate to /manager/samples (should redirect)
+- [ ] 8.2 Verify redirect preserves query parameters
+- [ ] 8.3 Verify can view samples list with receiver filter
+- [ ] 8.4 Verify can reject/ignore when status=received/assigned
+- [ ] 8.5 Verify can view results for all statuses
+- [ ] 8.6 Verify CANNOT enter results (analyst only)
+- [ ] 8.7 Verify auto-refresh after actions
+- [ ] 8.8 Verify status badge updates instantly
+- [ ] 8.9 Test all filters including receiver filter
+- [ ] 8.10 Verify back link points to /manager dashboard
+
+## Phase 9: Cross-Role Testing
+
+- [ ] 9.1 Test permissions are enforced (analyst cannot access manager actions)
+- [ ] 9.2 Test with active filters, ensure persistence after refresh
+- [ ] 9.3 Test multi-tab scenario (window focus refetch)
+- [ ] 9.4 Test network error handling and retry logic
+- [ ] 9.5 Verify React Query DevTools shows correct cache entries
+- [ ] 9.6 Test inline editing (client name) with cache invalidation
+- [ ] 9.7 Test direct navigation to /samples (should work without redirect)
+
+## Phase 10: Documentation and Cleanup
+
+- [ ] 10.1 Update GEMINI.md to reference unified /samples route
+- [ ] 10.2 Update OpenSpec docs to reflect new architecture
+- [ ] 10.3 Add comments explaining permissions structure
+- [ ] 10.4 Run typecheck to ensure no TypeScript errors
+- [ ] 10.5 Run build to verify production bundle
+- [ ] 10.6 Document migration in NOTES.md or changelog
+- [ ] 10.7 Update any navigation links in dashboard components
+
+## Notes
+
+**Estimated Effort:** 2-3 days (16-24 hours)
+
+**Critical Path:**
+1. Phase 2: Unified server component (4-5 hours)
+2. Phase 3-4: Component updates (4-5 hours)
+3. Phase 5: Redirects (2-3 hours)
+4. Phase 7-9: Testing (6-8 hours)
+
+**Rollback Plan:**
+- Keep legacy routes functional during initial rollout
+- If critical issues arise, can quickly revert /samples to redirect back to legacy routes
+- Git revert strategy: Create feature branch, merge only after full testing
+
+**Success Metrics:**
+- All manual tests pass (Phase 7-9)
+- No TypeScript errors
+- Production build succeeds
+- Both roles report smooth workflow
+- Auto-refresh works 100% reliably

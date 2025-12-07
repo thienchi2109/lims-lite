@@ -13,35 +13,48 @@ import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 interface SamplesPageClientProps {
-    isManager: boolean
+    role: 'analyst' | 'manager'
+    permissions: {
+        canReject: boolean
+        canIgnore: boolean
+        canEdit: boolean
+        canViewResults: boolean
+        canEnterResults: boolean
+    }
+    homeHref: string
     receiverOptions: Array<{ id: string; name: string }>
 }
 
-export function SamplesPageClient({ isManager, receiverOptions }: SamplesPageClientProps) {
+export function SamplesPageClient({
+    role,
+    permissions,
+    homeHref,
+    receiverOptions
+}: SamplesPageClientProps) {
     const searchParams = useSearchParams()
-    
+
     // Parse URL params
     const searchTerm = searchParams.get('search') || ''
     const statusParam = searchParams.get('status') || 'all'
     const validStatuses: SampleStatus[] = ['received', 'assigned', 'in_progress', 'review', 'completed']
-    const status = validStatuses.includes(statusParam as SampleStatus) 
-        ? (statusParam as SampleStatus) 
+    const status = validStatuses.includes(statusParam as SampleStatus)
+        ? (statusParam as SampleStatus)
         : undefined
-    
+
     const pageParam = Number(searchParams.get('page') || '1')
     const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1
-    
+
     const pageSizeParam = Number(searchParams.get('pageSize') || '20')
     const pageSize = Number.isFinite(pageSizeParam) && pageSizeParam > 0 ? pageSizeParam : 20
-    
+
     const fromDate = searchParams.get('fromDate') || ''
     const toDate = searchParams.get('toDate') || ''
     const sortBy = searchParams.get('sortBy') || 'created_at'
     const sortOrder = searchParams.get('sortOrder') === 'asc' ? 'asc' : 'desc'
-    
+
     const receiverIdParam = searchParams.get('receiverId') || ''
     const receiverId = receiverIdParam.match(/^[0-9a-fA-F-]{36}$/) ? receiverIdParam : ''
-    
+
     const sampleId = searchParams.get('sampleId') || undefined
 
     // Fetch samples with TanStack Query
@@ -60,9 +73,9 @@ export function SamplesPageClient({ isManager, receiverOptions }: SamplesPageCli
     })
 
     // Fetch selected sample with TanStack Query hook
-    const { 
-        data: selectedSampleData, 
-        isLoading: isLoadingSample 
+    const {
+        data: selectedSampleData,
+        isLoading: isLoadingSample
     } = useSampleDetail({
         sampleId: sampleId || null,
         enabled: !!sampleId
@@ -94,7 +107,7 @@ export function SamplesPageClient({ isManager, receiverOptions }: SamplesPageCli
     return (
         <main className="flex-1 flex flex-col min-h-0 p-2 sm:px-4 gap-2">
             <div className="flex items-center gap-4 shrink-0">
-                <Link href={isManager ? '/manager' : '/analyst'}>
+                <Link href={homeHref}>
                     <Button variant="ghost" size="sm">
                         <ArrowLeft className="h-4 w-4 mr-2" />
                         Quay lại Bảng điều khiển
@@ -127,7 +140,7 @@ export function SamplesPageClient({ isManager, receiverOptions }: SamplesPageCli
                         totalPages={totalPages}
                         totalCount={totalCount}
                         error={result?.error || null}
-                        isManager={isManager}
+                        permissions={permissions}
                         sortBy={sortBy}
                         sortOrder={sortOrder as 'asc' | 'desc'}
                         selectedSampleId={selectedSample?.id}
@@ -137,7 +150,11 @@ export function SamplesPageClient({ isManager, receiverOptions }: SamplesPageCli
 
             {/* Bottom Row: Detail & Assignments (Remaining Height) */}
             <div className="flex-1 min-h-0 border-t pt-4">
-                <SampleBottomRow sample={selectedSample} isLoadingSample={isLoadingSample} />
+                <SampleBottomRow
+                    sample={selectedSample}
+                    isLoadingSample={isLoadingSample}
+                    permissions={permissions}
+                />
             </div>
         </main>
     )

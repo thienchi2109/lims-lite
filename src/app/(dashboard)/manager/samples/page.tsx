@@ -1,15 +1,21 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { DashboardHeader } from '@/components/dashboard-header'
-import { SamplesPageClient } from '@/components/samples-page-client'
-import { Suspense } from 'react'
 
 // This page relies on cookies/session via Supabase, so force dynamic rendering
 export const dynamic = 'force-dynamic'
 
-export default async function ManagerSamplesPage() {
+/**
+ * Legacy route for manager samples page.
+ * Redirects to unified /samples page while preserving query parameters.
+ */
+export default async function ManagerSamplesRedirect({
+    searchParams,
+}: {
+    searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
     const supabase = await createClient()
 
+    // 1. Authenticate user
     const {
         data: { user },
     } = await supabase.auth.getUser()
@@ -18,50 +24,20 @@ export default async function ManagerSamplesPage() {
         redirect('/login')
     }
 
+    // 2. Verify manager role
     const { data: userData } = await supabase
         .from('users')
-        .select('full_name, role')
+        .select('role')
         .eq('id', user.id)
         .single()
 
-    // Ensure user is a manager
     if (userData?.role !== 'manager') {
-        redirect('/analyst')
+        redirect('/login')
     }
 
-    const { data: receiverData, error: receiverError } = await supabase
-        .from('users')
-        .select('id, full_name')
-        .order('full_name', { ascending: true })
+    // 3. Preserve query parameters and redirect to unified page
+    const params = await searchParams
+    const queryString = new URLSearchParams(params as any).toString()
 
-    if (receiverError) {
-        console.error('Error fetching receiver list:', receiverError)
-    }
-
-    const receiverOptions: Array<{ id: string; name: string }> =
-        receiverData?.map((receiver) => ({
-            id: String(receiver.id),
-            name: receiver.full_name || '',
-        })) || []
-
-    return (
-        <div className="h-[calc(100vh-4rem)] flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden">
-            <DashboardHeader 
-                subtitle="Quản lý mẫu"
-                user={userData}
-                className="shrink-0"
-            />
-
-            <Suspense fallback={
-                <div className="flex-1 flex items-center justify-center">
-                    <div className="text-sm text-slate-500">Đang tải...</div>
-                </div>
-            }>
-                <SamplesPageClient 
-                    isManager={true}
-                    receiverOptions={receiverOptions}
-                />
-            </Suspense>
-        </div>
-    )
+    redirect(`/samples${queryString ? `?${queryString}` : ''}`)
 }

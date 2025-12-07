@@ -7,9 +7,16 @@ import { AssignedTestsPanel } from '@/components/assigned-tests-panel'
 interface SampleBottomRowProps {
     sample: SampleWithUser | null
     isLoadingSample?: boolean
+    permissions?: {
+        canReject: boolean
+        canIgnore: boolean
+        canEdit: boolean
+        canViewResults: boolean
+        canEnterResults: boolean
+    }
 }
 
-export function SampleBottomRow({ sample, isLoadingSample = false }: SampleBottomRowProps) {
+export function SampleBottomRow({ sample, isLoadingSample = false, permissions }: SampleBottomRowProps) {
     if (isLoadingSample) {
         return (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
