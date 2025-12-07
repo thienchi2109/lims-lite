@@ -1,6 +1,7 @@
 'use client'
 
 import { useSamples } from '@/hooks/use-samples'
+import { useSampleDetail } from '@/hooks/use-sample-detail'
 import { SampleListTable } from '@/components/sample-list-table'
 import { SampleFilters } from '@/components/sample-filters'
 import { SampleBottomRow } from '@/components/sample-bottom-row'
@@ -8,10 +9,8 @@ import { type SampleStatus } from '@/types'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { getSample } from '@/app/actions/samples'
-import type { SampleWithUser } from '@/types'
 
 interface SamplesPageClientProps {
     isManager: boolean
@@ -60,22 +59,16 @@ export function SamplesPageClient({ isManager, receiverOptions }: SamplesPageCli
         }
     })
 
-    // Fetch selected sample
-    const [selectedSample, setSelectedSample] = useState<SampleWithUser | null>(null)
-    const [isLoadingSample, setIsLoadingSample] = useState(false)
-    
-    useEffect(() => {
-        if (sampleId) {
-            setIsLoadingSample(true)
-            getSample(sampleId)
-                .then(({ data }) => {
-                    if (data) setSelectedSample(data)
-                })
-                .finally(() => setIsLoadingSample(false))
-        } else {
-            setSelectedSample(null)
-        }
-    }, [sampleId])
+    // Fetch selected sample with TanStack Query hook
+    const { 
+        data: selectedSampleData, 
+        isLoading: isLoadingSample 
+    } = useSampleDetail({
+        sampleId: sampleId || null,
+        enabled: !!sampleId
+    })
+
+    const selectedSample = selectedSampleData || null
 
     // Handle loading and error states
     if (isLoading) {
