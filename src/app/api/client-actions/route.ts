@@ -32,6 +32,48 @@ interface ActionHandler {
     (payload?: any): Promise<any>
 }
 
+function isAllowedOrigin(request: Request) {
+    const origin = request.headers.get('origin')
+    const referer = request.headers.get('referer')
+    const requestHost = new URL(request.url).host
+    const headerHost = request.headers.get('host')
+    const envSiteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL
+
+    const allowedHosts = new Set<string>()
+    allowedHosts.add(requestHost)
+    if (headerHost) allowedHosts.add(headerHost)
+    if (envSiteUrl) {
+        try {
+            allowedHosts.add(new URL(envSiteUrl).host)
+        } catch {
+            // ignore malformed SITE_URL
+        }
+    }
+
+    const isHostAllowed = (value: string | null) => {
+        if (!value) return false
+        try {
+            const host = new URL(value).host
+            return allowedHosts.has(host)
+        } catch {
+            return allowedHosts.has(value)
+        }
+    }
+
+    if (origin && !isHostAllowed(origin)) return false
+    if (!origin && referer && !isHostAllowed(referer)) return false
+
+    return true
+}
+
+function mapErrorToStatus(message: string) {
+    const normalized = message.toLowerCase()
+    if (normalized.includes('unauthorized')) return 401
+    if (normalized.includes('forbidden')) return 403
+    if (normalized.includes('not found')) return 404
+    return 400
+}
+
 const actionHandlers: Record<ClientActionName, ActionHandler> = {
     getSamples: async (payload) => getSamples(payload),
     assignTests: async (payload) => assignTests(payload),
@@ -134,6 +176,10 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
 }
 
 export async function POST(request: Request) {
+    if (!isAllowedOrigin(request)) {
+        return NextResponse.json({ error: 'Yêu cầu bị từ chối (CSRF)' }, { status: 403 })
+    }
+
     let body: ClientActionRequest
     try {
         body = (await request.json()) as ClientActionRequest
@@ -152,10 +198,18 @@ export async function POST(request: Request) {
 
     try {
         const result = await handler(body.payload)
+
+        if (result && typeof result === 'object' && 'error' in result && (result as any).error) {
+            const status = mapErrorToStatus(String((result as any).error))
+            return NextResponse.json(result, { status })
+        }
+
         return NextResponse.json(result ?? { success: true })
     } catch (error) {
         console.error(`Client action ${body.action} failed`, error)
         const message = error instanceof Error ? error.message : 'Đã xảy ra lỗi không mong muốn'
-        return NextResponse.json({ error: message })
+        const derivedStatus = mapErrorToStatus(message)
+        const status = derivedStatus === 400 ? 500 : derivedStatus
+        return NextResponse.json({ error: message }, { status })
     }
 }

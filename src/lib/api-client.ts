@@ -39,6 +39,10 @@ async function callClientAction<T = any>(action: ClientActionName, payload?: unk
     }
 
     const data = await response.json()
+    if (data && typeof data === 'object' && 'error' in data && (data as any).error) {
+        throw new Error(String((data as any).error))
+    }
+
     return data as T
 }
 
