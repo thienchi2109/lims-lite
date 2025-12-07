@@ -20,7 +20,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { MoreHorizontal, Plus, Star, Trash2, Check } from 'lucide-react'
-import { setDefaultMethod, removeMethodFromAssay } from '@/app/actions/assay-methods'
+import { setDefaultMethodClient, removeMethodFromAssayClient } from '@/lib/api-client'
 import { AddMethodToAssayDialog } from './add-method-to-assay-dialog'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -44,7 +44,7 @@ export function AssayMethodsList({ assayId, methods }: Props) {
 
     const handleSetDefault = (methodId: string) => {
         startTransition(async () => {
-            const result = await setDefaultMethod(assayId, methodId)
+            const result = await setDefaultMethodClient(assayId, methodId)
             if (result.error) {
                 toast.error(result.error)
             } else {
@@ -57,7 +57,7 @@ export function AssayMethodsList({ assayId, methods }: Props) {
         if (!confirm('Bạn có chắc chắn muốn xóa phương pháp này khỏi chỉ tiêu?')) return
 
         startTransition(async () => {
-            const result = await removeMethodFromAssay(assayMethodId)
+            const result = await removeMethodFromAssayClient(assayMethodId)
             if (result.error) {
                 toast.error(result.error)
             } else {

@@ -10,7 +10,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { deleteAssayDefinition } from '@/app/actions/assays'
+import { deleteAssayDefinitionClient } from '@/lib/api-client'
 import { toast } from 'sonner'
 import { Loader2, AlertTriangle } from 'lucide-react'
 
@@ -30,7 +30,7 @@ export function DeleteAssayDialog({ open, onOpenChange, assay }: Props) {
 
     const handleDelete = () => {
         startTransition(async () => {
-            const result = await deleteAssayDefinition(assay.id)
+            const result = await deleteAssayDefinitionClient(assay.id)
 
             if (result.error) {
                 toast.error(result.error)

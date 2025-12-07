@@ -26,9 +26,9 @@
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { assignTests } from '@/app/actions/samples'
+import { assignTestsClient } from '@/lib/api-client'
 import { sampleKeys } from '@/types/query-keys'
-import type { AssignTests } from '@/types'
+import type { AssignTests, SampleWithUser } from '@/types'
 import { toast } from 'sonner'
 
 interface UseAssignTestsOptions {
@@ -55,7 +55,7 @@ export function useAssignTests(options: UseAssignTestsOptions = {}) {
 
     return useMutation({
         mutationFn: async (data: AssignTests) => {
-            const result = await assignTests(data)
+            const result = await assignTestsClient(data)
 
             if ('error' in result) {
                 throw new Error(result.error)
@@ -73,17 +73,22 @@ export function useAssignTests(options: UseAssignTestsOptions = {}) {
             await queryClient.cancelQueries({ queryKey: sampleKeys.all })
 
             // Snapshot the previous value for rollback
-            const previousSample = queryClient.getQueryData(sampleKeys.detail(variables.sampleId))
+            const previousSample = queryClient.getQueryData<SampleWithUser | undefined>(
+                sampleKeys.detail(variables.sampleId)
+            )
 
             // Optimistically update sample status to 'assigned'
-            queryClient.setQueryData(sampleKeys.detail(variables.sampleId), (old: any) => {
-                if (!old) return old
-                return {
-                    ...old,
-                    status: 'assigned',
-                    updated_at: new Date().toISOString(),
+            queryClient.setQueryData<SampleWithUser | undefined>(
+                sampleKeys.detail(variables.sampleId),
+                (old) => {
+                    if (!old) return old
+                    return {
+                        ...old,
+                        status: 'assigned',
+                        updated_at: new Date().toISOString(),
+                    }
                 }
-            })
+            )
 
             // Return context with previous value for rollback
             return { previousSample }

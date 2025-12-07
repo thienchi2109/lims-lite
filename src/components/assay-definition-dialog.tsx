@@ -20,7 +20,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { createAssayDefinition, updateAssayDefinition, getMethods } from '@/app/actions/assays'
+import {
+    createAssayDefinitionClient,
+    updateAssayDefinitionClient,
+    fetchMethodsClient,
+} from '@/lib/api-client'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { AssayMethodsList } from './assay-methods-list'
@@ -96,11 +100,12 @@ export function AssayDefinitionDialog({ open, onOpenChange, mode, assay }: Props
 
     const loadMethods = async () => {
         setLoadingMethods(true)
-        const result = await getMethods()
+        const result = await fetchMethodsClient()
         if (result.data) {
+            const methodsData = result.data as Method[]
             // Deduplicate by name to ensure unique values in dropdown
-            const uniqueMethods = result.data.filter((method, index, self) =>
-                index === self.findIndex((m) => m.name === method.name)
+            const uniqueMethods = methodsData.filter((method, index, self) =>
+                index === self.findIndex((candidate) => candidate.name === method.name)
             )
             setMethods(uniqueMethods)
         }
@@ -119,6 +124,11 @@ export function AssayDefinitionDialog({ open, onOpenChange, mode, assay }: Props
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+
+        if (mode === 'edit' && !assay) {
+            toast.error('Không tìm thấy chỉ tiêu để cập nhật')
+            return
+        }
 
         // Build validation rules from individual fields
         const validationRules: Record<string, any> = {}
@@ -145,28 +155,22 @@ export function AssayDefinitionDialog({ open, onOpenChange, mode, assay }: Props
             validationRules.required = true
         }
 
-        const formData = new FormData()
-        if (mode === 'edit' && assay) {
-            formData.append('id', assay.id)
-        }
-        formData.append('name', name)
-
-        // Only append method_id in create mode
-        if (mode === 'create' && methodId) {
-            formData.append('method_id', methodId)
-        }
-
-        if (units) {
-            formData.append('units', units)
-        }
-        if (Object.keys(validationRules).length > 0) {
-            formData.append('validation_rules', JSON.stringify(validationRules))
+        const basePayload = {
+            name,
+            units: units || undefined,
+            validationRules: Object.keys(validationRules).length > 0 ? validationRules : undefined,
         }
 
         startTransition(async () => {
             const result = mode === 'create'
-                ? await createAssayDefinition(formData)
-                : await updateAssayDefinition(formData)
+                ? await createAssayDefinitionClient({
+                    ...basePayload,
+                    methodId: methodId || undefined,
+                })
+                : await updateAssayDefinitionClient({
+                    ...basePayload,
+                    id: assay!.id,
+                })
 
             if (result.error) {
                 toast.error(result.error)

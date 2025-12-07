@@ -17,8 +17,8 @@
  */
 
 import { useQuery } from '@tanstack/react-query'
-import { getSample } from '@/app/actions/samples'
 import { sampleKeys } from '@/types/query-keys'
+import type { SampleWithUser } from '@/types'
 
 interface UseSampleDetailOptions {
     /**
@@ -33,6 +33,27 @@ interface UseSampleDetailOptions {
     enabled?: boolean
 }
 
+type SampleDetailResponse = { data: SampleWithUser } | { error: string }
+
+export async function fetchSampleDetail(sampleId: string): Promise<SampleWithUser> {
+    const response = await fetch(`/api/samples/${sampleId}`, {
+        credentials: 'include',
+        cache: 'no-store',
+        headers: {
+            Accept: 'application/json',
+        },
+    })
+
+    const payload: SampleDetailResponse = await response.json()
+
+    if (!response.ok || !('data' in payload)) {
+        const message = 'error' in payload ? payload.error : 'Không thể tải chi tiết mẫu'
+        throw new Error(message)
+    }
+
+    return payload.data
+}
+
 export function useSampleDetail({ sampleId, enabled = true }: UseSampleDetailOptions) {
     return useQuery({
         queryKey: sampleKeys.detail(sampleId || ''),
@@ -41,13 +62,7 @@ export function useSampleDetail({ sampleId, enabled = true }: UseSampleDetailOpt
                 throw new Error('Sample ID is required')
             }
 
-            const result = await getSample(sampleId)
-
-            if ('error' in result) {
-                throw new Error(result.error)
-            }
-
-            return result.data
+            return fetchSampleDetail(sampleId)
         },
         // Only fetch if sampleId is provided and enabled is true
         enabled: enabled && !!sampleId,

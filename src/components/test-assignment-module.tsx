@@ -22,8 +22,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
-import { assignTests } from '@/app/actions/samples'
-import { getAssayDefinitions } from '@/app/actions/assays'
+import { assignTestsClient, fetchAssayDefinitionsClient } from '@/lib/api-client'
 import { toast } from 'sonner'
 
 interface TestAssignmentModuleProps {
@@ -71,7 +70,7 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus }
     async function fetchAssays(search: string) {
         setLoading(true)
         try {
-            const { data, error } = await getAssayDefinitions({ search, pageSize: 100 })
+            const { data, error } = await fetchAssayDefinitionsClient({ search, pageSize: 100 })
             if (error) {
                 toast.error('Không thể tải danh sách xét nghiệm')
                 console.error(error)
@@ -152,7 +151,7 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus }
                 }
             })
 
-            const result = await assignTests({
+            const result = await assignTestsClient({
                 sampleId,
                 tests: testsToAssign
             })

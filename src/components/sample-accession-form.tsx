@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { CreateSampleWithAssignmentsSchema, type CreateSampleWithAssignments } from '@/types'
-import { accessionAndAssignTests } from '@/app/actions/samples'
+import { accessionAndAssignTestsClient } from '@/lib/api-client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -85,7 +85,7 @@ export function SampleAccessionForm() {
                 })),
             }
 
-            const result = await accessionAndAssignTests(payload)
+            const result = await accessionAndAssignTestsClient(payload)
 
             if (result.error) {
                 setSubmitError(result.error)

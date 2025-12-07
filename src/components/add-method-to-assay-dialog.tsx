@@ -20,8 +20,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { addMethodToAssay } from '@/app/actions/assay-methods'
-import { getMethods } from '@/app/actions/assays'
+import { addMethodToAssayClient, fetchMethodsClient } from '@/lib/api-client'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 
@@ -57,11 +56,11 @@ export function AddMethodToAssayDialog({ open, onOpenChange, assayId, existingMe
 
     const loadMethods = async () => {
         setLoadingMethods(true)
-        const result = await getMethods()
+        const result = await fetchMethodsClient()
         if (result.data) {
             // Filter out methods that are already assigned to this assay
-            const availableMethods = result.data.filter(
-                (m) => !existingMethodIds.includes(m.id)
+            const availableMethods = (result.data as Method[]).filter(
+                (method) => !existingMethodIds.includes(method.id)
             )
             setMethods(availableMethods)
         }
@@ -79,16 +78,13 @@ export function AddMethodToAssayDialog({ open, onOpenChange, assayId, existingMe
 
         if (!methodId) return
 
-        const formData = new FormData()
-        formData.append('assay_id', assayId)
-        formData.append('method_id', methodId)
-        formData.append('is_default', String(isDefault))
-        if (notes) {
-            formData.append('notes', notes)
-        }
-
         startTransition(async () => {
-            const result = await addMethodToAssay(formData)
+            const result = await addMethodToAssayClient({
+                assayId,
+                methodId,
+                isDefault,
+                notes: notes || undefined,
+            })
 
             if (result.error) {
                 toast.error(result.error)

@@ -3,13 +3,12 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { CreateUserSchema, UpdateUserSchema, User, UserRole } from '@/types'
-import { createUser, updateUser } from '@/app/actions/users'
+import { CreateUserSchema, UpdateUserSchema, type CreateUser, type UpdateUser, type User } from '@/types'
+import { createUserClient, updateUserClient } from '@/lib/api-client'
 import { Button } from '@/components/ui/button'
 import {
     Form,
     FormControl,
-    FormDescription,
     FormField,
     FormItem,
     FormLabel,
@@ -39,52 +38,83 @@ export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const isEdit = !!user
 
-    // Form Schema depends on mode
-    const formSchema = isEdit 
-        ? UpdateUserSchema.extend({
-            password: z.string().min(8).optional().or(z.literal('')), // Allow empty for no change
-        })
-        : CreateUserSchema
-
-    const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
-        defaultValues: isEdit ? {
-            id: user.id,
-            full_name: user.full_name,
-            email: user.email || '',
-            lab: user.lab || '',
-            role: user.role,
-            password: '', // Empty for edit
-        } : {
-            username: '',
-            full_name: '',
-            email: '',
-            lab: '',
-            role: 'analyst',
-            password: '',
-        },
+    const updateSchema = UpdateUserSchema.extend({
+        password: z.string().min(8).optional().or(z.literal('')),
     })
 
-    async function onSubmit(data: any) {
+    type CreateUserFormValues = z.infer<typeof CreateUserSchema>
+    type UpdateUserFormValues = z.infer<typeof updateSchema>
+    type UserFormValues = CreateUserFormValues | UpdateUserFormValues
+
+    const form = useForm<UserFormValues>({
+        resolver: zodResolver(isEdit ? updateSchema : CreateUserSchema),
+        defaultValues: (isEdit
+            ? {
+                  id: user?.id ?? '',
+                  full_name: user?.full_name ?? '',
+                  email: user?.email || '',
+                  lab: user?.lab || '',
+                  role: user?.role ?? 'analyst',
+                  password: '',
+              }
+            : {
+                  username: '',
+                  full_name: '',
+                  email: '',
+                  lab: '',
+                  role: 'analyst',
+                  password: '',
+              }) as UserFormValues,
+    })
+
+    const hasActionError = (result: any): result is { error: string } =>
+        Boolean(result && typeof result === 'object' && 'error' in result)
+
+    async function onSubmit(values: UserFormValues) {
         setIsSubmitting(true)
         try {
-            if (isEdit) {
-                // Filter out empty password
-                const updateData = { ...data }
-                if (!updateData.password) delete updateData.password
-                
-                await updateUser(updateData)
-                // Use a generic toast or window alert if sonner not available?
-                // I'll assume standard window.alert for now if I can't find toaster
+            if (isEdit && user) {
+                const updateValues = values as UpdateUserFormValues
+                const updatePayload: UpdateUser = {
+                    id: user.id,
+                    full_name: updateValues.full_name || undefined,
+                    role: updateValues.role ?? user.role,
+                    email: updateValues.email || undefined,
+                    lab: updateValues.lab || undefined,
+                }
+
+                if (updateValues.password) {
+                    updatePayload.password = updateValues.password
+                }
+
+                const result = await updateUserClient(updatePayload)
+                if (hasActionError(result)) {
+                    throw new Error(result.error)
+                }
+                toast.success('Đã cập nhật người dùng thành công')
             } else {
-                await createUser(data)
+                const createValues = values as CreateUserFormValues
+                const createPayload: CreateUser = {
+                    username: createValues.username,
+                    full_name: createValues.full_name,
+                    password: createValues.password,
+                    role: createValues.role,
+                    email: createValues.email || undefined,
+                    lab: createValues.lab || undefined,
+                }
+
+                const result = await createUserClient(createPayload)
+                if (hasActionError(result)) {
+                    throw new Error(result.error)
+                }
+                toast.success('Đã tạo người dùng mới')
             }
             onSuccess()
-        } catch (error: any) {
+        } catch (error) {
             console.error('Submission error:', error)
-            form.setError('root', { 
-                message: error.message || 'Đã xảy ra lỗi. Vui lòng thử lại.' 
-            })
+            const message = error instanceof Error ? error.message : 'Đã xảy ra lỗi. Vui lòng thử lại.'
+            form.setError('root', { message })
+            toast.error(message)
         } finally {
             setIsSubmitting(false)
         }

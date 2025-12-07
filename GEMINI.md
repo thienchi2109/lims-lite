@@ -613,3 +613,53 @@ When creating commits in this project:
 5. **Review commit history for context:** `git log --oneline`
 
 See the [Development Workflow](#development-workflow) section for detailed git operations and the full commit creation process.
+
+### File Structure Expectations
+
+1. Files: 250-350 lines maximum, single responsibility
+2. Filenames: Descriptive and match content exactly
+
+3. Single class/function: OrderService.ts, calculateTax.py
+4. Multiple items: update_inventory_on_order_placed.go
+
+
+Headers: First 5-10 lines explain purpose for multi-item files only
+
+### Code Quality Standards
+
+Self-documenting: names explain intent completely
+Clear variable names: userAuthenticatedAt not uat
+Action-based functions: calculateTaxForOrder() not calcTax()
+Semantic directories: group by feature/domain, max 3-4 levels deep
+
+### Working Approach
+
+Navigate first: Understand structure before reading code
+Read purposefully: Only open files relevant to current task
+Trust the structure: Filename and location tell you what's inside
+Small focused changes: Maintain the 250-350 line limit
+Keep it clean: Don't break existing conventions
+
+### When Making Changes
+
+Maintain single-responsibility principle
+Keep filenames accurate to content
+Split files that exceed 350 lines
+Update file headers if purpose changes
+Follow existing naming patterns
+
+### Token Optimization
+
+Don't read entire files unnecessarily
+Use grep to find specific patterns
+Check file headers before reading full content
+Navigate using directory structure, not memory
+
+### Quality Check
+Before completing tasks, ensure:
+
+1. Files remain under 350 lines
+2. Filenames accurately describe content
+3. New code is self-documenting
+4. Directory structure stays logical
+5. Changes follow existing patterns

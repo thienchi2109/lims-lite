@@ -23,7 +23,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { deleteUser } from '@/app/actions/users'
+import { deleteUserClient } from '@/lib/api-client'
 
 interface UserListTableProps {
     users: User[]
@@ -56,10 +56,14 @@ export function UserListTable({
     const handleDelete = async (user: User) => {
         if (confirm(`Bạn có chắc chắn muốn xóa người dùng ${user.username}?`)) {
             try {
-                await deleteUser(user.id)
+                const result = await deleteUserClient(user.id)
+                if (result?.error) {
+                    throw new Error(result.error)
+                }
                 router.refresh()
-            } catch (error: any) {
-                alert(error.message)
+            } catch (error) {
+                const message = error instanceof Error ? error.message : 'Không thể xóa người dùng'
+                alert(message)
             }
         }
     }

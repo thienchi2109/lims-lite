@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { updateSample } from '@/app/actions/samples'
+import { updateSampleClient } from '@/lib/api-client'
 import { SampleWithUser } from '@/types'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
@@ -56,7 +56,7 @@ export function SampleEditDialog({
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         setIsSubmitting(true)
         try {
-            const result = await updateSample({
+            const result = await updateSampleClient({
                 id: sample.id,
                 client_name: values.client_name,
             })

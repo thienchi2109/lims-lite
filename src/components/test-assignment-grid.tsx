@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo, useEffect } from 'react'
-import { getAssayDefinitions, getMethods } from '@/app/actions/assays'
+import { fetchAssayDefinitionsClient, fetchMethodsClient } from '@/lib/api-client'
 import {
     Search,
     Beaker,
@@ -115,7 +115,7 @@ export function TestAssignmentGrid({
     }, [searchQuery])
 
     const loadMethods = async () => {
-        const result = await getMethods()
+        const result = await fetchMethodsClient()
         if (result.data) {
             setMethods(result.data)
         }
@@ -125,7 +125,7 @@ export function TestAssignmentGrid({
         setIsLoading(true)
         try {
             // Fetch assays with method filter and search
-            const result = await getAssayDefinitions({
+            const result = await fetchAssayDefinitionsClient({
                 pageSize: 100,
                 methodId: selectedMethodId,
                 search: search

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { approveResults, cancelApproval } from '@/app/actions/results'
+import { approveResultsClient, cancelApprovalClient } from '@/lib/api-client'
 import {
     Dialog,
     DialogContent,
@@ -46,7 +46,7 @@ export function ApprovalDialog({
 
         try {
             if (mode === 'approve') {
-                const result = await approveResults({
+                const result = await approveResultsClient({
                     sampleId,
                     resultIds,
                     note: note.trim() || undefined,
@@ -61,7 +61,7 @@ export function ApprovalDialog({
                     router.refresh()
                 }
             } else {
-                const result = await cancelApproval({
+                const result = await cancelApprovalClient({
                     sampleId,
                     resultIds,
                     reason: note.trim(),

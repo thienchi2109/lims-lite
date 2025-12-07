@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { logout } from '@/app/actions/auth'
+import { useRouter } from 'next/navigation'
+import { logoutClient } from '@/lib/api-client'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -31,10 +32,17 @@ interface UserProfileDropdownProps {
 
 export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
     const [showLogoutDialog, setShowLogoutDialog] = useState(false)
+    const router = useRouter()
 
     const handleLogout = async () => {
         setShowLogoutDialog(false)
-        await logout()
+        try {
+            await logoutClient()
+        } catch (error) {
+            console.error('Logout failed', error)
+        } finally {
+            router.replace('/login')
+        }
     }
 
     const initials = user.full_name

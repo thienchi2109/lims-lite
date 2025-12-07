@@ -7,7 +7,7 @@ import {
     flexRender,
     type ColumnDef,
 } from '@tanstack/react-table'
-import { updateSample } from '@/app/actions/samples'
+import { updateSampleClient } from '@/lib/api-client'
 import { type SampleWithUser } from '@/types'
 import { formatDate } from '@/lib/utils-lims'
 import { Button } from '@/components/ui/button'
@@ -57,7 +57,7 @@ export function SampleListTable({
     }, [serverSamples])
 
     const handleUpdateCell = async (sampleId: string, field: 'client_name', value: string) => {
-        const result = await updateSample({
+        const result = await updateSampleClient({
             id: sampleId,
             [field]: value,
         })

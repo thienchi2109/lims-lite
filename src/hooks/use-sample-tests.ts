@@ -17,7 +17,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query'
-import { getSampleTests } from '@/app/actions/samples'
+import { fetchSampleTestsClient } from '@/lib/api-client'
 import { sampleKeys } from '@/types/query-keys'
 
 interface UseSampleTestsOptions {
@@ -41,7 +41,7 @@ export function useSampleTests({ sampleId, enabled = true }: UseSampleTestsOptio
                 throw new Error('Sample ID is required')
             }
 
-            const result = await getSampleTests(sampleId)
+            const result = await fetchSampleTestsClient(sampleId)
 
             if ('error' in result) {
                 throw new Error(result.error)

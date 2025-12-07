@@ -31,8 +31,13 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
-import { getResultsBySample, saveBatchResults, validateResultValue } from '@/app/actions/results'
-import { submitSampleForReview, getSample } from '@/app/actions/samples'
+import {
+    fetchSampleResultsClient,
+    saveBatchResultsClient,
+    submitSampleForReviewClient,
+} from '@/lib/api-client'
+import { fetchSampleDetail } from '@/hooks/use-sample-detail'
+import { validateNumericValue, validateTextValue } from '@/lib/utils-lims'
 import { ResultWithAssay, SampleStatus } from '@/types'
 import { ResultCellEditor } from '@/components/result-cell-editor'
 import { BatchSaveToolbar } from '@/components/batch-save-toolbar'
@@ -69,7 +74,7 @@ export function AssignedTestsPanel({ sampleId }: AssignedTestsPanelProps) {
     const fetchTests = useCallback(async () => {
         try {
             setLoading(true)
-            const { data, error } = await getResultsBySample(sampleId)
+            const { data, error } = await fetchSampleResultsClient(sampleId)
             if (error) {
                 setError(error)
             } else if (data) {
@@ -136,7 +141,7 @@ export function AssignedTestsPanel({ sampleId }: AssignedTestsPanelProps) {
                 value,
             }))
 
-            const result = await saveBatchResults({ results: updates })
+            const result = await saveBatchResultsClient({ results: updates })
 
             if (result.error) {
                 toast.error(result.error)
@@ -171,7 +176,7 @@ export function AssignedTestsPanel({ sampleId }: AssignedTestsPanelProps) {
     const handleSubmitForReview = async () => {
         setIsSubmitting(true)
         try {
-            const result = await submitSampleForReview(sampleId)
+            const result = await submitSampleForReviewClient(sampleId)
             if (result.error) {
                 toast.error(result.error)
             } else {
@@ -190,11 +195,7 @@ export function AssignedTestsPanel({ sampleId }: AssignedTestsPanelProps) {
     const handlePrint = async () => {
         try {
             // Fetch full sample details
-            const { data: sampleData, error: sampleError } = await getSample(sampleId)
-            if (sampleError || !sampleData) {
-                toast.error('Không thể tải thông tin mẫu để in')
-                return
-            }
+            const sampleData = await fetchSampleDetail(sampleId)
 
             // Generate HTML
             const htmlContent = generatePrintTemplate(sampleData, results)
@@ -456,4 +457,17 @@ export function AssignedTestsPanel({ sampleId }: AssignedTestsPanelProps) {
             </Dialog>
         </div>
     )
+}
+
+async function validateResultValue(value: string, rules: Record<string, any>) {
+    const normalizedRules = rules || {}
+    if (
+        normalizedRules.type === 'numeric' ||
+        normalizedRules.min !== undefined ||
+        normalizedRules.max !== undefined
+    ) {
+        return validateNumericValue(value, normalizedRules)
+    }
+
+    return validateTextValue(value, normalizedRules)
 }

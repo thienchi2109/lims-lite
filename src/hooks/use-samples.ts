@@ -22,7 +22,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query'
-import { getSamples } from '@/app/actions/samples'
+import { fetchSamplesClient } from '@/lib/api-client'
 import { sampleKeys } from '@/types/query-keys'
 import type { SampleListParams } from '@/types'
 
@@ -43,7 +43,7 @@ export function useSamples({ params, enabled = true }: UseSamplesOptions) {
     return useQuery({
         queryKey: sampleKeys.list(params),
         queryFn: async () => {
-            const result = await getSamples(params)
+            const result = await fetchSamplesClient(params)
 
             if ('error' in result) {
                 throw new Error(result.error)
