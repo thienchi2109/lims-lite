@@ -385,7 +385,7 @@ lims-lite/
 ### **State Management**
 - React Server Components for data fetching
 - `useState`/`useReducer` for local UI state
-- Server Actions for mutations
+- Server Actions stay server-only; client components call them through `src/lib/api-client.ts` hitting `/api/client-actions` (and `/api/auth/logout`) instead of importing `src/app/actions/*` directly
 - No global state library (keep it simple)
 
 ## **Common Patterns**

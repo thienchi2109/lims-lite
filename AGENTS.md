@@ -24,6 +24,7 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - Database work only via SQL migrations in `supabase/migrations`; include RLS policies/triggers and apply through Docker (not the Supabase dashboard).
 - All UI text is Vietnamese; use `docs/vietnamese_dictionary.md` and keep validation/type safety with Zod schemas and strict TypeScript.
 - Build incrementally: validate inputs in Server Actions, lean on existing patterns/components listed in `CLAUDE.md`.
+- Client-side components must call `src/lib/api-client.ts` (which hits `/api/client-actions` and `/api/auth/logout`) for data fetching/mutations; do not import `src/app/actions/*` directly into client code.
 
 ## Superpowers Skills
 
