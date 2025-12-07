@@ -71,7 +71,8 @@ export function ResultCellEditor({
                 }}
                 disabled={!isEditable}
                 className={cn(
-                    'pr-16 transition-all duration-200',
+                    'transition-all duration-200',
+                    validationError || units ? 'pr-8' : 'pr-3',
                     validationError &&
                     'border-red-500 bg-red-50 focus:border-red-500 focus:ring-red-500 dark:bg-red-950/20',
                     isPending &&
