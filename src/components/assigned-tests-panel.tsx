@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
+import { sampleKeys } from '@/types/query-keys'
 import {
     Table,
     TableBody,
@@ -46,6 +48,7 @@ interface AssignedTestsPanelProps {
 export function AssignedTestsPanel({ sampleId }: AssignedTestsPanelProps) {
     const router = useRouter()
     const searchParams = useSearchParams()
+    const queryClient = useQueryClient()
     const [results, setResults] = useState<ResultWithAssay[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -222,7 +225,9 @@ export function AssignedTestsPanel({ sampleId }: AssignedTestsPanelProps) {
         params.set('sampleId', targetSampleId)
         params.set('page', '1')
         router.push(`?${params.toString()}`)
-        router.refresh()
+        
+        // Invalidate queries to trigger refetch with new cache
+        queryClient.invalidateQueries({ queryKey: sampleKeys.all })
     }
 
     // Keyboard shortcut for save

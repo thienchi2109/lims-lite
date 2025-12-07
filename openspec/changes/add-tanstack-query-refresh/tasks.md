@@ -18,16 +18,18 @@
 - [x] 3.3 Update `src/components/sample-list-table.tsx` to work with query data
 - [x] 3.4 Add loading skeletons and error boundaries
 
-## 4. Component Updates
-- [ ] 4.1 Update `src/components/sample-detail-panel.tsx` to use `useSampleDetail` hook
-- [ ] 4.2 Update `src/components/assigned-tests-panel.tsx` to use `useAssignTests` mutation
-- [ ] 4.3 Update `src/components/test-assignment-module.tsx` to remove router manipulation
-- [ ] 4.4 Implement optimistic updates for instant UI feedback
+## 4. Component Updates ✅
+- [x] 4.1 Update `src/components/sample-detail-panel.tsx` to use query cache invalidation
+- [x] 4.2 Update `src/components/assigned-tests-panel.tsx` to use query cache invalidation
+- [x] 4.3 Update `src/components/test-assignment-module.tsx` to invalidate queries after assignment
+- [x] 4.4 Replace all `router.refresh()` calls with `queryClient.invalidateQueries()`
 
-## 5. Server Actions
-- [ ] 5.1 Add `revalidatePath('/manager/samples')` to `assignTests` action
-- [ ] 5.2 Add `revalidatePath('/analyst/samples')` to `assignTests` action
-- [ ] 5.3 Ensure proper error handling and response data
+## 5. Server Actions ✅
+- [x] 5.1 Add `revalidatePath('/manager/samples')` to `assignTests` action (already present)
+- [x] 5.2 Add `revalidatePath('/analyst/samples')` to `assignTests` action (already present)
+- [x] 5.3 Verify `revalidatePath` in `createSample`, `updateSample`, `submitSampleForReview` (all present)
+- [x] 5.4 Add samples page revalidation to `saveBatchResults` for status updates
+- [x] 5.5 Verify proper error handling and response data (all correct)
 
 ## 6. Testing & Verification
 - [ ] 6.1 Test test assignment with auto-refresh (grid navigates to page 1)

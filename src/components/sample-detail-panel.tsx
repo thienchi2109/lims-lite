@@ -14,7 +14,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
 import { SampleEditDialog } from '@/components/sample-edit-dialog'
-import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
+import { sampleKeys } from '@/types/query-keys'
 
 interface SampleDetailPanelProps {
     sample: SampleWithUser | null
@@ -22,7 +23,7 @@ interface SampleDetailPanelProps {
 
 export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
     const [editDialogOpen, setEditDialogOpen] = useState(false)
-    const router = useRouter()
+    const queryClient = useQueryClient()
 
     if (!sample) {
         return (
@@ -34,7 +35,8 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
     }
 
     const handleEditSuccess = () => {
-        router.refresh()
+        // Invalidate sample queries to refetch fresh data
+        queryClient.invalidateQueries({ queryKey: sampleKeys.all })
     }
 
     return (

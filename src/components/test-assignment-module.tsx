@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState, useMemo, useCallback, useTransition, useDeferredValue } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { sampleKeys } from '@/types/query-keys'
 import {
     Search,
     FlaskConical,
@@ -49,6 +51,7 @@ const CATEGORIES = [
 ]
 
 export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus }: TestAssignmentModuleProps) {
+    const queryClient = useQueryClient()
     const [assays, setAssays] = useState<Assay[]>([])
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
@@ -171,8 +174,13 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus }
                 : `Đã chỉ định ${insertedCount} xét nghiệm mới`
 
             toast.success(message)
+            
+            // Invalidate all sample queries to trigger refetch
+            queryClient.invalidateQueries({ queryKey: sampleKeys.all })
+            
             onSuccess()
             onClose()
+            
             // Refocus on the sample after successful assignment
             if (onRefocus) {
                 onRefocus(sampleId)
