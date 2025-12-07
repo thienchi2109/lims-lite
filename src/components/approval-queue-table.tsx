@@ -1,18 +1,20 @@
 'use client'
 
+import { useState } from 'react'
 import {
     type ColumnDef,
     flexRender,
     getCoreRowModel,
+    getPaginationRowModel,
     useReactTable,
 } from '@tanstack/react-table'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import Link from 'next/link'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
+import { ChevronLeft, ChevronRight, ClipboardPen } from 'lucide-react'
 
 // Type for approval queue data
 interface ApprovalQueueSample {
@@ -21,6 +23,7 @@ interface ApprovalQueueSample {
     client_name: string | null
     status: string
     received_at: string
+    updated_at: string
     received_by_name: string | null
     total_tests: number
     entered_count: number
@@ -38,6 +41,10 @@ export function ApprovalQueueTable({ data, selectedSampleId }: ApprovalQueueTabl
     const pathname = usePathname()
     const searchParams = useSearchParams()
 
+    // Client-side pagination state
+    const [pageIndex, setPageIndex] = useState(0)
+    const [pageSize, setPageSize] = useState(20)
+
     const handleRowClick = (sampleId: string) => {
         const params = new URLSearchParams(searchParams.toString())
         params.set('sampleId', sampleId)
@@ -48,18 +55,20 @@ export function ApprovalQueueTable({ data, selectedSampleId }: ApprovalQueueTabl
         {
             accessorKey: 'sample_id',
             header: 'Mã mẫu',
-            cell: ({ row }) => {
-                return (
-                    <span className="font-medium text-primary">
-                        {row.getValue('sample_id')}
-                    </span>
-                )
-            },
+            cell: ({ row }) => (
+                <span className="font-mono font-medium text-slate-700 dark:text-slate-200">
+                    {row.getValue('sample_id')}
+                </span>
+            ),
         },
         {
             accessorKey: 'client_name',
             header: 'Khách hàng',
-            cell: ({ row }) => row.getValue('client_name') || '-',
+            cell: ({ row }) => (
+                <span className="text-sm text-slate-900 dark:text-slate-100">
+                    {row.getValue('client_name') || '-'}
+                </span>
+            ),
         },
         {
             id: 'progress',
@@ -75,12 +84,12 @@ export function ApprovalQueueTable({ data, selectedSampleId }: ApprovalQueueTabl
                         </span>
                         <div className="flex gap-1">
                             {entered_count > 0 && (
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="secondary" className="text-xs font-normal">
                                     {entered_count} đã nhập
                                 </Badge>
                             )}
                             {approved_count > 0 && (
-                                <Badge variant="default" className="text-xs bg-green-600">
+                                <Badge variant="default" className="text-xs bg-green-600 hover:bg-green-700 font-normal">
                                     {approved_count} đã duyệt
                                 </Badge>
                             )}
@@ -91,14 +100,25 @@ export function ApprovalQueueTable({ data, selectedSampleId }: ApprovalQueueTabl
         },
         {
             accessorKey: 'received_at',
-            header: 'Đã nhận',
+            header: 'Ngày nhận',
             cell: ({ row }) => {
                 const date = new Date(row.getValue('received_at'))
                 return (
-                    <div className="flex flex-col">
-                        <span className="text-sm">{format(date, 'MMM d, yyyy')}</span>
-                        <span className="text-xs text-muted-foreground">{format(date, 'HH:mm')}</span>
-                    </div>
+                    <span className="text-sm text-muted-foreground font-mono">
+                        {format(date, 'HH:mm, dd/MM/yyyy')}
+                    </span>
+                )
+            },
+        },
+        {
+            accessorKey: 'updated_at',
+            header: 'Ngày cập nhật',
+            cell: ({ row }) => {
+                const date = new Date(row.getValue('updated_at'))
+                return (
+                    <span className="text-sm text-muted-foreground font-mono">
+                        {format(date, 'HH:mm, dd/MM/yyyy')}
+                    </span>
                 )
             },
         },
@@ -108,12 +128,13 @@ export function ApprovalQueueTable({ data, selectedSampleId }: ApprovalQueueTabl
             cell: ({ row }) => {
                 return (
                     <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
                         onClick={(e) => {
                             e.stopPropagation()
                             handleRowClick(row.original.id)
                         }}
+                        className="h-8 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                     >
                         Xem xét
                     </Button>
@@ -126,53 +147,119 @@ export function ApprovalQueueTable({ data, selectedSampleId }: ApprovalQueueTabl
         data,
         columns,
         getCoreRowModel: getCoreRowModel(),
+        getPaginationRowModel: getPaginationRowModel(),
+        state: {
+            pagination: {
+                pageIndex,
+                pageSize,
+            },
+        },
+        onPaginationChange: (updater) => {
+            if (typeof updater === 'function') {
+                const newState = updater({ pageIndex, pageSize })
+                setPageIndex(newState.pageIndex)
+                setPageSize(newState.pageSize)
+            } else {
+                setPageIndex(updater.pageIndex)
+                setPageSize(updater.pageSize)
+            }
+        },
     })
 
-    if (data.length === 0) {
-        return (
-            <div className="rounded-lg border border-dashed p-8 text-center">
-                <p className="text-muted-foreground">Không có mẫu nào chờ phê duyệt</p>
-            </div>
-        )
-    }
+    const totalCount = data.length
+    const pageCount = table.getPageCount()
+    const currentPage = table.getState().pagination.pageIndex + 1
 
     return (
-        <div className="rounded-md border bg-white dark:bg-slate-900 h-full overflow-auto">
-            <Table>
-                <TableHeader className="sticky top-0 bg-white dark:bg-slate-900 z-10 shadow-sm">
-                    {table.getHeaderGroups().map((headerGroup) => (
-                        <TableRow key={headerGroup.id}>
-                            {headerGroup.headers.map((header) => (
-                                <TableHead key={header.id}>
-                                    {header.isPlaceholder
-                                        ? null
-                                        : flexRender(header.column.columnDef.header, header.getContext())}
-                                </TableHead>
+        <div className="space-y-4 h-full flex flex-col">
+            {/* Table */}
+            <div className="rounded-lg border border-slate-200 dark:border-slate-800 flex-1 overflow-auto bg-white dark:bg-slate-950 relative shadow-sm">
+                {data.length === 0 ? (
+                    <div className="p-12 text-center text-muted-foreground flex flex-col items-center gap-3">
+                        <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                            <ClipboardPen className="h-6 w-6 text-slate-400" />
+                        </div>
+                        <p>Không có mẫu nào chờ phê duyệt</p>
+                    </div>
+                ) : (
+                    <Table>
+                        <TableHeader className="sticky top-0 bg-slate-50/95 backdrop-blur supports-[backdrop-filter]:bg-slate-50/60 dark:bg-slate-900/95 z-10 shadow-sm border-b border-slate-200 dark:border-slate-800">
+                            {table.getHeaderGroups().map((headerGroup) => (
+                                <TableRow key={headerGroup.id} className="hover:bg-transparent border-none">
+                                    {headerGroup.headers.map((header) => (
+                                        <TableHead key={header.id} className="h-9 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                            {header.isPlaceholder
+                                                ? null
+                                                : flexRender(
+                                                    header.column.columnDef.header,
+                                                    header.getContext()
+                                                )}
+                                        </TableHead>
+                                    ))}
+                                </TableRow>
                             ))}
-                        </TableRow>
-                    ))}
-                </TableHeader>
-                <TableBody>
-                    {table.getRowModel().rows.map((row) => (
-                        <TableRow
-                            key={row.id}
-                            className={cn(
-                                'cursor-pointer transition-colors',
-                                row.original.id === selectedSampleId
-                                    ? 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 border-l-4 border-l-blue-500'
-                                    : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                            )}
-                            onClick={() => handleRowClick(row.original.id)}
+                        </TableHeader>
+                        <TableBody>
+                            {table.getRowModel().rows.map((row) => {
+                                const isSelected = row.original.id === selectedSampleId
+                                return (
+                                    <TableRow
+                                        key={row.id}
+                                        onClick={() => handleRowClick(row.original.id)}
+                                        className={`cursor-pointer transition-colors border-slate-100 dark:border-slate-800 ${isSelected
+                                            ? 'bg-sky-50 dark:bg-sky-900/20 hover:bg-sky-100 dark:hover:bg-sky-900/30'
+                                            : 'hover:bg-slate-50/80 dark:hover:bg-slate-900/50'
+                                            }`}
+                                    >
+                                        {row.getVisibleCells().map((cell) => (
+                                            <TableCell key={cell.id} className="py-2">
+                                                {flexRender(
+                                                    cell.column.columnDef.cell,
+                                                    cell.getContext()
+                                                )}
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                )
+                            })}
+                        </TableBody>
+                    </Table>
+                )}
+            </div>
+
+            {/* Pagination */}
+            {data.length > 0 && (
+                <div className="flex items-center justify-between shrink-0 px-1">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>
+                            Hiển thị <span className="font-medium text-foreground">{Math.min((currentPage - 1) * pageSize + 1, totalCount)}</span> - <span className="font-medium text-foreground">{Math.min(currentPage * pageSize, totalCount)}</span> của <span className="font-medium text-foreground">{totalCount}</span> mẫu
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => table.previousPage()}
+                            disabled={!table.getCanPreviousPage()}
+                            className="h-8 w-8 p-0"
                         >
-                            {row.getVisibleCells().map((cell) => (
-                                <TableCell key={cell.id}>
-                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                </TableCell>
-                            ))}
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <div className="text-xs font-medium min-w-[3rem] text-center">
+                            {currentPage} / {pageCount}
+                        </div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => table.nextPage()}
+                            disabled={!table.getCanNextPage()}
+                            className="h-8 w-8 p-0"
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

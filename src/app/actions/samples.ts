@@ -510,6 +510,7 @@ export async function getSamplesForApproval() {
                 client_name,
                 status,
                 received_at,
+                updated_at,
                 received_by_user:users!samples_received_by_fkey(full_name)
             `
             )

@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import Link from 'next/link'
 import { FlaskConical, CheckCircle2, ClipboardList, User } from 'lucide-react'
 import { DashboardHeader } from '@/components/dashboard-header'
+import { getSamplesForApproval } from '@/app/actions/samples'
+import { Badge } from '@/components/ui/badge'
 
 export default async function ManagerDashboard() {
     const supabase = await createClient()
@@ -21,6 +23,9 @@ export default async function ManagerDashboard() {
         .select('full_name, role')
         .eq('id', user.id)
         .single()
+
+    const { data: samples } = await getSamplesForApproval()
+    const pendingCount = samples?.length || 0
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -64,7 +69,14 @@ export default async function ManagerDashboard() {
                                         <CheckCircle2 className="h-6 w-6 text-green-600" />
                                     </div>
                                     <div>
-                                        <CardTitle>Hàng đợi phê duyệt</CardTitle>
+                                        <CardTitle className="flex items-center gap-2">
+                                            Hàng đợi phê duyệt
+                                            {pendingCount > 0 && (
+                                                <Badge variant="destructive" className="rounded-full px-2 py-0.5 text-xs">
+                                                    {pendingCount}
+                                                </Badge>
+                                            )}
+                                        </CardTitle>
                                         <CardDescription>
                                             Xem xét và phê duyệt kết quả xét nghiệm
                                         </CardDescription>
@@ -130,4 +142,5 @@ export default async function ManagerDashboard() {
             </main>
         </div>
     )
+
 }
