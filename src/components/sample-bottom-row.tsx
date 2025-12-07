@@ -6,9 +6,23 @@ import { AssignedTestsPanel } from '@/components/assigned-tests-panel'
 
 interface SampleBottomRowProps {
     sample: SampleWithUser | null
+    isLoadingSample?: boolean
 }
 
-export function SampleBottomRow({ sample }: SampleBottomRowProps) {
+export function SampleBottomRow({ sample, isLoadingSample = false }: SampleBottomRowProps) {
+    if (isLoadingSample) {
+        return (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+                <div className="h-full min-h-0 flex items-center justify-center rounded-lg border border-slate-200 bg-white p-6">
+                    <div className="text-sm text-slate-500">Đang tải chi tiết mẫu...</div>
+                </div>
+                <div className="h-full min-h-0 flex items-center justify-center rounded-lg border border-slate-200 bg-white p-6">
+                    <div className="text-sm text-slate-500">Đang tải...</div>
+                </div>
+            </div>
+        )
+    }
+
     if (!sample) {
         return (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">

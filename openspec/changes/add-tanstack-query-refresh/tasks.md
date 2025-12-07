@@ -12,11 +12,11 @@
 - [x] 2.5 Create `src/hooks/use-sample-tests.ts` for fetching assigned tests (bonus)
 - [x] 2.6 Create `src/hooks/index.ts` barrel export (bonus)
 
-## 3. Page Refactoring
-- [ ] 3.1 Create `src/components/samples-page-client.tsx` client component
-- [ ] 3.2 Update `src/app/(dashboard)/manager/samples/page.tsx` to hybrid architecture
-- [ ] 3.3 Update `src/components/sample-list-table.tsx` to work with query data
-- [ ] 3.4 Add loading skeletons and error boundaries
+## 3. Page Refactoring ✅
+- [x] 3.1 Create `src/components/samples-page-client.tsx` client component
+- [x] 3.2 Update `src/app/(dashboard)/manager/samples/page.tsx` to hybrid architecture
+- [x] 3.3 Update `src/components/sample-list-table.tsx` to work with query data
+- [x] 3.4 Add loading skeletons and error boundaries
 
 ## 4. Component Updates
 - [ ] 4.1 Update `src/components/sample-detail-panel.tsx` to use `useSampleDetail` hook

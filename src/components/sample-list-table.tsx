@@ -78,7 +78,8 @@ export function SampleListTable({
     }
 
     const handleEditSuccess = () => {
-        router.refresh()
+        // TanStack Query will handle refresh via cache invalidation
+        // No need for router.refresh()
     }
 
     const updateQuery = (updates: Record<string, string | null>) => {

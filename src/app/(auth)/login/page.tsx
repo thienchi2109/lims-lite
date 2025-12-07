@@ -5,7 +5,6 @@ import { login } from '@/app/actions/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import Image from 'next/image'
 import { Lock, User, Loader2, AlertCircle } from 'lucide-react'
 
@@ -21,115 +20,149 @@ export default function LoginPage() {
     const [state, formAction, isPending] = useActionState<FormState, FormData>(login, null)
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-4">
-            <div className="w-full max-w-lg md:max-w-xl space-y-8">
-                <div className="flex flex-col items-center justify-center space-y-2 text-center">
-                    <div className="mb-2">
-                        <Image
-                            src="/cdc-logo-400x400.png"
-                            alt="CDC Logo"
-                            width={180}
-                            height={180}
-                            className="h-48 w-48 object-contain"
-                            priority
-                        />
-                    </div>
-                    <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                        Chào mừng trở lại
-                    </h1>
-                    <p className="text-sm text-muted-foreground">
-                        Đăng nhập vào tài khoản của bạn để tiếp tục
+        <div className="min-h-screen w-full grid grid-cols-1 lg:grid-cols-2">
+            {/* Left Column - Hero Image & Branding */}
+            <div className="hidden lg:flex flex-col relative overflow-hidden bg-slate-900">
+                <Image
+                    src="/2305.i039.008.F.m004.c9.biotechnology isometric.jpg"
+                    alt="Mô hình phòng xét nghiệm hiện đại"
+                    fill
+                    className="object-cover"
+                    priority
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/50 to-transparent" />
+                
+                <div className="relative z-10 mt-auto p-12 text-center space-y-4">
+                    <h2 className="text-3xl font-bold tracking-tight text-white whitespace-nowrap">
+                        Hệ thống Quản lý thông tin Xét nghiệm
+                    </h2>
+                    <p className="text-slate-200 text-lg leading-relaxed max-w-lg mx-auto">
+                        Nền tảng quản lý xét nghiệm hiện đại, chính xác và bảo mật dành cho Trung tâm Kiểm soát Bệnh tật.
                     </p>
                 </div>
+            </div>
 
-                <Card className="border-border/50 shadow-xl">
-                    <CardHeader className="space-y-1 pb-6">
-                        <CardTitle className="text-lg md:text-xl text-center leading-6 md:leading-7 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-600 dark:from-blue-400 dark:via-blue-300 dark:to-indigo-400 bg-clip-text text-transparent font-bold">
-                            Hệ thống quản lý thông tin khoa Xét nghiệm
-                        </CardTitle>
-                        <CardDescription className="text-center">
-                            Trung tâm Kiểm soát Bệnh tật (CDC)
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <form action={formAction} className="space-y-5">
-                            <div className="space-y-2">
-                                <Label htmlFor="username">Tên đăng nhập</Label>
-                                <div className="relative">
-                                    <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        id="username"
-                                        name="username"
-                                        type="text"
-                                        placeholder="Nhập tên đăng nhập"
-                                        required
-                                        disabled={isPending}
-                                        className="pl-9"
-                                        aria-invalid={!!state?.error?.username}
-                                        aria-describedby={state?.error?.username ? "username-error" : undefined}
-                                    />
-                                </div>
-                                {state?.error?.username && (
-                                    <p id="username-error" className="text-sm text-destructive flex items-center gap-1 mt-1">
-                                        <AlertCircle className="h-3 w-3" />
-                                        {state.error.username[0]}
-                                    </p>
-                                )}
+            {/* Right Column - Login Form */}
+            <div className="flex items-center justify-center p-8 lg:p-24 bg-white dark:bg-slate-950">
+                <div className="w-full max-w-[400px] space-y-8 animate-in slide-in-from-right-8 duration-700">
+                    {/* Header */}
+                    <div className="space-y-6 flex flex-col items-center text-center">
+                        <div className="flex flex-col items-center gap-4">
+                            <Image 
+                                src="/cdc-logo-400x400.png" 
+                                alt="CDC Logo" 
+                                width={80} 
+                                height={80} 
+                                className="w-20 h-20 object-contain drop-shadow-sm" 
+                            />
+                            <div className="flex flex-col items-center">
+                                <span className="font-bold text-xl leading-none text-slate-900 dark:text-slate-100">CDC LIMS</span>
+                                <span className="text-sm text-slate-500 font-medium mt-1">Secure Access</span>
                             </div>
+                        </div>
+                        <div className="space-y-2">
+                            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
+                                Chào mừng trở lại
+                            </h1>
+                            <p className="text-slate-500 dark:text-slate-400">
+                                Vui lòng nhập thông tin đăng nhập để tiếp tục.
+                            </p>
+                        </div>
+                    </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="password">Mật khẩu</Label>
-                                <div className="relative">
-                                    <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        id="password"
-                                        name="password"
-                                        type="password"
-                                        placeholder="Nhập mật khẩu"
-                                        required
-                                        disabled={isPending}
-                                        className="pl-9"
-                                        aria-invalid={!!state?.error?.password}
-                                        aria-describedby={state?.error?.password ? "password-error" : undefined}
-                                    />
-                                </div>
-                                {state?.error?.password && (
-                                    <p id="password-error" className="text-sm text-destructive flex items-center gap-1 mt-1">
-                                        <AlertCircle className="h-3 w-3" />
-                                        {state.error.password[0]}
-                                    </p>
-                                )}
+                    {/* Form */}
+                    <form action={formAction} className="space-y-5">
+                        <div className="space-y-2">
+                            <Label htmlFor="username">Tên đăng nhập</Label>
+                            <div className="relative group">
+                                <User className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 group-hover:text-blue-500 transition-colors" />
+                                <Input
+                                    id="username"
+                                    name="username"
+                                    type="text"
+                                    placeholder="user@example.com"
+                                    required
+                                    disabled={isPending}
+                                    className="pl-10 border-slate-200 dark:border-slate-800 focus-visible:ring-blue-500 transition-all duration-200 bg-slate-50/50 dark:bg-slate-900/50"
+                                    aria-invalid={!!state?.error?.username}
+                                    aria-describedby={state?.error?.username ? "username-error" : undefined}
+                                />
                             </div>
-
-                            {state?.error?.general && (
-                                <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md flex items-start gap-2 border border-destructive/20">
-                                    <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                                    <p>{state.error.general[0]}</p>
-                                </div>
+                            {state?.error?.username && (
+                                <p id="username-error" className="text-sm text-destructive flex items-center gap-1 mt-1 animate-in slide-in-from-top-1">
+                                    <AlertCircle className="h-3 w-3" />
+                                    {state.error.username[0]}
+                                </p>
                             )}
+                        </div>
 
-                            <Button type="submit" className="w-full" disabled={isPending} size="lg">
-                                {isPending ? (
-                                    <>
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Đang đăng nhập...
-                                    </>
-                                ) : (
-                                    'Đăng nhập'
-                                )}
-                            </Button>
-                        </form>
-                    </CardContent>
-                    <CardFooter className="flex justify-center border-t bg-muted/30 py-4">
-                        <p className="text-xs text-muted-foreground">
-                            Khu vực hạn chế • Chỉ dành cho nhân viên được ủy quyền
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="password">Mật khẩu</Label>
+                                {/* Forgot password link could go here in future */}
+                            </div>
+                            <div className="relative group">
+                                <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 group-hover:text-blue-500 transition-colors" />
+                                <Input
+                                    id="password"
+                                    name="password"
+                                    type="password"
+                                    placeholder="••••••••"
+                                    required
+                                    disabled={isPending}
+                                    className="pl-10 border-slate-200 dark:border-slate-800 focus-visible:ring-blue-500 transition-all duration-200 bg-slate-50/50 dark:bg-slate-900/50"
+                                    aria-invalid={!!state?.error?.password}
+                                    aria-describedby={state?.error?.password ? "password-error" : undefined}
+                                />
+                            </div>
+                            {state?.error?.password && (
+                                <p id="password-error" className="text-sm text-destructive flex items-center gap-1 mt-1 animate-in slide-in-from-top-1">
+                                    <AlertCircle className="h-3 w-3" />
+                                    {state.error.password[0]}
+                                </p>
+                            )}
+                        </div>
+
+                        {state?.error?.general && (
+                            <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md flex items-start gap-2 border border-destructive/20 animate-in zoom-in-95">
+                                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                                <p>{state.error.general[0]}</p>
+                            </div>
+                        )}
+
+                        <Button 
+                            type="submit" 
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20 transition-all duration-200 h-11 text-base font-medium" 
+                            disabled={isPending}
+                        >
+                            {isPending ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Đang xác thực...
+                                </>
+                            ) : (
+                                'Đăng nhập'
+                            )}
+                        </Button>
+                    </form>
+
+                    {/* Footer */}
+                    <div className="space-y-4">
+                        <div className="relative">
+                            <div className="absolute inset-0 flex items-center">
+                                <span className="w-full border-t border-slate-200 dark:border-slate-800" />
+                            </div>
+                            <div className="relative flex justify-center text-xs uppercase">
+                                <span className="bg-white dark:bg-slate-950 px-2 text-slate-500">
+                                    Khu vực hạn chế
+                                </span>
+                            </div>
+                        </div>
+                        <p className="text-center text-xs text-slate-400">
+                            &copy; {new Date().getFullYear()} Khoa Xét nghiệm - CDC.
                         </p>
-                    </CardFooter>
-                </Card>
-
-                <p className="text-center text-xs text-muted-foreground px-8">
-                    &copy; {new Date().getFullYear()} Hệ thống quản lý thông tin khoa Xét nghiệm. Đã đăng ký bản quyền.
-                </p>
+                    </div>
+                </div>
             </div>
         </div>
     )
