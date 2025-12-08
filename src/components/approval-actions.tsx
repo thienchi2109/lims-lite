@@ -4,7 +4,9 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ApprovalDialog } from '@/components/approval-dialog'
-import { CheckCircle2, XCircle } from 'lucide-react'
+import { RejectSampleDialog } from '@/components/reject-sample-dialog'
+import { DiscardSampleDialog } from '@/components/discard-sample-dialog'
+import { CheckCircle2, XCircle, Ban, Trash2 } from 'lucide-react'
 import type { ResultWithAssay } from '@/types'
 
 interface ApprovalActionsProps {
@@ -15,6 +17,8 @@ interface ApprovalActionsProps {
 export function ApprovalActions({ sampleId, results }: ApprovalActionsProps) {
     const [approveDialogOpen, setApproveDialogOpen] = useState(false)
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+    const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
+    const [discardDialogOpen, setDiscardDialogOpen] = useState(false)
 
     // Get results that can be approved (status='entered')
     const enteredResults = results.filter((r) => r.status === 'entered')
@@ -24,6 +28,8 @@ export function ApprovalActions({ sampleId, results }: ApprovalActionsProps) {
 
     const hasEnteredResults = enteredResults.length > 0
     const hasApprovedResults = approvedResults.length > 0
+    const sampleStatus = results.length > 0 ? results[0].sample_status : null
+    const isReview = sampleStatus === 'review'
 
     if (!hasEnteredResults && !hasApprovedResults) {
         return null
@@ -62,6 +68,30 @@ export function ApprovalActions({ sampleId, results }: ApprovalActionsProps) {
                                 Hủy phê duyệt ({approvedResults.length})
                             </Button>
                         )}
+
+                        {isReview && (
+                            <>
+                                <Button
+                                    onClick={() => setRejectDialogOpen(true)}
+                                    variant="secondary"
+                                    className="gap-2 border border-slate-200"
+                                    size="lg"
+                                >
+                                    <Ban className="h-5 w-5" />
+                                    Từ chối mẫu
+                                </Button>
+
+                                <Button
+                                    onClick={() => setDiscardDialogOpen(true)}
+                                    variant="outline"
+                                    className="gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                    size="lg"
+                                >
+                                    <Trash2 className="h-5 w-5" />
+                                    Loại bỏ mẫu
+                                </Button>
+                            </>
+                        )}
                     </div>
 
                     <div className="mt-4 space-y-2 text-sm text-muted-foreground">
@@ -94,6 +124,20 @@ export function ApprovalActions({ sampleId, results }: ApprovalActionsProps) {
                 mode="cancel"
                 open={cancelDialogOpen}
                 onOpenChange={setCancelDialogOpen}
+            />
+
+            {/* Reject Sample Dialog */}
+            <RejectSampleDialog
+                sampleId={sampleId}
+                open={rejectDialogOpen}
+                onOpenChange={setRejectDialogOpen}
+            />
+
+            {/* Discard Sample Dialog */}
+            <DiscardSampleDialog
+                sampleId={sampleId}
+                open={discardDialogOpen}
+                onOpenChange={setDiscardDialogOpen}
             />
         </>
     )

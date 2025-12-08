@@ -118,6 +118,7 @@ export async function saveBatchResults(data: SaveBatchResults) {
                 id,
                 status,
                 sample_id,
+                sample:samples!results_sample_id_fkey(id, status),
                 assay:assay_definitions!results_assay_id_fkey(
                     validation_rules
                 )
@@ -128,6 +129,13 @@ export async function saveBatchResults(data: SaveBatchResults) {
         if (fetchError) {
             console.error('Error fetching results for validation:', fetchError)
             return { error: fetchError.message }
+        }
+
+        // Check sample status to prevent editing locked samples
+        const sampleData = existingResults[0]?.sample as any
+        const sampleStatus = Array.isArray(sampleData) ? sampleData[0]?.status : sampleData?.status
+        if (['review', 'completed', 'discarded'].includes(sampleStatus)) {
+            return { error: 'Cannot edit results for samples under review, discarded, or completed' }
         }
 
         // Validate each result value against its assay rules

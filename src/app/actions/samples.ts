@@ -13,6 +13,10 @@ import {
     type UpdateSample,
     type AssignTests,
     type SampleListParams,
+    RejectSampleSchema,
+    DiscardSampleSchema,
+    type RejectSample,
+    type DiscardSample,
 } from '@/types'
 import { generateSampleId, getTodayRange } from '@/lib/utils-lims'
 import { fetchSamples } from '@/lib/data/samples'
@@ -203,7 +207,8 @@ export async function getSample(id: string) {
             .select(
                 `
                 *,
-                received_by_user:users!samples_received_by_fkey(full_name)
+                received_by_user:users!samples_received_by_fkey(full_name),
+                rejected_by_user:users!samples_rejected_by_fkey(full_name)
             `
             )
             .eq('id', id)
@@ -218,6 +223,7 @@ export async function getSample(id: string) {
             data: {
                 ...sample,
                 received_by_name: sample.received_by_user?.full_name || null,
+                rejected_by_name: sample.rejected_by_user?.full_name || null,
             },
         }
     } catch (error) {
@@ -646,5 +652,127 @@ export async function submitSampleForReview(sampleId: string) {
     } catch (error) {
         console.error('Error in submitSampleForReview:', error)
         return { error: error instanceof Error ? error.message : 'Failed to submit sample' }
+    }
+}
+
+/**
+ * Rejects a sample under review (Manager only)
+ * Reverts status: 'review' -> 'in_progress'
+ */
+export async function rejectSample(data: RejectSample) {
+    try {
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (!user) return { error: 'Unauthorized' }
+
+        // Verify manager role
+        const { data: userData } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+        if (userData?.role !== 'manager') {
+            return { error: 'Only managers can reject samples' }
+        }
+
+        const validatedData = RejectSampleSchema.parse(data)
+
+        // Verify sample is in 'review' status
+        const { data: sample } = await supabase
+            .from('samples')
+            .select('id, status')
+            .eq('id', validatedData.sampleId)
+            .single()
+
+        if (!sample) return { error: 'Sample not found' }
+        if (sample.status !== 'review') {
+            return { error: 'Can only reject samples with status "review"' }
+        }
+
+        // Update sample status back to 'in_progress'
+        const { error: updateError } = await supabase
+            .from('samples')
+            .update({
+                status: 'in_progress',
+                rejection_reason: validatedData.reason,
+                rejected_at: new Date().toISOString(),
+                rejected_by: user.id
+            })
+            .eq('id', validatedData.sampleId)
+
+        if (updateError) return { error: updateError.message }
+
+        revalidatePath('/manager/approvals')
+        revalidatePath('/manager/samples')
+        revalidatePath('/samples')
+        revalidatePath(`/manager/results/${validatedData.sampleId}`)
+
+        return { success: true }
+    } catch (error) {
+        console.error('Error in rejectSample:', error)
+        return { error: error instanceof Error ? error.message : 'Failed to reject sample' }
+    }
+}
+
+/**
+ * Discards a sample under review (Manager only)
+ * Changes status: 'review' -> 'discarded'
+ */
+export async function discardSample(data: DiscardSample) {
+    try {
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (!user) return { error: 'Unauthorized' }
+
+        // Verify manager role
+        const { data: userData } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+        if (userData?.role !== 'manager') {
+            return { error: 'Only managers can discard samples' }
+        }
+
+        const validatedData = DiscardSampleSchema.parse(data)
+
+        // Verify sample is in 'review' status
+        const { data: sample } = await supabase
+            .from('samples')
+            .select('id, status')
+            .eq('id', validatedData.sampleId)
+            .single()
+
+        if (!sample) return { error: 'Sample not found' }
+        if (sample.status !== 'review') {
+            return { error: 'Can only discard samples with status "review"' }
+        }
+
+        // Update sample status to 'discarded'
+        const { error: updateError } = await supabase
+            .from('samples')
+            .update({
+                status: 'discarded',
+                rejection_reason: validatedData.reason,
+                rejected_at: new Date().toISOString(),
+                rejected_by: user.id
+            })
+            .eq('id', validatedData.sampleId)
+
+        if (updateError) return { error: updateError.message }
+
+        revalidatePath('/manager/approvals')
+        revalidatePath('/manager/samples')
+        revalidatePath('/samples')
+        revalidatePath(`/manager/results/${validatedData.sampleId}`)
+
+        return { success: true }
+    } catch (error) {
+        console.error('Error in discardSample:', error)
+        return { error: error instanceof Error ? error.message : 'Failed to discard sample' }
     }
 }

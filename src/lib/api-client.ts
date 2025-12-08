@@ -10,6 +10,8 @@ import type {
     CancelApproval,
     CreateUser,
     UpdateUser,
+    RejectSample,
+    DiscardSample,
 } from '@/types'
 import type { ClientActionName } from '@/lib/client-actions/types'
 
@@ -128,6 +130,14 @@ export function updateUserClient(data: UpdateUser) {
 
 export function deleteUserClient(userId: string) {
     return callClientAction('deleteUser', { userId })
+}
+
+export function rejectSampleClient(data: RejectSample) {
+    return callClientAction('rejectSample', data)
+}
+
+export function discardSampleClient(data: DiscardSample) {
+    return callClientAction('discardSample', data)
 }
 
 export async function logoutClient() {

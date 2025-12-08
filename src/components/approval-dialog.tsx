@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
+import { sampleKeys, resultKeys } from '@/types/query-keys'
 import { approveResultsClient, cancelApprovalClient } from '@/lib/api-client'
 import {
     Dialog,
@@ -35,6 +37,7 @@ export function ApprovalDialog({
     const [note, setNote] = useState('')
     const [isSubmitting, setIsSubmitting] = useState(false)
     const router = useRouter()
+    const queryClient = useQueryClient()
 
     const handleSubmit = async () => {
         if (mode === 'cancel' && note.trim().length < 3) {
@@ -56,6 +59,8 @@ export function ApprovalDialog({
                     toast.error(result.error)
                 } else {
                     toast.success(`Approved ${result.approvedCount} results`)
+                    queryClient.invalidateQueries({ queryKey: sampleKeys.all })
+                    queryClient.invalidateQueries({ queryKey: resultKeys.bySample(sampleId) })
                     onOpenChange(false)
                     setNote('')
                     router.refresh()
@@ -71,6 +76,8 @@ export function ApprovalDialog({
                     toast.error(result.error)
                 } else {
                     toast.success(`Canceled approval for ${result.canceledCount} results`)
+                    queryClient.invalidateQueries({ queryKey: sampleKeys.all })
+                    queryClient.invalidateQueries({ queryKey: resultKeys.bySample(sampleId) })
                     onOpenChange(false)
                     setNote('')
                     router.refresh()

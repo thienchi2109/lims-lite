@@ -7,7 +7,7 @@ import { z } from 'zod'
 export const UserRole = z.enum(['analyst', 'manager'])
 export type UserRole = z.infer<typeof UserRole>
 
-export const SampleStatus = z.enum(['received', 'assigned', 'in_progress', 'review', 'completed'])
+export const SampleStatus = z.enum(['received', 'assigned', 'in_progress', 'review', 'discarded', 'completed'])
 export type SampleStatus = z.infer<typeof SampleStatus>
 
 export const ResultStatus = z.enum(['pending', 'entered', 'approved'])
@@ -155,6 +155,9 @@ export const SampleSchema = z.object({
     created_at: z.string().datetime(),
     updated_at: z.string().datetime(),
     deleted_at: z.string().datetime().nullable(),
+    rejection_reason: z.string().nullable().optional(),
+    rejected_at: z.string().datetime().nullable().optional(),
+    rejected_by: z.string().uuid().nullable().optional(),
 })
 
 export type Sample = z.infer<typeof SampleSchema>
@@ -299,6 +302,7 @@ export type SampleListParams = z.infer<typeof SampleListParamsSchema>
 
 export const SampleWithUserSchema = SampleSchema.extend({
     received_by_name: z.string().nullable(),
+    rejected_by_name: z.string().nullable().optional(),
 })
 
 export type SampleWithUser = z.infer<typeof SampleWithUserSchema>
@@ -387,4 +391,18 @@ export const CancelApprovalSchema = z.object({
 })
 
 export type CancelApproval = z.infer<typeof CancelApprovalSchema>
+
+export const RejectSampleSchema = z.object({
+    sampleId: z.string().uuid(),
+    reason: z.string().min(1, 'Lý do từ chối là bắt buộc'),
+})
+
+export type RejectSample = z.infer<typeof RejectSampleSchema>
+
+export const DiscardSampleSchema = z.object({
+    sampleId: z.string().uuid(),
+    reason: z.string().min(1, 'Lý do loại bỏ là bắt buộc'),
+})
+
+export type DiscardSample = z.infer<typeof DiscardSampleSchema>
 

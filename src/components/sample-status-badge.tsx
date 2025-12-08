@@ -39,6 +39,11 @@ const statusConfig: Record<
         className:
             'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800',
     },
+    discarded: {
+        label: 'Loại bỏ',
+        className:
+            'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800',
+    },
 }
 
 export function SampleStatusBadge({ status }: SampleStatusBadgeProps) {

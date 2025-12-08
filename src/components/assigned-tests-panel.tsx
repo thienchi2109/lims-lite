@@ -99,8 +99,9 @@ export function AssignedTestsPanel({ sampleId }: AssignedTestsPanelProps) {
     // Determine if editing is allowed based on sample status
     const isEditable = useCallback(() => {
         if (!sampleStatus) return false
-        // Editable statuses: assigned, in_progress, review
-        return ['assigned', 'in_progress', 'review'].includes(sampleStatus)
+        // Editable statuses: assigned, in_progress
+        // Review status is NOT editable for analysts (and generally locked until rejected)
+        return ['assigned', 'in_progress'].includes(sampleStatus)
     }, [sampleStatus])
 
     // Handle value changes from ResultCellEditor
@@ -158,7 +159,7 @@ export function AssignedTestsPanel({ sampleId }: AssignedTestsPanelProps) {
                 setResultValues({})
                 setValidationErrors({})
                 fetchTests() // Refresh data
-                
+
                 // Refresh sample list and move to top (sort by updated_at)
                 handleRefocus(sampleId)
             }
@@ -229,7 +230,7 @@ export function AssignedTestsPanel({ sampleId }: AssignedTestsPanelProps) {
         params.set('sampleId', targetSampleId)
         params.set('page', '1')
         router.push(`?${params.toString()}`)
-        
+
         // Invalidate queries to trigger refetch with new cache
         queryClient.invalidateQueries({ queryKey: sampleKeys.all })
     }

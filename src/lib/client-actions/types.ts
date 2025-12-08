@@ -20,6 +20,8 @@ export type ClientActionName =
     | 'createUser'
     | 'updateUser'
     | 'deleteUser'
+    | 'rejectSample'
+    | 'discardSample'
 
 export interface ClientActionRequest {
     action: ClientActionName

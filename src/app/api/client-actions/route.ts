@@ -6,6 +6,8 @@ import {
     getSampleTests,
     getSamples,
     submitSampleForReview,
+    rejectSample,
+    discardSample,
 } from '@/app/actions/samples'
 import {
     getResultsBySample,
@@ -173,6 +175,8 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
         }
         return deleteUser(payload.userId)
     },
+    rejectSample: async (payload) => rejectSample(payload),
+    discardSample: async (payload) => discardSample(payload),
 }
 
 export async function POST(request: Request) {

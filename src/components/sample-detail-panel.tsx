@@ -9,7 +9,8 @@ import {
     User,
     Building2,
     Clock,
-    Pencil
+    Pencil,
+    AlertCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
@@ -70,6 +71,31 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
             </div>
 
             <div className="flex-1 overflow-y-auto p-3">
+                {sample.rejection_reason && (
+                    <div className={`mb-4 p-3 rounded-md border ${sample.status === 'discarded'
+                        ? 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'
+                        : 'bg-orange-50 border-orange-200 text-orange-800 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-300'
+                        }`}>
+                        <div className="flex items-start gap-3">
+                            <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                            <div className="flex-1 text-sm">
+                                <h4 className="font-semibold mb-1">
+                                    {sample.status === 'discarded' ? 'Mẫu đã bị loại bỏ' : 'Mẫu đã bị từ chối'}
+                                </h4>
+                                <div className="space-y-1 opacity-90">
+                                    <p><span className="font-medium">Lý do:</span> {sample.rejection_reason}</p>
+                                    {sample.rejected_at && (
+                                        <p><span className="font-medium">Thời gian:</span> {new Date(sample.rejected_at).toLocaleString('vi-VN')}</p>
+                                    )}
+                                    {sample.rejected_by_name && (
+                                        <p><span className="font-medium">Người thực hiện:</span> {sample.rejected_by_name}</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-3">
                     <div className="col-span-2 space-y-1.5">
                         <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
