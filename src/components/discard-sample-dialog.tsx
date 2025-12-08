@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { sampleKeys, resultKeys } from '@/types/query-keys'
 import { discardSampleClient } from '@/lib/api-client'
@@ -19,6 +19,8 @@ interface DiscardSampleDialogProps {
 
 export function DiscardSampleDialog({ sampleId, open, onOpenChange }: DiscardSampleDialogProps) {
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const pathname = usePathname()
     const queryClient = useQueryClient()
     const [reason, setReason] = useState('')
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -37,12 +39,19 @@ export function DiscardSampleDialog({ sampleId, open, onOpenChange }: DiscardSam
             } else {
                 toast.success('Đã loại bỏ mẫu')
 
-                // Invalidate queries
-                queryClient.invalidateQueries({ queryKey: sampleKeys.all })
-                queryClient.invalidateQueries({ queryKey: sampleKeys.detail(sampleId) })
+                // Update URL params to sort by updated_at DESC and navigate to page 1
+                const params = new URLSearchParams(searchParams?.toString() ?? '')
+                params.set('sortBy', 'updated_at')
+                params.set('sortOrder', 'desc')
+                params.set('sampleId', sampleId)
+                params.set('page', '1')
+                router.push(`${pathname}?${params.toString()}`)
+
+                // Invalidate queries to trigger refetch
+                queryClient.invalidateQueries({ queryKey: sampleKeys.all }) // Refresh sample list
+                await queryClient.refetchQueries({ queryKey: sampleKeys.detail(sampleId) }) // Force refresh detail panel (bypasses staleTime)
                 queryClient.invalidateQueries({ queryKey: resultKeys.bySample(sampleId) })
 
-                router.refresh()
                 onOpenChange(false)
                 setReason('')
             }
