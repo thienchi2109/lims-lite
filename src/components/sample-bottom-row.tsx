@@ -8,8 +8,7 @@ interface SampleBottomRowProps {
     sample: SampleWithUser | null
     isLoadingSample?: boolean
     permissions?: {
-        canReject: boolean
-        canIgnore: boolean
+        canDiscard: boolean
         canEdit: boolean
         canViewResults: boolean
         canEnterResults: boolean

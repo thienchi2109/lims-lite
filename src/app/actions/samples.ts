@@ -740,7 +740,7 @@ export async function discardSample(data: DiscardSample) {
 
         const validatedData = DiscardSampleSchema.parse(data)
 
-        // Verify sample is in 'review' status
+        // Verify sample is in a discardable status
         const { data: sample } = await supabase
             .from('samples')
             .select('id, status')
@@ -748,8 +748,11 @@ export async function discardSample(data: DiscardSample) {
             .single()
 
         if (!sample) return { error: 'Sample not found' }
-        if (sample.status !== 'review') {
-            return { error: 'Can only discard samples with status "review"' }
+
+        // Allow discard for received, assigned, or review status
+        const discardableStatuses = ['received', 'assigned', 'review']
+        if (!discardableStatuses.includes(sample.status)) {
+            return { error: `Cannot discard samples with status "${sample.status}". Only received, assigned, or review samples can be discarded.` }
         }
 
         // Update sample status to 'discarded'

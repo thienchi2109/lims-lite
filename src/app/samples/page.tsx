@@ -51,8 +51,7 @@ export default async function UnifiedSamplesPage() {
 
     // 4. Build permissions object based on role
     const permissions = {
-        canReject: role === 'manager',
-        canIgnore: role === 'manager',
+        canDiscard: role === 'manager',
         canEdit: true, // Both roles can edit (status-gated in component)
         canViewResults: true, // Both roles can view results
         canEnterResults: role === 'analyst', // Only analysts can enter results

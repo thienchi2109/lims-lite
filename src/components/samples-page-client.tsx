@@ -15,8 +15,7 @@ import { useSearchParams } from 'next/navigation'
 interface SamplesPageClientProps {
     role: 'analyst' | 'manager'
     permissions: {
-        canReject: boolean
-        canIgnore: boolean
+        canDiscard: boolean
         canEdit: boolean
         canViewResults: boolean
         canEnterResults: boolean
@@ -36,7 +35,7 @@ export function SamplesPageClient({
     // Parse URL params
     const searchTerm = searchParams.get('search') || ''
     const statusParam = searchParams.get('status') || 'all'
-    const validStatuses: SampleStatus[] = ['received', 'assigned', 'in_progress', 'review', 'completed']
+    const validStatuses: SampleStatus[] = ['received', 'assigned', 'in_progress', 'review', 'completed', 'discarded']
     const status = validStatuses.includes(statusParam as SampleStatus)
         ? (statusParam as SampleStatus)
         : undefined

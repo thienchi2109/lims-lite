@@ -15,7 +15,8 @@ import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/compon
 import { SampleStatusBadge } from '@/components/sample-status-badge'
 import { EditableCell } from '@/components/editable-cell'
 import { SampleEditDialog } from '@/components/sample-edit-dialog'
-import { ChevronLeft, ChevronRight, Eye, Pencil, ArrowUpDown, ArrowUp, ArrowDown, ClipboardPen, XCircle } from 'lucide-react'
+import { DiscardSampleDialog } from '@/components/discard-sample-dialog'
+import { ChevronLeft, ChevronRight, Eye, Pencil, ArrowUpDown, ArrowUp, ArrowDown, ClipboardPen, Trash2 } from 'lucide-react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { sampleKeys } from '@/types/query-keys'
@@ -27,8 +28,7 @@ interface SampleListTableProps {
     totalPages: number
     totalCount: number
     permissions?: {
-        canReject: boolean
-        canIgnore: boolean
+        canDiscard: boolean
         canEdit: boolean
         canViewResults: boolean
         canEnterResults: boolean
@@ -54,6 +54,8 @@ export function SampleListTable({
     const [samples, setSamples] = useState<SampleWithUser[]>(serverSamples)
     const [editDialogOpen, setEditDialogOpen] = useState(false)
     const [selectedSampleForEdit, setSelectedSampleForEdit] = useState<SampleWithUser | null>(null)
+    const [discardDialogOpen, setDiscardDialogOpen] = useState(false)
+    const [selectedSampleForDiscard, setSelectedSampleForDiscard] = useState<string | null>(null)
 
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -162,7 +164,7 @@ export function SampleListTable({
                     onSave={(newValue) =>
                         handleUpdateCell(row.original.id, 'client_name', newValue)
                     }
-                    disabled={!permissions?.canEdit && row.original.status !== 'received'}
+                    disabled={!permissions?.canEdit || row.original.status !== 'received'}
                 />
             ),
         },
@@ -249,7 +251,7 @@ export function SampleListTable({
                 ['assigned', 'in_progress'].includes(status)
             const canViewResults = permissions?.canViewResults &&
                 ['assigned', 'in_progress', 'review', 'completed'].includes(status)
-            const canReject = permissions?.canReject &&
+            const canDiscard = permissions?.canDiscard &&
                 ['received', 'assigned'].includes(status)
 
             return (
@@ -297,19 +299,19 @@ export function SampleListTable({
                         </Button>
                     )}
 
-                    {/* Reject button - Manager only, status-gated */}
-                    {canReject && (
+                    {/* Discard button - Manager only, status-gated */}
+                    {canDiscard && (
                         <Button
                             variant="ghost"
                             size="icon-sm"
                             onClick={() => {
-                                // TODO: Implement reject dialog
-                                console.log('Reject sample:', row.original.id)
+                                setSelectedSampleForDiscard(row.original.id)
+                                setDiscardDialogOpen(true)
                             }}
-                            title="Từ chối"
+                            title="Loại bỏ mẫu"
                             className="h-8 w-8 text-slate-500 hover:text-red-600 hover:bg-red-50"
                         >
-                            <XCircle className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                         </Button>
                     )}
                 </div>
@@ -353,7 +355,7 @@ export function SampleListTable({
                                                 : flexRender(
                                                     header.column.columnDef.header,
                                                     header.getContext()
-                                            )}
+                                                )}
                                         </TableHead>
                                     ))}
                                 </TableRow>
@@ -429,6 +431,15 @@ export function SampleListTable({
                     open={editDialogOpen}
                     onOpenChange={setEditDialogOpen}
                     onSuccess={handleEditSuccess}
+                />
+            )}
+
+            {/* Discard Dialog */}
+            {selectedSampleForDiscard && (
+                <DiscardSampleDialog
+                    sampleId={selectedSampleForDiscard}
+                    open={discardDialogOpen}
+                    onOpenChange={setDiscardDialogOpen}
                 />
             )}
         </div>

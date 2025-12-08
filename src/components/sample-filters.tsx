@@ -48,6 +48,7 @@ const statusOptions: Array<{ value: SampleStatus | 'all'; label: string; color: 
     { value: 'in_progress', label: 'Đang thực hiện', color: 'bg-indigo-500' },
     { value: 'review', label: 'Chờ duyệt', color: 'bg-purple-500' },
     { value: 'completed', label: 'Hoàn thành', color: 'bg-green-500' },
+    { value: 'discarded', label: 'Loại bỏ', color: 'bg-red-500' },
 ]
 
 const sortOptions = [
@@ -176,7 +177,7 @@ export function SampleFilters({
         // Set search value and trigger immediate search
         setSearchValue(decodedText)
         setIsScannerOpen(false)
-        
+
         // Immediately update URL (bypass debounce for instant results)
         const params = new URLSearchParams(searchParamsString)
         if (decodedText) {
@@ -187,7 +188,7 @@ export function SampleFilters({
         params.set('page', '1')
         const query = params.toString()
         router.replace(query ? `${pathname}?${query}` : pathname)
-        
+
         // Focus the search input to show the scanned value
         setTimeout(() => {
             searchInputRef.current?.focus()
@@ -436,7 +437,7 @@ export function SampleFilters({
                         </DialogDescription>
                     </DialogHeader>
                     <div className="p-6 pt-0">
-                        <QRScanner 
+                        <QRScanner
                             onScan={handleQRScan}
                             onError={(error) => {
                                 console.error('QR Scanner error:', error)
