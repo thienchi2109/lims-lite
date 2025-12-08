@@ -4,10 +4,17 @@ import { createClient } from '@/lib/supabase/server'
 import { getResultsBySample } from '@/app/actions/results'
 import { AssignedTestsPanel } from '@/components/assigned-tests-panel'
 import { ApprovalActions } from '@/components/approval-actions'
+import { SampleActivityFeed } from '@/components/sample-activity-feed'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, RefreshCcw } from 'lucide-react'
 import Link from 'next/link'
 import { SampleStatusBadge } from '@/components/sample-status-badge'
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible'
+import { ChevronDown } from 'lucide-react'
 
 export const metadata: Metadata = {
     title: 'Xem xét kết quả - CDC LIMS',
@@ -148,6 +155,19 @@ export default async function ManagerResultsPage({ params }: PageProps) {
 
             {/* Approval Actions */}
             <ApprovalActions sampleId={resolvedParams.sampleId} results={results} />
+
+            {/* Activity Feed */}
+            <Collapsible defaultOpen={false}>
+                <CollapsibleTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between">
+                        <span className="font-semibold">Lịch sử hoạt động</span>
+                        <ChevronDown className="h-4 w-4 transition-transform ui-open:rotate-180" />
+                    </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-4">
+                    <SampleActivityFeed sampleId={resolvedParams.sampleId} />
+                </CollapsibleContent>
+            </Collapsible>
         </div>
     )
 }
