@@ -186,6 +186,11 @@ export function AssignedTestsPanel({ sampleId }: AssignedTestsPanelProps) {
             } else {
                 toast.success('Đã gửi mẫu để duyệt')
                 setShowSubmitDialog(false)
+
+                // Invalidate queries to trigger refetch
+                queryClient.invalidateQueries({ queryKey: sampleKeys.all }) // Refresh sample list
+                await queryClient.refetchQueries({ queryKey: sampleKeys.detail(sampleId) }) // Force refresh detail panel (bypasses staleTime)
+
                 fetchTests() // Refresh to update status
             }
         } catch (error) {
