@@ -159,6 +159,7 @@ export function AssignedTestsPanel({ sampleId }: AssignedTestsPanelProps) {
                 setResultValues({})
                 setValidationErrors({})
                 fetchTests() // Refresh data
+                queryClient.invalidateQueries({ queryKey: sampleKeys.detail(sampleId) }) // Refresh sample status
 
                 // Refresh sample list and move to top (sort by updated_at)
                 handleRefocus(sampleId)
@@ -189,7 +190,7 @@ export function AssignedTestsPanel({ sampleId }: AssignedTestsPanelProps) {
 
                 // Invalidate queries to trigger refetch
                 queryClient.invalidateQueries({ queryKey: sampleKeys.all }) // Refresh sample list
-                await queryClient.refetchQueries({ queryKey: sampleKeys.detail(sampleId) }) // Force refresh detail panel (bypasses staleTime)
+                queryClient.invalidateQueries({ queryKey: sampleKeys.detail(sampleId) }) // Force refresh detail panel
 
                 fetchTests() // Refresh to update status
             }

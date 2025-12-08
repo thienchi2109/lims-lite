@@ -173,13 +173,14 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus }
                 : `Đã chỉ định ${insertedCount} xét nghiệm mới`
 
             toast.success(message)
-            
+
             // Invalidate all sample queries to trigger refetch
             queryClient.invalidateQueries({ queryKey: sampleKeys.all })
-            
+            queryClient.invalidateQueries({ queryKey: sampleKeys.detail(sampleId) })
+
             onSuccess()
             onClose()
-            
+
             // Refocus on the sample after successful assignment
             if (onRefocus) {
                 onRefocus(sampleId)
