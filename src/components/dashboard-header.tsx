@@ -13,7 +13,7 @@ interface DashboardHeaderProps {
 }
 
 export function DashboardHeader({ 
-    title = "Hệ thống quản lý thông tin khoa Xét nghiệm", 
+    title = "Hệ Thống Quản Lý Thông Tin Khoa Xét nghiệm", 
     subtitle, 
     user,
     className 
