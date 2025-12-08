@@ -34,7 +34,7 @@ export default function LoginPage() {
                     sizes="(max-width: 1023px) 0px, 50vw"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/50 to-transparent" />
-                
+
                 <div className="relative z-10 mt-auto p-12 text-center space-y-4">
                     <h2 className="text-3xl font-bold tracking-tight text-white whitespace-nowrap">
                         Hệ thống Quản lý thông tin Xét nghiệm
@@ -51,12 +51,12 @@ export default function LoginPage() {
                     {/* Header */}
                     <div className="space-y-6 flex flex-col items-center text-center">
                         <div className="flex flex-col items-center gap-4">
-                            <Image 
-                                src="/cdc-logo-400x400.png" 
-                                alt="CDC Logo" 
-                                width={80} 
-                                height={80} 
-                                className="w-20 h-20 object-contain drop-shadow-sm" 
+                            <Image
+                                src="/cdc-logo-400x400.png"
+                                alt="CDC Logo"
+                                width={80}
+                                height={80}
+                                className="w-20 h-20 object-contain drop-shadow-sm"
                             />
                             <div className="flex flex-col items-center">
                                 <span className="font-bold text-xl leading-none text-slate-900 dark:text-slate-100">CDC LIMS</span>
@@ -83,6 +83,7 @@ export default function LoginPage() {
                                     id="username"
                                     name="username"
                                     type="text"
+                                    autoComplete="username"
                                     placeholder="user@example.com"
                                     required
                                     disabled={isPending}
@@ -110,6 +111,7 @@ export default function LoginPage() {
                                     id="password"
                                     name="password"
                                     type={showPassword ? "text" : "password"}
+                                    autoComplete="current-password"
                                     placeholder="••••••••"
                                     required
                                     disabled={isPending}
@@ -144,9 +146,9 @@ export default function LoginPage() {
                             </div>
                         )}
 
-                        <Button 
-                            type="submit" 
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20 transition-all duration-200 h-11 text-base font-medium" 
+                        <Button
+                            type="submit"
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20 transition-all duration-200 h-11 text-base font-medium"
                             disabled={isPending}
                         >
                             {isPending ? (
@@ -172,17 +174,17 @@ export default function LoginPage() {
                                 </span>
                             </div>
                         </div>
-                        
+
                         <div className="flex flex-col items-center gap-2">
-                             <p className="text-center text-xs text-slate-400">
+                            <p className="text-center text-xs text-slate-400">
                                 &copy; {new Date().getFullYear()} Khoa Xét nghiệm - CDC.
                             </p>
-                            
+
                             <Popover>
                                 <PopoverTrigger asChild>
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm" 
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
                                         className="h-9 rounded-full border-slate-200/60 bg-gradient-to-r from-slate-50/50 to-white pl-3 pr-4 text-xs font-medium text-slate-500 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-200 hover:from-blue-50/50 hover:to-white hover:text-blue-600 hover:shadow-md dark:border-slate-800 dark:from-slate-900 dark:to-slate-900/50 dark:text-slate-400 dark:hover:border-blue-900/50 dark:hover:from-blue-900/20 dark:hover:to-slate-900 dark:hover:text-blue-400 gap-2"
                                     >
                                         <HelpCircle className="h-3.5 w-3.5" />
