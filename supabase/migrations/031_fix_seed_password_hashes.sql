@@ -10,7 +10,11 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- Reset known seed passwords for local/dev users
 UPDATE auth.users
 SET encrypted_password = crypt('password123', gen_salt('bf'))
-WHERE email IN ('analyst@cdc-lims.local', 'manager@cdc-lims.local');
+WHERE email IN (
+    'analyst@cdc-lims.local',
+    'manager@cdc-lims.local',
+    'system@cdc-lims.local'
+);
 
 -- Verify security posture
 SELECT * FROM public.run_security_tests();
