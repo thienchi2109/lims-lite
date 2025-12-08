@@ -73,6 +73,57 @@ docker compose logs -f   # View logs
 docker compose ps        # Check container status
 ```
 
+## File Structure Expectations
+
+1. Files: 250-350 lines maximum, single responsibility
+2. Filenames: Descriptive and match content exactly
+
+3. Single class/function: OrderService.ts, calculateTax.py
+4. Multiple items: update_inventory_on_order_placed.go
+
+
+Headers: First 5-10 lines explain purpose for multi-item files only
+
+## Code Quality Standards
+
+Self-documenting: names explain intent completely
+Clear variable names: userAuthenticatedAt not uat
+Action-based functions: calculateTaxForOrder() not calcTax()
+Semantic directories: group by feature/domain, max 3-4 levels deep
+
+## Working Approach
+
+Navigate first: Understand structure before reading code
+Read purposefully: Only open files relevant to current task
+Trust the structure: Filename and location tell you what's inside
+Small focused changes: Maintain the 250-350 line limit
+Keep it clean: Don't break existing conventions
+
+## When Making Changes
+
+Maintain single-responsibility principle
+Keep filenames accurate to content
+Split files that exceed 350 lines
+Update file headers if purpose changes
+Follow existing naming patterns
+
+## Token Optimization
+
+Don't read entire files unnecessarily
+Use grep to find specific patterns
+Check file headers before reading full content
+Navigate using directory structure, not memory
+
+## Quality Check
+Before completing tasks, ensure:
+
+1. Files remain under 350 lines
+2. Filenames accurately describe content
+3. New code is self-documenting
+4. Directory structure stays logical
+5. Changes follow existing patterns
+
+
 ## **Backend Infrastructure (Self-Hosted Supabase)**
 
 ### **Architecture Overview**
@@ -205,6 +256,199 @@ This project uses **self-hosted Supabase** running in Docker, NOT Supabase Cloud
        AND status = 'pending'
    );
    ```
+
+#### **Database Migration Security Checklist**
+
+**CRITICAL:** Every migration that modifies RLS policies MUST follow this security checklist to prevent vulnerabilities and false positives.
+
+**Pre-Migration (BEFORE writing SQL):**
+
+1. **Review Existing Policies**
+   ```bash
+   # List all policies on the table you're modifying
+   docker exec lims-postgres psql -U postgres -d postgres -c "SELECT polname, polcmd FROM pg_policy WHERE polrelid = 'public.TABLE_NAME'::regclass ORDER BY polname;"
+   ```
+   - [ ] Document current policy names
+   - [ ] Identify which policies will be modified/removed
+   - [ ] Check for orphaned policies from previous migrations
+
+2. **Security Analysis**
+   - [ ] Does the new policy include **role checks**? (`get_user_role()`)
+   - [ ] Does the new policy include **ownership checks**? (`auth.uid()`)
+   - [ ] Is the policy **more permissive** than the previous one?
+   - [ ] Could this policy allow **unauthorized access**?
+
+3. **Migration File Preparation**
+   - [ ] Use descriptive migration number (sequential)
+   - [ ] Include clear comments explaining the change
+   - [ ] Use `DROP POLICY IF EXISTS` **before** `CREATE POLICY`
+   - [ ] Use idempotent SQL (`IF NOT EXISTS`, `IF EXISTS`)
+
+**Migration Template (Use this as starting point):**
+```sql
+-- Migration XXX: Description of what this does
+-- Security Impact: [None / Low / Medium / High]
+-- Changes: [What policies are being added/removed/modified]
+
+SET search_path TO public;
+
+-- Drop old policy (if replacing)
+DROP POLICY IF EXISTS "old_policy_name" ON public.table_name;
+
+-- Create new policy
+CREATE POLICY "new_policy_name"
+ON public.table_name FOR operation
+USING (condition)  -- For SELECT
+WITH CHECK (
+    -- ✅ ALWAYS include role check for INSERT/UPDATE/DELETE
+    get_user_role() IN ('analyst', 'manager')
+    AND other_conditions
+);
+
+-- Add comment explaining the policy
+COMMENT ON POLICY "new_policy_name" ON public.table_name 
+IS 'Description of what this policy allows and why';
+```
+
+**Post-Migration (AFTER applying SQL):**
+
+1. **Apply Migration**
+   ```bash
+   Get-Content supabase\migrations\XXX_name.sql | docker exec -i lims-postgres psql -U postgres -d postgres
+   ```
+
+2. **Verify Migration Success**
+   ```bash
+   # Check logs for errors
+   docker compose logs postgres | tail -n 20
+   
+   # Verify table structure (if schema changed)
+   docker exec lims-postgres psql -U postgres -d postgres -c "\d table_name"
+   ```
+
+3. **Run Security Tests (MANDATORY)**
+   ```bash
+   docker exec lims-postgres psql -U postgres -d postgres -c "SELECT * FROM run_security_tests();"
+   ```
+   - [ ] All tests passed (all `t` in passed column)
+   - [ ] No warnings in PostgreSQL logs
+   - [ ] If any test fails, **investigate immediately** before proceeding
+
+4. **Verify Policy State**
+   ```bash
+   docker exec lims-postgres psql -U postgres -d postgres -c "SELECT polname, polcmd FROM pg_policy WHERE polrelid = 'public.TABLE_NAME'::regclass ORDER BY polname;"
+   ```
+   - [ ] Old policy is removed (if applicable)
+   - [ ] New policy exists
+   - [ ] No duplicate policies
+   - [ ] Policy count matches expectations
+
+5. **Verify Policy Content**
+   ```bash
+   docker exec lims-postgres psql -U postgres -d postgres -c "SELECT polname, pg_get_expr(polwithcheck, polrelid) FROM pg_policy WHERE polrelid = 'public.TABLE_NAME'::regclass AND polcmd = 'a';"
+   ```
+   - [ ] Policy includes `get_user_role()` check (for critical operations)
+   - [ ] Policy logic matches intended security model
+   - [ ] No overly permissive conditions
+
+6. **Application Testing**
+   ```bash
+   npm run typecheck
+   npm run dev
+   ```
+   - [ ] No TypeScript errors
+   - [ ] Application starts successfully
+   - [ ] Test affected functionality with different user roles
+
+**Common Mistakes to Avoid:**
+
+❌ **DON'T: Forget to drop old policy**
+```sql
+-- BAD: Creates duplicate policies
+CREATE POLICY "new_policy" ON table_name ...
+-- Old policy still exists!
+```
+
+✅ **DO: Always drop before create**
+```sql
+-- GOOD: Ensures only one policy exists
+DROP POLICY IF EXISTS "old_policy" ON table_name;
+CREATE POLICY "new_policy" ON table_name ...
+```
+
+❌ **DON'T: Skip role checks**
+```sql
+-- BAD: Any authenticated user can insert
+CREATE POLICY "policy_name"
+WITH CHECK (
+    auth.uid() IS NOT NULL  -- ❌ No role check
+    AND status = 'pending'
+);
+```
+
+✅ **DO: Include role checks**
+```sql
+-- GOOD: Only analysts and managers can insert
+CREATE POLICY "policy_name"
+WITH CHECK (
+    get_user_role() IN ('analyst', 'manager')  -- ✅ Role check
+    AND status = 'pending'
+);
+```
+
+❌ **DON'T: Use Supabase Studio for schema changes**
+- Changes are not version controlled
+- Cannot be reproduced in other environments
+- No audit trail
+
+✅ **DO: Use migration files**
+- Version controlled
+- Reproducible
+- Auditable
+- Testable
+
+**Emergency Rollback:**
+
+If a migration causes security issues, create an immediate rollback migration:
+
+```sql
+-- Migration XXX_rollback: Revert migration XXX
+-- Security Impact: High - Fixes security vulnerability
+
+SET search_path TO public;
+
+-- Drop problematic policy
+DROP POLICY IF EXISTS "problematic_policy" ON public.table_name;
+
+-- Restore previous policy
+CREATE POLICY "previous_policy"
+ON public.table_name FOR operation
+WITH CHECK (
+    -- Previous policy conditions
+);
+```
+
+Apply rollback:
+```bash
+Get-Content supabase\migrations\XXX_rollback.sql | docker exec -i lims-postgres psql -U postgres -d postgres
+```
+
+**Quick Reference - Security Verification Commands:**
+```bash
+# Apply migration
+Get-Content supabase\migrations\XXX_name.sql | docker exec -i lims-postgres psql -U postgres -d postgres
+
+# Run security tests
+docker exec lims-postgres psql -U postgres -d postgres -c "SELECT * FROM run_security_tests();"
+
+# Check policies
+docker exec lims-postgres psql -U postgres -d postgres -c "SELECT polname FROM pg_policy WHERE polrelid = 'public.TABLE_NAME'::regclass;"
+
+# Verify role check in policy
+docker exec lims-postgres psql -U postgres -d postgres -c "SELECT pg_get_expr(polwithcheck, polrelid) FROM pg_policy WHERE polrelid = 'public.TABLE_NAME'::regclass AND polcmd = 'a';"
+```
+
+**REMEMBER:** Security is not optional. Always verify migrations with `run_security_tests()` before considering them complete.
 
 #### **Common Migration Patterns**
 
@@ -614,52 +858,3 @@ When creating commits in this project:
 
 See the [Development Workflow](#development-workflow) section for detailed git operations and the full commit creation process.
 
-### File Structure Expectations
-
-1. Files: 250-350 lines maximum, single responsibility
-2. Filenames: Descriptive and match content exactly
-
-3. Single class/function: OrderService.ts, calculateTax.py
-4. Multiple items: update_inventory_on_order_placed.go
-
-
-Headers: First 5-10 lines explain purpose for multi-item files only
-
-### Code Quality Standards
-
-Self-documenting: names explain intent completely
-Clear variable names: userAuthenticatedAt not uat
-Action-based functions: calculateTaxForOrder() not calcTax()
-Semantic directories: group by feature/domain, max 3-4 levels deep
-
-### Working Approach
-
-Navigate first: Understand structure before reading code
-Read purposefully: Only open files relevant to current task
-Trust the structure: Filename and location tell you what's inside
-Small focused changes: Maintain the 250-350 line limit
-Keep it clean: Don't break existing conventions
-
-### When Making Changes
-
-Maintain single-responsibility principle
-Keep filenames accurate to content
-Split files that exceed 350 lines
-Update file headers if purpose changes
-Follow existing naming patterns
-
-### Token Optimization
-
-Don't read entire files unnecessarily
-Use grep to find specific patterns
-Check file headers before reading full content
-Navigate using directory structure, not memory
-
-### Quality Check
-Before completing tasks, ensure:
-
-1. Files remain under 350 lines
-2. Filenames accurately describe content
-3. New code is self-documenting
-4. Directory structure stays logical
-5. Changes follow existing patterns

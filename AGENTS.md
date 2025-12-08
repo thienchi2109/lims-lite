@@ -26,6 +26,61 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - Build incrementally: validate inputs in Server Actions, lean on existing patterns/components listed in `CLAUDE.md`.
 - Client-side components must call `src/lib/api-client.ts` (which hits `/api/client-actions` and `/api/auth/logout`) for data fetching/mutations; do not import `src/app/actions/*` directly into client code.
 
+## Database Migration Security (CRITICAL)
+
+**MANDATORY:** When creating or modifying database migrations that affect RLS policies, you MUST follow the Database Migration Security Checklist.
+
+### Quick Security Rules:
+1. **Always `DROP POLICY IF EXISTS` before `CREATE POLICY`** - Prevents duplicate policies
+2. **Always include role checks** - Use `get_user_role() IN ('analyst', 'manager')` in policies
+3. **Always document security impact** - Add `-- Security Impact: [None/Low/Medium/High]` to migration files
+4. **Always run security tests after migration** - `docker exec lims-postgres psql -U postgres -d postgres -c "SELECT * FROM run_security_tests();"`
+5. **Never use Supabase Studio for schema changes** - Only use versioned migration files
+
+### Migration Template:
+```sql
+-- Migration XXX: Description
+-- Security Impact: [None / Low / Medium / High]
+-- Changes: [What policies are being added/removed/modified]
+
+SET search_path TO public;
+
+-- Drop old policy (if replacing)
+DROP POLICY IF EXISTS "old_policy_name" ON public.table_name;
+
+-- Create new policy with role check
+CREATE POLICY "new_policy_name"
+ON public.table_name FOR operation
+WITH CHECK (
+    get_user_role() IN ('analyst', 'manager')  -- ✅ MANDATORY for INSERT/UPDATE/DELETE
+    AND other_conditions
+);
+
+-- Document the policy
+COMMENT ON POLICY "new_policy_name" ON public.table_name 
+IS 'Description of what this policy allows and why';
+```
+
+### Post-Migration Checklist:
+```bash
+# 1. Apply migration
+Get-Content supabase\migrations\XXX_name.sql | docker exec -i lims-postgres psql -U postgres -d postgres
+
+# 2. Run security tests (MANDATORY)
+docker exec lims-postgres psql -U postgres -d postgres -c "SELECT * FROM run_security_tests();"
+
+# 3. Verify policy state
+docker exec lims-postgres psql -U postgres -d postgres -c "SELECT polname FROM pg_policy WHERE polrelid = 'public.TABLE_NAME'::regclass;"
+
+# 4. Test application
+npm run typecheck
+npm run dev
+```
+
+**See `CLAUDE.md` Database Migration Security Checklist section for full details and examples.**
+
+**Reference:** Full checklist in `MIGRATION_SECURITY_CHECKLIST.md`
+
 ## Superpowers Skills
 
 - Superpowers are installed; run `~/.codex/superpowers/.codex/superpowers-codex bootstrap` at session start to list available skills.
