@@ -12,33 +12,36 @@ CREATE OR REPLACE FUNCTION update_sample_updated_at_from_result()
 RETURNS TRIGGER AS $$
 BEGIN
     -- Update the parent sample's updated_at timestamp
-    UPDATE public.samples
-    SET updated_at = NOW()
-    WHERE id = NEW.sample_id;
-    
-    RETURN NEW;
+    -- For DELETE operations, use OLD.sample_id, otherwise use NEW.sample_id
+    IF TG_OP = 'DELETE' THEN
+        UPDATE public.samples
+        SET updated_at = NOW()
+        WHERE id = OLD.sample_id;
+        RETURN OLD;
+    ELSE
+        UPDATE public.samples
+        SET updated_at = NOW()
+        WHERE id = NEW.sample_id;
+        RETURN NEW;
+    END IF;
 END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================================================
--- TRIGGER: Fire on result value or status changes
+-- TRIGGER: Fire on result INSERT, UPDATE, or DELETE
 -- ============================================================================
 DROP TRIGGER IF EXISTS update_sample_on_result_change ON public.results;
 
 CREATE TRIGGER update_sample_on_result_change
-    AFTER UPDATE ON public.results
+    AFTER INSERT OR UPDATE OR DELETE ON public.results
     FOR EACH ROW
-    WHEN (
-        OLD.value IS DISTINCT FROM NEW.value 
-        OR OLD.status IS DISTINCT FROM NEW.status
-    )
     EXECUTE FUNCTION update_sample_updated_at_from_result();
 
 -- ============================================================================
 -- DOCUMENTATION
 -- ============================================================================
 COMMENT ON FUNCTION update_sample_updated_at_from_result() 
-IS 'Automatically updates parent sample updated_at timestamp when result value or status changes';
+IS 'Automatically updates parent sample updated_at timestamp when results are inserted, updated, or deleted';
 
 COMMENT ON TRIGGER update_sample_on_result_change ON public.results 
-IS 'Ensures sample.updated_at reflects the latest result activity for proper sorting and tracking';
+IS 'Ensures sample.updated_at reflects the latest result activity (insert/update/delete) for proper sorting and tracking';
