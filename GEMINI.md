@@ -568,6 +568,7 @@ lims-lite/
 │   │   ├── (dashboard)/         # Protected routes
 │   │   │   ├── analyst/         # Analyst role pages
 │   │   │   └── manager/         # Manager role pages
+│   │   ├── samples/             # Unified samples page (RBAC-gated)
 │   │   ├── actions/             # Server Actions (auth, samples, results)
 │   │   ├── layout.tsx           # Root layout
 │   │   └── page.tsx             # Landing page

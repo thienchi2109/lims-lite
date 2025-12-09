@@ -50,7 +50,7 @@
 - [x] 6.4 Add `/samples` to revalidatePath in assignTests (line 270-271)
 - [x] 6.5 Add `/samples` to revalidatePath in unassignTests (line 343-344)
 - [x] 6.6 Add `/samples` to revalidatePath in submitSampleForReview (line 631-632)
-- [ ] 6.7 Keep existing paths for backward compatibility
+- [x] 6.7 Keep existing paths for backward compatibility
 
 ## Phase 7: Testing - Analyst Role
 
@@ -81,23 +81,23 @@
 
 ## Phase 9: Cross-Role Testing
 
-- [ ] 9.1 Test permissions are enforced (analyst cannot access manager actions)
-- [ ] 9.2 Test with active filters, ensure persistence after refresh
-- [ ] 9.3 Test multi-tab scenario (window focus refetch)
-- [ ] 9.4 Test network error handling and retry logic
-- [ ] 9.5 Verify React Query DevTools shows correct cache entries
-- [ ] 9.6 Test inline editing (client name) with cache invalidation
-- [ ] 9.7 Test direct navigation to /samples (should work without redirect)
+- [x] 9.1 Test permissions are enforced (analyst cannot access manager actions)
+- [x] 9.2 Test with active filters, ensure persistence after refresh
+- [x] 9.3 Test multi-tab scenario (window focus refetch)
+- [x] 9.4 Test network error handling and retry logic
+- [x] 9.5 Verify React Query DevTools shows correct cache entries
+- [x] 9.6 Test inline editing (client name) with cache invalidation
+- [x] 9.7 Test direct navigation to /samples (should work without redirect)
 
 ## Phase 10: Documentation and Cleanup
 
-- [ ] 10.1 Update GEMINI.md to reference unified /samples route
-- [ ] 10.2 Update OpenSpec docs to reflect new architecture
-- [ ] 10.3 Add comments explaining permissions structure
-- [ ] 10.4 Run typecheck to ensure no TypeScript errors
-- [ ] 10.5 Run build to verify production bundle
-- [ ] 10.6 Document migration in NOTES.md or changelog
-- [ ] 10.7 Update any navigation links in dashboard components
+- [x] 10.1 Update GEMINI.md to reference unified /samples route
+- [x] 10.2 Update OpenSpec docs to reflect new architecture
+- [x] 10.3 Add comments explaining permissions structure
+- [x] 10.4 Run typecheck to ensure no TypeScript errors
+- [x] 10.5 Run build to verify production bundle
+- [x] 10.6 Document migration in NOTES.md or changelog
+- [x] 10.7 Update any navigation links in dashboard components
 
 ## Notes
 

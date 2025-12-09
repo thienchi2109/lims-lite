@@ -1,16 +1,19 @@
-## UPDATED Requirements (Reflects Current State)
+# sample-management Specification
 
+## Purpose
+TBD - created by archiving change consolidate-samples-pages. Update Purpose after archive.
+## Requirements
 ### Requirement: Unified samples workspace with role-aware permissions
-
-**Context:** Currently, manager samples page uses TanStack Query (migrated Dec 7, 2025), while analyst samples page still uses legacy server-side rendering. This creates maintenance burden and feature parity gaps.
-
-**Objective:** Create a single `/samples` workspace that serves both analyst and manager roles with TanStack Query-based data fetching and role-specific permissions.
 
 The system SHALL provide a unified samples workspace at `/samples` that:
 - Authenticates users and determines role server-side
 - Uses TanStack Query for client-side data fetching (both roles)
 - Enforces role-specific permissions for actions
 - Redirects legacy routes (`/analyst/samples`, `/manager/samples`) transparently
+
+**Context:** Currently, manager samples page uses TanStack Query (migrated Dec 7, 2025), while analyst samples page still uses legacy server-side rendering. This creates maintenance burden and feature parity gaps.
+
+**Objective:** Create a single `/samples` workspace that serves both analyst and manager roles with TanStack Query-based data fetching and role-specific permissions.
 
 #### Scenario: Analyst accesses unified workspace
 
@@ -84,42 +87,3 @@ The system SHALL provide a unified samples workspace at `/samples` that:
 - Synchronize sample list and detail panels
 - Show consistent state across all tabs
 
-## Non-Functional Requirements
-
-### NFR 1: Performance
-- Initial page load SHALL not exceed 2 seconds on 3G network
-- TanStack Query bundle addition SHALL not exceed 30KB gzipped
-- Cache invalidation SHALL trigger refetch within 500ms
-- Auto-refresh SHALL complete within 1 second for typical datasets (< 100 samples)
-
-### NFR 2: Accessibility
-- All role-specific actions SHALL have ARIA labels indicating permission requirements
-- Keyboard navigation SHALL work identically for both roles
-- Screen reader SHALL announce role-specific permissions ("Manager actions available" / "Analyst view")
-
-### NFR 3: Auditability (21 CFR Part 11)
-- All data fetching SHALL respect Supabase RLS policies
-- Permissions checks SHALL occur both client and server-side
-- Permission violations SHALL be logged to audit_logs table
-- Legacy route redirects SHALL preserve audit trail (same session)
-
-### NFR 4: Maintainability
-- Single source of truth for samples UI logic
-- Component props SHALL use TypeScript interfaces
-- Permissions object SHALL be centrally defined
-- Code duplication SHALL be eliminated between analyst/manager pages
-
-## Acceptance Criteria
-
-**The consolidation is considered complete when:**
-
-1. ✅ Both analyst and manager can access `/samples` with correct permissions
-2. ✅ Legacy routes redirect seamlessly with query preservation
-3. ✅ TanStack Query hooks work for both roles
-4. ✅ Auto-refresh functions 100% reliably for both roles
-5. ✅ All existing features work identically (filters, pagination, sorting)
-6. ✅ Role-specific actions are correctly gated by permissions
-7. ✅ No TypeScript errors
-8. ✅ Production build succeeds
-9. ✅ All manual test scenarios pass (analyst + manager)
-10. ✅ Code review approved by team lead
