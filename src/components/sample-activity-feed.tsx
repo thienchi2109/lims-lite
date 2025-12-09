@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { formatDistanceToNow } from 'date-fns'
+import { format } from 'date-fns'
 import { vi } from 'date-fns/locale'
 import { 
     FileEdit, 
@@ -132,8 +132,7 @@ function ActivityItem({ activity }: { activity: AuditLog }) {
                     </span>
                     <span>•</span>
                     <span>
-                        {formatDistanceToNow(new Date(activity.changed_at), {
-                            addSuffix: true,
+                        {format(new Date(activity.changed_at), 'dd/MM/yyyy HH:mm:ss', {
                             locale: vi,
                         })}
                     </span>
