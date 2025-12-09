@@ -4,11 +4,11 @@ import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { format } from 'date-fns'
 import { vi } from 'date-fns/locale'
-import { 
-    FileEdit, 
-    FlaskConical, 
-    CheckCircle, 
-    XCircle, 
+import {
+    FileEdit,
+    FlaskConical,
+    CheckCircle,
+    XCircle,
     RefreshCw,
     Activity,
     Loader2,
@@ -39,7 +39,7 @@ export function SampleActivityFeed({ sampleId }: SampleActivityFeedProps) {
         queryKey: ['sample-activities', sampleId],
         queryFn: async () => {
             const supabase = createClient()
-            
+
             // Fetch audit logs for this sample and its related results
             const { data, error } = await supabase
                 .from('audit_logs')
@@ -56,15 +56,15 @@ export function SampleActivityFeed({ sampleId }: SampleActivityFeedProps) {
                 .or(`record_id.eq.${sampleId},new_values->>sample_id.eq.${sampleId},old_values->>sample_id.eq.${sampleId}`)
                 .order('changed_at', { ascending: false })
                 .limit(50)
-            
+
             if (error) throw error
-            
+
             // Transform data to handle single user object (Supabase returns array for joins)
             const transformedData = data?.map(log => ({
                 ...log,
                 user: Array.isArray(log.user) ? log.user[0] : log.user
             })) || []
-            
+
             return transformedData as AuditLog[]
         },
         refetchInterval: 30000, // Refresh every 30 seconds
@@ -115,7 +115,7 @@ function ActivityItem({ activity }: { activity: AuditLog }) {
     const { icon, color, message } = getActivityDisplay(activity)
     const Icon = icon
     const userName = getUserName(activity.user)
-    
+
     return (
         <div className="flex gap-4 p-4 hover:bg-slate-50/50 transition-colors">
             <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${color}`}>
@@ -138,8 +138,8 @@ function ActivityItem({ activity }: { activity: AuditLog }) {
                     </span>
                 </div>
                 {activity.operation === 'UPDATE' && (
-                    <ChangeDetails 
-                        oldValues={activity.old_values} 
+                    <ChangeDetails
+                        oldValues={activity.old_values}
                         newValues={activity.new_values}
                         tableName={activity.table_name}
                     />
@@ -268,7 +268,7 @@ function ChangeDetails({
     // Only show meaningful changes
     const changes: Array<{ field: string; old: any; new: any }> = []
 
-    const fieldsToShow = tableName === 'results' 
+    const fieldsToShow = tableName === 'results'
         ? ['value', 'status', 'approval_note']
         : ['client_name', 'status']
 
@@ -292,11 +292,11 @@ function ChangeDetails({
                         {getFieldLabel(change.field)}:
                     </span>
                     <span className="text-slate-400 line-through">
-                        {formatValue(change.old)}
+                        {formatValue(change.old, change.field)}
                     </span>
                     <span>→</span>
                     <span className="font-medium text-slate-700">
-                        {formatValue(change.new)}
+                        {formatValue(change.new, change.field)}
                     </span>
                 </div>
             ))}
@@ -316,7 +316,7 @@ function getFieldLabel(field: string): string {
 
 function getStatusLabel(status: string | null | undefined): string {
     if (!status) return 'N/A'
-    
+
     const labels: Record<string, string> = {
         received: 'Đã nhận',
         assigned: 'Đã chỉ định',
@@ -331,8 +331,9 @@ function getStatusLabel(status: string | null | undefined): string {
     return labels[status] || status
 }
 
-function formatValue(value: any): string {
+function formatValue(value: any, field?: string): string {
     if (value === null || value === undefined) return 'Trống'
+    if (field === 'status') return getStatusLabel(value)
     if (typeof value === 'boolean') return value ? 'Có' : 'Không'
     if (typeof value === 'object') return JSON.stringify(value)
     return String(value)
