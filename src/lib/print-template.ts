@@ -5,7 +5,7 @@ export function generatePrintTemplate(sample: any, results: ResultWithAssay[]) {
   const logoUrl = "https://i.postimg.cc/8zFZ52j1/cdc-logo-150.png";
   const dateStr = new Date().toLocaleDateString('vi-VN');
 
-  // Group results by category (mocked as 'XÉT NGHIỆM' since we don't have category in ResultWithAssay)
+  // Group results by category
   const testsByCategory: { [key: string]: ResultWithAssay[] } = {};
   results.forEach(result => {
     const cat = 'XÉT NGHIỆM'; // Default category
@@ -24,18 +24,18 @@ export function generatePrintTemplate(sample: any, results: ResultWithAssay[]) {
         
         body { 
           font-family: 'Times New Roman', serif; 
-          font-size: 11px; 
+          font-size: 10px; 
           color: #111;
-          line-height: 1.3;
+          line-height: 1.2;
           background: #fff;
           margin: 0;
-          padding: 10px;
-          zoom: 0.95;
+          padding: 5px;
         }
 
         .container {
           max-width: 148mm;
           margin: 0 auto;
+          background: white;
         }
 
         /* HEADER */
@@ -43,9 +43,9 @@ export function generatePrintTemplate(sample: any, results: ResultWithAssay[]) {
           display: flex;
           align-items: flex-start;
           justify-content: space-between;
-          margin-bottom: 15px;
+          margin-bottom: 5px;
           border-bottom: 1px solid #000;
-          padding-bottom: 10px;
+          padding-bottom: 5px;
         }
         
         .header-left {
@@ -54,20 +54,20 @@ export function generatePrintTemplate(sample: any, results: ResultWithAssay[]) {
           justify-content: center;
           align-items: center;
         }
-        .logo { width: 60px; height: auto; display: block; } 
+        .logo { width: 55px; height: auto; display: block; } 
         
         .header-center {
           flex: 1;
           text-align: center;
-          padding: 0 10px;
+          padding: 0 5px;
           display: flex;
           flex-direction: column;
           justify-content: center;
         }
-        .org-parent { font-size: 11px; font-weight: normal; margin: 0; text-transform: uppercase; }
-        .org-name { font-size: 13px; font-weight: bold; margin: 2px 0 0 0; text-transform: uppercase; color: #000; }
+        .org-parent { font-size: 10px; font-weight: normal; margin: 0; text-transform: uppercase; }
+        .org-name { font-size: 12px; font-weight: bold; margin: 2px 0 0 0; text-transform: uppercase; color: #000; }
         .org-address { font-size: 9px; margin-top: 2px; font-style: italic; }
-        .form-name { font-size: 18px; font-weight: bold; margin-top: 10px; text-transform: uppercase; color: #0056b3; }
+        .form-name { font-size: 16px; font-weight: bold; margin-top: 5px; text-transform: uppercase; color: #0056b3; }
 
         .header-right {
           flex: 0 0 20%;
@@ -76,76 +76,78 @@ export function generatePrintTemplate(sample: any, results: ResultWithAssay[]) {
           flex-direction: column;
           align-items: center;
         }
-        .qr-img { width: 60px; height: 60px; margin-bottom: 4px; }
-        .sample-id-box { font-family: monospace; font-size: 11px; font-weight: bold; border: 1px solid #ccc; padding: 2px 4px; border-radius: 4px; background: #f8fafc; }
+        .qr-img { width: 50px; height: 50px; margin-bottom: 2px; }
+        .sample-id-box { font-family: monospace; font-size: 10px; font-weight: bold; border: 1px solid #ccc; padding: 1px 4px; border-radius: 4px; background: #f8fafc; }
 
         /* SECTIONS & TABLES */
-        .section-box { margin-bottom: 10px; }
+        .section-box { margin-bottom: 5px; }
         .section-title { 
-          font-size: 12px; 
+          font-size: 11px; 
           font-weight: 700; 
           text-transform: uppercase; 
-          margin-bottom: 5px;
+          margin-bottom: 2px;
           color: #0056b3;
-          border-bottom: 1px solid #eee;
-          padding-bottom: 2px;
+          border-bottom: 1px dotted #ccc;
+          padding-bottom: 1px;
         }
 
-        /* Info Table Style */
-        .info-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 11px; }
+        /* Info Table Style - Compact 6-column grid */
+        .info-table { width: 100%; border-collapse: collapse; margin-bottom: 0; font-size: 10px; }
         .info-table td {
-            border: 1px solid #000; /* Solid border for info fields */
-            padding: 4px;
+            border: 1px solid #ccc;
+            padding: 2px 4px;
             vertical-align: middle;
+            height: 18px; /* Force compact height */
         }
         .info-label {
             font-weight: bold;
             color: #333;
-            background-color: #f9fafb; /* Light gray background for labels */
-            width: 100px;
+            background-color: #f9fafb;
+            white-space: nowrap;
         }
         .info-value {
             font-weight: 500;
             color: #000;
         }
+        .uppercase { text-transform: uppercase; }
 
         /* MODERN DATA GRID TABLE */
         .test-table { 
             width: 100%; 
             border-collapse: collapse; 
-            margin-top: 5px; 
-            font-size: 11px; 
-            border: 1px solid #cbd5e1;
+            margin-top: 2px; 
+            font-size: 10px; 
+            border: 1px solid #000;
         }
         .test-table th { 
-          border: 1px solid #cbd5e1; 
-          padding: 5px 4px; 
-          background-color: #f8fafc; 
-          color: #334155;
-          font-weight: 800; 
+          border: 1px solid #000; 
+          padding: 3px 4px; 
+          background-color: #f1f5f9; 
+          color: #000;
+          font-weight: bold; 
           text-transform: uppercase;
           text-align: left;
-          font-size: 10px;
+          font-size: 9px;
         }
         .test-table td { 
-            border: 1px solid #e2e8f0; 
-            padding: 5px 4px; 
+            border: 1px solid #000; 
+            padding: 3px 4px; 
             vertical-align: middle; 
-            color: #1e293b;
+            color: #000;
         }
         .cat-row td { 
           background-color: #f0f9ff; 
-          font-weight: 700; 
+          font-weight: bold; 
           text-align: left; 
           padding-left: 8px;
-          color: #dc2626; /* RED COLOR FOR CATEGORY AS REQUESTED */
+          color: #dc2626;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
+          font-size: 10px;
         }
         .center-text { text-align: center; }
         .checkbox-cell {
-            font-size: 14px;
-            color: #94a3b8;
+            font-size: 12px;
+            color: #000;
             line-height: 1;
             text-align: center;
         }
@@ -154,17 +156,17 @@ export function generatePrintTemplate(sample: any, results: ResultWithAssay[]) {
         .footer {
           display: flex;
           justify-content: space-between;
-          margin-top: 20px;
+          margin-top: 10px;
           page-break-inside: avoid;
         }
         .footer-col { text-align: center; width: 45%; }
-        .footer-title { font-weight: bold; text-transform: uppercase; margin-top: 5px; font-size: 11px; }
-        .footer-sign-area { height: 60px; margin-top: 5px; }
+        .footer-title { font-weight: bold; text-transform: uppercase; margin-top: 2px; font-size: 10px; }
+        .footer-sign-area { height: 40px; margin-top: 5px; } /* Reduced height */
         .footer-info {
-            margin-top: 15px;
+            margin-top: 10px;
             border-top: 1px solid #ccc;
-            padding-top: 5px;
-            font-size: 9px;
+            padding-top: 2px;
+            font-size: 8px;
             display: flex;
             justify-content: space-between;
             color: #666;
@@ -197,76 +199,80 @@ export function generatePrintTemplate(sample: any, results: ResultWithAssay[]) {
           </div>
         </div>
 
-        <!-- I. INFO TABLE (Patient & Clinical) -->
+        <!-- I. INFO TABLE (Patient & Clinical) - Compact 4 rows -->
         <div class="section-box">
-          <div class="section-title">I. Thông Tin Hành Chính & Lâm Sàng</div>
+          <div class="section-title">I. Thông Tin Hành Chính</div>
           <table class="info-table">
+            <colgroup>
+                <col style="width: 12%">
+                <col style="width: 38%">
+                <col style="width: 12%">
+                <col style="width: 13%">
+                <col style="width: 12%">
+                <col style="width: 13%">
+            </colgroup>
             <tbody>
                 <tr>
                     <td class="info-label">Họ và tên:</td>
-                    <td class="info-value" style="text-transform: uppercase; font-weight: bold; font-size: 13px;" colspan="3">${sample.client_name || ''}</td>
-                </tr>
-                <tr>
+                    <td class="info-value uppercase" style="font-weight: 800; font-size: 11px;">${sample.client_name || ''}</td>
                     <td class="info-label">Năm sinh:</td>
-                    <td class="info-value">......................</td>
+                    <td class="info-value">............</td>
                     <td class="info-label">Giới tính:</td>
-                    <td class="info-value">......................</td>
+                    <td class="info-value">............</td>
                 </tr>
                 <tr>
                     <td class="info-label">Địa chỉ:</td>
-                    <td class="info-value" colspan="3">................................................................................................</td>
-                </tr>
-                <tr>
-                    <td class="info-label">Số BHYT:</td>
-                    <td class="info-value">................................</td>
-                    <td class="info-label">Hạn sử dụng:</td>
-                    <td class="info-value">................................</td>
-                </tr>
-                <tr>
+                    <td class="info-value" colspan="3">....................................................................................</td>
                     <td class="info-label">Điện thoại:</td>
-                    <td class="info-value" colspan="3">................................</td>
+                    <td class="info-value">............</td>
+                </tr>
+                 <tr>
+                    <td class="info-label">Bác sĩ CĐ:</td>
+                    <td class="info-value" colspan="3">....................................................................................</td>
+                    <td class="info-label">Số BHYT:</td>
+                    <td class="info-value">............</td>
                 </tr>
                 <tr>
                     <td class="info-label">Chẩn đoán:</td>
-                    <td class="info-value" colspan="3">................................................................................................</td>
-                </tr>
-                <tr>
-                    <td class="info-label">Bác sĩ chỉ định:</td>
-                    <td class="info-value" colspan="3">................................</td>
+                    <td class="info-value" colspan="5">..........................................................................................................................................</td>
                 </tr>
             </tbody>
           </table>
         </div>
 
-        <!-- II. SAMPLE & TIME INFO (Bổ sung theo yêu cầu) -->
+        <!-- II. SAMPLE INFO - Compact 2 rows -->
         <div class="section-box">
-            <div class="section-title">II. Thông Tin Mẫu & Thời Gian</div>
+            <div class="section-title">II. Thông Tin Mẫu</div>
             <table class="info-table">
+                <colgroup>
+                    <col style="width: 12%">
+                    <col style="width: 25%">
+                    <col style="width: 12%">
+                    <col style="width: 20%">
+                    <col style="width: 12%">
+                    <col style="width: 19%">
+                </colgroup>
                 <tbody>
                     <tr>
                         <td class="info-label">Loại mẫu:</td>
-                        <td class="info-value">......................</td>
-                        <td class="info-label">Ngày lấy mẫu:</td>
-                        <td class="info-value">${sample.received_at ? new Date(sample.received_at).toLocaleDateString('vi-VN') : '......................'}</td>
+                        <td class="info-value">....................</td>
+                        <td class="info-label">T.Gian lấy:</td>
+                        <td class="info-value">..../..../....... ...:</td>
+                        <td class="info-label">Người lấy:</td>
+                        <td class="info-value">................</td>
                     </tr>
                     <tr>
-                        <td class="info-label">Giờ lấy mẫu:</td>
-                        <td class="info-value">......................</td>
-                        <td class="info-label">Người lấy mẫu:</td>
-                        <td class="info-value">......................</td>
-                    </tr>
-                    <tr>
-                        <td class="info-label">Giờ nhận mẫu:</td>
-                        <td class="info-value">......................</td>
-                        <td class="info-label">Người nhận mẫu:</td>
-                        <td class="info-value">${sample.received_by_name || '......................'}</td>
+                         <td class="info-label">T.Gian nhận:</td>
+                        <td class="info-value">${sample.received_at ? new Date(sample.received_at).toLocaleDateString('vi-VN') + ' ' + new Date(sample.received_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '..../..../....... ...:'}</td>
+                        <td class="info-label">Người nhận:</td>
+                        <td class="info-value" colspan="3">${sample.received_by_name || '...................................................'}</td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
-        <!-- III. MODERN DATA GRID TABLE -->
-        <div class="section-box">
+        <!-- III. TESTS -->
+        <div class="section-box" style="flex: 1;">
           <div class="section-title">III. Chỉ Định Xét Nghiệm</div>
           <table class="test-table">
             <thead>
@@ -301,27 +307,26 @@ export function generatePrintTemplate(sample: any, results: ResultWithAssay[]) {
           </table>
         </div>
 
-        <!-- FOOTER (Cập nhật theo mẫu) -->
+        <!-- FOOTER -->
         <div class="footer">
           <div class="footer-col">
-            <div style="font-style: italic; font-size: 10px; margin-bottom: 3px;">Ngày ..... tháng ..... năm .....</div>
+            <div style="font-style: italic; font-size: 9px; margin-bottom: 2px;">Ngày ..... tháng ..... năm .....</div>
             <div class="footer-title">KHÁCH HÀNG YÊU CẦU</div>
             <div class="footer-sign-area"></div>
-            <div style="font-size: 10px;">(Ký và ghi rõ họ tên)</div>
+            <div style="font-size: 9px;">(Ký và ghi rõ họ tên)</div>
           </div>
           <div class="footer-col">
-            <div style="font-style: italic; font-size: 10px; margin-bottom: 3px;">Cần Thơ, ngày ${dateStr.split('/')[0]} tháng ${dateStr.split('/')[1]} năm ${dateStr.split('/')[2]}</div>
+            <div style="font-style: italic; font-size: 9px; margin-bottom: 2px;">Cần Thơ, ngày ${dateStr.split('/')[0]} tháng ${dateStr.split('/')[1]} năm ${dateStr.split('/')[2]}</div>
             <div class="footer-title">Bác Sĩ Chỉ Định</div>
             <div class="footer-sign-area"></div>
-            <div style="font-weight: bold; font-size: 11px;">(Ký và ghi rõ họ tên)</div>
+            <div style="font-weight: bold; font-size: 10px;">(Ký và ghi rõ họ tên)</div>
           </div>
         </div>
 
-        <!-- FOOTER INFO (Định danh cuối trang) -->
         <div class="footer-info">
             <div>PL2.1.CDC.STLM</div>
             <div>Trang: 1/1</div>
-            <div>Ngày ban hành: ....................</div>
+            <div>Ngày ban hành: ${dateStr}</div>
         </div>
 
       </div>
