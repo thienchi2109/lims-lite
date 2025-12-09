@@ -62,7 +62,7 @@ export default async function UnifiedSamplesPage() {
 
     // 6. Render client component with all required props
     return (
-        <div className="h-[calc(100vh-4rem)] flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden">
+        <div className="h-screen flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden">
             <DashboardHeader
                 subtitle="Quản lý mẫu"
                 user={userData}
