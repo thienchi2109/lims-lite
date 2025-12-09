@@ -515,7 +515,8 @@ export async function getSamplesForApproval() {
             return { error: 'Only managers can view approval queue' }
         }
 
-        // Fetch samples with their results status counts
+        // Fetch only samples that analysts have explicitly submitted for review
+        // Status 'review' means the analyst used submitSampleForReview()
         const { data: samples, error } = await supabase
             .from('samples')
             .select(
@@ -526,47 +527,44 @@ export async function getSamplesForApproval() {
                 status,
                 received_at,
                 updated_at,
-                received_by_user:users!samples_received_by_fkey(full_name)
+                received_by_user:users!samples_received_by_fkey(full_name),
+                results(id, status)
             `
             )
-            .in('status', ['assigned', 'in_progress', 'review'])
+            .eq('status', 'review')
             .is('deleted_at', null)
-            .order('received_at', { ascending: false })
+            .order('updated_at', { ascending: false })
 
         if (error) {
             console.error('Error fetching samples for approval:', error)
             return { error: error.message }
         }
 
-        // For each sample, get result counts
-        const samplesWithCounts = await Promise.all(
-            samples.map(async (sample: any) => {
-                const { data: results } = await supabase
-                    .from('results')
-                    .select('id, status')
-                    .eq('sample_id', sample.id)
+        // Transform data with result counts (computed from nested results, no additional queries)
+        const samplesWithCounts = samples.map((sample: any) => {
+            const results = sample.results || []
+            const totalTests = results.length
+            const pendingCount = results.filter((r: any) => r.status === 'pending').length
+            const enteredCount = results.filter((r: any) => r.status === 'entered').length
+            const approvedCount = results.filter((r: any) => r.status === 'approved').length
 
-                const totalTests = results?.length || 0
-                const pendingCount = results?.filter((r: any) => r.status === 'pending').length || 0
-                const enteredCount = results?.filter((r: any) => r.status === 'entered').length || 0
-                const approvedCount = results?.filter((r: any) => r.status === 'approved').length || 0
+            return {
+                id: sample.id,
+                sample_id: sample.sample_id,
+                client_name: sample.client_name,
+                status: sample.status,
+                received_at: sample.received_at,
+                updated_at: sample.updated_at,
+                received_by_name: sample.received_by_user?.full_name || null,
+                total_tests: totalTests,
+                pending_count: pendingCount,
+                entered_count: enteredCount,
+                approved_count: approvedCount,
+            }
+        })
 
-                return {
-                    ...sample,
-                    received_by_name: sample.received_by_user?.full_name || null,
-                    total_tests: totalTests,
-                    pending_count: pendingCount,
-                    entered_count: enteredCount,
-                    approved_count: approvedCount,
-                    needs_approval: enteredCount > 0,
-                }
-            })
-        )
-
-        // Filter to only samples that have tests entered (awaiting approval)
-        const samplesNeedingApproval = samplesWithCounts.filter((s) => s.needs_approval)
-
-        return { data: samplesNeedingApproval }
+        // All samples in 'review' status should have entered results, return all for visibility
+        return { data: samplesWithCounts }
     } catch (error) {
         console.error('Error in getSamplesForApproval:', error)
         return { error: error instanceof Error ? error.message : 'Failed to fetch samples for approval' }
