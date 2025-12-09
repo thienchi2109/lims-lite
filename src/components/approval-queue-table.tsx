@@ -14,9 +14,15 @@ import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { ChevronLeft, ChevronRight, ClipboardPen } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ClipboardPen, FileSearch } from 'lucide-react'
 import { SampleStatusBadge } from '@/components/sample-status-badge'
 import { type SampleStatus } from '@/types'
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 // Type for approval queue data
 interface ApprovalQueueSample {
@@ -136,17 +142,26 @@ export function ApprovalQueueTable({ data, selectedSampleId }: ApprovalQueueTabl
             header: 'Hành động',
             cell: ({ row }) => {
                 return (
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            handleRowClick(row.original.id)
-                        }}
-                        className="h-8 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                    >
-                        Xem xét
-                    </Button>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleRowClick(row.original.id)
+                                    }}
+                                    className="h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50"
+                                >
+                                    <FileSearch className="h-4 w-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Xem chi tiết và phê duyệt</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                 )
             },
         },
@@ -272,4 +287,5 @@ export function ApprovalQueueTable({ data, selectedSampleId }: ApprovalQueueTabl
         </div>
     )
 }
+
 
