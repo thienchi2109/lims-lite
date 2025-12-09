@@ -40,35 +40,14 @@ export async function createSample(data: CreateSample) {
         // Validate input
         const validatedData = CreateSampleSchema.parse(data)
 
-        // Get today's date range
-        const { startOfDay, endOfDay } = getTodayRange()
-
-        // Count samples created today to generate sequence number
-        const { count } = await supabase
-            .from('samples')
-            .select('*', { count: 'exact', head: true })
-            .gte('created_at', startOfDay)
-            .lte('created_at', endOfDay)
-
-        // Generate sample ID
-        const sampleId = generateSampleId(count || 0)
-
-        const nowIso = new Date().toISOString()
-        const receivedAt = validatedData.received_at || nowIso
-
-        // Create sample
-        const { data: sample, error } = await supabase
-            .from('samples')
-            .insert({
-                sample_id: sampleId,
-                client_name: validatedData.client_name,
-                received_by: user.id,
-                received_at: receivedAt,
-                updated_at: nowIso,
-                status: 'received',
-            })
-            .select()
-            .single()
+        // Use atomic RPC to prevent race conditions
+        // create_sample_atomic returns the created sample object as JSONB
+        const { data: sample, error } = await supabase.rpc('create_sample_atomic', {
+            p_client_id: null,
+            p_client_name: validatedData.client_name,
+            p_received_at: validatedData.received_at || null,
+            p_received_by: user.id,
+        })
 
         if (error) {
             console.error('Error creating sample:', error)
