@@ -602,6 +602,98 @@ lims-lite/
 4. **`src/components/*.tsx`** - Feature components (forms, grids, dialogs)
 5. **`docker-compose.yml`** - Infrastructure configuration
 
+## **UI/UX Standards**
+
+### **Page Header Pattern (MANDATORY)**
+
+**All pages MUST use the unified `DashboardHeader` component.** This ensures consistent branding, user experience, and functionality across the entire application.
+
+#### **Required Pattern:**
+```tsx
+import { DashboardHeader } from '@/components/dashboard-header'
+
+export default async function YourPage() {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) redirect('/login')
+    
+    const { data: userData } = await supabase
+        .from('users')
+        .select('full_name, role')
+        .eq('id', user.id)
+        .single()
+    
+    return (
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+            <DashboardHeader 
+                subtitle="Page-specific subtitle in Vietnamese"
+                user={userData}
+            />
+            
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {/* Page content */}
+            </main>
+        </div>
+    )
+}
+```
+
+#### **DashboardHeader Features:**
+- ✅ **CDC Logo**: Automatically displayed on left side
+- ✅ **Gradient Title**: "Hệ Thống Quản Lý Thông Tin Khoa Xét nghiệm" (default, can override with `title` prop)
+- ✅ **Subtitle**: Page-specific subtitle in Vietnamese (required prop)
+- ✅ **User Profile**: UserProfileDropdown with:
+  - Avatar displaying user initials
+  - User name and role display with active status indicator (green ping animation)
+  - Dropdown menu: "Hồ sơ" (Profile), "Cài đặt" (Settings), "Đăng xuất" (Logout)
+  - Logout confirmation dialog (prevents accidental logouts)
+- ✅ **Responsive**: Works on mobile, tablet, and desktop
+- ✅ **Dark Mode**: Full dark mode support
+
+#### **Navigation Pattern:**
+Place navigation buttons ("Quay lại", etc.) in the **main content area**, NOT in the header:
+
+```tsx
+<main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="mb-6">
+        <Link href="/manager">
+            <Button variant="ghost" size="sm" className="hover:bg-slate-100 dark:hover:bg-slate-800">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Quay lại
+            </Button>
+        </Link>
+    </div>
+    
+    {/* Rest of content */}
+</main>
+```
+
+#### **Examples of Correct Subtitles:**
+| Page | Subtitle |
+|------|----------|
+| `/samples` | "Quản lý mẫu" |
+| `/manager/approvals` | "Phê duyệt kết quả" |
+| `/manager/assays` | "Quản lý danh mục chỉ tiêu xét nghiệm/kiểm nghiệm" |
+| `/manager/users` | "Quản lý tài khoản và phân quyền người dùng" |
+| `/analyst/accession` | "Tiếp nhận mẫu" |
+
+#### **❌ DO NOT:**
+- Create custom headers with inline user profile display
+- Use `LogoutButton` component directly
+- Place navigation buttons in the header
+- Omit CDC logo
+- Skip the DashboardHeader component
+
+#### **✅ DO:**
+- Always use `DashboardHeader` for all authenticated pages
+- Pass `userData` with `full_name` and `role` to DashboardHeader
+- Write subtitles in Vietnamese that describe the page's purpose
+- Place navigation buttons in main content area
+- Follow the established pattern for consistency
+
+This unified pattern ensures professional appearance, consistent UX, and easier maintenance across the entire application.
+
 ## **Code Generation Preferences**
 
 ### **React Components**
