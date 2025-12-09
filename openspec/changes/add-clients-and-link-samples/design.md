@@ -8,7 +8,7 @@
 - Non-Goals: UI polish beyond intake forms; multi-identifier history; storing raw QR payload; changing sample_status enum.
 
 ## Decisions
-- Table: `clients(id uuid pk default gen_random_uuid())` with NOT NULL `id_card_num`, `name`, `date_of_birth` (DATE), `gender` (TEXT CHECK in {'Nam','Nữ','Khác'}); optional `address`, `health_insurance_num`, `expiry_date` (DATE), `created_at/updated_at` with defaults.
+- Table: `clients(id uuid pk default gen_random_uuid())` with NOT NULL `id_card_num`, `name`, `date_of_birth` (DATE), `gender` (TEXT CHECK in {'Nam','Nữ','Khác'}), `phone` (TEXT NOT NULL with format CHECK matching Vietnamese phones: `^(0|\+84)[0-9]{9,10}$`); optional `address`, `health_insurance_num`, `expiry_date` (DATE), `created_at/updated_at` with defaults.
 - Uniqueness: UNIQUE (`name`, `date_of_birth`) to curb duplicates; `id_card_num` stored but not uniqueness key.
 - Samples: add `client_id UUID NOT NULL REFERENCES clients(id)` plus required `client_name` snapshot (TEXT NOT NULL); keep `status sample_status`; change `type` to TEXT with CHECK over allowed list: `{"Máu","Dịch niệu đạo/âm đạo","Nước tiểu","Phết tế bào âm đạo","Ngoáy trực tràng/hậu môn","Phân","Nước","Thực phẩm"}`.
 - Trigger: BEFORE INSERT/UPDATE on samples to auto-fill `client_name` from `clients.name` when `client_id` provided; keep existing updated_at trigger.
@@ -36,6 +36,7 @@
 ## Backfill Plan (current data assessment)
 - Current data: 50 samples; `client_id` is NULL for all; `client_name` is present for all; no `type` column yet. Duplicate client_name values exist (11 names appear twice) with identical `created_at::date`.
 - Placeholder DOB policy: during backfill, assign `date_of_birth = DATE '1900-01-01' + (row_number() OVER (PARTITION BY client_name ORDER BY created_at, id) - 1)` to satisfy NOT NULL and UNIQUE (name, date_of_birth) without merging unrelated records. Set `gender = 'Khác'` and `id_card_num = 'LEGACY-' || md5(client_name || '-' || rn)` (rn = row_number()) to keep required fields non-null and unique-ish.
+- Placeholder phone policy: assign `phone = '0900' || lpad(row_number()::text, 6, '0')` (e.g., '0900000001', '0900000002') to satisfy NOT NULL and format CHECK; mark for manual cleanup later by managers.
 - Type backfill: when adding `samples.type` (TEXT + CHECK), set legacy rows to `'Nước'` (allowed list) as a conservative default; manual cleanup can follow if better classification is provided later.
 - Snapshot trigger: after backfill, enable BEFORE INSERT/UPDATE trigger to copy `client_name` from clients so future rows stay consistent.
 
@@ -52,13 +53,14 @@ WITH numbered AS (
         ROW_NUMBER() OVER (PARTITION BY s.client_name ORDER BY s.created_at, s.id) AS rn
     FROM public.samples s
 )
-INSERT INTO public.clients (id, id_card_num, name, date_of_birth, gender)
+INSERT INTO public.clients (id, id_card_num, name, date_of_birth, gender, phone)
 SELECT
     gen_random_uuid(),
     'LEGACY-' || md5(n.client_name || '-' || n.rn),
     n.client_name,
     DATE '1900-01-01' + (n.rn - 1),
-    'Khác'
+    'Khác',
+    '0900' || lpad(n.rn::text, 6, '0')  -- Placeholder phone: 0900000001, 0900000002, etc.
 FROM numbered n
 ON CONFLICT (name, date_of_birth) DO NOTHING;
 
