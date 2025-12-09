@@ -15,13 +15,15 @@ import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { ChevronLeft, ChevronRight, ClipboardPen } from 'lucide-react'
+import { SampleStatusBadge } from '@/components/sample-status-badge'
+import { type SampleStatus } from '@/types'
 
 // Type for approval queue data
 interface ApprovalQueueSample {
     id: string
     sample_id: string
     client_name: string | null
-    status: string
+    status: SampleStatus
     received_at: string
     updated_at: string
     received_by_name: string | null
@@ -68,6 +70,13 @@ export function ApprovalQueueTable({ data, selectedSampleId }: ApprovalQueueTabl
                 <span className="text-sm text-slate-900 dark:text-slate-100">
                     {row.getValue('client_name') || '-'}
                 </span>
+            ),
+        },
+        {
+            accessorKey: 'status',
+            header: 'Trạng thái',
+            cell: ({ row }) => (
+                <SampleStatusBadge status={row.getValue('status')} />
             ),
         },
         {
@@ -263,3 +272,4 @@ export function ApprovalQueueTable({ data, selectedSampleId }: ApprovalQueueTabl
         </div>
     )
 }
+

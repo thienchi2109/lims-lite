@@ -321,11 +321,19 @@ export async function approveResults(data: ApproveResults) {
             return { error: updateError.message }
         }
 
-        // Update sample status to 'review'
+        // Check if all results for this sample are now approved
         if (sampleIds[0]) {
+            const { count } = await supabase
+                .from('results')
+                .select('*', { count: 'exact', head: true })
+                .eq('sample_id', sampleIds[0])
+                .neq('status', 'approved')
+
+            const newStatus = count === 0 ? 'completed' : 'review'
+
             await supabase
                 .from('samples')
-                .update({ status: 'review' })
+                .update({ status: newStatus })
                 .eq('id', sampleIds[0])
         }
 
