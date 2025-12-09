@@ -66,7 +66,7 @@ export function SampleFilters({
     fromDate = '',
     toDate = '',
     pageSize = 20,
-    sortBy = 'created_at',
+    sortBy = 'updated_at',
     sortOrder = 'desc',
     receiverId = '',
     receiverOptions = [],

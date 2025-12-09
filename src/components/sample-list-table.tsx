@@ -47,7 +47,7 @@ export function SampleListTable({
     totalCount,
     permissions,
     error,
-    sortBy = 'created_at',
+    sortBy = 'updated_at',
     sortOrder = 'desc',
     selectedSampleId,
 }: SampleListTableProps) {

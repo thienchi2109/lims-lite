@@ -48,7 +48,7 @@ export function SamplesPageClient({
 
     const fromDate = searchParams.get('fromDate') || ''
     const toDate = searchParams.get('toDate') || ''
-    const sortBy = searchParams.get('sortBy') || 'created_at'
+    const sortBy = searchParams.get('sortBy') || 'updated_at'
     const sortOrder = searchParams.get('sortOrder') === 'asc' ? 'asc' : 'desc'
 
     const receiverIdParam = searchParams.get('receiverId') || ''

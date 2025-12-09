@@ -87,7 +87,7 @@ export async function fetchSamples(params: SampleListParams) {
     }
 
     // Apply sorting
-    const sortBy = validatedParams.sortBy || 'created_at'
+    const sortBy = validatedParams.sortBy || 'updated_at'
     const sortOrder = validatedParams.sortOrder || 'desc'
     query = query.order(sortBy, { ascending: sortOrder === 'asc' })
 
