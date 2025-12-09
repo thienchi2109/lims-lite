@@ -104,7 +104,7 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
                 >
                     <div className="flex items-center justify-center gap-2">
                         <Activity className="h-4 w-4" />
-                        <span>Hoạt động</span>
+                        <span>Lịch sử cập nhật</span>
                     </div>
                     {activeTab === 'activity' && (
                         <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-sky-600 dark:bg-sky-400" />
