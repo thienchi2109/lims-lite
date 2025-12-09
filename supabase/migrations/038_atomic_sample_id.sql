@@ -1,4 +1,4 @@
--- Migration 027: Implement Atomic Sample ID Generation
+-- Migration 038: Implement Atomic Sample ID Generation
 -- Description: Introduces a sequence table and helper function to generate sample IDs atomically,
 -- preventing race conditions. Updates usage in new RPC and existing accession flow.
 
