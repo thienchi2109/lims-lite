@@ -26,11 +26,11 @@ The system SHALL store clients in a dedicated table with required identity field
 
 ### Requirement: QR intake mapping for clients
 The system SHALL parse QR payloads from ID cards to auto-fill client fields without storing the raw string.
-- Mapping: `id_card_num|name|dd/mm/yyyy|gender` (health insurance ignored).
-- `date_of_birth` SHALL be converted to DATE; `gender` SHALL be validated against {'Nam','Nữ','Khác'}.
+- Mapping: `id_card_num|health_insurance_num|name|DDMMYYYY|gender|` (health insurance ignored, segment 1 unused).
+- `date_of_birth` SHALL be converted from 8-digit DDMMYYYY to DATE; `gender` SHALL be validated against {'Nam','Nữ','Khác'}.
 
 #### Scenario: Accept QR payload into client registry
-- **WHEN** a sampler scans a QR code yielding `086094006827|331757192|NGUYỄN THIỆN CHÍ|21/09/1994|Nam|`
+- **WHEN** a sampler scans a QR code yielding `086094006827|331757192|NGUYỄN THIỆN CHÍ|21091994|Nam|`
 - **THEN** the system SHALL map `id_card_num=086094006827`, `name=NGUYỄN THIỆN CHÍ`, `date_of_birth=1994-09-21`, `gender=Nam`
 - **AND** upsert/select a client using (`name`, `date_of_birth`) uniqueness rules
 - **AND** return the client identifier for downstream sample creation

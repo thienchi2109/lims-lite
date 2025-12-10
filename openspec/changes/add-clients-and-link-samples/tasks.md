@@ -1,7 +1,8 @@
-## 1. Design & Decisions
-- [ ] 1.1 Confirm mapping of QR payload to fields (id_card_num, name, DOB dd/mm/yyyy → DATE, gender) and allowed lists
-- [ ] 1.2 Finalize DB constraints (CHECKs for gender/type, UNIQUE on name+date_of_birth, NOT NULL columns) and trigger behavior for snapshots/updated_at
-- [ ] 1.3 Define RLS policy matrix for clients (analyst/manager) and samples changes (role checks, drop/create pattern)
+## 1. Design & Decisions ✅ COMPLETE
+> **See**: [PHASE1_DESIGN_DECISIONS.md](./PHASE1_DESIGN_DECISIONS.md) for full specification
+- [x] 1.1 Confirm mapping of QR payload to fields (id_card_num, name, DOB dd/mm/yyyy → DATE, gender) and allowed lists
+- [x] 1.2 Finalize DB constraints (CHECKs for gender/type, UNIQUE on name+date_of_birth, NOT NULL columns) and trigger behavior for snapshots/updated_at
+- [x] 1.3 Define RLS policy matrix for clients (analyst/manager) and samples changes (role checks, drop/create pattern)
 
 ## 2. Database Migration
 - [ ] 2.1 Create migration adding `clients` table with audit/updated_at triggers, CHECKs (gender, phone format), UNIQUE, indexes
