@@ -23,6 +23,10 @@ export type ClientActionName =
     | 'deleteUser'
     | 'rejectSample'
     | 'discardSample'
+    | 'upsertClient'
+    | 'findClientByIdentity'
+    | 'getClients'
+    | 'updateClient'
 
 export interface ClientActionRequest {
     action: ClientActionName

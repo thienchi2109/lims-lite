@@ -146,6 +146,22 @@ export function discardSampleClient(data: DiscardSample) {
     return callClientAction('discardSample', data)
 }
 
+export function upsertClientClient(data: CreateClient) {
+    return callClientAction('upsertClient', data)
+}
+
+export function findClientByIdentityClient(name: string, dateOfBirth: string) {
+    return callClientAction('findClientByIdentity', { name, dateOfBirth })
+}
+
+export function fetchClientsClient(search?: string) {
+    return callClientAction('getClients', search ? { search } : undefined)
+}
+
+export function updateClientClient(id: string, data: Partial<CreateClient>) {
+    return callClientAction('updateClient', { id, data })
+}
+
 export async function logoutClient() {
     const response = await fetch('/api/auth/logout', {
         method: 'POST',

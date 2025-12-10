@@ -79,7 +79,10 @@ export function SampleAccessionForm() {
         try {
             if (selectedTests.length === 0) {
                 // Create sample WITHOUT tests (new flow)
+                // TODO: Replace with actual client selection and type selection in Phase 4 UI
                 const payload: CreateSample = {
+                    client_id: '00000000-0000-0000-0000-000000000000', // TODO: Get from client selector
+                    type: 'Máu', // TODO: Get from type selector
                     client_name: data.client_name,
                     received_at: data.received_at ? new Date(data.received_at).toISOString() : undefined,
                 }
@@ -99,8 +102,11 @@ export function SampleAccessionForm() {
                 }
             } else {
                 // Create sample WITH tests (existing flow)
+                // TODO: Replace with actual client selection and type selection in Phase 4 UI
                 const payload: CreateSampleWithAssignments = {
+                    client_id: '00000000-0000-0000-0000-000000000000', // TODO: Get from client selector
                     client_name: data.client_name,
+                    type: 'Máu', // TODO: Get from type selector
                     received_at: data.received_at ? new Date(data.received_at).toISOString() : undefined,
                     tests: selectedTests.map((t) => ({
                         assayId: t.assayId,

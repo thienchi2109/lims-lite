@@ -29,6 +29,12 @@ import {
     removeMethodFromAssay,
 } from '@/app/actions/assay-methods'
 import { createUser, updateUser, deleteUser } from '@/app/actions/users'
+import {
+    upsertClient,
+    findClientByIdentity,
+    getClients,
+    updateClient,
+} from '@/app/actions/clients'
 import type { ClientActionName, ClientActionRequest } from '@/lib/client-actions/types'
 
 interface ActionHandler {
@@ -179,6 +185,20 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
     },
     rejectSample: async (payload) => rejectSample(payload),
     discardSample: async (payload) => discardSample(payload),
+    upsertClient: async (payload) => upsertClient(payload),
+    findClientByIdentity: async (payload) => {
+        if (!payload?.name || !payload?.dateOfBirth) {
+            return { error: 'Tên và ngày sinh là bắt buộc' }
+        }
+        return findClientByIdentity(payload.name, payload.dateOfBirth)
+    },
+    getClients: async (payload) => getClients(payload?.search),
+    updateClient: async (payload) => {
+        if (!payload?.id) {
+            return { error: 'Client ID là bắt buộc' }
+        }
+        return updateClient(payload.id, payload.data)
+    },
 }
 
 export async function POST(request: Request) {
