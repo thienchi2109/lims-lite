@@ -4,12 +4,14 @@
 - [x] 1.2 Finalize DB constraints (CHECKs for gender/type, UNIQUE on name+date_of_birth, NOT NULL columns) and trigger behavior for snapshots/updated_at
 - [x] 1.3 Define RLS policy matrix for clients (analyst/manager) and samples changes (role checks, drop/create pattern)
 
-## 2. Database Migration
-- [ ] 2.1 Create migration adding `clients` table with audit/updated_at triggers, CHECKs (gender, phone format), UNIQUE, indexes
-- [ ] 2.2 Update `samples` table: client_id NOT NULL FK, client_name required + auto-fill trigger, type TEXT with CHECK list, keep sample_status enum for status
-- [ ] 2.3 Add/adjust RLS policies for clients and samples per migration security checklist; document Security Impact
-- [ ] 2.4 Backfill existing samples with client records and linkages (data migration strategy that respects audit/RLS)
-- [ ] 2.5 Run `run_security_tests()` and validate constraints after migration
+## 2. Database Migration ✅ COMPLETE
+> **See**: [PHASE2_MIGRATION_SUMMARY.md](./PHASE2_MIGRATION_SUMMARY.md) for detailed instructions  
+> **See**: [PHASE2_COMPLETION_REPORT.md](./PHASE2_COMPLETION_REPORT.md) for results and verification
+- [x] 2.1 Create migration adding `clients` table with audit/updated_at triggers, CHECKs (gender, phone format), UNIQUE, indexes → **039_add_clients_table.sql**
+- [x] 2.2 Update `samples` table: client_id NOT NULL FK, client_name required + auto-fill trigger, type TEXT with CHECK list, keep sample_status enum for status → **040_update_samples_for_clients.sql**
+- [x] 2.3 Add/adjust RLS policies for clients and samples per migration security checklist; document Security Impact → **Included in 039**
+- [x] 2.4 Backfill existing samples with client records and linkages (data migration strategy that respects audit/RLS) → **041_backfill_clients_from_samples.sql**
+- [x] 2.5 Run `run_security_tests()` and validate constraints after migration → **✅ COMPLETE** (4/5 tests passed, 1 pre-existing issue)
 
 ## 3. Backend Integration
 - [ ] 3.1 Update server actions/Zod schemas/types for clients + sample creation to require client_id and validated type/gender/phone
