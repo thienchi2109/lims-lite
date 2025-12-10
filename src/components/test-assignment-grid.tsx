@@ -233,7 +233,7 @@ export function TestAssignmentGrid({
 
     return (
         <div className="flex flex-col h-[calc(100vh-200px)] min-h-[600px]">
-             <ResizablePanelGroup
+            <ResizablePanelGroup
                 direction="horizontal"
                 className="h-full border rounded-lg shadow-sm bg-white dark:bg-slate-950"
             >
@@ -473,7 +473,7 @@ export function TestAssignmentGrid({
                             {onSave && (
                                 <Button
                                     onClick={onSave}
-                                    disabled={selected.length === 0 || isSaving}
+                                    disabled={isSaving}
                                     className="w-full"
                                 >
                                     {isSaving ? (

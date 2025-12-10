@@ -4,6 +4,7 @@ import type {
     AssignTests,
     SampleListParams,
     UpdateSample,
+    CreateSample,
     CreateSampleWithAssignments,
     SaveBatchResults,
     ApproveResults,
@@ -58,6 +59,10 @@ export function assignTestsClient(data: AssignTests) {
 
 export function updateSampleClient(data: UpdateSample) {
     return callClientAction('updateSample', data)
+}
+
+export function createSampleClient(data: CreateSample) {
+    return callClientAction('createSample', data)
 }
 
 export function accessionAndAssignTestsClient(data: CreateSampleWithAssignments) {

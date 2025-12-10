@@ -25,13 +25,13 @@ export default async function AccessionPage() {
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-            <DashboardHeader 
+            <DashboardHeader
                 subtitle="Tiếp nhận mẫu"
                 user={userData}
             />
 
-            <main className="w-full px-4 sm:px-6 lg:px-8 py-8">
-                <div className="mb-6">
+            <main className="w-full px-4 sm:px-6 lg:px-8 py-2">
+                <div className="mb-2">
                     <Link href="/analyst">
                         <Button variant="ghost" className="gap-2 pl-0 hover:pl-0 hover:bg-transparent">
                             <ArrowLeft className="h-4 w-4" />
@@ -40,8 +40,8 @@ export default async function AccessionPage() {
                     </Link>
                 </div>
 
-                <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 p-6">
-                    <div className="mb-6">
+                <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 p-3">
+                    <div className="mb-3">
                         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                             Tiếp nhận mẫu mới
                         </h2>

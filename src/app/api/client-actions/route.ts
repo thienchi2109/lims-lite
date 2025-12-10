@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import {
     assignTests,
     updateSample,
+    createSample,
     accessionAndAssignTests,
     getSampleTests,
     getSamples,
@@ -80,6 +81,7 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
     getSamples: async (payload) => getSamples(payload),
     assignTests: async (payload) => assignTests(payload),
     updateSample: async (payload) => updateSample(payload),
+    createSample: async (payload) => createSample(payload),
     accessionAndAssignTests: async (payload) => accessionAndAssignTests(payload),
     getSampleTests: async (payload) => {
         if (!payload?.sampleId) {

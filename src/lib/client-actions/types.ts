@@ -2,6 +2,7 @@ export type ClientActionName =
     | 'getSamples'
     | 'assignTests'
     | 'updateSample'
+    | 'createSample'
     | 'accessionAndAssignTests'
     | 'getSampleTests'
     | 'getResultsBySample'
