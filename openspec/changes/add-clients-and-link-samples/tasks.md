@@ -15,7 +15,7 @@
 
 ## 3. Backend Integration
 - [ ] 3.1 Update server actions/Zod schemas/types for clients + sample creation to require client_id and validated type/gender/phone
-- [ ] 3.2 Implement QR payload parser/validator (dd/mm/yyyy → DATE) and client upsert/find logic; add phone validation (Vietnamese format)
+- [ ] 3.2 Implement QR payload parser/validator (dd/mm/yyyy → DATE) and client upsert/find logic; add phone validation (Vietnamese format)g
 - [ ] 3.3 Adjust API client routes to use new endpoints/actions; ensure RLS-friendly access
 
 ## 4. Frontend Integration
