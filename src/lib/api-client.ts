@@ -13,6 +13,7 @@ import type {
     UpdateUser,
     RejectSample,
     DiscardSample,
+    CreateClient,
 } from '@/types'
 import type { ClientActionName } from '@/lib/client-actions/types'
 

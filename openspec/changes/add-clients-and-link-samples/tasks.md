@@ -13,10 +13,13 @@
 - [x] 2.4 Backfill existing samples with client records and linkages (data migration strategy that respects audit/RLS) → **041_backfill_clients_from_samples.sql**
 - [x] 2.5 Run `run_security_tests()` and validate constraints after migration → **✅ COMPLETE** (4/5 tests passed, 1 pre-existing issue)
 
-## 3. Backend Integration
-- [ ] 3.1 Update server actions/Zod schemas/types for clients + sample creation to require client_id and validated type/gender/phone
-- [ ] 3.2 Implement QR payload parser/validator (dd/mm/yyyy → DATE) and client upsert/find logic; add phone validation (Vietnamese format)g
-- [ ] 3.3 Adjust API client routes to use new endpoints/actions; ensure RLS-friendly access
+## 3. Backend Integration 🚧 IN PROGRESS
+- [x] 3.1 Update server actions/Zod schemas/types for clients + sample creation to require client_id and validated type/gender/phone → **Complete**: Client/Sample types, schemas in `src/types/index.ts`; RPC migration **043_update_rpc_for_sample_type.sql** applied
+- [x] 3.2 Implement client upsert/find logic → **Complete**: `src/app/actions/clients.ts` with upsertClient, findClientByIdentity, getClients, updateClient
+- [x] 3.3 Update sample creation actions to use client_id and type → **Complete**: `createSample()` and `accessionAndAssignTests()` in `src/app/actions/samples.ts` now pass `p_client_id` and `p_type` to RPCs
+- [ ] 3.4 Wire client actions to API router → **Pending**: Add client action names to `src/lib/client-actions/types.ts` and route handlers in `src/app/api/client-actions/route.ts`
+- [ ] 3.5 Add API client wrapper functions → **Pending**: Add upsertClientClient, findClientByIdentityClient, etc. to `src/lib/api-client.ts` after router update
+- [ ] 3.6 Implement QR payload parser → **Pending**: Create `src/lib/qr-parser.ts` with dd/mm/yyyy → DATE conversion and Vietnamese phone validation
 
 ## 4. Frontend Integration
 - [ ] 4.1 Update sample intake UI to select/create client, snapshot name, pick type from allowed list, and require phone input; keep Vietnamese labels

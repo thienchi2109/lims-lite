@@ -7,23 +7,9 @@
 **Goal:** 21 CFR Part 11 Compliant Lab Information Management System
 **Deployment:** Docker Compose (VPS) or Railway/Render (Cloud)
 **Localization:** Vietnamese UI (all user-facing text must be in Vietnamese)
-
-## **Current Status**
-
-This project is in active development with core features implemented:
 - ✅ Authentication & Role-Based Access Control (Analyst/Manager)
   - Token Expiry: Access tokens (1h), Refresh tokens (4h) - enforces re-login after 4 hours
   - Configuration: `GOTRUE_JWT_EXP=3600`, `GOTRUE_REFRESH_TOKEN_EXPIRY=14400`
-- ✅ Sample Accessioning (Manual & QR Scanner)
-- ✅ Test Assignment (POS-style UI with server-side search)
-  - Auto-focus on assigned sample with timestamp update
-  - Updated_at column in sample grid with sorting options
-  - Tooltips for better UX
-- ✅ Print Order Form (A5 format with optimized layout)
-- ✅ Results Grid (TanStack Table with editable cells)
-- ✅ Approval Queue & Workflow
-- ✅ Audit Logging (Database triggers)
-- 🚧 PDF Report Generation (In progress)
 
 ## **Behavioral Directives**
 

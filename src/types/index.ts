@@ -13,6 +13,21 @@ export type SampleStatus = z.infer<typeof SampleStatus>
 export const ResultStatus = z.enum(['pending', 'entered', 'approved'])
 export type ResultStatus = z.infer<typeof ResultStatus>
 
+export const Gender = z.enum(['Nam', 'Nữ', 'Khác'])
+export type Gender = z.infer<typeof Gender>
+
+export const SampleType = z.enum([
+    'Máu',
+    'Dịch niệu đạo/âm đạo',
+    'Nước tiểu',
+    'Phết tế bào âm đạo',
+    'Ngoáy trực tràng/hậu môn',
+    'Phân',
+    'Nước',
+    'Thực phẩm'
+])
+export type SampleType = z.infer<typeof SampleType>
+
 // ============================================================================
 // USER SCHEMAS
 // ============================================================================
@@ -52,6 +67,57 @@ export const UpdateUserSchema = z.object({
 })
 
 export type UpdateUser = z.infer<typeof UpdateUserSchema>
+
+// ============================================================================
+// CLIENT SCHEMAS
+// ============================================================================
+
+export const ClientSchema = z.object({
+    id: z.string().uuid(),
+    id_card_num: z.string(),
+    name: z.string(),
+    date_of_birth: z.string(),
+    gender: Gender,
+    phone: z.string(),
+    address: z.string().nullable().optional(),
+    health_insurance_num: z.string().nullable().optional(),
+    expiry_date: z.string().nullable().optional(),
+    created_at: z.string().datetime(),
+    updated_at: z.string().datetime(),
+})
+
+export type Client = z.infer<typeof ClientSchema>
+
+export const CreateClientSchema = z.object({
+    id_card_num: z.string().min(1, 'Số CMND/CCCD là bắt buộc'),
+    name: z.string().min(1, 'Tên là bắt buộc'),
+    date_of_birth: z.string().refine((val) => !isNaN(Date.parse(val)), {
+        message: 'Ngày sinh không hợp lệ'
+    }),
+    gender: Gender,
+    phone: z.string().regex(/^(0|\+84)[0-9]{9,10}$/, 'Số điện thoại không hợp lệ'),
+    address: z.string().optional(),
+    health_insurance_num: z.string().optional(),
+    expiry_date: z.string().optional(),
+})
+
+export type CreateClient = z.infer<typeof CreateClientSchema>
+
+export const UpdateClientSchema = z.object({
+    id: z.string().uuid(),
+    id_card_num: z.string().min(1).optional(),
+    name: z.string().min(1).optional(),
+    date_of_birth: z.string().refine((val) => !isNaN(Date.parse(val)), {
+        message: 'Ngày sinh không hợp lệ'
+    }).optional(),
+    gender: Gender.optional(),
+    phone: z.string().regex(/^(0|\+84)[0-9]{9,10}$/, 'Số điện thoại không hợp lệ').optional(),
+    address: z.string().optional(),
+    health_insurance_num: z.string().optional(),
+    expiry_date: z.string().optional(),
+})
+
+export type UpdateClient = z.infer<typeof UpdateClientSchema>
 
 // ============================================================================
 // METHOD SCHEMAS
@@ -149,6 +215,7 @@ export const SampleSchema = z.object({
     sample_id: z.string().min(1).max(100),
     client_id: z.string().uuid().nullable(),
     client_name: z.string().nullable(),
+    type: SampleType.nullable().optional(),
     status: SampleStatus,
     received_at: z.string().datetime(),
     received_by: z.string().uuid().nullable(),
@@ -164,16 +231,18 @@ export type Sample = z.infer<typeof SampleSchema>
 
 export const CreateSampleSchema = z.object({
     sample_id: z.string().min(1).max(100).optional(),
-    client_id: z.string().uuid().optional(),
+    client_id: z.string().uuid(),
     client_name: z.string().min(1).max(200).optional(),
+    type: SampleType,
     received_at: z.string().datetime().optional(),
 })
 
 export type CreateSample = z.infer<typeof CreateSampleSchema>
 
 export const CreateSampleWithAssignmentsSchema = z.object({
-    client_id: z.string().uuid().optional(),
+    client_id: z.string().uuid(),
     client_name: z.string().min(1).max(200),
+    type: SampleType,
     received_at: z.string().datetime().optional(),
     tests: z.array(z.object({
         assayId: z.string(), // Relaxed from .uuid() to support legacy/test IDs
@@ -405,4 +474,3 @@ export const DiscardSampleSchema = z.object({
 })
 
 export type DiscardSample = z.infer<typeof DiscardSampleSchema>
-

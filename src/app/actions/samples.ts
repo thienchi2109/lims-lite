@@ -43,8 +43,9 @@ export async function createSample(data: CreateSample) {
         // Use atomic RPC to prevent race conditions
         // create_sample_atomic returns the created sample object as JSONB
         const { data: sample, error } = await supabase.rpc('create_sample_atomic', {
-            p_client_id: null,
-            p_client_name: validatedData.client_name,
+            p_client_id: validatedData.client_id,
+            p_client_name: validatedData.client_name || null,
+            p_type: validatedData.type,
             p_received_at: validatedData.received_at || null,
             p_received_by: user.id,
         })
@@ -86,8 +87,9 @@ export async function accessionAndAssignTests(data: CreateSampleWithAssignments)
 
         // Execute transactional accession + assignment via RPC (enforced by RLS)
         const { data: rpcResult, error } = await supabase.rpc('accession_and_assign_tests', {
-            p_client_id: validatedData.client_id || null,
+            p_client_id: validatedData.client_id,
             p_client_name: validatedData.client_name,
+            p_type: validatedData.type,
             p_received_at: validatedData.received_at || null,
             p_tests: validatedData.tests,
         })
