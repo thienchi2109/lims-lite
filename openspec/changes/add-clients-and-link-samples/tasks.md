@@ -21,10 +21,10 @@
 - [x] 3.5 Add API client wrapper functions → **Complete** (Commit de64bca): Added upsertClientClient, findClientByIdentityClient, fetchClientsClient, updateClientClient to `src/lib/api-client.ts`
 - [x] 3.6 Fix type errors and add placeholders → **Complete** (Commit de64bca): Fixed `src/components/sample-accession-form.tsx` with placeholder client_id/type values and TODO comments for Phase 4 UI; all TypeScript checks passing
 
-## 4. Frontend Integration
-- [ ] 4.1 Update sample intake UI to select/create client, snapshot name, pick type from allowed list, and require phone input; keep Vietnamese labels
-- [ ] 4.2 Wire QR scan flow to auto-fill client fields (QR provides id_card, name, DOB, gender; phone is manual entry) and handle validation errors gracefully
-- [ ] 4.3 Adjust lists/detail views to display client linkage
+## 4. Frontend Integration ✅ COMPLETE
+- [x] 4.1 Update sample intake UI to select/create client, snapshot name, pick type from allowed list, and require phone input; keep Vietnamese labels
+- [x] 4.2 Wire QR scan flow to auto-fill client fields (QR provides id_card, name, DOB, gender; phone is manual entry) and handle validation errors gracefully
+- [x] 4.3 Adjust lists/detail views to display client linkage
 
 ## 5. Testing & Docs
 - [ ] 5.1 Update seeds/fixtures for clients + linked samples

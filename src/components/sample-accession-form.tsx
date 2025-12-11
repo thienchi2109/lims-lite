@@ -4,30 +4,32 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { CreateSampleWithAssignmentsSchema, type CreateSampleWithAssignments, type CreateSample } from '@/types'
+import { CreateSampleWithAssignmentsSchema, type CreateSampleWithAssignments, type CreateSample, type Client, type SampleType } from '@/types'
 import { accessionAndAssignTestsClient, createSampleClient } from '@/lib/api-client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { QRScanner } from '@/components/qr-scanner'
 import { TestAssignmentGrid, type SelectedTest } from '@/components/test-assignment-grid'
-import { Loader2, CheckCircle2, Scan, AlertCircle } from 'lucide-react'
+import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
+import { ClientSelector } from '@/components/client-selector'
+import { SampleTypeSelector } from '@/components/sample-type-selector'
 
 export function SampleAccessionForm() {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [submitError, setSubmitError] = useState<string | null>(null)
     const [submitSuccess, setSubmitSuccess] = useState<string | null>(null)
     const [lastSampleId, setLastSampleId] = useState<string | null>(null)
-    const [showScanner, setShowScanner] = useState(false)
     const [selectedTests, setSelectedTests] = useState<SelectedTest[]>([])
     const [showConfirmation, setShowConfirmation] = useState(false)
+
+    // New state for Client and Sample Type
+    const [selectedClient, setSelectedClient] = useState<Client | null>(null)
+    const [selectedSampleType, setSelectedSampleType] = useState<SampleType>('Máu')
 
     // Form schema that accepts datetime-local string format
     // We relax validation here and validate manually before submit
     const FormSchema = z.object({
-        client_name: z.string().min(1, 'Tên khách hàng là bắt buộc'),
         received_at: z.string().optional(),
         tests: z.array(z.object({
             assayId: z.string(),
@@ -46,7 +48,6 @@ export function SampleAccessionForm() {
     } = useForm<FormData>({
         resolver: zodResolver(FormSchema),
         defaultValues: {
-            client_name: '',
             received_at: '',
             tests: [],
         },
@@ -65,6 +66,12 @@ export function SampleAccessionForm() {
     }, [selectedTests, setValue])
 
     const onSubmit = async (data: FormData) => {
+        // Validate Client Selection
+        if (!selectedClient) {
+            setSubmitError('Vui lòng chọn khách hàng')
+            return
+        }
+
         // If no tests selected, show confirmation dialog
         if (selectedTests.length === 0 && !showConfirmation) {
             setShowConfirmation(true)
@@ -79,11 +86,10 @@ export function SampleAccessionForm() {
         try {
             if (selectedTests.length === 0) {
                 // Create sample WITHOUT tests (new flow)
-                // TODO: Replace with actual client selection and type selection in Phase 4 UI
                 const payload: CreateSample = {
-                    client_id: '00000000-0000-0000-0000-000000000000', // TODO: Get from client selector
-                    type: 'Máu', // TODO: Get from type selector
-                    client_name: data.client_name,
+                    client_id: selectedClient.id,
+                    type: selectedSampleType,
+                    client_name: selectedClient.name, // Snapshot
                     received_at: data.received_at ? new Date(data.received_at).toISOString() : undefined,
                 }
 
@@ -97,16 +103,20 @@ export function SampleAccessionForm() {
                     const sampleId = sampleData?.id
                     setSubmitSuccess(`Mẫu ${sampleCode || ''} đã được tạo.`.trim())
                     setLastSampleId(sampleId || null)
+
+                    // Reset form but keep client selected for convenience? 
+                    // Usually better to reset everything to avoid mistakes.
                     reset()
                     setSelectedTests([])
+                    setSelectedClient(null)
+                    setSelectedSampleType('Máu')
                 }
             } else {
                 // Create sample WITH tests (existing flow)
-                // TODO: Replace with actual client selection and type selection in Phase 4 UI
                 const payload: CreateSampleWithAssignments = {
-                    client_id: '00000000-0000-0000-0000-000000000000', // TODO: Get from client selector
-                    client_name: data.client_name,
-                    type: 'Máu', // TODO: Get from type selector
+                    client_id: selectedClient.id,
+                    client_name: selectedClient.name, // Snapshot
+                    type: selectedSampleType,
                     received_at: data.received_at ? new Date(data.received_at).toISOString() : undefined,
                     tests: selectedTests.map((t) => ({
                         assayId: t.assayId,
@@ -126,8 +136,11 @@ export function SampleAccessionForm() {
                     const assignedCount = payload?.results?.length || selectedTests.length
                     setSubmitSuccess(`Mẫu ${sampleCode || ''} đã được tạo và chỉ định ${assignedCount} xét nghiệm.`.trim())
                     setLastSampleId(sampleId || null)
+
                     reset()
                     setSelectedTests([])
+                    setSelectedClient(null)
+                    setSelectedSampleType('Máu')
                 }
             }
         } catch (error) {
@@ -135,11 +148,6 @@ export function SampleAccessionForm() {
         }
 
         setIsSubmitting(false)
-    }
-
-    const handleQRScan = (decodedText: string) => {
-        setValue('client_name', decodedText)
-        setShowScanner(false)
     }
 
     return (
@@ -152,46 +160,33 @@ export function SampleAccessionForm() {
                 saveLabel="Tạo mẫu và chỉ định"
                 context={
                     <div className="space-y-6">
-                        {/* Client Name Field */}
+                        {/* Client Selector */}
                         <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <Label htmlFor="client_name" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Tên khách hàng *</Label>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setShowScanner(!showScanner)}
-                                    className="h-6 px-2 text-xs text-sky-600 hover:text-sky-700 hover:bg-sky-50"
-                                >
-                                    <Scan className="h-3 w-3 mr-1" />
-                                    {showScanner ? 'Ẩn' : 'Quét QR'}
-                                </Button>
-                            </div>
-                            <Input
-                                id="client_name"
-                                {...register('client_name')}
-                                placeholder="Nhập tên khách hàng"
-                                autoFocus
-                                className="shadow-sm"
+                            <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                Khách hàng *
+                            </Label>
+                            <ClientSelector
+                                selectedClient={selectedClient}
+                                onSelect={setSelectedClient}
                             />
-                            {errors.client_name && (
-                                <p className="text-sm text-destructive">{errors.client_name.message}</p>
-                            )}
                         </div>
 
-                        {/* QR Scanner */}
-                        {showScanner && (
-                            <div className="border rounded-lg p-2 bg-slate-50 dark:bg-slate-900">
-                                <QRScanner
-                                    onScan={handleQRScan}
-                                    onError={(error) => setSubmitError(error)}
-                                />
-                            </div>
-                        )}
+                        {/* Sample Type Selector */}
+                        <div className="space-y-2">
+                            <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                Loại mẫu *
+                            </Label>
+                            <SampleTypeSelector
+                                value={selectedSampleType}
+                                onChange={setSelectedSampleType}
+                            />
+                        </div>
 
                         {/* Received At Field (Optional) */}
                         <div className="space-y-2">
-                            <Label htmlFor="received_at" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Thời gian nhận</Label>
+                            <Label htmlFor="received_at" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                Thời gian nhận
+                            </Label>
                             <Input
                                 id="received_at"
                                 type="datetime-local"
@@ -205,9 +200,6 @@ export function SampleAccessionForm() {
                                 <p className="text-sm text-destructive">{errors.received_at.message}</p>
                             )}
                         </div>
-
-                        {/* Validation Error for Tests - shown only when trying to submit */}
-                        {/* Error is now handled in onSubmit and shown in submitError */}
 
                         {/* Confirmation Dialog for No Tests */}
                         {showConfirmation && (
@@ -247,7 +239,8 @@ export function SampleAccessionForm() {
 
                         {/* Submit Error */}
                         {submitError && (
-                            <div className="bg-destructive/10 text-destructive p-3 rounded-md text-sm">
+                            <div className="bg-destructive/10 text-destructive p-3 rounded-md text-sm flex items-center gap-2">
+                                <AlertCircle className="h-4 w-4" />
                                 {submitError}
                             </div>
                         )}
@@ -276,3 +269,4 @@ export function SampleAccessionForm() {
         </form>
     )
 }
+
