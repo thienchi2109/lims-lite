@@ -245,7 +245,7 @@ export function TestAssignmentGrid({
                         <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
                             <div className="flex items-center gap-2 text-sky-700 dark:text-sky-400 mb-1">
                                 <FlaskConical size={18} />
-                                <span className="font-bold tracking-tight text-sm">LIMS<span className="text-slate-900 dark:text-slate-100">Pro</span> Grid</span>
+                                <span className="font-bold tracking-tight text-sm">CDC<span className="text-slate-900 dark:text-slate-100"> LIMS</span> Pro</span>
                             </div>
                         </div>
 

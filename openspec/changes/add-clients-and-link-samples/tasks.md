@@ -27,6 +27,6 @@
 - [x] 4.3 Adjust lists/detail views to display client linkage
 
 ## 5. Testing & Docs
-- [ ] 5.1 Update seeds/fixtures for clients + linked samples
-- [ ] 5.2 Add/extend SQL/manual test cases for RLS, QR intake, and validation; run typecheck/lint
-- [ ] 5.3 Document QR intake + client workflow in README/docs
+- [x] 5.1 Update seeds/fixtures for clients + linked samples
+- [x] 5.2 Add/extend SQL/manual test cases for RLS, QR intake, and validation; run typecheck/lint
+- [x] 5.3 Document QR intake + client workflow in README/docs
