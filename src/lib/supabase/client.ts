@@ -1,8 +1,13 @@
 import { createBrowserClient } from '@supabase/ssr'
 
 export function createClient() {
+    // Fallback to current origin (browser) if env var is not set
+    // This allows the app to work behind a tunnel with a dynamic URL
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ||
+        (typeof window !== 'undefined' ? window.location.origin : '')
+
     return createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        supabaseUrl,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
 }

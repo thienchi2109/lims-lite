@@ -6,8 +6,11 @@ export async function middleware(request: NextRequest) {
         request,
     })
 
+    // Prioritize internal Docker URL for middleware (server-side)
+    const supabaseUrl = process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!
+
     const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        supabaseUrl,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
             cookies: {

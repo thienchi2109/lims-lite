@@ -148,12 +148,52 @@ services:
       STUDIO_PG_META_URL: http://meta:8080
       HOST: 0.0.0.0
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"const host=process.env.HOSTNAME||'localhost';fetch('http://'+host+':3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      test: [ "CMD-SHELL", "node -e \"const host=process.env.HOSTNAME||'localhost';fetch('http://'+host+':3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"" ]
       interval: 10s
       timeout: 5s
       retries: 5
     ports:
       - "3002:3000"
+
+  app:
+    container_name: lims-app
+    build:
+      context: .
+      args:
+        # Empty URL forces client to use window.location.origin (Tunnel URL)
+        NEXT_PUBLIC_SUPABASE_URL: ""
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${ANON_KEY}
+    restart: unless-stopped
+    environment:
+      # Internal URL for Server Actions/SSR
+      SUPABASE_INTERNAL_URL: http://kong:8000
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${ANON_KEY}
+    depends_on:
+      - kong
+    networks:
+      - default
+
+  nginx:
+    image: nginx:alpine
+    container_name: lims-nginx
+    restart: unless-stopped
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app
+      - kong
+    networks:
+      - default
+
+  tunnel:
+    image: cloudflare/cloudflared
+    container_name: lims-tunnel
+    command: tunnel --url http://nginx:80
+    restart: unless-stopped
+    depends_on:
+      - nginx
+    networks:
+      - default
 
 volumes:
   postgres-data:
