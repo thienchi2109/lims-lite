@@ -17,15 +17,16 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
     const scannerRef = useRef<Html5Qrcode | null>(null)
     const elementId = 'qr-reader'
     const scannerInitializedRef = useRef(false)
+    const lastErrorTimeRef = useRef<number>(0)
 
     const startScanning = async () => {
         try {
             setError(null)
             setIsInitializing(true)
-            
+
             // Wait for DOM element to be ready
             await new Promise(resolve => setTimeout(resolve, 100))
-            
+
             const html5QrCode = new Html5Qrcode(elementId)
             scannerRef.current = html5QrCode
             scannerInitializedRef.current = true
@@ -34,7 +35,7 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
                 { facingMode: 'environment' }, // Use back camera on mobile
                 {
                     fps: 10,
-                    qrbox: function(viewfinderWidth, viewfinderHeight) {
+                    qrbox: function (viewfinderWidth, viewfinderHeight) {
                         // Responsive QR box sizing
                         const minEdgePercentage = 0.7 // 70% of the smaller edge
                         const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight)
@@ -52,10 +53,18 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
                     stopScanning()
                 },
                 (errorMessage) => {
-                    // Scanning error (can be ignored for continuous scanning)
-                    // Only log critical errors
-                    if (!errorMessage.includes('NotFoundException')) {
-                        console.warn('QR scan error:', errorMessage)
+                    // Throttle error logging to prevent message handler violations
+                    // Only process errors once per second
+                    const now = Date.now()
+                    if (now - lastErrorTimeRef.current > 1000) {
+                        lastErrorTimeRef.current = now
+                        // Only log non-NotFoundException errors
+                        if (!errorMessage.includes('NotFoundException')) {
+                            // Use requestAnimationFrame to avoid blocking
+                            requestAnimationFrame(() => {
+                                console.warn('QR scan error:', errorMessage)
+                            })
+                        }
                     }
                 }
             )

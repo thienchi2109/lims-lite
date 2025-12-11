@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Check, ChevronsUpDown, Search, Scan, Plus, User, Phone, Calendar, CreditCard, Edit, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -94,6 +94,17 @@ export function ClientSelector({ selectedClient, onSelect }: ClientSelectorProps
         }
     }
 
+    // Memoize formatted date to prevent forced reflows
+    const formattedDOB = useMemo(() => {
+        if (!selectedClient) return ''
+        try {
+            return new Date(selectedClient.date_of_birth).toLocaleDateString('vi-VN')
+        } catch {
+            return 'N/A'
+        }
+    }, [selectedClient?.date_of_birth])
+
+
     if (showClientForm) {
         return (
             <div className="space-y-2 border border-slate-200 dark:border-slate-800 rounded-lg p-3 bg-slate-50/50 dark:bg-slate-900/50">
@@ -169,7 +180,7 @@ export function ClientSelector({ selectedClient, onSelect }: ClientSelectorProps
                         </div>
                         <div className="flex items-center gap-2">
                             <Calendar className="h-3 w-3 opacity-70" />
-                            <span>{new Date(selectedClient.date_of_birth).toLocaleDateString('vi-VN')}</span>
+                            <span>{formattedDOB}</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <CreditCard className="h-3 w-3 opacity-70" />
@@ -227,27 +238,32 @@ export function ClientSelector({ selectedClient, onSelect }: ClientSelectorProps
                                             )}
                                         </div>
                                     ) : (
-                                        clients.map((client: any) => (
-                                            <div
-                                                key={client.id}
-                                                className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
-                                                onClick={() => {
-                                                    onSelect(client)
-                                                    setOpen(false)
-                                                }}
-                                            >
-                                                <div className="flex flex-col w-full">
-                                                    <span className="font-medium">{client.name}</span>
-                                                    <div className="flex justify-between text-xs text-muted-foreground mt-0.5">
-                                                        <span>{client.phone}</span>
-                                                        <span>{new Date(client.date_of_birth).getFullYear()}</span>
+                                        clients.map((client: any) => {
+                                            // Pre-calculate birth year to prevent forced reflows
+                                            const birthYear = new Date(client.date_of_birth).getFullYear()
+
+                                            return (
+                                                <div
+                                                    key={client.id}
+                                                    className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                                                    onClick={() => {
+                                                        onSelect(client)
+                                                        setOpen(false)
+                                                    }}
+                                                >
+                                                    <div className="flex flex-col w-full">
+                                                        <span className="font-medium">{client.name}</span>
+                                                        <div className="flex justify-between text-xs text-muted-foreground mt-0.5">
+                                                            <span>{client.phone}</span>
+                                                            <span>{birthYear}</span>
+                                                        </div>
                                                     </div>
+                                                    {/* {selectedClient?.id === client.id && (
+                                                        <Check className="ml-auto h-4 w-4" />
+                                                    )} */}
                                                 </div>
-                                                {/* {selectedClient?.id === client.id && (
-                                                    <Check className="ml-auto h-4 w-4" />
-                                                )} */}
-                                            </div>
-                                        ))
+                                            )
+                                        })
                                     )}
                                 </div>
                             </PopoverContent>
