@@ -153,6 +153,115 @@ lims-lite/
 - 95% zoom scale for optimal fit and readability
 - Browser print dialog integration
 
+## 🔍 Client Management & QR Intake Workflow
+
+### Overview
+
+The LIMS now supports comprehensive client management with QR code-based sample intake, allowing for rapid patient identification and sample accessioning.
+
+### Client Management
+
+**Features:**
+- Client database with full patient information (name, DOB, phone, address, ID number)
+- Client search and selection with real-time filtering
+- Duplicate prevention based on name + date of birth
+- Inline client creation during sample intake
+- Client information snapshot preserved with each sample
+
+**Adding a New Client:**
+1. Navigate to sample accession page
+2. Click the "+" icon or start typing in the client selector
+3. Fill in required fields:
+   - Họ và tên (Full Name) *
+   - Ngày sinh (Date of Birth) *
+   - Số điện thoại (Phone)
+   - Địa chỉ (Address)
+   - Số CMND/CCCD (ID Number)
+4. System prevents duplicates by checking Name + DOB combination
+5. Client is created and automatically selected
+
+### QR Code Intake Workflow
+
+**QR Code Format:**
+```
+Name|DD/MM/YYYY|PhoneNumber
+```
+
+Example:
+```
+Nguyễn Văn A|15/03/1990|0987654321
+```
+
+**Using QR Scanner:**
+
+1. **Access Sample Intake:**
+   - Navigate to `/analyst/accession` page
+   - Client selector field is ready to receive QR input
+
+2. **Scan QR Code:**
+   - Click the QR scanner icon (📷) in the client selector
+   - Allow camera permissions when prompted
+   - Point camera at patient's QR code
+   - System automatically parses: Name, DOB, Phone Number
+
+3. **Automatic Processing:**
+   - **Existing Client Found:** Auto-selects the matching client
+   - **New Client:** Pre-fills client form with QR data
+     - User can add Address and ID Number if needed
+     - Click "Lưu" (Save) to create new client
+
+4. **Complete Sample Intake:**
+   - Select sample type (Máu, Nước tiểu, etc.)
+   - Optionally set received time
+   - Optionally assign tests immediately
+   - Click "Tạo mẫu và chỉ định" or "Tạo mẫu" (if no tests)
+
+**Sample Creation Modes:**
+- **With Tests:** Sample status = `assigned` (ready for analysis)
+- **Without Tests:** Sample status = `received` (tests assigned later)
+
+### Technical Implementation
+
+**Database Schema:**
+- `clients` table: Stores patient information
+- `samples.client_id` → `clients.id`: Foreign key relationship
+- `samples.client_name`: Snapshot of name at sample creation time
+- RLS policies ensure analysts can only access their own samples
+
+**QR Scanner:**
+- Uses browser's native camera API (`getUserMedia`)
+- Real-time QR detection with `@zxing/library`
+- Throttled error handling (1 error/second max) for performance
+- Graceful camera release on component unmount
+
+**PostgREST Integration:**
+- `create_sample_atomic()`: Creates sample with atomic ID generation
+- `accession_and_assign_tests()`: Combined sample + test assignment
+- Parameters ordered alphabetically for PostgREST compatibility
+
+**Sample ID Format:**
+```
+CDC-XN-DDMMYYYY-XXXX
+```
+- Sequential numbering per day
+- Atomic generation prevents duplicates
+- Example: `CDC-XN-11122025-0001`
+
+### Migration Notes
+
+If you're upgrading from a previous version:
+
+1. **Migration 039-042:** Adds clients table and updates samples schema
+2. **Migration 043-044:** Updates RPC functions for sample type support
+3. **Data Backfill:** Existing samples get placeholder clients with their client_name
+
+Apply migrations in order:
+```bash
+Get-ChildItem -Path .\supabase\migrations\0{39..44}*.sql | Sort-Object Name | ForEach-Object { 
+  Get-Content $_.FullName | docker exec -i lims-postgres psql -U postgres -d postgres 
+}
+```
+
 ## 🐛 Troubleshooting
 
 If you encounter issues:
