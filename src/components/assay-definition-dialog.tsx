@@ -28,6 +28,7 @@ import {
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { AssayMethodsList } from './assay-methods-list'
+import { LabSpecialty } from '@/types'
 
 type Method = {
     id: string
@@ -46,6 +47,7 @@ type AssayMethod = {
 type AssayDefinition = {
     id: string
     name: string
+    specialty_id?: string | null
     units: string | null
     validation_rules: Record<string, any>
     methods?: AssayMethod[]
@@ -56,15 +58,17 @@ type Props = {
     onOpenChange: (open: boolean) => void
     mode: 'create' | 'edit'
     assay?: AssayDefinition
+    specialties?: LabSpecialty[]
 }
 
-export function AssayDefinitionDialog({ open, onOpenChange, mode, assay }: Props) {
+export function AssayDefinitionDialog({ open, onOpenChange, mode, assay, specialties = [] }: Props) {
     const [isPending, startTransition] = useTransition()
     const [methods, setMethods] = useState<Method[]>([])
     const [loadingMethods, setLoadingMethods] = useState(true)
 
     // Form state
     const [name, setName] = useState('')
+    const [specialtyId, setSpecialtyId] = useState<string>('')
     const [methodId, setMethodId] = useState<string>('')
     const [units, setUnits] = useState('')
 
@@ -85,6 +89,7 @@ export function AssayDefinitionDialog({ open, onOpenChange, mode, assay }: Props
     useEffect(() => {
         if (mode === 'edit' && assay) {
             setName(assay.name)
+            setSpecialtyId(assay.specialty_id || '')
             setUnits(assay.units || '')
 
             // Parse validation rules into individual fields
@@ -114,6 +119,7 @@ export function AssayDefinitionDialog({ open, onOpenChange, mode, assay }: Props
 
     const resetForm = () => {
         setName('')
+        setSpecialtyId('')
         setMethodId('')
         setUnits('')
         setMinValue('')
@@ -157,6 +163,7 @@ export function AssayDefinitionDialog({ open, onOpenChange, mode, assay }: Props
 
         const basePayload = {
             name,
+            specialty_id: specialtyId || undefined,
             units: units || undefined,
             validationRules: Object.keys(validationRules).length > 0 ? validationRules : undefined,
         }
@@ -223,6 +230,28 @@ export function AssayDefinitionDialog({ open, onOpenChange, mode, assay }: Props
                                     required
                                     disabled={isPending}
                                 />
+                            </div>
+
+                            {/* Specialty - Required */}
+                            <div className="space-y-2">
+                                <Label htmlFor="specialty">Nhóm xét nghiệm <span className="text-red-500">*</span></Label>
+                                <Select
+                                    value={specialtyId}
+                                    onValueChange={setSpecialtyId}
+                                    disabled={isPending}
+                                    required
+                                >
+                                    <SelectTrigger id="specialty">
+                                        <SelectValue placeholder="Chọn nhóm xét nghiệm" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {specialties?.map((specialty) => (
+                                            <SelectItem key={specialty.id} value={specialty.id}>
+                                                {specialty.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             {/* Method - Only show in create mode */}

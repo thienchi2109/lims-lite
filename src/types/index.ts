@@ -123,6 +123,19 @@ export type UpdateClient = z.infer<typeof UpdateClientSchema>
 // METHOD SCHEMAS
 // ============================================================================
 
+export const LabSpecialtySchema = z.object({
+    id: z.string().uuid(),
+    code: z.string(),
+    name: z.string(),
+    display_order: z.number().int(),
+    description: z.string().nullable(),
+    created_at: z.string().datetime(),
+    updated_at: z.string().datetime(),
+    deleted_at: z.string().datetime().nullable(),
+})
+
+export type LabSpecialty = z.infer<typeof LabSpecialtySchema>
+
 export const MethodSchema = z.object({
     id: z.string().uuid(),
     name: z.string().min(1).max(200),
@@ -175,6 +188,7 @@ export type CreateAssayMethod = z.infer<typeof CreateAssayMethodSchema>
 export const AssayDefinitionSchema = z.object({
     id: z.string().uuid(),
     name: z.string().min(1).max(200),
+    specialty_id: z.string().uuid().nullable().optional(),
     units: z.string().nullable(),
     validation_rules: z.record(z.string(), z.any()).default({}),
     created_at: z.string().datetime(),
@@ -186,6 +200,7 @@ export type AssayDefinition = z.infer<typeof AssayDefinitionSchema>
 
 export const CreateAssayDefinitionSchema = z.object({
     name: z.string().min(1).max(200),
+    specialty_id: z.string().uuid().optional(),
     method_id: z.string().uuid().optional(), // Initial method for creation
     units: z.string().optional(),
     validation_rules: z.record(z.string(), z.any()).optional(),
