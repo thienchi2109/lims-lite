@@ -39,12 +39,16 @@ export async function getAssayDefinitions(params?: {
                 units,
                 validation_rules,
                 created_at,
-                updated_at
+                updated_at,
+                lab_specialties (
+                    name,
+                    display_order
+                )
             `,
                 { count: 'exact' }
             )
             .is('deleted_at', null)
-            .order('name', { ascending: true })
+            .is('deleted_at', null)
 
         // Apply Specialty Filter
         if (specialtyId && specialtyId !== 'all') {
@@ -105,23 +109,44 @@ export async function getAssayDefinitions(params?: {
             }
         }
 
-        // Apply pagination
-        const { data: assays, error: assayError, count } = await query.range(from, to)
+        // Execute query (fetch all matching rows)
+        const { data: allAssays, error: assayError } = await query
 
         if (assayError) {
             console.error('Error fetching assay definitions:', JSON.stringify(assayError, null, 2))
             return { error: assayError.message }
         }
 
-        if (!assays || assays.length === 0) {
+        if (!allAssays || allAssays.length === 0) {
             return {
                 data: [],
-                totalCount: count || 0,
-                totalPages: Math.ceil((count || 0) / pageSize),
+                totalCount: 0,
+                totalPages: 0,
                 page,
                 pageSize,
             }
         }
+
+        // Sort in memory: Specialty Display Order -> Specialty Name -> Assay Name
+        const sortedAssays = [...allAssays].sort((a: any, b: any) => {
+            // 1. Specialty Display Order
+            const orderA = a.lab_specialties?.display_order ?? 9999
+            const orderB = b.lab_specialties?.display_order ?? 9999
+            if (orderA !== orderB) return orderA - orderB
+
+            // 2. Specialty Name
+            const specNameA = a.lab_specialties?.name || ''
+            const specNameB = b.lab_specialties?.name || ''
+            if (specNameA !== specNameB) return specNameA.localeCompare(specNameB)
+
+            // 3. Assay Name
+            return a.name.localeCompare(b.name)
+        })
+
+        // Slice for pagination
+        const totalCount = sortedAssays.length
+        const totalPages = Math.ceil(totalCount / pageSize)
+        const assays = sortedAssays.slice(from, to)
 
         // 2. Fetch related assay_methods (without joining methods yet)
         const assayIds = assays.map(a => a.id)
@@ -177,8 +202,8 @@ export async function getAssayDefinitions(params?: {
 
         return {
             data: transformedData,
-            totalCount: count || 0,
-            totalPages: Math.ceil((count || 0) / pageSize),
+            totalCount,
+            totalPages,
             page,
             pageSize,
         }

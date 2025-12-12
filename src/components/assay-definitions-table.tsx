@@ -236,45 +236,76 @@ export function AssayDefinitionsTable({
                                         <TableCell>
                                             {assay.specialty_id ? (
                                                 (() => {
-                                                    const specialty = specialties.find(s => s.id === assay.specialty_id)
+                                                    const sp = specialties.find(
+                                                        (s) => s.id === assay.specialty_id
+                                                    )
                                                     const colorMap: Record<string, string> = {
-                                                        'HEM': 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100', // Huyết học
-                                                        'BIO': 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100', // Sinh hóa
-                                                        'IMM': 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100', // Miễn dịch
-                                                        'MIC': 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100', // Vi sinh
+                                                        HEM: 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100', // Huyết học
+                                                        BIO: 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100', // Sinh hóa
+                                                        IMM: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100', // Miễn dịch
+                                                        MIC: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100', // Vi sinh
                                                     }
                                                     return (
-                                                        <Badge variant="outline" className={cn("px-2.5 py-0.5 rounded-full font-medium transition-colors", specialty?.code ? colorMap[specialty.code] : '')}>
-                                                            {specialty?.name || 'Unknown'}
+                                                        <Badge
+                                                            variant="outline"
+                                                            className={cn(
+                                                                'px-2.5 py-0.5 rounded-full font-medium transition-colors',
+                                                                sp?.code ? colorMap[sp.code] : ''
+                                                            )}
+                                                        >
+                                                            {sp?.name || 'Unknown'}
                                                         </Badge>
                                                     )
                                                 })()
                                             ) : (
-                                                <span className="text-muted-foreground/50 text-sm italic">-</span>
+                                                <span className="text-muted-foreground/50 text-sm italic">
+                                                    -
+                                                </span>
                                             )}
                                         </TableCell>
                                         <TableCell>
                                             {assay.methods && assay.methods.length > 0 ? (
                                                 <div className="flex flex-col gap-1 items-start">
-                                                    {assay.methods.find(m => m.is_default) ? (
+                                                    {assay.methods.find((m) => m.is_default) ? (
                                                         <div className="flex items-center gap-1.5">
-                                                            <Badge variant="secondary" className="font-normal bg-slate-100 text-slate-700 hover:bg-slate-200 border-0">
-                                                                {assay.methods.find(m => m.is_default)?.name}
+                                                            <Badge
+                                                                variant="secondary"
+                                                                className="font-normal bg-slate-100 text-slate-700 hover:bg-slate-200 border-0"
+                                                            >
+                                                                {
+                                                                    assay.methods.find(
+                                                                        (m) => m.is_default
+                                                                    )?.name
+                                                                }
                                                             </Badge>
                                                             {assay.methods.length > 1 && (
                                                                 <TooltipProvider>
                                                                     <Tooltip>
                                                                         <TooltipTrigger asChild>
-                                                                            <Badge variant="outline" className="h-5 px-1.5 text-[10px] text-muted-foreground border-dashed cursor-help">
+                                                                            <Badge
+                                                                                variant="outline"
+                                                                                className="h-5 px-1.5 text-[10px] text-muted-foreground border-dashed cursor-help"
+                                                                            >
                                                                                 +{assay.methods.length - 1}
                                                                             </Badge>
                                                                         </TooltipTrigger>
                                                                         <TooltipContent>
                                                                             <div className="flex flex-col gap-1">
-                                                                                <span className="font-semibold text-xs">Phương pháp khác:</span>
-                                                                                {assay.methods.filter(m => !m.is_default).map(m => (
-                                                                                    <span key={m.id} className="text-xs text-muted-foreground">• {m.name}</span>
-                                                                                ))}
+                                                                                <span className="font-semibold text-xs">
+                                                                                    Phương pháp khác:
+                                                                                </span>
+                                                                                {assay.methods
+                                                                                    .filter(
+                                                                                        (m) => !m.is_default
+                                                                                    )
+                                                                                    .map((m) => (
+                                                                                        <span
+                                                                                            key={m.id}
+                                                                                            className="text-xs text-muted-foreground"
+                                                                                        >
+                                                                                            • {m.name}
+                                                                                        </span>
+                                                                                    ))}
                                                                             </div>
                                                                         </TooltipContent>
                                                                     </Tooltip>
@@ -282,7 +313,10 @@ export function AssayDefinitionsTable({
                                                             )}
                                                         </div>
                                                     ) : (
-                                                        <Badge variant="outline" className="text-muted-foreground font-normal">
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="text-muted-foreground font-normal"
+                                                        >
                                                             {assay.methods[0].name}
                                                         </Badge>
                                                     )}
@@ -295,16 +329,16 @@ export function AssayDefinitionsTable({
                                         </TableCell>
                                         <TableCell>
                                             {assay.units || (
-                                                <span className="text-muted-foreground text-sm">
-                                                    -
-                                                </span>
+                                                <span className="text-muted-foreground text-sm">-</span>
                                             )}
                                         </TableCell>
                                         <TableCell>
                                             {Object.keys(assay.validation_rules || {}).length > 0 ? (
                                                 <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
                                                     <AlertCircle className="h-3.5 w-3.5 text-blue-500" />
-                                                    <span>{Object.keys(assay.validation_rules).length} quy tắc</span>
+                                                    <span>
+                                                        {Object.keys(assay.validation_rules).length} quy tắc
+                                                    </span>
                                                 </div>
                                             ) : (
                                                 <span className="text-muted-foreground/50 text-sm italic">
