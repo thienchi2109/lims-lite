@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Plus, Pencil, Trash2, Search, Filter, FlaskConical, TestTube2, AlertCircle } from 'lucide-react'
 import {
@@ -45,9 +45,9 @@ type AssayDefinition = {
     specialty_id?: string | null
     units: string | null
     validation_rules: Record<string, any>
-    created_at: string
-    updated_at: string
-    methods: AssayMethod[]
+    created_at?: string
+    updated_at?: string
+    methods?: AssayMethod[]
 }
 
 type Props = {
@@ -70,9 +70,66 @@ export function AssayDefinitionsTable({
     const [deletingAssay, setDeletingAssay] = useState<AssayDefinition | null>(null)
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
 
+    const [localAssays, setLocalAssays] = useState<AssayDefinition[]>(assays)
+
+    useEffect(() => {
+        setLocalAssays(assays)
+    }, [assays])
+
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
+
+    const matchesCurrentFilters = (candidate: Pick<AssayDefinition, 'name' | 'specialty_id'>) => {
+        const specialtyFilter = searchParams.get('specialtyId')
+        if (specialtyFilter && specialtyFilter !== 'all' && candidate.specialty_id !== specialtyFilter) {
+            return false
+        }
+
+        const searchTerm = (searchParams.get('search') || '').trim().toLowerCase()
+        if (searchTerm) {
+            return candidate.name.toLowerCase().includes(searchTerm)
+        }
+
+        return true
+    }
+
+    const handleAssayCreated = (created: AssayDefinition) => {
+        if (!matchesCurrentFilters(created)) return
+        if (page !== 1) return
+
+        setLocalAssays((prev) => {
+            const next = [created, ...prev]
+            return next.slice(0, pageSize)
+        })
+    }
+
+    const handleAssayUpdated = (updated: AssayDefinition) => {
+        setLocalAssays((prev) => {
+            const existsIndex = prev.findIndex((a) => a.id === updated.id)
+
+            if (!matchesCurrentFilters(updated)) {
+                return existsIndex >= 0 ? prev.filter((a) => a.id !== updated.id) : prev
+            }
+
+            if (existsIndex >= 0) {
+                return prev.map((a) =>
+                    a.id === updated.id
+                        ? { ...a, ...updated, methods: a.methods }
+                        : a
+                )
+            }
+
+            if (page !== 1) return prev
+
+            const next = [updated, ...prev]
+            return next.slice(0, pageSize)
+        })
+    }
+
+    const handleAssayDeleted = (deletedId: string) => {
+        setLocalAssays((prev) => prev.filter((a) => a.id !== deletedId))
+    }
 
     const updateQuery = (newPage: number, newPageSize: number) => {
         const params = new URLSearchParams(searchParams.toString())
@@ -140,7 +197,7 @@ export function AssayDefinitionsTable({
                 </div>
             </div>
 
-            {assays.length === 0 ? (
+            {localAssays.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-slate-900 rounded-lg border border-dashed">
                     <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-full mb-4">
                         <FlaskConical className="h-8 w-8 text-slate-400" />
@@ -171,7 +228,7 @@ export function AssayDefinitionsTable({
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {assays.map((assay) => (
+                                {localAssays.map((assay) => (
                                     <TableRow key={assay.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                         <TableCell className="font-medium">
                                             {assay.name}
@@ -338,6 +395,7 @@ export function AssayDefinitionsTable({
                 onOpenChange={setIsAddDialogOpen}
                 mode="create"
                 specialties={specialties}
+                onCreated={handleAssayCreated}
             />
 
             {editingAssay && (
@@ -347,6 +405,7 @@ export function AssayDefinitionsTable({
                     mode="edit"
                     assay={editingAssay}
                     specialties={specialties}
+                    onUpdated={handleAssayUpdated}
                 />
             )}
 
@@ -355,6 +414,7 @@ export function AssayDefinitionsTable({
                     open={!!deletingAssay}
                     onOpenChange={(open) => !open && setDeletingAssay(null)}
                     assay={deletingAssay}
+                    onDeleted={handleAssayDeleted}
                 />
             )}
         </div>

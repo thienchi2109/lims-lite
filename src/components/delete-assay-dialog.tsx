@@ -1,6 +1,7 @@
 'use client'
 
 import { useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import {
     Dialog,
     DialogContent,
@@ -23,20 +24,24 @@ type Props = {
     open: boolean
     onOpenChange: (open: boolean) => void
     assay: AssayDefinition
+    onDeleted?: (id: string) => void
 }
 
-export function DeleteAssayDialog({ open, onOpenChange, assay }: Props) {
+export function DeleteAssayDialog({ open, onOpenChange, assay, onDeleted }: Props) {
     const [isPending, startTransition] = useTransition()
+    const router = useRouter()
 
     const handleDelete = () => {
         startTransition(async () => {
-            const result = await deleteAssayDefinitionClient(assay.id)
-
-            if (result.error) {
-                toast.error(result.error)
-            } else {
+            try {
+                await deleteAssayDefinitionClient(assay.id)
+                onDeleted?.(assay.id)
                 toast.success('Đã xóa chỉ tiêu xét nghiệm thành công')
                 onOpenChange(false)
+                router.refresh()
+            } catch (error) {
+                const message = error instanceof Error ? error.message : 'Đã xảy ra lỗi không mong muốn'
+                toast.error(message)
             }
         })
     }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import {
     Dialog,
     DialogContent,
@@ -59,12 +60,24 @@ type Props = {
     mode: 'create' | 'edit'
     assay?: AssayDefinition
     specialties?: LabSpecialty[]
+    onCreated?: (assay: AssayDefinition) => void
+    onUpdated?: (assay: AssayDefinition) => void
 }
 
-export function AssayDefinitionDialog({ open, onOpenChange, mode, assay, specialties = [] }: Props) {
+export function AssayDefinitionDialog({
+    open,
+    onOpenChange,
+    mode,
+    assay,
+    specialties = [],
+    onCreated,
+    onUpdated,
+}: Props) {
     const [isPending, startTransition] = useTransition()
     const [methods, setMethods] = useState<Method[]>([])
     const [loadingMethods, setLoadingMethods] = useState(true)
+
+    const router = useRouter()
 
     // Form state
     const [name, setName] = useState('')
@@ -169,19 +182,26 @@ export function AssayDefinitionDialog({ open, onOpenChange, mode, assay, special
         }
 
         startTransition(async () => {
-            const result = mode === 'create'
-                ? await createAssayDefinitionClient({
-                    ...basePayload,
-                    methodId: methodId || undefined,
-                })
-                : await updateAssayDefinitionClient({
-                    ...basePayload,
-                    id: assay!.id,
-                })
+            try {
+                const result = mode === 'create'
+                    ? await createAssayDefinitionClient({
+                        ...basePayload,
+                        methodId: methodId || undefined,
+                    })
+                    : await updateAssayDefinitionClient({
+                        ...basePayload,
+                        id: assay!.id,
+                    })
 
-            if (result.error) {
-                toast.error(result.error)
-            } else {
+                const returnedAssay = (result as any)?.data as AssayDefinition | undefined
+                if (returnedAssay) {
+                    if (mode === 'create') {
+                        onCreated?.(returnedAssay)
+                    } else {
+                        onUpdated?.(returnedAssay)
+                    }
+                }
+
                 toast.success(
                     mode === 'create'
                         ? 'Đã tạo chỉ tiêu xét nghiệm thành công'
@@ -189,6 +209,10 @@ export function AssayDefinitionDialog({ open, onOpenChange, mode, assay, special
                 )
                 resetForm()
                 onOpenChange(false)
+                router.refresh()
+            } catch (error) {
+                const message = error instanceof Error ? error.message : 'Đã xảy ra lỗi không mong muốn'
+                toast.error(message)
             }
         })
     }

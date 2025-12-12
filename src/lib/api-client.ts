@@ -106,13 +106,13 @@ export function removeMethodFromAssayClient(assayMethodId: string) {
     return callClientAction('removeMethodFromAssay', { assayMethodId })
 }
 
-export function createAssayDefinitionClient(payload: { name: string; methodId?: string; units?: string; validationRules?: Record<string, unknown> }) {
-    return callClientAction('createAssayDefinition', payload)
-}
+export function createAssayDefinitionClient(payload: { name: string; specialty_id?: string; methodId?: string; units?: string; validationRules?: Record<string, unknown> }) {
+	    return callClientAction('createAssayDefinition', payload)
+	}
 
-export function updateAssayDefinitionClient(payload: { id: string; name: string; units?: string; validationRules?: Record<string, unknown> }) {
-    return callClientAction('updateAssayDefinition', payload)
-}
+export function updateAssayDefinitionClient(payload: { id: string; name: string; specialty_id?: string; units?: string; validationRules?: Record<string, unknown> }) {
+	    return callClientAction('updateAssayDefinition', payload)
+	}
 
 export function deleteAssayDefinitionClient(id: string) {
     return callClientAction('deleteAssayDefinition', { id })

@@ -135,34 +135,40 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
         }
         return removeMethodFromAssay(payload.assayMethodId)
     },
-    createAssayDefinition: async (payload) => {
-        if (!payload?.name) {
-            return { error: 'Tên chỉ tiêu là bắt buộc' }
-        }
-        const formData = new FormData()
-        formData.append('name', payload.name)
-        if (payload.methodId) {
-            formData.append('method_id', payload.methodId)
-        }
-        if (payload.units) {
-            formData.append('units', payload.units)
+	    createAssayDefinition: async (payload) => {
+	        if (!payload?.name) {
+	            return { error: 'Tên chỉ tiêu là bắt buộc' }
+	        }
+	        const formData = new FormData()
+	        formData.append('name', payload.name)
+	        if (payload.specialty_id) {
+	            formData.append('specialty_id', payload.specialty_id)
+	        }
+	        if (payload.methodId) {
+	            formData.append('method_id', payload.methodId)
+	        }
+	        if (payload.units) {
+	            formData.append('units', payload.units)
         }
         if (payload.validationRules) {
             formData.append('validation_rules', JSON.stringify(payload.validationRules))
         }
         return createAssayDefinition(formData)
     },
-    updateAssayDefinition: async (payload) => {
-        if (!payload?.id || !payload?.name) {
-            return { error: 'id và tên chỉ tiêu là bắt buộc' }
-        }
-        const formData = new FormData()
-        formData.append('id', payload.id)
-        formData.append('name', payload.name)
-        if (payload.units) {
-            formData.append('units', payload.units)
-        }
-        if (payload.validationRules) {
+	    updateAssayDefinition: async (payload) => {
+	        if (!payload?.id || !payload?.name) {
+	            return { error: 'id và tên chỉ tiêu là bắt buộc' }
+	        }
+	        const formData = new FormData()
+	        formData.append('id', payload.id)
+	        formData.append('name', payload.name)
+	        if (payload.specialty_id) {
+	            formData.append('specialty_id', payload.specialty_id)
+	        }
+	        if (payload.units) {
+	            formData.append('units', payload.units)
+	        }
+	        if (payload.validationRules) {
             formData.append('validation_rules', JSON.stringify(payload.validationRules))
         }
         return updateAssayDefinition(formData)
