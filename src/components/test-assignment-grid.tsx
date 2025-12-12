@@ -233,15 +233,15 @@ export function TestAssignmentGrid({
                 }
             }
 
-            if (methodToSelect) {
-                onChange([...selected, {
-                    assayId: assay.id,
-                    methodId: methodToSelect.method_id,
-                    assayName: assay.name,
-                    methodName: methodToSelect.name,
-                    units: assay.units
-                }])
-            }
+            // Fix: Allow selection even if no method exists (empty array)
+            // If methodToSelect is undefined, we use empty string for methodId and "N/A" for name
+            onChange([...selected, {
+                assayId: assay.id,
+                methodId: methodToSelect?.method_id || '',
+                assayName: assay.name,
+                methodName: methodToSelect?.name || 'Không có', // Vietnamese for "None"
+                units: assay.units
+            }])
         }
     }
 
