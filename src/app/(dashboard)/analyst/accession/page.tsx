@@ -5,6 +5,7 @@ import { SampleAccessionForm } from '@/components/sample-accession-form'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { DashboardHeader } from '@/components/dashboard-header'
+import { getSpecialties } from '@/app/actions/assays'
 
 export default async function AccessionPage() {
     const supabase = await createClient()
@@ -22,6 +23,8 @@ export default async function AccessionPage() {
         .select('full_name, role')
         .eq('id', user.id)
         .single()
+
+    const { data: specialties } = await getSpecialties()
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -50,7 +53,7 @@ export default async function AccessionPage() {
                         </p>
                     </div>
 
-                    <SampleAccessionForm />
+                    <SampleAccessionForm specialties={specialties || []} />
                 </div>
             </main>
         </div>

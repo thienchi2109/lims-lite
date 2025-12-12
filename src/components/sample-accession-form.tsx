@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { CreateSampleWithAssignmentsSchema, type CreateSampleWithAssignments, type CreateSample, type Client, type SampleType } from '@/types'
+import { CreateSampleWithAssignmentsSchema, type CreateSampleWithAssignments, type CreateSample, type Client, type LabSpecialty, type SampleType } from '@/types'
 import { accessionAndAssignTestsClient, createSampleClient } from '@/lib/api-client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,7 +15,11 @@ import Link from 'next/link'
 import { ClientSelector } from '@/components/client-selector'
 import { SampleTypeSelector } from '@/components/sample-type-selector'
 
-export function SampleAccessionForm() {
+interface SampleAccessionFormProps {
+    specialties?: LabSpecialty[]
+}
+
+export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [submitError, setSubmitError] = useState<string | null>(null)
     const [submitSuccess, setSubmitSuccess] = useState<string | null>(null)
@@ -155,6 +159,7 @@ export function SampleAccessionForm() {
             <TestAssignmentGrid
                 selected={selectedTests}
                 onChange={setSelectedTests}
+                specialties={specialties}
                 isSaving={isSubmitting}
                 onSave={handleSubmit(onSubmit)}
                 saveLabel="Tạo mẫu và chỉ định"

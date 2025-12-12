@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react'
 import { fetchAssayDefinitionsClient, fetchMethodsClient } from '@/lib/api-client'
+import type { LabSpecialty } from '@/types'
 import {
     Search,
     Beaker,
@@ -45,6 +46,7 @@ type AssayMethod = {
 type AssayDefinitionWithMethods = {
     id: string
     name: string
+    specialty_id: string | null
     units: string | null
     methods: AssayMethod[]
 }
@@ -62,6 +64,7 @@ interface TestAssignmentGridProps {
     onChange: (tests: SelectedTest[]) => void
     context?: React.ReactNode
     disabledAssayIds?: string[]
+    specialties?: LabSpecialty[]
     onSave?: () => void
     isSaving?: boolean
     saveLabel?: string
@@ -81,6 +84,7 @@ export function TestAssignmentGrid({
     onChange,
     context,
     disabledAssayIds = [],
+    specialties = [],
     onSave,
     isSaving = false,
     saveLabel = 'Lưu thay đổi'
@@ -89,6 +93,7 @@ export function TestAssignmentGrid({
     const [availableAssays, setAvailableAssays] = useState<AssayDefinitionWithMethods[]>([])
     const [methods, setMethods] = useState<{ id: string, name: string }[]>([])
     const [selectedMethodId, setSelectedMethodId] = useState<string>('all')
+    const [selectedSpecialtyId, setSelectedSpecialtyId] = useState<string>('all')
     const [isLoading, setIsLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
     const [sortConfig, setSortConfig] = useState<{ key: keyof AssayDefinitionWithMethods, direction: 'asc' | 'desc' } | null>({ key: 'name', direction: 'asc' })
@@ -103,7 +108,7 @@ export function TestAssignmentGrid({
     // Reload assays when method filter changes
     useEffect(() => {
         loadAssays(searchQuery)
-    }, [selectedMethodId])
+    }, [selectedMethodId, selectedSpecialtyId])
 
     // Debounce Search
     useEffect(() => {
@@ -128,6 +133,7 @@ export function TestAssignmentGrid({
             const result = await fetchAssayDefinitionsClient({
                 pageSize: 100,
                 methodId: selectedMethodId,
+                specialtyId: selectedSpecialtyId,
                 search: search
             })
             if (result.data) {
@@ -173,6 +179,17 @@ export function TestAssignmentGrid({
     }, [availableAssays, sortConfig])
 
     const disabledSet = useMemo(() => new Set(disabledAssayIds), [disabledAssayIds])
+    const specialtiesMap = useMemo(() => {
+        return new Map(specialties.map((s) => [s.id, s]))
+    }, [specialties])
+    const specialtyColorMap: Record<string, string> = {
+        'HEM': 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100',
+        'BIO': 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100',
+        'IMM': 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100',
+        'MIC': 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100',
+        'MOL': 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100',
+        'PAT': 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100',
+    }
 
     // Handlers
     const toggleTestSelection = (assay: AssayDefinitionWithMethods) => {
@@ -303,6 +320,29 @@ export function TestAssignmentGrid({
                                         </SelectContent>
                                     </Select>
                                 </div>
+
+                                <div className="w-[220px]">
+                                    <Select value={selectedSpecialtyId} onValueChange={setSelectedSpecialtyId}>
+                                        <SelectTrigger className="h-9 bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                                            <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                                                <Filter size={14} />
+                                                <span className="truncate">
+                                                    {selectedSpecialtyId === 'all'
+                                                        ? 'Tất cả nhóm xét nghiệm'
+                                                        : specialtiesMap.get(selectedSpecialtyId)?.name || 'Nhóm xét nghiệm'}
+                                                </span>
+                                            </div>
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Tất cả nhóm xét nghiệm</SelectItem>
+                                            {specialties.map((specialty) => (
+                                                <SelectItem key={specialty.id} value={specialty.id}>
+                                                    {specialty.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
                             <div className="text-xs text-slate-500 font-medium whitespace-nowrap">
                                 {processedTests.length} chỉ tiêu
@@ -320,6 +360,9 @@ export function TestAssignmentGrid({
                                             <th onClick={() => requestSort('name')} className="group p-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 border-b border-slate-200 dark:border-slate-800 select-none">
                                                 <div className="flex items-center gap-1">Tên chỉ tiêu <SortIcon column="name" sortConfig={sortConfig} /></div>
                                             </th>
+                                            <th className="p-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 w-44 select-none">
+                                                Nhóm xét nghiệm
+                                            </th>
                                             <th className="p-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 w-48 select-none">
                                                 Phương pháp
                                             </th>
@@ -331,7 +374,7 @@ export function TestAssignmentGrid({
                                     <tbody className="bg-white dark:bg-slate-950">
                                         {isLoading ? (
                                             <tr>
-                                                <td colSpan={4} className="p-8 text-center text-muted-foreground">
+                                                <td colSpan={5} className="p-8 text-center text-muted-foreground">
                                                     <div className="flex justify-center items-center gap-2">
                                                         <Loader2 className="h-4 w-4 animate-spin" />
                                                         Đang tải dữ liệu...
@@ -340,7 +383,7 @@ export function TestAssignmentGrid({
                                             </tr>
                                         ) : processedTests.length === 0 ? (
                                             <tr>
-                                                <td colSpan={4} className="p-8 text-center text-muted-foreground">
+                                                <td colSpan={5} className="p-8 text-center text-muted-foreground">
                                                     Không tìm thấy chỉ tiêu nào
                                                 </td>
                                             </tr>
@@ -349,6 +392,7 @@ export function TestAssignmentGrid({
                                                 const selectedTest = selected.find(t => t.assayId === test.id)
                                                 const isSelected = !!selectedTest
                                                 const isDisabled = disabledSet.has(test.id)
+                                                const specialty = test.specialty_id ? specialtiesMap.get(test.specialty_id) : null
 
                                                 return (
                                                     <tr
@@ -373,6 +417,18 @@ export function TestAssignmentGrid({
                                                             <div className="flex flex-col">
                                                                 <span className={`text-sm font-medium ${isSelected ? 'text-sky-900 dark:text-sky-100' : 'text-slate-800 dark:text-slate-200'}`}>{test.name}</span>
                                                             </div>
+                                                        </td>
+                                                        <td className="p-3">
+                                                            {specialty ? (
+                                                                <Badge
+                                                                    variant="outline"
+                                                                    className={`px-2.5 py-0.5 rounded-full font-medium transition-colors ${specialty.code && specialtyColorMap[specialty.code] ? specialtyColorMap[specialty.code] : ''}`}
+                                                                >
+                                                                    {specialty.name}
+                                                                </Badge>
+                                                            ) : (
+                                                                <span className="text-xs text-muted-foreground/50 italic">-</span>
+                                                            )}
                                                         </td>
                                                         <td className="p-3" onClick={(e) => e.stopPropagation()}>
                                                             {isSelected && test.methods.length > 1 ? (
