@@ -1,12 +1,12 @@
 'use client'
 
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { fetchAssayDefinitionsClient, fetchMethodsClient } from '@/lib/api-client'
 import type { LabSpecialty } from '@/types'
 import { SPECIALTY_BADGE_CLASSES } from '@/lib/specialty-badges'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import {
     Search,
-    Beaker,
     CheckCircle2,
     X,
     Plus,
@@ -100,6 +100,9 @@ export function TestAssignmentGrid({
     const [sortConfig, setSortConfig] = useState<{ key: keyof AssayDefinitionWithMethods, direction: 'asc' | 'desc' } | null>({ key: 'name', direction: 'asc' })
     const [showToast, setShowToast] = useState(false)
 
+    // Virtualization Ref
+    const parentRef = useRef<HTMLDivElement>(null)
+
     // Initial Load
     useEffect(() => {
         loadMethods()
@@ -108,16 +111,22 @@ export function TestAssignmentGrid({
 
     // Reload assays when method filter changes
     useEffect(() => {
-        loadAssays(searchQuery)
+        const controller = new AbortController()
+        loadAssays(searchQuery, controller.signal)
+        return () => controller.abort()
     }, [selectedMethodId, selectedSpecialtyId])
 
     // Debounce Search
     useEffect(() => {
+        const controller = new AbortController()
         const timer = setTimeout(() => {
-            loadAssays(searchQuery)
+            loadAssays(searchQuery, controller.signal)
         }, 300)
 
-        return () => clearTimeout(timer)
+        return () => {
+            clearTimeout(timer)
+            controller.abort()
+        }
     }, [searchQuery])
 
     const loadMethods = async () => {
@@ -127,26 +136,35 @@ export function TestAssignmentGrid({
         }
     }
 
-    const loadAssays = async (search: string = '') => {
+    const loadAssays = async (search: string = '', signal?: AbortSignal) => {
         setIsLoading(true)
         try {
             // Fetch assays with method filter and search
+            // Use large pageSize to simulate infinite scroll data availability for virtualization
+            // Note: In a real "infinite loading" scenario, we would append to the list.
+            // But here we fetch a large "page" (2000) to feed the client-side virtualizer.
             const result = await fetchAssayDefinitionsClient({
-                pageSize: 100,
+                pageSize: 2000,
                 methodId: selectedMethodId,
                 specialtyId: selectedSpecialtyId,
                 search: search
             })
+
+            if (signal?.aborted) return
+
             if (result.data) {
                 setAvailableAssays(result.data as AssayDefinitionWithMethods[])
             } else {
                 setAvailableAssays([])
             }
         } catch (error) {
+            if (signal?.aborted) return
             console.error('Failed to load assays', error)
             setAvailableAssays([])
         } finally {
-            setIsLoading(false)
+            if (!signal?.aborted) {
+                setIsLoading(false)
+            }
         }
     }
 
@@ -183,6 +201,14 @@ export function TestAssignmentGrid({
     const specialtiesMap = useMemo(() => {
         return new Map(specialties.map((s) => [s.id, s]))
     }, [specialties])
+
+    // Virtualizer
+    const rowVirtualizer = useVirtualizer({
+        count: processedTests.length,
+        getScrollElement: () => parentRef.current,
+        estimateSize: () => 54, // Approximate row height with padding/border
+        overscan: 20, // Keep more items rendered for smoother scroll
+    })
 
     // Handlers
     const toggleTestSelection = (assay: AssayDefinitionWithMethods) => {
@@ -272,19 +298,19 @@ export function TestAssignmentGrid({
                 <ResizableHandle withHandle />
 
                 {/* -------------------------------------------------------------
-                    CENTER PANE: DATA GRID
+                    CENTER PANE: DATA GRID (VIRTUALIZED)
                 ----------------------------------------------------------------- */}
                 <ResizablePanel defaultSize={55}>
                     <main className="h-full flex flex-col min-w-0 bg-white dark:bg-slate-950">
 
                         {/* Toolbar */}
-                        <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center gap-4 justify-between bg-white dark:bg-slate-950">
+                        <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center gap-4 justify-between bg-white dark:bg-slate-950 z-20 relative">
                             <div className="flex items-center gap-2 flex-1">
                                 <div className="relative w-full max-w-[240px]">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                                     <input
                                         type="text"
-                                        placeholder="Tìm kiếm chỉ tiêu..."
+                                        placeholder="Tìm kiếm tên, nhóm KT, phương pháp..."
                                         className="w-full pl-9 pr-4 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500 transition-all outline-none"
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -342,119 +368,133 @@ export function TestAssignmentGrid({
                             </div>
                         </div>
 
-                        {/* The Grid Header */}
-                        <div className="flex-1 overflow-hidden flex flex-col">
-                            <div className="overflow-auto flex-1">
-                                <table className="w-full text-left border-collapse">
-                                    <thead className="bg-slate-50 dark:bg-slate-900 sticky top-0 z-10 shadow-sm ring-1 ring-slate-900/5 dark:ring-slate-100/5">
-                                        <tr>
-                                            <th className="p-3 w-12 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
-                                            </th>
-                                            <th onClick={() => requestSort('name')} className="group p-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 border-b border-slate-200 dark:border-slate-800 select-none">
-                                                <div className="flex items-center gap-1">Tên chỉ tiêu <SortIcon column="name" sortConfig={sortConfig} /></div>
-                                            </th>
-                                            <th className="p-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 w-44 select-none">
-                                                Nhóm kỹ thuật
-                                            </th>
-                                            <th className="p-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 w-48 select-none">
-                                                Phương pháp
-                                            </th>
-                                            <th onClick={() => requestSort('units')} className="group p-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 border-b border-slate-200 dark:border-slate-800 w-24 select-none">
-                                                <div className="flex items-center gap-1">ĐVT <SortIcon column="units" sortConfig={sortConfig} /></div>
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white dark:bg-slate-950">
-                                        {isLoading ? (
-                                            <tr>
-                                                <td colSpan={5} className="p-8 text-center text-muted-foreground">
-                                                    <div className="flex justify-center items-center gap-2">
-                                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                                        Đang tải dữ liệu...
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ) : processedTests.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={5} className="p-8 text-center text-muted-foreground">
-                                                    Không tìm thấy chỉ tiêu nào
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            processedTests.map((test, index) => {
-                                                const selectedTest = selected.find(t => t.assayId === test.id)
-                                                const isSelected = !!selectedTest
-                                                const isDisabled = disabledSet.has(test.id)
-                                                const specialty = test.specialty_id ? specialtiesMap.get(test.specialty_id) : null
+                        {/* Virtualized Grid Header */}
+                        <div className="grid grid-cols-[48px_1fr_180px_190px_100px] bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 select-none z-10 shadow-sm relative">
+                            <div className="p-3 bg-slate-50 dark:bg-slate-900"></div>
+                            <div
+                                onClick={() => requestSort('name')}
+                                className="group p-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1"
+                            >
+                                Tên chỉ tiêu <SortIcon column="name" sortConfig={sortConfig} />
+                            </div>
+                            <div className="p-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                Nhóm kỹ thuật
+                            </div>
+                            <div className="p-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                Phương pháp
+                            </div>
+                            <div
+                                onClick={() => requestSort('units')}
+                                className="group p-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1"
+                            >
+                                ĐVT <SortIcon column="units" sortConfig={sortConfig} />
+                            </div>
+                        </div>
 
-                                                return (
-                                                    <tr
-                                                        key={test.id}
-                                                        onClick={() => !isDisabled && toggleTestSelection(test)}
-                                                        className={`
-                                                            transition-colors border-b border-slate-100 dark:border-slate-800 last:border-0 
-                                                            ${isDisabled ? 'opacity-50 cursor-not-allowed bg-slate-50 dark:bg-slate-900' : 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900'}
-                                                            ${isSelected ? 'bg-sky-50 dark:bg-sky-900/20 hover:bg-sky-100 dark:hover:bg-sky-900/30' : index % 2 === 0 ? 'bg-white dark:bg-slate-950' : 'bg-slate-50/30 dark:bg-slate-900/30'}
-                                                        `}
-                                                    >
-                                                        <td className="p-3 text-center">
-                                                            {isDisabled ? (
-                                                                <CheckCircle2 size={18} className="text-slate-300 dark:text-slate-600 inline-block" />
-                                                            ) : isSelected ? (
-                                                                <CheckSquare size={18} className="text-sky-600 dark:text-sky-400 inline-block" />
-                                                            ) : (
-                                                                <Square size={18} className="text-slate-300 dark:text-slate-600 inline-block" />
-                                                            )}
-                                                        </td>
-                                                        <td className="p-3">
-                                                            <div className="flex flex-col">
-                                                                <span className={`text-sm font-medium ${isSelected ? 'text-sky-900 dark:text-sky-100' : 'text-slate-800 dark:text-slate-200'}`}>{test.name}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="p-3">
-                                                            {specialty ? (
-                                                                <Badge
-                                                                    variant="outline"
-                                                                    className={`px-2.5 py-0.5 rounded-full font-medium transition-colors ${specialty.code && SPECIALTY_BADGE_CLASSES[specialty.code] ? SPECIALTY_BADGE_CLASSES[specialty.code] : ''}`}
-                                                                >
-                                                                    {specialty.name}
-                                                                </Badge>
-                                                            ) : (
-                                                                <span className="text-xs text-muted-foreground/50 italic">-</span>
-                                                            )}
-                                                        </td>
-                                                        <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                                                            {isSelected && test.methods.length > 1 ? (
-                                                                <Select
-                                                                    value={selectedTest.methodId}
-                                                                    onValueChange={(value) => handleMethodChange(test.id, value)}
-                                                                >
-                                                                    <SelectTrigger className="h-8 w-full text-xs">
-                                                                        <SelectValue />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {test.methods.map(m => (
-                                                                            <SelectItem key={m.method_id} value={m.method_id} className="text-xs">
-                                                                                {m.name}
-                                                                            </SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            ) : (
-                                                                <span className="text-xs text-slate-600 dark:text-slate-400">
-                                                                    {isSelected ? selectedTest.methodName : test.methods[0]?.name || 'N/A'}
-                                                                </span>
-                                                            )}
-                                                        </td>
-                                                        <td className="p-3 text-xs text-slate-600 dark:text-slate-400">
-                                                            {test.units || '-'}
-                                                        </td>
-                                                    </tr>
-                                                )
-                                            })
-                                        )}
-                                    </tbody>
-                                </table>
+                        {/* Virtualized Grid List */}
+                        <div
+                            ref={parentRef}
+                            className="flex-1 overflow-auto w-full relative"
+                        >
+                            {/* Inner Container for total height */}
+                            <div
+                                style={{
+                                    height: `${rowVirtualizer.getTotalSize()}px`,
+                                    width: '100%',
+                                    position: 'relative',
+                                }}
+                            >
+                                {isLoading && processedTests.length === 0 ? (
+                                    <div className="absolute inset-0 flex items-center justify-center p-8 text-center text-muted-foreground z-50 bg-white/50 dark:bg-slate-950/50">
+                                        <div className="flex justify-center items-center gap-2">
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            Đang tải dữ liệu...
+                                        </div>
+                                    </div>
+                                ) : processedTests.length === 0 ? (
+                                    <div className="absolute inset-0 flex items-center justify-center p-8 text-center text-muted-foreground">
+                                        Không tìm thấy chỉ tiêu nào
+                                    </div>
+                                ) : (
+                                    rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                                        const test = processedTests[virtualRow.index]
+                                        const selectedTest = selected.find(t => t.assayId === test.id)
+                                        const isSelected = !!selectedTest
+                                        const isDisabled = disabledSet.has(test.id)
+                                        const specialty = test.specialty_id ? specialtiesMap.get(test.specialty_id) : null
+
+                                        return (
+                                            <div
+                                                key={test.id}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: 0,
+                                                    left: 0,
+                                                    width: '100%',
+                                                    height: `${virtualRow.size}px`,
+                                                    transform: `translateY(${virtualRow.start}px)`,
+                                                }}
+                                                className={`
+                                                    grid grid-cols-[48px_1fr_180px_190px_100px] border-b border-slate-100 dark:border-slate-800 box-border
+                                                    ${isDisabled ? 'opacity-50 cursor-not-allowed bg-slate-50 dark:bg-slate-900' : 'cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-900'}
+                                                    ${isSelected ? 'bg-sky-50 dark:bg-sky-900/20 hover:bg-sky-100 dark:hover:bg-sky-900/30' : virtualRow.index % 2 === 0 ? 'bg-white dark:bg-slate-950' : 'bg-slate-50/30 dark:bg-slate-900/30'}
+                                                `}
+                                                onClick={() => !isDisabled && toggleTestSelection(test)}
+                                            >
+                                                <div className="p-3 flex items-center justify-center">
+                                                    {isDisabled ? (
+                                                        <CheckCircle2 size={18} className="text-slate-300 dark:text-slate-600 inline-block" />
+                                                    ) : isSelected ? (
+                                                        <CheckSquare size={18} className="text-sky-600 dark:text-sky-400 inline-block" />
+                                                    ) : (
+                                                        <Square size={18} className="text-slate-300 dark:text-slate-600 inline-block" />
+                                                    )}
+                                                </div>
+                                                <div className="p-3 flex items-center">
+                                                    <span className={`text-sm font-medium ${isSelected ? 'text-sky-900 dark:text-sky-100' : 'text-slate-800 dark:text-slate-200'}`}>{test.name}</span>
+                                                </div>
+                                                <div className="p-3 flex items-center">
+                                                    {specialty ? (
+                                                        <Badge
+                                                            variant="outline"
+                                                            className={`px-2.5 py-0.5 rounded-full font-medium transition-colors ${specialty.code && SPECIALTY_BADGE_CLASSES[specialty.code] ? SPECIALTY_BADGE_CLASSES[specialty.code] : ''}`}
+                                                        >
+                                                            {specialty.name}
+                                                        </Badge>
+                                                    ) : (
+                                                        <span className="text-xs text-muted-foreground/50 italic">-</span>
+                                                    )}
+                                                </div>
+                                                <div className="p-3 flex items-center" onClick={(e) => e.stopPropagation()}>
+                                                    {isSelected && test.methods.length > 1 ? (
+                                                        <Select
+                                                            value={selectedTest.methodId}
+                                                            onValueChange={(value) => handleMethodChange(test.id, value)}
+                                                        >
+                                                            <SelectTrigger className="h-8 w-full text-xs">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {test.methods.map(m => (
+                                                                    <SelectItem key={m.method_id} value={m.method_id} className="text-xs">
+                                                                        {m.name}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    ) : (
+                                                        <span className="text-xs text-slate-600 dark:text-slate-400">
+                                                            {isSelected ? selectedTest.methodName : test.methods[0]?.name || 'N/A'}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="p-3 flex items-center text-xs text-slate-600 dark:text-slate-400">
+                                                    {test.units || '-'}
+                                                </div>
+                                            </div>
+                                        )
+                                    })
+                                )}
                             </div>
                         </div>
                     </main>

@@ -77,10 +77,12 @@ export async function getAssayDefinitions(params?: {
             }
         }
 
-        // Handle search: match by assay name OR method name
+        // Handle search: match by assay name OR method name OR specialty name
         let assayIdsMatchingMethod: string[] = []
+        let matchingSpecialtyIds: string[] = []
+
         if (search) {
-            // First, find methods that match the search term
+            // 1. Find methods that match the search term
             const { data: matchingMethods } = await supabase
                 .from('methods')
                 .select('id')
@@ -100,13 +102,28 @@ export async function getAssayDefinitions(params?: {
                 }
             }
 
-            // Filter: assay name matches OR assay id is in the method-matched list
-            if (assayIdsMatchingMethod.length > 0) {
-                query = query.or(`name.ilike.%${search}%,id.in.(${assayIdsMatchingMethod.join(',')})`)
-            } else {
-                // No method matches, just search by assay name
-                query = query.ilike('name', `%${search}%`)
+            // 2. Find specialties that match the search term
+            const { data: matchingSpecialties } = await supabase
+                .from('lab_specialties')
+                .select('id')
+                .ilike('name', `%${search}%`)
+
+            if (matchingSpecialties && matchingSpecialties.length > 0) {
+                matchingSpecialtyIds = matchingSpecialties.map((s) => s.id)
             }
+
+            // 3. Build OR condition
+            const orConditions = [`name.ilike.%${search}%`] // Always search by assay name
+
+            if (assayIdsMatchingMethod.length > 0) {
+                orConditions.push(`id.in.(${assayIdsMatchingMethod.join(',')})`)
+            }
+
+            if (matchingSpecialtyIds.length > 0) {
+                orConditions.push(`specialty_id.in.(${matchingSpecialtyIds.join(',')})`)
+            }
+
+            query = query.or(orConditions.join(','))
         }
 
         // Execute query (fetch all matching rows)
