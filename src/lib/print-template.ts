@@ -1,9 +1,30 @@
-import { ResultWithAssay } from '@/types'
+import type { Client, ResultWithAssay, SampleWithUser } from '@/types'
 
-export function generatePrintTemplate(sample: any, results: ResultWithAssay[]) {
+type SampleForPrint = SampleWithUser & {
+  client?: Pick<
+    Client,
+    'id' | 'name' | 'date_of_birth' | 'gender' | 'phone' | 'address' | 'health_insurance_num'
+  > | null
+}
+
+export function generatePrintTemplate(sample: SampleForPrint, results: ResultWithAssay[]) {
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${sample.sample_id}&margin=0`;
   const logoUrl = "https://i.postimg.cc/8zFZ52j1/cdc-logo-150.png";
   const dateStr = new Date().toLocaleDateString('vi-VN');
+
+  const client = sample.client ?? null
+  const clientName = client?.name || sample.client_name || ''
+  const birthYear = client?.date_of_birth
+    ? (() => {
+        const year = new Date(client.date_of_birth).getFullYear()
+        return Number.isFinite(year) ? String(year) : ''
+      })()
+    : ''
+  const gender = client?.gender || ''
+  const address = client?.address || ''
+  const phone = client?.phone || ''
+  const healthInsuranceNum = client?.health_insurance_num || ''
+  const sampleType = sample.type || ''
 
   // Group results by category
   const testsByCategory: { [key: string]: ResultWithAssay[] } = {};
@@ -214,23 +235,23 @@ export function generatePrintTemplate(sample: any, results: ResultWithAssay[]) {
             <tbody>
                 <tr>
                     <td class="info-label">Họ và tên:</td>
-                    <td class="info-value uppercase" style="font-weight: 800; font-size: 11px;">${sample.client_name || ''}</td>
+                    <td class="info-value uppercase" style="font-weight: 800; font-size: 11px;">${clientName}</td>
                     <td class="info-label">Năm sinh:</td>
-                    <td class="info-value">............</td>
+                    <td class="info-value">${birthYear || '............'}</td>
                     <td class="info-label">Giới tính:</td>
-                    <td class="info-value">............</td>
+                    <td class="info-value">${gender || '............'}</td>
                 </tr>
                 <tr>
                     <td class="info-label">Địa chỉ:</td>
-                    <td class="info-value" colspan="3">....................................................................................</td>
+                    <td class="info-value" colspan="3">${address || '....................................................................................'}</td>
                     <td class="info-label">Điện thoại:</td>
-                    <td class="info-value">............</td>
+                    <td class="info-value">${phone || '............'}</td>
                 </tr>
                  <tr>
                     <td class="info-label">Bác sĩ CĐ:</td>
                     <td class="info-value" colspan="3">....................................................................................</td>
                     <td class="info-label">Số BHYT:</td>
-                    <td class="info-value">............</td>
+                    <td class="info-value">${healthInsuranceNum || '............'}</td>
                 </tr>
                 <tr>
                     <td class="info-label">Chẩn đoán:</td>
@@ -255,7 +276,7 @@ export function generatePrintTemplate(sample: any, results: ResultWithAssay[]) {
                 <tbody>
                     <tr>
                         <td class="info-label">Loại mẫu:</td>
-                        <td class="info-value">....................</td>
+                        <td class="info-value">${sampleType || '....................'}</td>
                         <td class="info-label">T.Gian lấy:</td>
                         <td class="info-value">..../..../....... ...:</td>
                         <td class="info-label">Người lấy:</td>

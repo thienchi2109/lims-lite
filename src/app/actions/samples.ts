@@ -189,7 +189,16 @@ export async function getSample(id: string) {
                 `
                 *,
                 received_by_user:users!samples_received_by_fkey(full_name),
-                rejected_by_user:users!samples_rejected_by_fkey(full_name)
+                rejected_by_user:users!samples_rejected_by_fkey(full_name),
+                client:clients!samples_client_fk(
+                    id,
+                    name,
+                    date_of_birth,
+                    gender,
+                    phone,
+                    address,
+                    health_insurance_num
+                )
             `
             )
             .eq('id', id)
