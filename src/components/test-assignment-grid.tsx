@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { fetchAssayDefinitionsClient, fetchMethodsClient } from '@/lib/api-client'
 import type { LabSpecialty } from '@/types'
+import { SPECIALTY_BADGE_CLASSES } from '@/lib/specialty-badges'
 import {
     Search,
     Beaker,
@@ -182,14 +183,6 @@ export function TestAssignmentGrid({
     const specialtiesMap = useMemo(() => {
         return new Map(specialties.map((s) => [s.id, s]))
     }, [specialties])
-    const specialtyColorMap: Record<string, string> = {
-        'HEM': 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100',
-        'BIO': 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100',
-        'IMM': 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100',
-        'MIC': 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100',
-        'MOL': 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100',
-        'PAT': 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100',
-    }
 
     // Handlers
     const toggleTestSelection = (assay: AssayDefinitionWithMethods) => {
@@ -422,7 +415,7 @@ export function TestAssignmentGrid({
                                                             {specialty ? (
                                                                 <Badge
                                                                     variant="outline"
-                                                                    className={`px-2.5 py-0.5 rounded-full font-medium transition-colors ${specialty.code && specialtyColorMap[specialty.code] ? specialtyColorMap[specialty.code] : ''}`}
+                                                                    className={`px-2.5 py-0.5 rounded-full font-medium transition-colors ${specialty.code && SPECIALTY_BADGE_CLASSES[specialty.code] ? SPECIALTY_BADGE_CLASSES[specialty.code] : ''}`}
                                                                 >
                                                                     {specialty.name}
                                                                 </Badge>

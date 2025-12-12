@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { DashboardHeader } from '@/components/dashboard-header'
 import { SamplesPageClient } from '@/components/samples-page-client'
 import { Suspense } from 'react'
+import { getSpecialties } from '@/app/actions/assays'
 
 // This page relies on cookies/session via Supabase, so force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -49,6 +50,8 @@ export default async function UnifiedSamplesPage() {
             name: receiver.full_name || '',
         })) || []
 
+    const { data: specialties } = await getSpecialties()
+
     // 4. Build permissions object based on role
     const permissions = {
         canDiscard: role === 'manager',
@@ -79,6 +82,7 @@ export default async function UnifiedSamplesPage() {
                     permissions={permissions}
                     homeHref={homeHref}
                     receiverOptions={receiverOptions}
+                    specialties={specialties || []}
                 />
             </Suspense>
         </div>

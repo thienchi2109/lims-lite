@@ -1,6 +1,6 @@
 'use client'
 
-import { SampleWithUser } from '@/types'
+import { SampleWithUser, type LabSpecialty } from '@/types'
 import { SampleDetailPanel } from '@/components/sample-detail-panel'
 import { AssignedTestsPanel } from '@/components/assigned-tests-panel'
 
@@ -13,9 +13,10 @@ interface SampleBottomRowProps {
         canViewResults: boolean
         canEnterResults: boolean
     }
+    specialties?: LabSpecialty[]
 }
 
-export function SampleBottomRow({ sample, isLoadingSample = false, permissions }: SampleBottomRowProps) {
+export function SampleBottomRow({ sample, isLoadingSample = false, permissions, specialties = [] }: SampleBottomRowProps) {
     if (isLoadingSample) {
         return (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
@@ -48,7 +49,7 @@ export function SampleBottomRow({ sample, isLoadingSample = false, permissions }
                 <SampleDetailPanel sample={sample} />
             </div>
             <div className="h-full min-h-0">
-                <AssignedTestsPanel sampleId={sample.id} />
+                <AssignedTestsPanel sampleId={sample.id} specialties={specialties} />
             </div>
         </div>
     )

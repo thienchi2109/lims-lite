@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo, useCallback, useTransition, useDeferredValue } from 'react'
+import { useEffect, useState, useMemo, useCallback, useTransition } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { sampleKeys } from '@/types/query-keys'
 import {
@@ -9,27 +9,32 @@ import {
     Plus,
     X,
     CheckCircle,
-    Beaker,
-    Microscope,
-    Dna,
     Loader2,
     Filter,
-    AlertCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import { assignTestsClient, fetchAssayDefinitionsClient } from '@/lib/api-client'
 import { toast } from 'sonner'
+import type { LabSpecialty } from '@/types'
+import { SPECIALTY_BADGE_CLASSES } from '@/lib/specialty-badges'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
 
 interface TestAssignmentModuleProps {
     sampleId: string
     onClose: () => void
     onSuccess: () => void
     onRefocus?: (sampleId: string) => void // Optional callback to refocus on the sample
+    specialties?: LabSpecialty[]
 }
 
 interface Assay {
@@ -38,26 +43,21 @@ interface Assay {
     method_name: string | null
     default_method_id: string | null
     units: string | null
+    specialty_id: string | null
     category?: string // Optional category for filtering
 }
 
-// Mock categories for now since they aren't in the DB schema yet
-const CATEGORIES = [
-    { id: 'all', label: 'Tất cả', icon: FlaskConical },
-    { id: 'microbio', label: 'Vi sinh', icon: Microscope },
-    { id: 'chem', label: 'Hóa lý', icon: Beaker },
-    { id: 'molecular', label: 'Sinh học phân tử', icon: Dna },
-]
-
-export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus }: TestAssignmentModuleProps) {
+export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus, specialties = [] }: TestAssignmentModuleProps) {
     const queryClient = useQueryClient()
     const [assays, setAssays] = useState<Assay[]>([])
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
-    const [selectedCategory, setSelectedCategory] = useState('all')
+    const [selectedSpecialtyId, setSelectedSpecialtyId] = useState('all')
     const [selectedAssayIds, setSelectedAssayIds] = useState<Set<string>>(new Set())
     const [isPending, startTransition] = useTransition()
+
+    const specialtiesMap = useMemo(() => new Map(specialties.map((s) => [s.id, s])), [specialties])
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -67,10 +67,18 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus }
         return () => clearTimeout(timer)
     }, [searchQuery])
 
+    useEffect(() => {
+        fetchAssays(searchQuery)
+    }, [selectedSpecialtyId])
+
     async function fetchAssays(search: string) {
         setLoading(true)
         try {
-            const { data, error } = await fetchAssayDefinitionsClient({ search, pageSize: 100 })
+            const { data, error } = await fetchAssayDefinitionsClient({
+                search,
+                pageSize: 100,
+                specialtyId: selectedSpecialtyId,
+            })
             if (error) {
                 toast.error('Không thể tải danh sách xét nghiệm')
                 console.error(error)
@@ -85,6 +93,7 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus }
                         method_name: defaultMethod?.name || null,
                         default_method_id: defaultMethod?.method_id || null,
                         units: a.units,
+                        specialty_id: a.specialty_id ?? null,
                     }
                 })
                 setAssays(transformedAssays)
@@ -209,26 +218,21 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus }
                         />
                     </div>
 
-                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                        {CATEGORIES.map((cat) => {
-                            const Icon = cat.icon
-                            const isSelected = selectedCategory === cat.id
-                            return (
-                                <button
-                                    key={cat.id}
-                                    onClick={() => setSelectedCategory(cat.id)}
-                                    className={cn(
-                                        "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap border",
-                                        isSelected
-                                            ? "bg-indigo-600 text-white border-indigo-600"
-                                            : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
-                                    )}
-                                >
-                                    <Icon className="h-3.5 w-3.5" />
-                                    {cat.label}
-                                </button>
-                            )
-                        })}
+                    <div className="flex flex-wrap gap-2">
+                        <Select value={selectedSpecialtyId} onValueChange={setSelectedSpecialtyId}>
+                            <SelectTrigger className="h-8 w-[220px] bg-white text-xs">
+                                <Filter className="mr-2 h-3.5 w-3.5 text-slate-400" />
+                                <SelectValue placeholder="Nhóm xét nghiệm" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Tất cả nhóm xét nghiệm</SelectItem>
+                                {specialties.map((specialty) => (
+                                    <SelectItem key={specialty.id} value={specialty.id}>
+                                        {specialty.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
 
@@ -248,6 +252,7 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus }
                         <div className="grid grid-cols-2 gap-3" style={{ willChange: isPending ? 'contents' : 'auto' }}>
                             {assays.map((assay) => {
                                 const isSelected = selectedAssayObjects.has(assay.id)
+                                const specialty = assay.specialty_id ? specialtiesMap.get(assay.specialty_id) : null
                                 return (
                                     <div
                                         key={assay.id}
@@ -275,6 +280,17 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus }
                                             <Badge variant="secondary" className="bg-slate-100 font-normal text-slate-500">
                                                 {assay.method_name || 'Chưa có PP'}
                                             </Badge>
+                                            {specialty && (
+                                                <Badge
+                                                    variant="outline"
+                                                    className={cn(
+                                                        "px-2.5 py-0.5 rounded-full font-medium transition-colors text-[10px]",
+                                                        specialty.code && SPECIALTY_BADGE_CLASSES[specialty.code] ? SPECIALTY_BADGE_CLASSES[specialty.code] : ''
+                                                    )}
+                                                >
+                                                    {specialty.name}
+                                                </Badge>
+                                            )}
                                             {assay.units && (
                                                 <span>{assay.units}</span>
                                             )}
@@ -317,6 +333,20 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus }
                                         <span className="truncate text-xs text-slate-500 group-hover:text-red-500">
                                             {assay.method_name}
                                         </span>
+                                        {assay.specialty_id && specialtiesMap.get(assay.specialty_id) && (
+                                            <Badge
+                                                variant="outline"
+                                                className={cn(
+                                                    "mt-1 w-fit px-2 py-0.5 rounded-full font-medium transition-colors text-[10px]",
+                                                    (() => {
+                                                        const spec = specialtiesMap.get(assay.specialty_id)
+                                                        return spec?.code && SPECIALTY_BADGE_CLASSES[spec.code] ? SPECIALTY_BADGE_CLASSES[spec.code] : ''
+                                                    })()
+                                                )}
+                                            >
+                                                {specialtiesMap.get(assay.specialty_id)?.name}
+                                            </Badge>
+                                        )}
                                     </div>
                                     <button
                                         onClick={() => toggleAssay(assay)}

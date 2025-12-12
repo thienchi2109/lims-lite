@@ -6,6 +6,7 @@ import { SampleListTable } from '@/components/sample-list-table'
 import { SampleFilters } from '@/components/sample-filters'
 import { SampleBottomRow } from '@/components/sample-bottom-row'
 import { type SampleStatus } from '@/types'
+import type { LabSpecialty } from '@/types'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
@@ -22,13 +23,15 @@ interface SamplesPageClientProps {
     }
     homeHref: string
     receiverOptions: Array<{ id: string; name: string }>
+    specialties: LabSpecialty[]
 }
 
 export function SamplesPageClient({
     role,
     permissions,
     homeHref,
-    receiverOptions
+    receiverOptions,
+    specialties
 }: SamplesPageClientProps) {
     const searchParams = useSearchParams()
 
@@ -153,6 +156,7 @@ export function SamplesPageClient({
                     sample={selectedSample}
                     isLoadingSample={isLoadingSample}
                     permissions={permissions}
+                    specialties={specialties}
                 />
             </div>
         </main>

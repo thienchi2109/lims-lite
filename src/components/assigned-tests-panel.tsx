@@ -38,7 +38,7 @@ import {
 } from '@/lib/api-client'
 import { fetchSampleDetail } from '@/hooks/use-sample-detail'
 import { validateNumericValue, validateTextValue } from '@/lib/utils-lims'
-import { ResultWithAssay, SampleStatus } from '@/types'
+import { ResultWithAssay, SampleStatus, type LabSpecialty } from '@/types'
 import { ResultCellEditor } from '@/components/result-cell-editor'
 import { BatchSaveToolbar } from '@/components/batch-save-toolbar'
 import { ResultStatusBadge } from '@/components/result-status-badge'
@@ -48,9 +48,10 @@ import { generatePrintTemplate } from '@/lib/print-template'
 
 interface AssignedTestsPanelProps {
     sampleId: string
+    specialties?: LabSpecialty[]
 }
 
-export function AssignedTestsPanel({ sampleId }: AssignedTestsPanelProps) {
+export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTestsPanelProps) {
     const router = useRouter()
     const searchParams = useSearchParams()
     const queryClient = useQueryClient()
@@ -462,6 +463,7 @@ export function AssignedTestsPanel({ sampleId }: AssignedTestsPanelProps) {
                             fetchTests()
                         }}
                         onRefocus={handleRefocus}
+                        specialties={specialties}
                     />
                 </DialogContent>
             </Dialog>
