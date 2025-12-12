@@ -321,13 +321,13 @@ export function TestAssignmentGrid({
                                                 <Filter size={14} />
                                                 <span className="truncate">
                                                     {selectedSpecialtyId === 'all'
-                                                        ? 'Tất cả nhóm xét nghiệm'
-                                                        : specialtiesMap.get(selectedSpecialtyId)?.name || 'Nhóm xét nghiệm'}
+                                                        ? 'Tất cả Nhóm kỹ thuật'
+                                                        : specialtiesMap.get(selectedSpecialtyId)?.name || 'Nhóm kỹ thuật'}
                                                 </span>
                                             </div>
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="all">Tất cả nhóm xét nghiệm</SelectItem>
+                                            <SelectItem value="all">Tất cả Nhóm kỹ thuật</SelectItem>
                                             {specialties.map((specialty) => (
                                                 <SelectItem key={specialty.id} value={specialty.id}>
                                                     {specialty.name}
@@ -354,7 +354,7 @@ export function TestAssignmentGrid({
                                                 <div className="flex items-center gap-1">Tên chỉ tiêu <SortIcon column="name" sortConfig={sortConfig} /></div>
                                             </th>
                                             <th className="p-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 w-44 select-none">
-                                                Nhóm xét nghiệm
+                                                Nhóm kỹ thuật
                                             </th>
                                             <th className="p-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 w-48 select-none">
                                                 Phương pháp

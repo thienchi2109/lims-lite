@@ -222,10 +222,10 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus, 
                         <Select value={selectedSpecialtyId} onValueChange={setSelectedSpecialtyId}>
                             <SelectTrigger className="h-8 w-[220px] bg-white text-xs">
                                 <Filter className="mr-2 h-3.5 w-3.5 text-slate-400" />
-                                <SelectValue placeholder="Nhóm xét nghiệm" />
+                                <SelectValue placeholder="Nhóm kỹ thuật" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">Tất cả nhóm xét nghiệm</SelectItem>
+                                <SelectItem value="all">Tất cả Nhóm kỹ thuật</SelectItem>
                                 {specialties.map((specialty) => (
                                     <SelectItem key={specialty.id} value={specialty.id}>
                                         {specialty.name}

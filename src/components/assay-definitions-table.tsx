@@ -171,11 +171,11 @@ export function AssayDefinitionsTable({
                         <SelectTrigger className="w-[240px] bg-slate-50 dark:bg-slate-950 border-slate-200">
                             <div className="flex items-center gap-2 text-muted-foreground truncate">
                                 <Filter className="h-3.5 w-3.5 flex-shrink-0" />
-                                <SelectValue placeholder="Nhóm xét nghiệm" />
+                                <SelectValue placeholder="Nhóm kỹ thuật" />
                             </div>
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Tất cả nhóm xét nghiệm</SelectItem>
+                            <SelectItem value="all">Tất cả Nhóm kỹ thuật</SelectItem>
                             {specialties.map((specialty) => (
                                 <SelectItem key={specialty.id} value={specialty.id}>
                                     {specialty.name}
@@ -220,7 +220,7 @@ export function AssayDefinitionsTable({
                             <TableHeader>
                                 <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50">
                                     <TableHead className="w-[250px] font-semibold text-slate-700 dark:text-slate-300">Tên chỉ tiêu</TableHead>
-                                    <TableHead className="w-[180px] font-semibold text-slate-700 dark:text-slate-300">Nhóm xét nghiệm</TableHead>
+                                    <TableHead className="w-[180px] font-semibold text-slate-700 dark:text-slate-300">Nhóm kỹ thuật</TableHead>
                                     <TableHead className="w-[200px] font-semibold text-slate-700 dark:text-slate-300">Phương pháp</TableHead>
                                     <TableHead className="w-[100px] font-semibold text-slate-700 dark:text-slate-300">Đơn vị</TableHead>
                                     <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Quy tắc xác thực</TableHead>

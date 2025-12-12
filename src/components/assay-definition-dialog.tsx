@@ -258,7 +258,7 @@ export function AssayDefinitionDialog({
 
                             {/* Specialty - Required */}
                             <div className="space-y-2">
-                                <Label htmlFor="specialty">Nhóm xét nghiệm <span className="text-red-500">*</span></Label>
+                                <Label htmlFor="specialty">Nhóm kỹ thuật <span className="text-red-500">*</span></Label>
                                 <Select
                                     value={specialtyId}
                                     onValueChange={setSpecialtyId}
@@ -266,7 +266,7 @@ export function AssayDefinitionDialog({
                                     required
                                 >
                                     <SelectTrigger id="specialty">
-                                        <SelectValue placeholder="Chọn nhóm xét nghiệm" />
+                                        <SelectValue placeholder="Chọn Nhóm kỹ thuật" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {specialties?.map((specialty) => (
