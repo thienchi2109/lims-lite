@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, Filter, FlaskConical, TestTube2, AlertCircle } from 'lucide-react'
 import {
     Table,
     TableBody,
@@ -12,6 +12,10 @@ import {
     TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
+import { Separator } from '@/components/ui/separator'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { AssayDefinitionDialog } from '@/components/assay-definition-dialog'
 import { DeleteAssayDialog } from '@/components/delete-assay-dialog'
 
@@ -25,6 +29,7 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { SearchInput } from '@/components/ui/search-input'
+import { LabSpecialty } from '@/types'
 
 type AssayMethod = {
     id: string
@@ -37,6 +42,7 @@ type AssayMethod = {
 type AssayDefinition = {
     id: string
     name: string
+    specialty_id?: string | null
     units: string | null
     validation_rules: Record<string, any>
     created_at: string
@@ -58,7 +64,8 @@ export function AssayDefinitionsTable({
     pageSize,
     totalPages,
     totalCount,
-}: Props) {
+    specialties = [],
+}: Props & { specialties?: LabSpecialty[] }) {
     const [editingAssay, setEditingAssay] = useState<AssayDefinition | null>(null)
     const [deletingAssay, setDeletingAssay] = useState<AssayDefinition | null>(null)
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
@@ -74,66 +81,153 @@ export function AssayDefinitionsTable({
         router.replace(`${pathname}?${params.toString()}`)
     }
 
+    const handleSpecialtyFilter = (specialtyId: string) => {
+        const params = new URLSearchParams(searchParams.toString())
+        if (specialtyId && specialtyId !== 'all') {
+            params.set('specialtyId', specialtyId)
+        } else {
+            params.delete('specialtyId')
+        }
+        params.set('page', '1') // Reset to page 1
+        router.replace(`${pathname}?${params.toString()}`)
+    }
+
     return (
-        <div className="space-y-4">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div className="flex flex-1 items-center gap-4">
-                    <SearchInput placeholder="Tìm kiếm chỉ tiêu..." className="w-full md:w-72" />
-                    <p className="text-sm text-muted-foreground hidden md:block border-l pl-4">
-                        Tổng số: <span className="font-semibold">{totalCount}</span> chỉ tiêu
-                    </p>
+        <div className="space-y-6">
+            {/* Toolbar Section */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900 p-4 rounded-lg border shadow-sm">
+                <div className="flex flex-1 items-center gap-3">
+                    <div className="relative w-full sm:w-72">
+                        <SearchInput
+                            placeholder="Tìm kiếm tên, mã chỉ tiêu..."
+                            className="w-full pl-9 bg-slate-50 dark:bg-slate-950 border-slate-200"
+                        />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    </div>
+
+                    <Separator orientation="vertical" className="h-8 hidden sm:block" />
+
+                    <Select
+                        value={searchParams.get('specialtyId') || 'all'}
+                        onValueChange={handleSpecialtyFilter}
+                    >
+                        <SelectTrigger className="w-[240px] bg-slate-50 dark:bg-slate-950 border-slate-200">
+                            <div className="flex items-center gap-2 text-muted-foreground truncate">
+                                <Filter className="h-3.5 w-3.5 flex-shrink-0" />
+                                <SelectValue placeholder="Nhóm xét nghiệm" />
+                            </div>
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Tất cả nhóm xét nghiệm</SelectItem>
+                            {specialties.map((specialty) => (
+                                <SelectItem key={specialty.id} value={specialty.id}>
+                                    {specialty.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
-                <Button onClick={() => setIsAddDialogOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Thêm chỉ tiêu
-                </Button>
+
+                <div className="flex items-center gap-3">
+                    <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-md text-xs font-medium text-slate-600 dark:text-slate-400">
+                        <TestTube2 className="h-3.5 w-3.5" />
+                        {totalCount} chỉ tiêu
+                    </div>
+                    <Button onClick={() => setIsAddDialogOpen(true)} className="bg-primary hover:bg-primary/90 shadow-sm">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Thêm mới
+                    </Button>
+                </div>
             </div>
 
             {assays.length === 0 ? (
-                <div className="text-center py-12 border rounded-lg bg-slate-50 dark:bg-slate-900">
-                    <p className="text-muted-foreground mb-4">
-                        Chưa có chỉ tiêu xét nghiệm nào
+                <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-slate-900 rounded-lg border border-dashed">
+                    <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-full mb-4">
+                        <FlaskConical className="h-8 w-8 text-slate-400" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">
+                        Chưa có chỉ tiêu xét nghiệm
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-6 max-w-sm text-center">
+                        Bắt đầu bằng cách thêm chỉ tiêu xét nghiệm mới vào hệ thống hoặc thay đổi bộ lọc tìm kiếm.
                     </p>
-                    <Button onClick={() => setIsAddDialogOpen(true)}>
+                    <Button onClick={() => setIsAddDialogOpen(true)} variant="outline">
                         <Plus className="h-4 w-4 mr-2" />
                         Thêm chỉ tiêu đầu tiên
                     </Button>
                 </div>
             ) : (
                 <>
-                    <div className="border rounded-lg">
+                    <Card className="overflow-hidden border shadow-sm bg-white dark:bg-slate-900">
                         <Table>
                             <TableHeader>
-                                <TableRow>
-                                    <TableHead>Tên chỉ tiêu</TableHead>
-                                    <TableHead>Phương pháp</TableHead>
-                                    <TableHead>Đơn vị</TableHead>
-                                    <TableHead>Quy tắc xác thực</TableHead>
-                                    <TableHead className="w-[100px]">Thao tác</TableHead>
+                                <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                                    <TableHead className="w-[250px] font-semibold text-slate-700 dark:text-slate-300">Tên chỉ tiêu</TableHead>
+                                    <TableHead className="w-[180px] font-semibold text-slate-700 dark:text-slate-300">Nhóm xét nghiệm</TableHead>
+                                    <TableHead className="w-[200px] font-semibold text-slate-700 dark:text-slate-300">Phương pháp</TableHead>
+                                    <TableHead className="w-[100px] font-semibold text-slate-700 dark:text-slate-300">Đơn vị</TableHead>
+                                    <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Quy tắc xác thực</TableHead>
+                                    <TableHead className="w-[100px] text-right font-semibold text-slate-700 dark:text-slate-300">Thao tác</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {assays.map((assay) => (
-                                    <TableRow key={assay.id}>
+                                    <TableRow key={assay.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                         <TableCell className="font-medium">
                                             {assay.name}
+                                        </TableCell>
+                                        <TableCell>
+                                            {assay.specialty_id ? (
+                                                (() => {
+                                                    const specialty = specialties.find(s => s.id === assay.specialty_id)
+                                                    const colorMap: Record<string, string> = {
+                                                        'HEM': 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100', // Huyết học
+                                                        'BIO': 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100', // Sinh hóa
+                                                        'IMM': 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100', // Miễn dịch
+                                                        'MIC': 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100', // Vi sinh
+                                                    }
+                                                    return (
+                                                        <Badge variant="outline" className={cn("px-2.5 py-0.5 rounded-full font-medium transition-colors", specialty?.code ? colorMap[specialty.code] : '')}>
+                                                            {specialty?.name || 'Unknown'}
+                                                        </Badge>
+                                                    )
+                                                })()
+                                            ) : (
+                                                <span className="text-muted-foreground/50 text-sm italic">-</span>
+                                            )}
                                         </TableCell>
                                         <TableCell>
                                             {assay.methods && assay.methods.length > 0 ? (
                                                 <div className="flex flex-col gap-1 items-start">
                                                     {assay.methods.find(m => m.is_default) ? (
-                                                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                                            {assay.methods.find(m => m.is_default)?.name}
-                                                        </Badge>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <Badge variant="secondary" className="font-normal bg-slate-100 text-slate-700 hover:bg-slate-200 border-0">
+                                                                {assay.methods.find(m => m.is_default)?.name}
+                                                            </Badge>
+                                                            {assay.methods.length > 1 && (
+                                                                <TooltipProvider>
+                                                                    <Tooltip>
+                                                                        <TooltipTrigger asChild>
+                                                                            <Badge variant="outline" className="h-5 px-1.5 text-[10px] text-muted-foreground border-dashed cursor-help">
+                                                                                +{assay.methods.length - 1}
+                                                                            </Badge>
+                                                                        </TooltipTrigger>
+                                                                        <TooltipContent>
+                                                                            <div className="flex flex-col gap-1">
+                                                                                <span className="font-semibold text-xs">Phương pháp khác:</span>
+                                                                                {assay.methods.filter(m => !m.is_default).map(m => (
+                                                                                    <span key={m.id} className="text-xs text-muted-foreground">• {m.name}</span>
+                                                                                ))}
+                                                                            </div>
+                                                                        </TooltipContent>
+                                                                    </Tooltip>
+                                                                </TooltipProvider>
+                                                            )}
+                                                        </div>
                                                     ) : (
-                                                        <Badge variant="outline">
+                                                        <Badge variant="outline" className="text-muted-foreground font-normal">
                                                             {assay.methods[0].name}
                                                         </Badge>
-                                                    )}
-                                                    {assay.methods.length > 1 && (
-                                                        <span className="text-xs text-muted-foreground ml-1">
-                                                            +{assay.methods.length - 1} phương pháp khác
-                                                        </span>
                                                     )}
                                                 </div>
                                             ) : (
@@ -151,29 +245,31 @@ export function AssayDefinitionsTable({
                                         </TableCell>
                                         <TableCell>
                                             {Object.keys(assay.validation_rules || {}).length > 0 ? (
-                                                <Badge variant="secondary">
-                                                    {Object.keys(assay.validation_rules).length} quy tắc
-                                                </Badge>
+                                                <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
+                                                    <AlertCircle className="h-3.5 w-3.5 text-blue-500" />
+                                                    <span>{Object.keys(assay.validation_rules).length} quy tắc</span>
+                                                </div>
                                             ) : (
-                                                <span className="text-muted-foreground text-sm">
-                                                    Không có
+                                                <span className="text-muted-foreground/50 text-sm italic">
+                                                    -
                                                 </span>
                                             )}
                                         </TableCell>
                                         <TableCell>
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center justify-end gap-2">
                                                 <Button
                                                     variant="ghost"
-                                                    size="sm"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50"
                                                     onClick={() => setEditingAssay(assay)}
                                                 >
                                                     <Pencil className="h-4 w-4" />
                                                 </Button>
                                                 <Button
                                                     variant="ghost"
-                                                    size="sm"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-slate-500 hover:text-red-600 hover:bg-red-50"
                                                     onClick={() => setDeletingAssay(assay)}
-                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
@@ -183,7 +279,7 @@ export function AssayDefinitionsTable({
                                 ))}
                             </TableBody>
                         </Table>
-                    </div>
+                    </Card>
 
                     {/* Pagination */}
                     <div className="flex items-center justify-between">
@@ -219,8 +315,8 @@ export function AssayDefinitionsTable({
                                 <ChevronLeft className="h-4 w-4" />
                                 Trước
                             </Button>
-                            <div className="text-sm">
-                                Trang {page} của {totalPages}
+                            <div className="text-sm font-medium min-w-[3rem] text-center">
+                                Trang {page} / {totalPages}
                             </div>
                             <Button
                                 variant="outline"
@@ -236,24 +332,24 @@ export function AssayDefinitionsTable({
                 </>
             )}
 
-            {/* Add Dialog */}
+            {/* Dialogs */}
             <AssayDefinitionDialog
                 open={isAddDialogOpen}
                 onOpenChange={setIsAddDialogOpen}
                 mode="create"
+                specialties={specialties}
             />
 
-            {/* Edit Dialog */}
             {editingAssay && (
                 <AssayDefinitionDialog
                     open={!!editingAssay}
                     onOpenChange={(open) => !open && setEditingAssay(null)}
                     mode="edit"
                     assay={editingAssay}
+                    specialties={specialties}
                 />
             )}
 
-            {/* Delete Dialog */}
             {deletingAssay && (
                 <DeleteAssayDialog
                     open={!!deletingAssay}
