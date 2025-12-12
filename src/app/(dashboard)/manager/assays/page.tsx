@@ -4,14 +4,14 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
-import { getAssayDefinitions } from '@/app/actions/assays'
+import { getAssayDefinitions, getSpecialties } from '@/app/actions/assays'
 import { AssayDefinitionsTable } from '@/components/assay-definitions-table'
 import { DashboardHeader } from '@/components/dashboard-header'
 
 export default async function AssaysPage({
     searchParams,
 }: {
-    searchParams: Promise<{ page?: string; pageSize?: string; search?: string }>
+    searchParams: Promise<{ page?: string; pageSize?: string; search?: string; specialtyId?: string }>
 }) {
     const supabase = await createClient()
 
@@ -40,12 +40,16 @@ export default async function AssaysPage({
     const page = Number(params?.page) || 1
     const pageSize = Number(params?.pageSize) || 10
     const search = params?.search || ''
+    const specialtyId = params?.specialtyId
 
     const { data: assays, totalCount, totalPages, error } = await getAssayDefinitions({
         page,
         pageSize,
         search,
+        specialtyId,
     })
+
+    const { data: specialties } = await getSpecialties()
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -87,6 +91,7 @@ export default async function AssaysPage({
                                 pageSize={pageSize}
                                 totalPages={totalPages || 1}
                                 totalCount={totalCount || 0}
+                                specialties={specialties || []}
                             />
                         )}
                     </CardContent>

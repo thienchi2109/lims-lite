@@ -14,6 +14,7 @@ export async function getAssayDefinitions(params?: {
     pageSize?: number
     search?: string
     methodId?: string
+    specialtyId?: string
 }) {
     try {
         const supabase = await createClient()
@@ -21,6 +22,7 @@ export async function getAssayDefinitions(params?: {
         const pageSize = params?.pageSize || 10
         const search = params?.search || ''
         const methodId = params?.methodId
+        const specialtyId = params?.specialtyId
 
         // Calculate range
         const from = (page - 1) * pageSize
@@ -33,6 +35,7 @@ export async function getAssayDefinitions(params?: {
                 `
                 id,
                 name,
+                specialty_id,
                 units,
                 validation_rules,
                 created_at,
@@ -42,6 +45,11 @@ export async function getAssayDefinitions(params?: {
             )
             .is('deleted_at', null)
             .order('name', { ascending: true })
+
+        // Apply Specialty Filter
+        if (specialtyId && specialtyId !== 'all') {
+            query = query.eq('specialty_id', specialtyId)
+        }
 
         // Apply Method Filter
         if (methodId && methodId !== 'all') {
@@ -194,6 +202,7 @@ export async function getAssayDefinitionById(id: string) {
             .select(`
                 id,
                 name,
+                specialty_id,
                 units,
                 validation_rules,
                 created_at,
@@ -288,6 +297,7 @@ export async function createAssayDefinition(formData: FormData) {
         // Parse and validate form data
         const rawData = {
             name: formData.get('name'),
+            specialty_id: formData.get('specialty_id') || undefined,
             method_id: formData.get('method_id') || undefined,
             units: formData.get('units') || undefined,
             validation_rules: formData.get('validation_rules')
@@ -309,6 +319,7 @@ export async function createAssayDefinition(formData: FormData) {
             .from('assay_definitions')
             .insert({
                 name: result.data.name,
+                specialty_id: result.data.specialty_id || null,
                 units: result.data.units || null,
                 validation_rules: result.data.validation_rules || {},
             })
@@ -352,6 +363,7 @@ export async function createAssayDefinition(formData: FormData) {
 const UpdateAssayDefinitionSchema = z.object({
     id: z.string().uuid(),
     name: z.string().min(1).max(200),
+    specialty_id: z.string().uuid().optional(),
     units: z.string().optional(),
     validation_rules: z.record(z.string(), z.any()).optional(),
 })
@@ -380,6 +392,7 @@ export async function updateAssayDefinition(formData: FormData) {
         const rawData = {
             id: formData.get('id'),
             name: formData.get('name'),
+            specialty_id: formData.get('specialty_id') || undefined,
             units: formData.get('units') || undefined,
             validation_rules: formData.get('validation_rules')
                 ? JSON.parse(formData.get('validation_rules') as string)
@@ -400,6 +413,7 @@ export async function updateAssayDefinition(formData: FormData) {
             .from('assay_definitions')
             .update({
                 name: result.data.name,
+                specialty_id: result.data.specialty_id || null,
                 units: result.data.units || null,
                 validation_rules: result.data.validation_rules || {},
             })
@@ -471,6 +485,33 @@ export async function deleteAssayDefinition(id: string) {
 
         revalidatePath('/manager/assays')
         return { success: true }
+    } catch (error) {
+        console.error('Unexpected error:', error)
+        return { error: 'Đã xảy ra lỗi không mong muốn' }
+    }
+}
+
+// ============================================================================
+// GET ALL SPECIALTIES (for dropdown)
+// ============================================================================
+
+export async function getSpecialties() {
+    try {
+        const supabase = await createClient()
+
+        const { data, error } = await supabase
+            .from('lab_specialties')
+            .select('*')
+            .is('deleted_at', null)
+            .order('display_order', { ascending: true })
+            .order('name', { ascending: true })
+
+        if (error) {
+            console.error('Error fetching specialties:', error)
+            return { error: error.message }
+        }
+
+        return { data }
     } catch (error) {
         console.error('Unexpected error:', error)
         return { error: 'Đã xảy ra lỗi không mong muốn' }
