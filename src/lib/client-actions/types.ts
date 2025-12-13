@@ -25,6 +25,7 @@ export type ClientActionName =
     | 'discardSample'
     | 'upsertClient'
     | 'findClientByIdentity'
+    | 'getClient'
     | 'getClients'
     | 'updateClient'
 

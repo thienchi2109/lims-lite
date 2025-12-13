@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { CreateClientSchema, type CreateClient, type Client, Gender } from '@/types'
-import { upsertClientClient } from '@/lib/api-client'
+import { updateClientClient, upsertClientClient } from '@/lib/api-client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,6 +19,8 @@ import { Loader2, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface ClientFormProps {
+    mode?: 'upsert' | 'update'
+    clientId?: string
     initialData?: Partial<CreateClient>
     onSuccess: (client: Client) => void
     onCancel: () => void
@@ -26,6 +28,8 @@ interface ClientFormProps {
 }
 
 export function ClientForm({
+    mode = 'upsert',
+    clientId,
     initialData,
     onSuccess,
     onCancel,
@@ -40,6 +44,7 @@ export function ClientForm({
         formState: { errors },
         reset,
         setValue,
+        watch,
     } = useForm<CreateClient>({
         resolver: zodResolver(CreateClientSchema),
         defaultValues: {
@@ -70,12 +75,22 @@ export function ClientForm({
         }
     }, [initialData, reset])
 
+    const currentGender = watch('gender')
+
     const onSubmit = async (data: CreateClient) => {
         setIsSubmitting(true)
         setSubmitError(null)
 
         try {
-            const result = await upsertClientClient(data)
+            if (mode === 'update' && !clientId) {
+                setSubmitError('Client ID không hợp lệ')
+                return
+            }
+
+            const result =
+                mode === 'update'
+                    ? await updateClientClient(clientId as string, data)
+                    : await upsertClientClient(data)
 
             if (result.error) {
                 setSubmitError(result.error)
@@ -83,7 +98,7 @@ export function ClientForm({
                 onSuccess(result.data)
             }
         } catch (error) {
-            setSubmitError('Đã có lỗi xảy ra khi lưu khách hàng')
+            setSubmitError(error instanceof Error ? error.message : 'Đã có lỗi xảy ra khi lưu khách hàng')
         } finally {
             setIsSubmitting(false)
         }
@@ -150,8 +165,8 @@ export function ClientForm({
                             Giới tính *
                         </Label>
                         <Select
-                            onValueChange={(value) => setValue('gender', value as Gender)}
-                            defaultValue={initialData?.gender || 'Khác'}
+                            value={currentGender}
+                            onValueChange={(value) => setValue('gender', value as Gender, { shouldValidate: true })}
                         >
                             <SelectTrigger className="shadow-sm h-9">
                                 <SelectValue placeholder="Chọn" />

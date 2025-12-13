@@ -32,6 +32,7 @@ import { createUser, updateUser, deleteUser } from '@/app/actions/users'
 import {
     upsertClient,
     findClientByIdentity,
+    getClient,
     getClients,
     updateClient,
 } from '@/app/actions/clients'
@@ -197,6 +198,12 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
             return { error: 'Tên và ngày sinh là bắt buộc' }
         }
         return findClientByIdentity(payload.name, payload.dateOfBirth)
+    },
+    getClient: async (payload) => {
+        if (!payload?.id) {
+            return { error: 'Client ID là bắt buộc' }
+        }
+        return getClient(payload.id)
     },
     getClients: async (payload) => getClients(payload?.search),
     updateClient: async (payload) => {

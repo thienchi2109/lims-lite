@@ -154,6 +154,10 @@ export function findClientByIdentityClient(name: string, dateOfBirth: string) {
     return callClientAction('findClientByIdentity', { name, dateOfBirth })
 }
 
+export function getClientClient(id: string) {
+    return callClientAction('getClient', { id })
+}
+
 export function fetchClientsClient(search?: string) {
     return callClientAction('getClients', search ? { search } : undefined)
 }

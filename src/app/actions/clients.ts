@@ -4,9 +4,41 @@ import { createClient as createSupabaseClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import {
     CreateClientSchema,
+    UpdateClientSchema,
     type CreateClient,
     type Client,
 } from '@/types'
+
+export async function getClient(id: string) {
+    try {
+        const supabase = await createSupabaseClient()
+
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+            return { error: 'Unauthorized' }
+        }
+
+        if (!id || !id.match(/^[0-9a-fA-F-]{36}$/)) {
+            return { error: 'Client ID không hợp lệ' }
+        }
+
+        const { data: client, error } = await supabase
+            .from('clients')
+            .select('*')
+            .eq('id', id)
+            .single()
+
+        if (error) {
+            console.error('Error fetching client:', error)
+            return { error: error.message }
+        }
+
+        return { data: client as Client }
+    } catch (error) {
+        console.error('Error in getClient:', error)
+        return { error: error instanceof Error ? error.message : 'Failed to fetch client' }
+    }
+}
 
 /**
  * Upsert client by (name, date_of_birth)
@@ -123,7 +155,7 @@ export async function getClients(search?: string) {
 }
 
 /**
- * Update client (Manager only)
+ * Update client (Analysts and managers)
  */
 export async function updateClient(id: string, data: Partial<CreateClient>) {
     try {
@@ -142,14 +174,25 @@ export async function updateClient(id: string, data: Partial<CreateClient>) {
             .eq('id', user.id)
             .single()
 
-        if (userData?.role !== 'manager') {
-            return { error: 'Only managers can update clients' }
+        if (userData?.role !== 'manager' && userData?.role !== 'analyst') {
+            return { error: 'Only analysts and managers can update clients' }
         }
 
-        // Update client
+        const validatedData = UpdateClientSchema.parse({ id, ...data })
+
+        const updateData: Record<string, unknown> = {}
+        if (validatedData.id_card_num !== undefined) updateData.id_card_num = validatedData.id_card_num
+        if (validatedData.name !== undefined) updateData.name = validatedData.name
+        if (validatedData.date_of_birth !== undefined) updateData.date_of_birth = validatedData.date_of_birth
+        if (validatedData.gender !== undefined) updateData.gender = validatedData.gender
+        if (validatedData.phone !== undefined) updateData.phone = validatedData.phone
+        if (validatedData.address !== undefined) updateData.address = validatedData.address || null
+        if (validatedData.health_insurance_num !== undefined) updateData.health_insurance_num = validatedData.health_insurance_num || null
+        if (validatedData.expiry_date !== undefined) updateData.expiry_date = validatedData.expiry_date || null
+
         const { data: client, error } = await supabase
             .from('clients')
-            .update(data)
+            .update(updateData)
             .eq('id', id)
             .select()
             .single()
@@ -157,6 +200,17 @@ export async function updateClient(id: string, data: Partial<CreateClient>) {
         if (error) {
             console.error('Error updating client:', error)
             return { error: error.message }
+        }
+
+        if (updateData.name) {
+            const { error: samplesError } = await supabase
+                .from('samples')
+                .update({ client_name: client.name })
+                .eq('client_id', id)
+
+            if (samplesError) {
+                console.error('Error syncing samples client_name:', samplesError)
+            }
         }
 
         revalidatePath('/analyst/accession')

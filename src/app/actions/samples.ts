@@ -133,7 +133,9 @@ export async function updateSample(data: UpdateSample) {
         // Build update object (only include defined fields)
         const updateData: any = {}
         if (validatedData.sample_id !== undefined) updateData.sample_id = validatedData.sample_id
+        if (validatedData.client_id !== undefined) updateData.client_id = validatedData.client_id
         if (validatedData.client_name !== undefined) updateData.client_name = validatedData.client_name
+        if (validatedData.type !== undefined) updateData.type = validatedData.type
         if (validatedData.status !== undefined) updateData.status = validatedData.status
 
         // Update sample

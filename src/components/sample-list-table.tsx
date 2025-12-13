@@ -7,13 +7,11 @@ import {
     flexRender,
     type ColumnDef,
 } from '@tanstack/react-table'
-import { updateSampleClient } from '@/lib/api-client'
 import { type SampleWithUser } from '@/types'
 import { formatDate } from '@/lib/utils-lims'
 import { Button } from '@/components/ui/button'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { SampleStatusBadge } from '@/components/sample-status-badge'
-import { EditableCell } from '@/components/editable-cell'
 import { SampleEditDialog } from '@/components/sample-edit-dialog'
 import { DiscardSampleDialog } from '@/components/discard-sample-dialog'
 import { ChevronLeft, ChevronRight, Eye, Pencil, ArrowUpDown, ArrowUp, ArrowDown, ClipboardPen, Trash2 } from 'lucide-react'
@@ -67,34 +65,6 @@ export function SampleListTable({
         setSamples(serverSamples)
     }, [serverSamples])
 
-    const handleUpdateCell = async (sampleId: string, field: 'client_name', value: string) => {
-        const result = await updateSampleClient({
-            id: sampleId,
-            [field]: value,
-        })
-
-        if (!result.error) {
-            // Update local state for optimistic UI
-            setSamples((prev) =>
-                prev.map((s) => (s.id === sampleId ? { ...s, [field]: value } : s))
-            )
-
-            // Apply the same refresh pattern as result saving:
-            // 1. Update URL params to sort by updated_at DESC and navigate to page 1
-            const params = new URLSearchParams(searchParams?.toString() ?? '')
-            params.set('sortBy', 'updated_at')
-            params.set('sortOrder', 'desc')
-            params.set('sampleId', sampleId)
-            params.set('page', '1')
-            router.push(`${pathname}?${params.toString()}`)
-
-            // 2. Invalidate TanStack Query cache to trigger refetch
-            queryClient.invalidateQueries({ queryKey: sampleKeys.all })
-        }
-
-        return result
-    }
-
     const handleEditSample = (sample: SampleWithUser) => {
         setSelectedSampleForEdit(sample)
         setEditDialogOpen(true)
@@ -103,7 +73,7 @@ export function SampleListTable({
     const handleEditSuccess = () => {
         if (!selectedSampleForEdit) return
 
-        // Apply the same refresh pattern as result saving and inline edit:
+        // Apply the same refresh pattern as result saving and sample editing:
         // 1. Update URL params to sort by updated_at DESC and navigate to page 1
         const params = new URLSearchParams(searchParams?.toString() ?? '')
         params.set('sortBy', 'updated_at')
@@ -159,13 +129,9 @@ export function SampleListTable({
             accessorKey: 'client_name',
             header: 'Tên khách hàng',
             cell: ({ row }) => (
-                <EditableCell
-                    value={row.original.client_name || ''}
-                    onSave={(newValue) =>
-                        handleUpdateCell(row.original.id, 'client_name', newValue)
-                    }
-                    disabled={!permissions?.canEdit || row.original.status !== 'received'}
-                />
+                <span className="text-sm text-slate-700 dark:text-slate-200">
+                    {row.original.client_name || '-'}
+                </span>
             ),
         },
         {

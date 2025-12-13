@@ -1,8 +1,9 @@
 'use client'
 
-import { SampleWithUser } from '@/types'
+import type { Client, SampleWithUser } from '@/types'
 import { formatDate } from '@/lib/utils-lims'
 import { SampleStatusBadge } from '@/components/sample-status-badge'
+import { getClientClient } from '@/lib/api-client'
 import {
     FileText,
     Calendar,
@@ -12,9 +13,10 @@ import {
     Pencil,
     AlertCircle,
     Activity,
+    Loader2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { SampleEditDialog } from '@/components/sample-edit-dialog'
 import { SampleActivityFeed } from '@/components/sample-activity-feed'
 import { useQueryClient } from '@tanstack/react-query'
@@ -28,7 +30,47 @@ interface SampleDetailPanelProps {
 export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
     const [editDialogOpen, setEditDialogOpen] = useState(false)
     const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
+    const [client, setClient] = useState<Client | null>(null)
+    const [isClientLoading, setIsClientLoading] = useState(false)
+    const [clientLoadError, setClientLoadError] = useState<string | null>(null)
     const queryClient = useQueryClient()
+
+    useEffect(() => {
+        setClient(null)
+        setClientLoadError(null)
+
+        if (!sample?.client_id) return
+
+        let cancelled = false
+
+        const run = async () => {
+            setIsClientLoading(true)
+            try {
+                const result = await getClientClient(sample.client_id as string)
+                if (cancelled) return
+
+                if ('data' in result && result.data) {
+                    setClient(result.data as Client)
+                    return
+                }
+
+                setClientLoadError('Không thể tải thông tin khách hàng')
+            } catch (error) {
+                if (cancelled) return
+                setClientLoadError(
+                    error instanceof Error ? error.message : 'Không thể tải thông tin khách hàng'
+                )
+            } finally {
+                if (!cancelled) setIsClientLoading(false)
+            }
+        }
+
+        run()
+
+        return () => {
+            cancelled = true
+        }
+    }, [sample?.client_id])
 
     if (!sample) {
         return (
@@ -43,6 +85,8 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
         // Invalidate sample queries to refetch fresh data
         queryClient.invalidateQueries({ queryKey: sampleKeys.all })
     }
+
+    const displayedClientName = client?.name || sample.client_name || 'N/A'
 
     return (
         <div className="h-full flex flex-col bg-white dark:bg-slate-950 border rounded-lg overflow-hidden shadow-sm">
@@ -147,9 +191,52 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
                                     <Building2 className="h-3.5 w-3.5" />
                                     Khách hàng
                                 </div>
-                                <div className="font-medium text-sm truncate" title={sample.client_name || ''}>
-                                    {sample.client_name || 'N/A'}
+                                <div className="font-medium text-sm truncate" title={displayedClientName}>
+                                    {displayedClientName}
                                 </div>
+
+                                {sample.client_id ? (
+                                    <div className="mt-2 space-y-2">
+                                        {isClientLoading && (
+                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                Đang tải thông tin khách hàng...
+                                            </div>
+                                        )}
+
+                                        {!isClientLoading && clientLoadError && (
+                                            <div className="text-xs text-red-600 dark:text-red-400">
+                                                {clientLoadError}
+                                            </div>
+                                        )}
+
+                                        {client && (
+                                            <div className="grid grid-cols-2 gap-3 rounded-md border border-slate-100 bg-slate-50/40 p-3 text-sm dark:border-slate-800 dark:bg-slate-900/30">
+                                                <DetailItem label="CCCD/CMND" value={client.id_card_num} />
+                                                <DetailItem label="Ngày sinh" value={formatDateOnly(client.date_of_birth)} />
+                                                <DetailItem label="Giới tính" value={client.gender} />
+                                                <DetailItem label="Số điện thoại" value={client.phone} />
+                                                <DetailItem
+                                                    className="col-span-2"
+                                                    label="Địa chỉ"
+                                                    value={client.address || 'N/A'}
+                                                />
+                                                <DetailItem
+                                                    label="BHYT"
+                                                    value={client.health_insurance_num || 'N/A'}
+                                                />
+                                                <DetailItem
+                                                    label="Hạn CCCD/CMND"
+                                                    value={client.expiry_date ? formatDateOnly(client.expiry_date) : 'N/A'}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="mt-1 text-xs text-muted-foreground">
+                                        Mẫu chưa được liên kết với khách hàng
+                                    </div>
+                                )}
                             </div>
 
                             <div className="space-y-1.5">
@@ -195,4 +282,33 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
             />
         </div>
     )
+}
+
+function DetailItem({
+    label,
+    value,
+    className,
+}: {
+    label: string
+    value: string
+    className?: string
+}) {
+    return (
+        <div className={cn('space-y-1.5', className)}>
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                {label}
+            </div>
+            <div className="text-sm break-words">{value}</div>
+        </div>
+    )
+}
+
+function formatDateOnly(dateString: string): string {
+    if (!dateString) return ''
+    const date = new Date(dateString)
+    return new Intl.DateTimeFormat('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).format(date)
 }
