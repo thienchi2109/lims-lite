@@ -62,7 +62,15 @@ function scoreNameCandidate(value: string) {
  * Many formats are pipe-delimited with extra fields; this parser searches tokens for DOB/gender/name instead of fixed positions.
  */
 export function parseClientIdentityQr(decodedText: string): ParsedClientIdentityQr | null {
-    const tokens = decodedText
+    const sanitizedText = decodedText
+        .replace(/\uFEFF/g, '')
+        // Some handheld scanners can inject ASCII control separators (e.g. GS/FS) instead of pipes.
+        .replace(/[\u001c\u001d\u001e\u001f]/g, '|')
+        // Remove remaining control characters (newlines, tabs, etc).
+        .replace(/[\u0000-\u001f\u007f]/g, '')
+        .trim()
+
+    const tokens = sanitizedText
         .split('|')
         .map((token) => token.trim())
         .filter(Boolean)

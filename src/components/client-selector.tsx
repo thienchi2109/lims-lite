@@ -10,9 +10,8 @@ import {
     PopoverTrigger,
 } from '@/components/ui/popover'
 import { Input } from '@/components/ui/input'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ClientQrScannerDialog } from '@/components/client-qr-scanner-dialog'
 import { ClientForm } from '@/components/client-form'
-import { QRScanner } from '@/components/qr-scanner'
 import { fetchClientsClient, findClientByIdentityClient } from '@/lib/api-client'
 import { parseClientIdentityQr } from '@/lib/qr/parse-client-identity-qr'
 import { Client, CreateClient } from '@/types'
@@ -292,22 +291,7 @@ export function ClientSelector({ selectedClient, onSelect }: ClientSelectorProps
             )}
 
             {/* QR Scanner Dialog */}
-            <Dialog open={showQRScanner} onOpenChange={setShowQRScanner}>
-                <DialogContent className="sm:max-w-md bg-slate-950 border-slate-800 text-slate-100">
-                    <DialogHeader>
-                        <DialogTitle>Quét mã QR CCCD</DialogTitle>
-                        <DialogDescription className="text-slate-300">
-                            Hướng camera vào mã QR trên CCCD để tự động điền thông tin khách hàng
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="p-4">
-                        <QRScanner
-                            onScan={handleQRScan}
-                            onError={(err) => console.error(err)}
-                        />
-                    </div>
-                </DialogContent>
-            </Dialog>
+            <ClientQrScannerDialog open={showQRScanner} onOpenChange={setShowQRScanner} onScan={handleQRScan} />
         </div>
     )
 }
