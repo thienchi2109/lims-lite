@@ -19,7 +19,7 @@ import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import { assignTestsClient, fetchAssayDefinitionsClient } from '@/lib/api-client'
 import { toast } from 'sonner'
-import type { LabSpecialty } from '@/types'
+import type { LabSpecialty, SampleStatus } from '@/types'
 import { SPECIALTY_BADGE_CLASSES } from '@/lib/specialty-badges'
 import {
     Select,
@@ -31,6 +31,7 @@ import {
 
 interface TestAssignmentModuleProps {
     sampleId: string
+    sampleStatus?: SampleStatus | null
     onClose: () => void
     onSuccess: () => void
     onRefocus?: (sampleId: string) => void // Optional callback to refocus on the sample
@@ -47,7 +48,7 @@ interface Assay {
     category?: string // Optional category for filtering
 }
 
-export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus, specialties = [] }: TestAssignmentModuleProps) {
+export function TestAssignmentModule({ sampleId, sampleStatus, onClose, onSuccess, onRefocus, specialties = [] }: TestAssignmentModuleProps) {
     const queryClient = useQueryClient()
     const [assays, setAssays] = useState<Assay[]>([])
     const [loading, setLoading] = useState(true)
@@ -361,13 +362,18 @@ export function TestAssignmentModule({ sampleId, onClose, onSuccess, onRefocus, 
                 </div>
 
                 <div className="border-t bg-slate-50 p-4">
+                    {sampleStatus === 'completed' && (
+                        <div className="mb-3 flex items-center gap-2 rounded-md bg-yellow-50 p-2 text-xs text-yellow-700 border border-yellow-200">
+                            <span className="font-medium">Lưu ý:</span> Mẫu đã hoàn thành không thể chỉ định thêm xét nghiệm.
+                        </div>
+                    )}
                     <div className="flex gap-3">
                         <Button variant="outline" className="flex-1" onClick={onClose}>
                             Hủy
                         </Button>
                         <Button
                             className="flex-1 bg-indigo-600 hover:bg-indigo-700"
-                            disabled={selectedAssayObjects.size === 0 || submitting}
+                            disabled={selectedAssayObjects.size === 0 || submitting || sampleStatus === 'completed'}
                             onClick={handleConfirm}
                         >
                             {submitting ? (

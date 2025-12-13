@@ -458,6 +458,7 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
                     </DialogDescription>
                     <TestAssignmentModule
                         sampleId={sampleId}
+                        sampleStatus={sampleStatus}
                         onClose={() => setShowAssignmentDialog(false)}
                         onSuccess={() => {
                             fetchTests()
