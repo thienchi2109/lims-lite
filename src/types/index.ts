@@ -278,7 +278,9 @@ export type CreateSampleWithAssignments = z.infer<typeof CreateSampleWithAssignm
 export const UpdateSampleSchema = z.object({
     id: z.string().uuid(),
     sample_id: z.string().min(1).max(100).optional(),
+    client_id: z.string().uuid().optional(),
     client_name: z.string().min(1).max(200).optional(),
+    type: SampleType.optional(),
     status: SampleStatus.optional(),
 })
 
@@ -366,7 +368,23 @@ export const LoginSchema = z.object({
     password: z.string().min(8),
 })
 
+
 export type Login = z.infer<typeof LoginSchema>
+
+// ============================================================================
+// PROFILE SCHEMAS
+// ============================================================================
+
+export const ChangePasswordSchema = z.object({
+    currentPassword: z.string().min(1, 'Mật khẩu hiện tại là bắt buộc'),
+    password: z.string().min(1, 'Mật khẩu không được để trống'),
+    confirmPassword: z.string().min(1, 'Vui lòng xác nhận mật khẩu'),
+}).refine((data) => data.password === data.confirmPassword, {
+    message: 'Mật khẩu xác nhận không khớp',
+    path: ['confirmPassword'],
+})
+
+export type ChangePassword = z.infer<typeof ChangePasswordSchema>
 
 // ============================================================================
 // SAMPLE EXTENDED SCHEMAS (Phase 2)

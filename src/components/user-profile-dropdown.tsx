@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { logoutClient } from '@/lib/api-client'
 import {
     DropdownMenu,
@@ -47,19 +48,19 @@ export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
 
     const initials = user.full_name
         ? user.full_name
-              .split(' ')
-              .map((n) => n[0])
-              .join('')
-              .toUpperCase()
-              .slice(0, 2)
+            .split(' ')
+            .map((n) => n[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2)
         : 'U'
 
     return (
         <>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button 
-                        variant="ghost" 
+                    <Button
+                        variant="ghost"
                         className="relative h-auto py-2 pl-2 pr-3 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                     >
                         <div className="flex items-center gap-3">
@@ -97,16 +98,18 @@ export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
                         </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="cursor-pointer">
-                        <User className="mr-2 h-4 w-4" />
-                        <span>Hồ sơ</span>
+                    <DropdownMenuItem asChild>
+                        <Link href="/profile" className="flex items-center cursor-pointer">
+                            <User className="mr-2 h-4 w-4" />
+                            <span>Hồ sơ</span>
+                        </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem className="cursor-pointer">
                         <Settings className="mr-2 h-4 w-4" />
                         <span>Cài đặt</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem 
+                    <DropdownMenuItem
                         onClick={() => setShowLogoutDialog(true)}
                         className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400 focus:bg-red-50 dark:focus:bg-red-950/50 cursor-pointer"
                     >
@@ -129,7 +132,7 @@ export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
                             <Button variant="outline" onClick={() => setShowLogoutDialog(false)}>
                                 Hủy
                             </Button>
-                            <Button 
+                            <Button
                                 onClick={handleLogout}
                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                             >
