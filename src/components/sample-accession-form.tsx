@@ -4,16 +4,30 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { CreateSampleWithAssignmentsSchema, type CreateSampleWithAssignments, type CreateSample, type Client, type LabSpecialty, type SampleType, type SelectedTest } from '@/types'
-import { accessionAndAssignTestsClient, createSampleClient } from '@/lib/api-client'
+import { CreateSampleWithAssignmentsSchema, type CreateSampleWithAssignments, type CreateSample, type Client, type CreateClient, type LabSpecialty, type SampleType, type SelectedTest } from '@/types'
+import { accessionAndAssignTestsClient, createSampleClient, findClientByIdentityClient } from '@/lib/api-client'
+import { parseClientIdentityQr } from '@/lib/qr/parse-client-identity-qr'
+import { ClientQrScannerDialog } from '@/components/client-qr-scanner-dialog'
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { TestAssignmentGrid } from '@/components/test-assignment-grid'
-import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Loader2, CheckCircle2, AlertCircle, QrCode, Scan, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import { ClientSelector } from '@/components/client-selector'
 import { SampleTypeSelector } from '@/components/sample-type-selector'
+import { useMediaQuery } from '@/hooks/use-media-query'
+import { toast } from 'sonner'
 
 interface SampleAccessionFormProps {
     specialties?: LabSpecialty[]
@@ -29,7 +43,15 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
 
     // New state for Client and Sample Type
     const [selectedClient, setSelectedClient] = useState<Client | null>(null)
+
     const [selectedSampleType, setSelectedSampleType] = useState<SampleType>('Máu')
+
+    // QR & Client Form State (Lifted for Mobile UI)
+    const [showQRScanner, setShowQRScanner] = useState(false)
+    const [showClientForm, setShowClientForm] = useState(false)
+    const [clientFormData, setClientFormData] = useState<Partial<CreateClient> | undefined>(undefined)
+
+    const isDesktop = useMediaQuery("(min-width: 1024px)")
 
     // Form schema that accepts datetime-local string format
     // We relax validation here and validate manually before submit
@@ -155,128 +177,170 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
         setIsSubmitting(false)
     }
 
-    return (
-        <form onSubmit={handleSubmit(onSubmit)} className="h-full">
-            <TestAssignmentGrid
-                selected={selectedTests}
-                onChange={setSelectedTests}
-                specialties={specialties}
-                isSaving={isSubmitting}
-                onSave={handleSubmit(onSubmit)}
-                saveLabel="Tạo mẫu và chỉ định"
-                summaryInfo={{
-                    clientName: selectedClient?.name,
-                    sampleType: selectedSampleType,
-                    receivedAt: watch('received_at') ? new Date(watch('received_at')!).toLocaleString('vi-VN') : 'Hiện tại'
-                }}
-                context={
-                    <div className="space-y-6">
-                        {/* Client Selector */}
-                        <div className="space-y-2">
-                            <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                                Khách hàng *
-                            </Label>
-                            <ClientSelector
-                                selectedClient={selectedClient}
-                                onSelect={setSelectedClient}
-                            />
-                        </div>
+    const handleQRScan = async (decodedText: string) => {
+        setShowQRScanner(false)
 
-                        {/* Sample Type Selector */}
-                        <div className="space-y-2">
-                            <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                                Loại mẫu *
-                            </Label>
-                            <SampleTypeSelector
-                                value={selectedSampleType}
-                                onChange={setSelectedSampleType}
-                            />
-                        </div>
+        const parsed = parseClientIdentityQr(decodedText)
+        if (!parsed) {
+            toast.error('Mã QR không hợp lệ. Vui lòng thử lại hoặc nhập thủ công.')
+            return
+        }
 
-                        {/* Received At Field (Optional) */}
-                        <div className="space-y-2">
-                            <Label htmlFor="received_at" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                                Thời gian nhận
-                            </Label>
-                            <Input
-                                id="received_at"
-                                type="datetime-local"
-                                {...register('received_at')}
-                                className="shadow-sm"
-                            />
-                            <p className="text-xs text-muted-foreground">
-                                Tùy chọn. Mặc định là hiện tại.
-                            </p>
-                            {errors.received_at && (
-                                <p className="text-sm text-destructive">{errors.received_at.message}</p>
-                            )}
-                        </div>
+        const { idCardNum, name, dateOfBirth, gender } = parsed
+        const address = parsed.address
 
-                        {/* Confirmation Dialog for No Tests */}
-                        {showConfirmation && (
-                            <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-md p-4">
-                                <div className="flex items-start gap-3">
-                                    <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
-                                    <div className="flex-1">
-                                        <h4 className="font-medium text-amber-900 dark:text-amber-100 mb-1">
-                                            Tạo mẫu không có xét nghiệm?
-                                        </h4>
-                                        <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
-                                            Bạn chưa chọn xét nghiệm nào. Mẫu sẽ được tạo với trạng thái "Đã tiếp nhận" và bạn có thể chỉ định xét nghiệm sau.
-                                        </p>
-                                        <div className="flex gap-2">
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => setShowConfirmation(false)}
-                                                className="border-amber-300 text-amber-700 hover:bg-amber-100"
-                                            >
-                                                Hủy
-                                            </Button>
-                                            <Button
-                                                type="button"
-                                                size="sm"
-                                                onClick={() => handleSubmit(onSubmit)()}
-                                                className="bg-amber-600 hover:bg-amber-700 text-white"
-                                            >
-                                                Tiếp tục
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+        try {
+            const result = await findClientByIdentityClient(name, dateOfBirth)
 
-                        {/* Submit Error */}
-                        {submitError && (
-                            <div className="bg-destructive/10 text-destructive p-3 rounded-md text-sm flex items-center gap-2">
-                                <AlertCircle className="h-4 w-4" />
-                                {submitError}
-                            </div>
-                        )}
+            if (result.data) {
+                setSelectedClient(result.data)
+                toast.success(`Đã tìm thấy khách hàng: ${result.data.name}`)
+                return
+            }
+        } catch (error) {
+            console.error('Error searching client', error)
+        }
 
-                        {/* Success Message */}
-                        {submitSuccess && (
-                            <div className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 p-3 rounded-md text-sm flex flex-col gap-2 border border-emerald-200 dark:border-emerald-800">
-                                <div className="flex items-center gap-2 font-medium">
-                                    <CheckCircle2 className="h-4 w-4" />
-                                    {submitSuccess}
-                                </div>
-                                {lastSampleId && (
-                                    <div className="flex gap-2">
-                                        <Link href={`/analyst/samples?sampleId=${lastSampleId}`} className="w-full">
-                                            <Button variant="secondary" className="w-full bg-white shadow-sm hover:bg-slate-50 text-emerald-700 border border-emerald-200">
-                                                Mở chi tiết mẫu
-                                            </Button>
-                                        </Link>
-                                    </div>
-                                )}
-                            </div>
-                        )}
+        setClientFormData({
+            name,
+            id_card_num: idCardNum || '',
+            date_of_birth: dateOfBirth,
+            gender,
+            phone: '', // Required
+            address: address || '',
+        })
+        setShowClientForm(true)
+    }
+
+    // Context Content (Card Style)
+    const contextContent = (
+        <div className="space-y-6 lg:space-y-6">
+            {/* QR Card (Mobile Only or Highlighted) */}
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-5">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm">
+                        <QrCode className="text-blue-500" size={20} />
+                        Quét mã QR
+                    </h2>
+                    <span className="text-xs text-slate-400">Tự động điền</span>
+                </div>
+                <button
+                    type="button"
+                    onClick={() => setShowQRScanner(true)}
+                    className="w-full py-3 border-2 border-dashed border-blue-500/50 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center gap-2 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all active:scale-[0.98]"
+                >
+                    <Scan size={20} />
+                    <span className="font-medium">Bấm để quét mã khách hàng</span>
+                </button>
+            </div>
+
+            {/* Sample Info Card */}
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+                <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-0 text-sm">Thông tin mẫu</h2>
+
+                {/* Client Selector (Styled as Input Group) */}
+                <div className="space-y-1">
+                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        Khách hàng *
+                    </Label>
+                    <div className="relative">
+                        <ClientSelector
+                            selectedClient={selectedClient}
+                            onSelect={setSelectedClient}
+                            isOpenForm={showClientForm}
+                            onOpenFormChange={setShowClientForm}
+                            formData={clientFormData}
+                            onFormDataChange={setClientFormData}
+                            hideQRButton={true}
+                        />
+                        {/* Plus button is handled inside ClientSelector via generic "New" action or search, 
+                            but to match design strictly we might want the absolute button. 
+                            However, the modified ClientSelector Trigger already covers the 'Input' look. 
+                            We'll rely on ClientSelector's internal 'Plus' or the popover flow. 
+                        */}
                     </div>
-                }
-            />
-        </form>
+                </div>
+
+                {/* Sample Type */}
+                <div className="space-y-1">
+                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        Loại mẫu *
+                    </Label>
+                    <SampleTypeSelector
+                        value={selectedSampleType}
+                        onChange={setSelectedSampleType}
+                    />
+                </div>
+
+                {/* Received Time */}
+                <div className="space-y-1">
+                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        Thời gian nhận
+                    </Label>
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 pointer-events-none">
+                            <Calendar size={18} />
+                        </div>
+                        <Input
+                            type="datetime-local"
+                            {...register('received_at')}
+                            className="pl-10 h-11 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                        />
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">Mặc định là thời gian hiện tại.</p>
+                </div>
+            </div>
+
+            {/* Error/Success Messages */}
+            {submitError && (
+                <div className="bg-destructive/10 text-destructive p-3 rounded-md text-sm flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    {submitError}
+                </div>
+            )}
+            {submitSuccess && (
+                <div className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 p-3 rounded-md text-sm flex flex-col gap-2 border border-emerald-200 dark:border-emerald-800">
+                    <div className="flex items-center gap-2 font-medium">
+                        <CheckCircle2 className="h-4 w-4" />
+                        {submitSuccess}
+                    </div>
+                </div>
+            )}
+
+            <ClientQrScannerDialog open={showQRScanner} onOpenChange={setShowQRScanner} onScan={handleQRScan} />
+        </div>
+    )
+
+    return (
+        <>
+            <form onSubmit={handleSubmit(onSubmit)} className="h-full">
+                <TestAssignmentGrid
+                    selected={selectedTests}
+                    onChange={setSelectedTests}
+                    specialties={specialties}
+                    context={contextContent}
+                    isSaving={isSubmitting}
+                    onSave={handleSubmit(onSubmit)}
+                    saveLabel={selectedTests.length > 0
+                        ? `Lưu & Chỉ định (${selectedTests.length})`
+                        : "Lưu mẫu (Không chỉ định)"}
+                />
+            </form>
+
+            <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Xác nhận tạo mẫu không có chỉ định?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Bạn chưa chọn xét nghiệm nào cho mẫu này. Bạn có chắc chắn muốn tạo mẫu mà không có chỉ định xét nghiệm?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Hủy bỏ</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleSubmit(onSubmit)}>Tiếp tục tạo mẫu</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
     )
 }

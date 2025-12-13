@@ -6,9 +6,7 @@ import type { LabSpecialty, AssayDefinitionWithMethods, SelectedTest } from '@/t
 import { SPECIALTY_BADGE_CLASSES } from '@/lib/specialty-badges'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useMediaQuery } from '@/hooks/use-media-query'
-import { MobileTestCard } from '@/components/mobile-test-card'
-import { MobileFilterBar } from '@/components/mobile-filter-bar'
-import { MobileBottomBar } from '@/components/mobile-bottom-bar'
+import { cn } from '@/lib/utils'
 import {
     Search,
     CheckCircle2,
@@ -22,8 +20,12 @@ import {
     FlaskConical,
     Loader2,
     Filter,
-    User
+    User,
+    ChevronDown,
+    Check,
+    ArrowRight
 } from 'lucide-react'
+
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -45,6 +47,11 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet'
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 
 // --- Types ---
 
@@ -91,6 +98,7 @@ export function TestAssignmentGrid({
 
     // State
     const [availableAssays, setAvailableAssays] = useState<AssayDefinitionWithMethods[]>([])
+    const [isContextOpen, setIsContextOpen] = useState(true)
     const [methods, setMethods] = useState<{ id: string, name: string }[]>([])
     const [selectedMethodId, setSelectedMethodId] = useState<string>('all')
     const [selectedSpecialtyId, setSelectedSpecialtyId] = useState<string>('all')
@@ -264,115 +272,211 @@ export function TestAssignmentGrid({
     // --- MOBILE LAYOUT ---
     if (!isDesktop) {
         return (
-            <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 relative">
-                {/* 1. Sticky Filter Bar */}
-                <MobileFilterBar
-                    searchQuery={searchQuery}
-                    onSearchChange={setSearchQuery}
-                    specialties={specialties}
-                    selectedSpecialtyId={selectedSpecialtyId}
-                    onSelectSpecialty={setSelectedSpecialtyId}
-                />
-
-                {/* 1.5 Context Summary Trigger */}
-                <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-3">
-                    <Sheet>
-                        <SheetTrigger asChild>
-                            <button className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-left flex items-start gap-3 active:scale-[0.99] transition-transform">
-                                <User className="text-sky-600 mt-0.5" size={18} />
-                                <div>
-                                    <div className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
-                                        {summaryInfo?.clientName || "Chọn khách hàng..."}
-                                    </div>
-                                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2">
-                                        <span className="bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide">
-                                            {summaryInfo?.sampleType || "Loại mẫu"}
-                                        </span>
-                                        {summaryInfo?.receivedAt && <span>{summaryInfo.receivedAt}</span>}
-                                    </div>
-                                </div>
-                            </button>
-                        </SheetTrigger>
-                        <SheetContent side="left" className="w-[85vw] sm:max-w-md overflow-y-auto">
-                            <SheetHeader className="mb-4">
-                                <SheetTitle>Thông tin tiếp nhận</SheetTitle>
-                            </SheetHeader>
-                            {context}
-                        </SheetContent>
-                    </Sheet>
-                </div>
-
-                {/* 2. Virtualized List */}
-                <div
-                    ref={parentRef}
-                    className="flex-1 overflow-auto w-full relative pb-24" // Extra padding for bottom bar
+            <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 p-4 gap-4 overflow-hidden">
+                {/* 1. Context Cards (QR & Info) - Scrollable container for the whole form? 
+                    Actually, if we want the Test Card to be scrollable internally, we should keep the main container static 
+                    and let the components flex. But if Context is too tall, we might have issues. 
+                    Let's make the MAIN container scrollable, and the card just part of the flow?
+                    No, specifically requested the Test Card to have sticky header. So Test Card must be the scroll container or have internal scroll.
+                    We will use flex-col. Context is top. Test Card is flex-1.
+                    If context text is tall, we rely on min-height of test card or page scroll?
+                    Let's use a wrapper that allows scrolling if needed, but tries to fit.
+                */}
+                <Collapsible
+                    open={isContextOpen}
+                    onOpenChange={setIsContextOpen}
+                    className="flex-shrink-0 space-y-2"
                 >
-                    <div
-                        style={{
-                            height: `${rowVirtualizer.getTotalSize()}px`,
-                            width: '100%',
-                            position: 'relative',
-                        }}
-                    >
-                        {isLoading && processedTests.length === 0 ? (
-                            <div className="absolute inset-0 flex items-center justify-center p-8 text-center text-muted-foreground pt-20">
-                                <div className="flex justify-center items-center gap-2">
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    Đang tải dữ liệu...
-                                </div>
-                            </div>
-                        ) : processedTests.length === 0 ? (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center pt-20">
-                                <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 animate-in zoom-in-50 duration-300">
-                                    <FlaskConical className="w-8 h-8 text-slate-400" />
-                                </div>
-                                <h3 className="text-base font-semibold text-slate-700 dark:text-slate-300 mb-1">Không tìm thấy chỉ tiêu</h3>
-                                <p className="text-sm text-slate-500 max-w-[200px]">Hãy thử tìm kiếm với từ khóa khác hoặc chọn chuyên khoa khác.</p>
-                            </div>
-                        ) : (
-                            rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                                const test = processedTests[virtualRow.index]
-                                const selectedTest = selected.find(t => t.assayId === test.id)
-                                const isSelected = !!selectedTest
-                                const isDisabled = disabledSet.has(test.id)
-                                const specialty = test.specialty_id ? specialtiesMap.get(test.specialty_id) : null
+                    <div className="flex items-center justify-between px-1">
+                        <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
+                            Thông tin hành chính
+                        </h3>
+                        <CollapsibleTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full">
+                                <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isContextOpen ? "rotate-180" : "")} />
+                                <span className="sr-only">Toggle Info</span>
+                            </Button>
+                        </CollapsibleTrigger>
+                    </div>
+                    <CollapsibleContent className="space-y-4 data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+                        {context}
+                    </CollapsibleContent>
+                </Collapsible>
 
-                                return (
-                                    <div
-                                        key={test.id}
-                                        style={{
-                                            position: 'absolute',
-                                            top: 0,
-                                            left: 0,
-                                            width: '100%',
-                                            transform: `translateY(${virtualRow.start}px)`,
-                                        }}
-                                    >
-                                        <MobileTestCard
-                                            test={test}
-                                            isSelected={isSelected}
-                                            selectedTest={selectedTest}
-                                            onToggle={toggleTestSelection}
-                                            onMethodChange={handleMethodChange}
-                                            isDisabled={isDisabled}
-                                            specialty={specialty}
-                                        />
+                {/* 2. Test Selection Card */}
+                <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden relative">
+                    {/* Sticky Header inside Card */}
+                    <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col gap-3 bg-white dark:bg-slate-900 z-10">
+                        {/* Search */}
+                        <div className="relative w-full">
+                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                <Search size={18} />
+                            </span>
+                            <input
+                                type="text"
+                                placeholder="Tìm kiếm chỉ tiêu (ALT, Glucose...)"
+                                className="w-full pl-10 pr-4 py-2 rounded-lg border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm outline-none transition-all"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+
+                        {/* Filter Pills */}
+                        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                            <button
+                                onClick={() => setSelectedSpecialtyId('all')}
+                                className={cn(
+                                    "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors",
+                                    selectedSpecialtyId === 'all'
+                                        ? "bg-blue-500 text-white shadow-sm"
+                                        : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                                )}
+                            >
+                                Tất cả
+                            </button>
+                            {specialties.map(spec => (
+                                <button
+                                    key={spec.id}
+                                    onClick={() => setSelectedSpecialtyId(spec.id)}
+                                    className={cn(
+                                        "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors",
+                                        selectedSpecialtyId === spec.id
+                                            ? "bg-blue-500 text-white shadow-sm"
+                                            : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                                    )}
+                                >
+                                    {spec.name}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Virtualized List Container */}
+                    <div
+                        ref={parentRef}
+                        className="flex-1 overflow-auto w-full relative pb-20 scroll-smooth"
+                    >
+                        <div
+                            style={{
+                                height: `${rowVirtualizer.getTotalSize()}px`,
+                                width: '100%',
+                                position: 'relative',
+                            }}
+                        >
+                            {isLoading && processedTests.length === 0 ? (
+                                <div className="absolute inset-0 flex items-center justify-center p-8 text-center text-muted-foreground pt-10">
+                                    <div className="flex justify-center items-center gap-2">
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Đang tải...
                                     </div>
-                                )
-                            })
-                        )}
+                                </div>
+                            ) : processedTests.length === 0 ? (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center pt-10">
+                                    <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Không tìm thấy</h3>
+                                </div>
+                            ) : (
+                                rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                                    const test = processedTests[virtualRow.index]
+                                    const selectedTest = selected.find(t => t.assayId === test.id)
+                                    const isSelected = !!selectedTest
+                                    const isDisabled = disabledSet.has(test.id)
+                                    const specialty = test.specialty_id ? specialtiesMap.get(test.specialty_id) : null
+
+                                    return (
+                                        <div
+                                            key={test.id}
+                                            style={{
+                                                position: 'absolute',
+                                                top: 0,
+                                                left: 0,
+                                                width: '100%',
+                                                transform: `translateY(${virtualRow.start}px)`,
+                                            }}
+                                            className="px-2 pt-2"
+                                        >
+                                            <label className={cn(
+                                                "group relative flex items-center p-3 rounded-lg border cursor-pointer transition-all",
+                                                isSelected
+                                                    ? "bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800"
+                                                    : "bg-white dark:bg-slate-800/50 border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800",
+                                                isDisabled && "opacity-50 cursor-not-allowed"
+                                            )}>
+                                                <div
+                                                    className={cn(
+                                                        "flex items-center justify-center w-5 h-5 rounded border transition-colors mr-3",
+                                                        isSelected
+                                                            ? "bg-blue-500 border-blue-500 text-white"
+                                                            : "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900"
+                                                    )}
+                                                    onClick={(e) => {
+                                                        e.preventDefault() // prevent double toggle if label handles it
+                                                        !isDisabled && toggleTestSelection(test)
+                                                    }}
+                                                >
+                                                    {isSelected && <Check size={14} strokeWidth={3} />}
+                                                </div>
+
+                                                <div className="flex-1 min-w-0" onClick={() => !isDisabled && toggleTestSelection(test)}>
+                                                    <div className="flex justify-between items-start">
+                                                        <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm truncate pr-2">
+                                                            {test.name}
+                                                        </span>
+                                                        {specialty && (
+                                                            <span className={cn(
+                                                                "px-2 py-0.5 rounded text-[10px] font-medium whitespace-nowrap",
+                                                                SPECIALTY_BADGE_CLASSES[specialty.code] || "bg-slate-100 text-slate-700"
+                                                            )}>
+                                                                {specialty.name}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <span className="text-xs text-slate-500 dark:text-slate-400 block mt-0.5">
+                                                        {test.methods.length > 0 ? (test.methods.length > 1 ? `${test.methods.length} phương pháp` : test.methods[0].name) : 'N/A'}
+                                                    </span>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    )
+                                })
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Bottom Bar integrated - Actually let's use the existing MobileBottomBar but styled or positioned?
+                        If we use parent component's positioning, we need to leave padding.
+                        The MobileBottomBar in current code is sticky bottom. 
+                        We can keep it. The padding pb-20 in virtual list ensures we can scroll to bottom.
+                    */}
+                    <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="relative">
+                                    <div className="w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-lg shadow-md animate-in zoom-in duration-200 key={selected.length}">
+                                        {selected.length}
+                                    </div>
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">Đã chọn</span>
+                                    <button
+                                        onClick={() => onChange([])}
+                                        disabled={selected.length === 0}
+                                        className="text-xs text-red-500 hover:text-red-600 hover:underline text-left disabled:opacity-50"
+                                    >
+                                        Xóa hết
+                                    </button>
+                                </div>
+                            </div>
+                            <Button
+                                onClick={onSave}
+                                disabled={isSaving}
+                                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 h-auto rounded-xl font-medium shadow-lg shadow-blue-500/30 transition-transform active:scale-95 flex items-center gap-2"
+                            >
+                                {isSaving ? <Loader2 className="animate-spin" /> : <span>Tiếp tục</span>}
+                                {!isSaving && <ArrowRight size={20} />}
+                            </Button>
+                        </div>
                     </div>
                 </div>
-
-                {/* 3. Bottom Bar */}
-                <MobileBottomBar
-                    selectedCount={selected.length}
-                    selectedTests={selected}
-                    onSave={onSave}
-                    onRemoveTest={handleRemove}
-                    onClearAll={() => onChange([])}
-                    isSaving={isSaving}
-                />
             </div>
         )
     }

@@ -20,16 +20,52 @@ import { toast } from 'sonner'
 interface ClientSelectorProps {
     selectedClient: Client | null
     onSelect: (client: Client | null) => void
+    // Controlled state props
+    isOpenForm?: boolean
+    onOpenFormChange?: (open: boolean) => void
+    formData?: Partial<CreateClient>
+    onFormDataChange?: (data: Partial<CreateClient> | undefined) => void
+    hideQRButton?: boolean
 }
 
-export function ClientSelector({ selectedClient, onSelect }: ClientSelectorProps) {
+export function ClientSelector({
+    selectedClient,
+    onSelect,
+    isOpenForm,
+    onOpenFormChange,
+    formData,
+    onFormDataChange,
+    hideQRButton = false
+}: ClientSelectorProps) {
     const [open, setOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const [clients, setClients] = useState<Client[]>([])
     const [loading, setLoading] = useState(false)
     const [showQRScanner, setShowQRScanner] = useState(false)
-    const [showClientForm, setShowClientForm] = useState(false)
-    const [clientFormData, setClientFormData] = useState<Partial<CreateClient> | undefined>(undefined)
+
+    // Internal state for uncontrolled mode
+    const [internalShowClientForm, setInternalShowClientForm] = useState(false)
+    const [internalClientFormData, setInternalClientFormData] = useState<Partial<CreateClient> | undefined>(undefined)
+
+    // Derived state
+    const showClientForm = isOpenForm ?? internalShowClientForm
+    const clientFormData = formData ?? internalClientFormData
+
+    const setShowClientForm = (show: boolean) => {
+        if (onOpenFormChange) {
+            onOpenFormChange(show)
+        } else {
+            setInternalShowClientForm(show)
+        }
+    }
+
+    const setClientFormData = (data: Partial<CreateClient> | undefined) => {
+        if (onFormDataChange) {
+            onFormDataChange(data)
+        } else {
+            setInternalClientFormData(data)
+        }
+    }
 
     // Debounce search
     useEffect(() => {
@@ -98,7 +134,7 @@ export function ClientSelector({ selectedClient, onSelect }: ClientSelectorProps
         } catch {
             return 'N/A'
         }
-    }, [selectedClient?.date_of_birth])
+    }, [selectedClient])
 
 
     if (showClientForm) {
@@ -112,7 +148,10 @@ export function ClientSelector({ selectedClient, onSelect }: ClientSelectorProps
                         variant="ghost"
                         size="sm"
                         className="h-6 w-6 p-0"
-                        onClick={() => setShowClientForm(false)}
+                        onClick={() => {
+                            setShowClientForm(false)
+                            setClientFormData(undefined)
+                        }}
                     >
                         <X className="h-4 w-4" />
                     </Button>
@@ -122,8 +161,12 @@ export function ClientSelector({ selectedClient, onSelect }: ClientSelectorProps
                     onSuccess={(client) => {
                         onSelect(client)
                         setShowClientForm(false)
+                        setClientFormData(undefined)
                     }}
-                    onCancel={() => setShowClientForm(false)}
+                    onCancel={() => {
+                        setShowClientForm(false)
+                        setClientFormData(undefined)
+                    }}
                 />
             </div>
         )
@@ -193,12 +236,14 @@ export function ClientSelector({ selectedClient, onSelect }: ClientSelectorProps
                                     variant="outline"
                                     role="combobox"
                                     aria-expanded={open}
-                                    className="flex-1 w-full justify-between shadow-sm border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 min-w-0"
+                                    className="flex-1 w-full justify-between shadow-sm border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 min-w-0 h-11 px-3 text-sm font-normal"
                                 >
-                                    <span className="truncate">
-                                        {searchQuery || "Tìm khách hàng..."}
-                                    </span>
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    <div className="flex items-center gap-2 truncate">
+                                        <Search className="h-5 w-5 text-slate-400" />
+                                        <span className={cn("truncate", !selectedClient && !searchQuery ? "text-slate-500" : "")}>
+                                            {searchQuery || "Tìm hoặc thêm mới..."}
+                                        </span>
+                                    </div>
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-[300px] p-0" align="start">
@@ -208,7 +253,7 @@ export function ClientSelector({ selectedClient, onSelect }: ClientSelectorProps
                                         placeholder="Tìm tên, SĐT, CMND..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 border-0 focus-visible:ring-0 px-0"
+                                        className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 border-0 focus-visible:ring-0 px-0 shadow-none"
                                     />
                                 </div>
                                 <div className="max-h-[200px] overflow-y-auto p-1">
@@ -234,7 +279,7 @@ export function ClientSelector({ selectedClient, onSelect }: ClientSelectorProps
                                             )}
                                         </div>
                                     ) : (
-                                        clients.map((client: any) => {
+                                        clients.map((client) => {
                                             // Pre-calculate birth year to prevent forced reflows
                                             const birthYear = new Date(client.date_of_birth).getFullYear()
 
@@ -254,9 +299,6 @@ export function ClientSelector({ selectedClient, onSelect }: ClientSelectorProps
                                                             <span>{birthYear}</span>
                                                         </div>
                                                     </div>
-                                                    {/* {selectedClient?.id === client.id && (
-                                                        <Check className="ml-auto h-4 w-4" />
-                                                    )} */}
                                                 </div>
                                             )
                                         })
@@ -265,17 +307,20 @@ export function ClientSelector({ selectedClient, onSelect }: ClientSelectorProps
                             </PopoverContent>
                         </Popover>
 
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            className="shrink-0 text-sky-600 hover:text-sky-700 hover:bg-sky-50 border-slate-200 dark:border-slate-800 shadow-sm"
-                            onClick={() => setShowQRScanner(true)}
-                            title="Quét mã QR"
-                        >
-                            <Scan className="h-4 w-4" />
-                        </Button>
+                        {!hideQRButton && (
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="shrink-0 text-sky-600 hover:text-sky-700 hover:bg-sky-50 border-slate-200 dark:border-slate-800 shadow-sm h-11 w-11"
+                                onClick={() => setShowQRScanner(true)}
+                                title="Quét mã QR"
+                            >
+                                <Scan className="h-5 w-5" />
+                            </Button>
+                        )}
                     </div>
 
+                    {/* Quick Create Button (Mobile friendly) */}
                     <Button
                         variant="ghost"
                         className="w-full justify-start text-sky-600 hover:text-sky-700 hover:bg-sky-50 h-8 px-2 text-xs"
@@ -290,7 +335,6 @@ export function ClientSelector({ selectedClient, onSelect }: ClientSelectorProps
                 </div>
             )}
 
-            {/* QR Scanner Dialog */}
             <ClientQrScannerDialog open={showQRScanner} onOpenChange={setShowQRScanner} onScan={handleQRScan} />
         </div>
     )
