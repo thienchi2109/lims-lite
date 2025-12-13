@@ -212,7 +212,7 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
 
                                         {client && (
                                             <div className="grid grid-cols-2 gap-3 rounded-md border border-slate-100 bg-slate-50/40 p-3 text-sm dark:border-slate-800 dark:bg-slate-900/30">
-                                                <DetailItem label="CCCD/CMND" value={client.id_card_num} />
+                                                <DetailItem label="SỐ CCCD/CMND" value={client.id_card_num} />
                                                 <DetailItem label="Ngày sinh" value={formatDateOnly(client.date_of_birth)} />
                                                 <DetailItem label="Giới tính" value={client.gender} />
                                                 <DetailItem label="Số điện thoại" value={client.phone} />
@@ -226,7 +226,7 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
                                                     value={client.health_insurance_num || 'N/A'}
                                                 />
                                                 <DetailItem
-                                                    label="Hạn CCCD/CMND"
+                                                    label="NGÀY HẾT HẠN BHYT"
                                                     value={client.expiry_date ? formatDateOnly(client.expiry_date) : 'N/A'}
                                                 />
                                             </div>
@@ -242,7 +242,7 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
                             <div className="space-y-1.5">
                                 <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                                     <Calendar className="h-3.5 w-3.5" />
-                                    Ngày nhận
+                                    Ngày nhận mẫu
                                 </div>
                                 <div className="text-sm">
                                     {formatDate(sample.received_at)}
@@ -252,7 +252,7 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
                             <div className="space-y-1.5">
                                 <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                                     <User className="h-3.5 w-3.5" />
-                                    Người nhận
+                                    Người nhận mẫu
                                 </div>
                                 <div className="text-sm truncate" title={sample.received_by_name || ''}>
                                     {sample.received_by_name || 'N/A'}
