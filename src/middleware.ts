@@ -71,6 +71,7 @@ export async function middleware(request: NextRequest) {
             ? decodeJwtPayload<{ session_id?: string; sid?: string }>(accessToken)
             : null
         const sessionId = payload?.session_id ?? payload?.sid
+        const timeboxSeconds = getSessionTimeboxSeconds()
 
         const signOutAndExpire = async () => {
             try {
@@ -99,33 +100,41 @@ export async function middleware(request: NextRequest) {
             return response
         }
 
-        if (!sessionId) {
-            return signOutAndExpire()
+        let sessionCreatedAtMs: number | null = null
+
+        if (sessionId) {
+            try {
+                const adminClient = createEdgeAdminClient()
+                const { data: createdAt, error } = await adminClient.rpc('get_session_created_at', {
+                    p_session_id: sessionId,
+                })
+
+                if (!error && createdAt) {
+                    const createdAtMs = Date.parse(createdAt)
+                    if (Number.isFinite(createdAtMs)) {
+                        sessionCreatedAtMs = createdAtMs
+                    }
+                }
+            } catch {
+                // ignore and fall back to auth.users.last_sign_in_at
+            }
         }
 
-        try {
-            const adminClient = createEdgeAdminClient()
-            const { data: createdAt, error } = await adminClient.rpc('get_session_created_at', {
-                p_session_id: sessionId,
-            })
-
-            if (error || !createdAt) {
-                return signOutAndExpire()
+        if (sessionCreatedAtMs === null) {
+            const lastSignInAt = (user as any).last_sign_in_at as string | null | undefined
+            if (lastSignInAt) {
+                const lastSignInAtMs = Date.parse(lastSignInAt)
+                if (Number.isFinite(lastSignInAtMs)) {
+                    sessionCreatedAtMs = lastSignInAtMs
+                }
             }
+        }
 
-            const createdAtMs = Date.parse(createdAt)
-            if (!Number.isFinite(createdAtMs)) {
-                return signOutAndExpire()
-            }
-
-            const timeboxSeconds = getSessionTimeboxSeconds()
-            const expiresAtMs = createdAtMs + timeboxSeconds * 1000
-
+        if (sessionCreatedAtMs !== null) {
+            const expiresAtMs = sessionCreatedAtMs + timeboxSeconds * 1000
             if (Date.now() > expiresAtMs) {
                 return signOutAndExpire()
             }
-        } catch {
-            return signOutAndExpire()
         }
     }
 

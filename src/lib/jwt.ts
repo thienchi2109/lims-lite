@@ -1,9 +1,16 @@
 function decodeBase64Url(input: string): string {
     const base64 = input.replace(/-/g, '+').replace(/_/g, '/')
     const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')
-    const binary = globalThis.atob(padded)
-    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0))
-    return new TextDecoder().decode(bytes)
+    if (typeof globalThis.atob === 'function') {
+        const binary = globalThis.atob(padded)
+        const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0))
+        return new TextDecoder().decode(bytes)
+    }
+
+    // Node.js fallback (some runtimes do not provide atob)
+    // eslint-disable-next-line no-restricted-globals
+    const buffer = Buffer.from(padded, 'base64')
+    return buffer.toString('utf-8')
 }
 
 export function decodeJwtPayload<T extends Record<string, unknown>>(jwt: string): T | null {
@@ -17,4 +24,3 @@ export function decodeJwtPayload<T extends Record<string, unknown>>(jwt: string)
         return null
     }
 }
-
