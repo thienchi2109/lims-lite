@@ -1,10 +1,14 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { getSessionTimeboxSeconds } from '@/lib/auth-session-timebox'
+import { decodeJwtPayload } from '@/lib/jwt'
+import { createEdgeAdminClient } from '@/lib/supabase/edge-admin'
 
 export async function middleware(request: NextRequest) {
     let supabaseResponse = NextResponse.next({
         request,
     })
+    const pendingCookies: Array<{ name: string; value: string; options: any }> = []
 
     // Prioritize internal Docker URL for middleware (server-side)
     const supabaseUrl = process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -19,6 +23,7 @@ export async function middleware(request: NextRequest) {
                 },
                 setAll(cookiesToSet) {
                     cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+                    pendingCookies.push(...cookiesToSet)
                     supabaseResponse = NextResponse.next({
                         request,
                     })
@@ -35,6 +40,81 @@ export async function middleware(request: NextRequest) {
         data: { user },
     } = await supabase.auth.getUser()
 
+    const applyCookies = (response: NextResponse) => {
+        pendingCookies.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
+        return response
+    }
+
+    const clearSupabaseAuthCookies = (response: NextResponse) => {
+        request.cookies.getAll().forEach(({ name }) => {
+            if (!name.startsWith('sb-')) return
+            response.cookies.set(name, '', { path: '/', maxAge: 0 })
+        })
+        return response
+    }
+
+    const isProtectedRoute =
+        request.nextUrl.pathname.startsWith('/analyst') ||
+        request.nextUrl.pathname.startsWith('/manager')
+    const isApiRoute = request.nextUrl.pathname.startsWith('/api')
+    const isRootRoute = request.nextUrl.pathname === '/'
+    const isLoginRoute = request.nextUrl.pathname === '/login'
+    const shouldEnforceTimebox = isProtectedRoute || isApiRoute || isRootRoute || isLoginRoute
+
+    if (shouldEnforceTimebox && user) {
+        const {
+            data: { session },
+        } = await supabase.auth.getSession()
+
+        const accessToken = session?.access_token
+        const payload = accessToken ? decodeJwtPayload<{ session_id?: string }>(accessToken) : null
+        const sessionId = payload?.session_id
+
+        const signOutAndExpire = async () => {
+            try {
+                await supabase.auth.signOut()
+            } catch {
+                // ignore signOut failures; still clear cookies best-effort
+            }
+
+            const url = request.nextUrl.clone()
+            url.pathname = '/login'
+            url.searchParams.set('reason', 'session_expired')
+
+            const response = NextResponse.redirect(url)
+            return applyCookies(clearSupabaseAuthCookies(response))
+        }
+
+        if (!sessionId) {
+            return signOutAndExpire()
+        }
+
+        try {
+            const adminClient = createEdgeAdminClient()
+            const { data: createdAt, error } = await adminClient.rpc('get_session_created_at', {
+                p_session_id: sessionId,
+            })
+
+            if (error || !createdAt) {
+                return signOutAndExpire()
+            }
+
+            const createdAtMs = Date.parse(createdAt)
+            if (!Number.isFinite(createdAtMs)) {
+                return signOutAndExpire()
+            }
+
+            const timeboxSeconds = getSessionTimeboxSeconds()
+            const expiresAtMs = createdAtMs + timeboxSeconds * 1000
+
+            if (Date.now() > expiresAtMs) {
+                return signOutAndExpire()
+            }
+        } catch {
+            return signOutAndExpire()
+        }
+    }
+
     // Get user role from database
     let userRole: string | null = null
     if (user) {
@@ -48,7 +128,6 @@ export async function middleware(request: NextRequest) {
     }
 
     // Protect dashboard routes
-    const isProtectedRoute = request.nextUrl.pathname.startsWith('/analyst') || request.nextUrl.pathname.startsWith('/manager')
     if (isProtectedRoute) {
         if (!user) {
             const url = request.nextUrl.clone()
@@ -65,14 +144,14 @@ export async function middleware(request: NextRequest) {
     }
 
     // Redirect logged-in users away from login page
-    if (request.nextUrl.pathname === '/login' && user) {
+    if (isLoginRoute && user) {
         const url = request.nextUrl.clone()
         url.pathname = userRole === 'manager' ? '/manager' : '/analyst'
         return NextResponse.redirect(url)
     }
 
     // Redirect root to appropriate dashboard or login
-    if (request.nextUrl.pathname === '/') {
+    if (isRootRoute) {
         const url = request.nextUrl.clone()
         if (user) {
             url.pathname = userRole === 'manager' ? '/manager' : '/analyst'
