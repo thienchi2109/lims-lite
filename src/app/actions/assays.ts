@@ -501,7 +501,9 @@ export async function deleteAssayDefinition(id: string) {
             return { error: 'Chỉ Quản lý mới có thể xóa chỉ tiêu xét nghiệm' }
         }
 
-        // Check if assay is being used in any results
+        // Check if assay is being used in any results - REMOVED per user request
+        // Soft delete allows preserving historical data references
+        /*
         const { data: existingResults } = await supabase
             .from('results')
             .select('id')
@@ -513,6 +515,7 @@ export async function deleteAssayDefinition(id: string) {
                 error: 'Không thể xóa chỉ tiêu này vì đang được sử dụng trong kết quả xét nghiệm'
             }
         }
+        */
 
         // Soft delete (set deleted_at timestamp)
         const { error } = await supabase
