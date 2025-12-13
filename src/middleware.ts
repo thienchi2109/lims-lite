@@ -67,8 +67,10 @@ export async function middleware(request: NextRequest) {
         } = await supabase.auth.getSession()
 
         const accessToken = session?.access_token
-        const payload = accessToken ? decodeJwtPayload<{ session_id?: string }>(accessToken) : null
-        const sessionId = payload?.session_id
+        const payload = accessToken
+            ? decodeJwtPayload<{ session_id?: string; sid?: string }>(accessToken)
+            : null
+        const sessionId = payload?.session_id ?? payload?.sid
 
         const signOutAndExpire = async () => {
             try {
@@ -77,12 +79,24 @@ export async function middleware(request: NextRequest) {
                 // ignore signOut failures; still clear cookies best-effort
             }
 
+            if (isApiRoute) {
+                const response = NextResponse.json(
+                    { error: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', reason: 'session_expired' },
+                    { status: 401 }
+                )
+                applyCookies(response)
+                clearSupabaseAuthCookies(response)
+                return response
+            }
+
             const url = request.nextUrl.clone()
             url.pathname = '/login'
             url.searchParams.set('reason', 'session_expired')
 
             const response = NextResponse.redirect(url)
-            return applyCookies(clearSupabaseAuthCookies(response))
+            applyCookies(response)
+            clearSupabaseAuthCookies(response)
+            return response
         }
 
         if (!sessionId) {
