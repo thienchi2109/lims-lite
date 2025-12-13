@@ -10,11 +10,13 @@ import {
     PopoverTrigger,
 } from '@/components/ui/popover'
 import { Input } from '@/components/ui/input'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ClientForm } from '@/components/client-form'
 import { QRScanner } from '@/components/qr-scanner'
 import { fetchClientsClient, findClientByIdentityClient } from '@/lib/api-client'
-import { Client, CreateClient, Gender } from '@/types'
+import { parseClientIdentityQr } from '@/lib/qr/parse-client-identity-qr'
+import { Client, CreateClient } from '@/types'
+import { toast } from 'sonner'
 
 interface ClientSelectorProps {
     selectedClient: Client | null
@@ -57,41 +59,36 @@ export function ClientSelector({ selectedClient, onSelect }: ClientSelectorProps
     const handleQRScan = async (decodedText: string) => {
         setShowQRScanner(false)
 
-        // Parse QR: id_card_num|name|dd/mm/yyyy|gender
-        const parts = decodedText.split('|')
-        if (parts.length < 4) {
-            alert('Mã QR không hợp lệ')
+        const parsed = parseClientIdentityQr(decodedText)
+        if (!parsed) {
+            toast.error('Mã QR không hợp lệ. Vui lòng thử lại hoặc nhập thủ công.')
             return
         }
 
-        const [idCard, name, dobRaw, genderRaw] = parts
+        const { idCardNum, name, dateOfBirth, gender } = parsed
+        const address = parsed.address
 
-        // Convert DOB dd/mm/yyyy to yyyy-mm-dd
-        const [day, month, year] = dobRaw.split('/')
-        const dob = `${year}-${month}-${day}`
+        try {
+            const result = await findClientByIdentityClient(name, dateOfBirth)
 
-        // Map gender
-        let gender: Gender = 'Khác'
-        if (genderRaw === 'Nam') gender = 'Nam'
-        if (genderRaw === 'Nữ') gender = 'Nữ'
-
-        // Find existing client
-        const result = await findClientByIdentityClient(name, dob)
-
-        if (result.data) {
-            // Found match
-            onSelect(result.data)
-        } else {
-            // No match, open create form pre-filled
-            setClientFormData({
-                name,
-                id_card_num: idCard,
-                date_of_birth: dob,
-                gender,
-                phone: '', // Required
-            })
-            setShowClientForm(true)
+            if (result.data) {
+                onSelect(result.data)
+                return
+            }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Không thể tìm khách hàng'
+            toast.error(message)
         }
+
+        setClientFormData({
+            name,
+            id_card_num: idCardNum || '',
+            date_of_birth: dateOfBirth,
+            gender,
+            phone: '', // Required
+            address: address || '',
+        })
+        setShowClientForm(true)
     }
 
     // Memoize formatted date to prevent forced reflows
@@ -299,6 +296,9 @@ export function ClientSelector({ selectedClient, onSelect }: ClientSelectorProps
                 <DialogContent className="sm:max-w-md bg-slate-950 border-slate-800 text-slate-100">
                     <DialogHeader>
                         <DialogTitle>Quét mã QR CCCD</DialogTitle>
+                        <DialogDescription className="text-slate-300">
+                            Hướng camera vào mã QR trên CCCD để tự động điền thông tin khách hàng
+                        </DialogDescription>
                     </DialogHeader>
                     <div className="p-4">
                         <QRScanner

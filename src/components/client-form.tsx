@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { CreateClientSchema, type CreateClient, type Client, Gender } from '@/types'
 import { updateClientClient, upsertClientClient } from '@/lib/api-client'
@@ -42,9 +42,8 @@ export function ClientForm({
         register,
         handleSubmit,
         formState: { errors },
+        control,
         reset,
-        setValue,
-        watch,
     } = useForm<CreateClient>({
         resolver: zodResolver(CreateClientSchema),
         defaultValues: {
@@ -62,11 +61,14 @@ export function ClientForm({
     // Reset form when initialData changes
     useEffect(() => {
         if (initialData) {
+            const genderResult = Gender.safeParse(initialData.gender)
+            const genderValue = genderResult.success ? genderResult.data : 'Khác'
+
             reset({
                 name: initialData.name || '',
                 id_card_num: initialData.id_card_num || '',
                 date_of_birth: initialData.date_of_birth || '',
-                gender: initialData.gender || 'Khác',
+                gender: genderValue,
                 phone: initialData.phone || '',
                 address: initialData.address || '',
                 health_insurance_num: initialData.health_insurance_num || '',
@@ -74,8 +76,6 @@ export function ClientForm({
             })
         }
     }, [initialData, reset])
-
-    const currentGender = watch('gender')
 
     const onSubmit = async (data: CreateClient) => {
         setIsSubmitting(true)
@@ -159,24 +159,30 @@ export function ClientForm({
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                    {/* Gender */}
+                {/* Gender */}
                     <div className="space-y-1.5">
                         <Label htmlFor="gender" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                             Giới tính *
                         </Label>
-                        <Select
-                            value={currentGender}
-                            onValueChange={(value) => setValue('gender', value as Gender, { shouldValidate: true })}
-                        >
-                            <SelectTrigger className="shadow-sm h-9">
-                                <SelectValue placeholder="Chọn" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Nam">Nam</SelectItem>
-                                <SelectItem value="Nữ">Nữ</SelectItem>
-                                <SelectItem value="Khác">Khác</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <Controller
+                            name="gender"
+                            control={control}
+                            render={({ field }) => (
+                                <Select
+                                    value={field.value}
+                                    onValueChange={(value) => field.onChange(value as Gender)}
+                                >
+                                    <SelectTrigger className="shadow-sm h-9">
+                                        <SelectValue placeholder="Chọn" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Nam">Nam</SelectItem>
+                                        <SelectItem value="Nữ">Nữ</SelectItem>
+                                        <SelectItem value="Khác">Khác</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            )}
+                        />
                         {errors.gender && (
                             <p className="text-xs text-red-600" role="alert">{errors.gender.message}</p>
                         )}

@@ -36,6 +36,7 @@ import {
     getClients,
     updateClient,
 } from '@/app/actions/clients'
+import { isIsoDateString } from '@/lib/iso-date'
 import type { ClientActionName, ClientActionRequest } from '@/lib/client-actions/types'
 
 interface ActionHandler {
@@ -194,10 +195,12 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
     discardSample: async (payload) => discardSample(payload),
     upsertClient: async (payload) => upsertClient(payload),
     findClientByIdentity: async (payload) => {
-        if (!payload?.name || !payload?.dateOfBirth) {
-            return { error: 'Tên và ngày sinh là bắt buộc' }
-        }
-        return findClientByIdentity(payload.name, payload.dateOfBirth)
+        const name = typeof payload?.name === 'string' ? payload.name.trim() : ''
+        const dateOfBirth = typeof payload?.dateOfBirth === 'string' ? payload.dateOfBirth.trim() : ''
+        if (!name) return { error: 'Tên là bắt buộc' }
+        if (!dateOfBirth) return { error: 'Ngày sinh là bắt buộc' }
+        if (!isIsoDateString(dateOfBirth)) return { error: 'Ngày sinh không hợp lệ' }
+        return findClientByIdentity(name, dateOfBirth)
     },
     getClient: async (payload) => {
         if (!payload?.id) {

@@ -2,6 +2,7 @@
 
 import { createClient as createSupabaseClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { isIsoDateString } from '@/lib/iso-date'
 import {
     CreateClientSchema,
     UpdateClientSchema,
@@ -101,10 +102,19 @@ export async function findClientByIdentity(name: string, date_of_birth: string) 
     try {
         const supabase = await createSupabaseClient()
 
+        const trimmedName = name.trim()
+        if (!trimmedName) {
+            return { error: 'Tên là bắt buộc' }
+        }
+
+        if (!isIsoDateString(date_of_birth)) {
+            return { error: 'Ngày sinh không hợp lệ' }
+        }
+
         const { data: client, error } = await supabase
             .from('clients')
             .select('*')
-            .eq('name', name)
+            .eq('name', trimmedName)
             .eq('date_of_birth', date_of_birth)
             .single()
 
@@ -112,6 +122,9 @@ export async function findClientByIdentity(name: string, date_of_birth: string) 
             if (error.code === 'PGRST116') {
                 // No rows found - not an error, just return null
                 return { data: null }
+            }
+            if (error.code === '22007') {
+                return { error: 'Ngày sinh không hợp lệ' }
             }
             console.error('Error finding client:', error)
             return { error: error.message }
