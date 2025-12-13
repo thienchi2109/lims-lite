@@ -28,7 +28,8 @@ POSTGRES_PASSWORD=your-super-secret-and-long-postgres-password
 # -----------------------------------------------------------------------------
 JWT_SECRET=your-super-secret-jwt-token-with-at-least-32-characters-long
 JWT_EXPIRY=3600
-GOTRUE_REFRESH_TOKEN_EXPIRY=14400  # 4 hours, forces re-login after this window
+# Refresh token expiry is a sliding inactivity timeout (NOT a hard max session lifetime).
+GOTRUE_REFRESH_TOKEN_EXPIRY=14400
 
 # -----------------------------------------------------------------------------
 # API Configuration
@@ -60,6 +61,11 @@ SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW
 # -----------------------------------------------------------------------------
 NEXT_PUBLIC_SUPABASE_URL=http://localhost:8000
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+
+# Next.js App Security Configuration
+# -----------------------------------------------------------------------------
+# Absolute max session lifetime (enforced by the Next.js app).
+SESSION_TIMEBOX_SECONDS=14400
 ```
 
 If you change token expiry settings later, restart the stack so GoTrue picks up the new values:
