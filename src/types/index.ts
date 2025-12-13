@@ -415,7 +415,16 @@ export const SampleWithUserSchema = SampleSchema.extend({
     rejected_by_name: z.string().nullable().optional(),
 })
 
+
 export type SampleWithUser = z.infer<typeof SampleWithUserSchema>
+
+export type SelectedTest = {
+    assayId: string
+    methodId: string
+    assayName: string
+    methodName: string
+    units: string | null
+}
 
 // ============================================================================
 // ASSAY WITH METHOD SCHEMA

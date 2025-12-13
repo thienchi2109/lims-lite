@@ -2,9 +2,13 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { fetchAssayDefinitionsClient, fetchMethodsClient } from '@/lib/api-client'
-import type { LabSpecialty } from '@/types'
+import type { LabSpecialty, AssayDefinitionWithMethods, SelectedTest } from '@/types'
 import { SPECIALTY_BADGE_CLASSES } from '@/lib/specialty-badges'
 import { useVirtualizer } from '@tanstack/react-virtual'
+import { useMediaQuery } from '@/hooks/use-media-query'
+import { MobileTestCard } from '@/components/mobile-test-card'
+import { MobileFilterBar } from '@/components/mobile-filter-bar'
+import { MobileBottomBar } from '@/components/mobile-bottom-bar'
 import {
     Search,
     CheckCircle2,
@@ -17,7 +21,8 @@ import {
     Square,
     FlaskConical,
     Loader2,
-    Filter
+    Filter,
+    User
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -33,32 +38,17 @@ import {
     ResizablePanel,
     ResizableHandle,
 } from "@/components/ui/resizable"
+import {
+    Sheet,
+    SheetContent,
+    SheetTrigger,
+    SheetHeader,
+    SheetTitle,
+} from '@/components/ui/sheet'
 
 // --- Types ---
 
-type AssayMethod = {
-    id: string
-    method_id: string
-    name: string
-    is_default: boolean
-    notes: string | null
-}
 
-type AssayDefinitionWithMethods = {
-    id: string
-    name: string
-    specialty_id: string | null
-    units: string | null
-    methods: AssayMethod[]
-}
-
-export type SelectedTest = {
-    assayId: string
-    methodId: string
-    assayName: string
-    methodName: string
-    units: string | null
-}
 
 interface TestAssignmentGridProps {
     selected: SelectedTest[]
@@ -69,6 +59,11 @@ interface TestAssignmentGridProps {
     onSave?: () => void
     isSaving?: boolean
     saveLabel?: string
+    summaryInfo?: {
+        clientName?: string
+        sampleType?: string
+        receivedAt?: string
+    }
 }
 
 // --- Components ---
@@ -86,10 +81,14 @@ export function TestAssignmentGrid({
     context,
     disabledAssayIds = [],
     specialties = [],
-    onSave,
+    onSave = () => { },
     isSaving = false,
-    saveLabel = 'Lưu thay đổi'
+    saveLabel = 'Lưu thay đổi',
+    summaryInfo
 }: TestAssignmentGridProps) {
+    // --- Responsive State ---
+    const isDesktop = useMediaQuery("(min-width: 1280px)")
+
     // State
     const [availableAssays, setAvailableAssays] = useState<AssayDefinitionWithMethods[]>([])
     const [methods, setMethods] = useState<{ id: string, name: string }[]>([])
@@ -141,8 +140,6 @@ export function TestAssignmentGrid({
         try {
             // Fetch assays with method filter and search
             // Use large pageSize to simulate infinite scroll data availability for virtualization
-            // Note: In a real "infinite loading" scenario, we would append to the list.
-            // But here we fetch a large "page" (2000) to feed the client-side virtualizer.
             const result = await fetchAssayDefinitionsClient({
                 pageSize: 2000,
                 methodId: selectedMethodId,
@@ -206,8 +203,8 @@ export function TestAssignmentGrid({
     const rowVirtualizer = useVirtualizer({
         count: processedTests.length,
         getScrollElement: () => parentRef.current,
-        estimateSize: () => 54, // Approximate row height with padding/border
-        overscan: 20, // Keep more items rendered for smoother scroll
+        estimateSize: () => isDesktop ? 54 : 88, // Taller rows on mobile
+        overscan: 20,
     })
 
     // Handlers
@@ -223,7 +220,6 @@ export function TestAssignmentGrid({
             onChange(newSelected)
         } else {
             // Add with default method
-            // If a specific method is filtered, try to select that one first
             let methodToSelect = assay.methods.find(m => m.is_default) || assay.methods[0]
 
             if (selectedMethodId !== 'all') {
@@ -233,8 +229,6 @@ export function TestAssignmentGrid({
                 }
             }
 
-            // Fix: Allow selection even if no method exists (empty array)
-            // If methodToSelect is undefined, we use empty string for methodId and "N/A" for name
             onChange([...selected, {
                 assayId: assay.id,
                 methodId: methodToSelect?.method_id || '',
@@ -267,6 +261,123 @@ export function TestAssignmentGrid({
         onChange(selected.filter(t => t.assayId !== assayId))
     }
 
+    // --- MOBILE LAYOUT ---
+    if (!isDesktop) {
+        return (
+            <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 relative">
+                {/* 1. Sticky Filter Bar */}
+                <MobileFilterBar
+                    searchQuery={searchQuery}
+                    onSearchChange={setSearchQuery}
+                    specialties={specialties}
+                    selectedSpecialtyId={selectedSpecialtyId}
+                    onSelectSpecialty={setSelectedSpecialtyId}
+                />
+
+                {/* 1.5 Context Summary Trigger */}
+                <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-3">
+                    <Sheet>
+                        <SheetTrigger asChild>
+                            <button className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-left flex items-start gap-3 active:scale-[0.99] transition-transform">
+                                <User className="text-sky-600 mt-0.5" size={18} />
+                                <div>
+                                    <div className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
+                                        {summaryInfo?.clientName || "Chọn khách hàng..."}
+                                    </div>
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2">
+                                        <span className="bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide">
+                                            {summaryInfo?.sampleType || "Loại mẫu"}
+                                        </span>
+                                        {summaryInfo?.receivedAt && <span>{summaryInfo.receivedAt}</span>}
+                                    </div>
+                                </div>
+                            </button>
+                        </SheetTrigger>
+                        <SheetContent side="left" className="w-[85vw] sm:max-w-md overflow-y-auto">
+                            <SheetHeader className="mb-4">
+                                <SheetTitle>Thông tin tiếp nhận</SheetTitle>
+                            </SheetHeader>
+                            {context}
+                        </SheetContent>
+                    </Sheet>
+                </div>
+
+                {/* 2. Virtualized List */}
+                <div
+                    ref={parentRef}
+                    className="flex-1 overflow-auto w-full relative pb-24" // Extra padding for bottom bar
+                >
+                    <div
+                        style={{
+                            height: `${rowVirtualizer.getTotalSize()}px`,
+                            width: '100%',
+                            position: 'relative',
+                        }}
+                    >
+                        {isLoading && processedTests.length === 0 ? (
+                            <div className="absolute inset-0 flex items-center justify-center p-8 text-center text-muted-foreground pt-20">
+                                <div className="flex justify-center items-center gap-2">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Đang tải dữ liệu...
+                                </div>
+                            </div>
+                        ) : processedTests.length === 0 ? (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center pt-20">
+                                <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 animate-in zoom-in-50 duration-300">
+                                    <FlaskConical className="w-8 h-8 text-slate-400" />
+                                </div>
+                                <h3 className="text-base font-semibold text-slate-700 dark:text-slate-300 mb-1">Không tìm thấy chỉ tiêu</h3>
+                                <p className="text-sm text-slate-500 max-w-[200px]">Hãy thử tìm kiếm với từ khóa khác hoặc chọn chuyên khoa khác.</p>
+                            </div>
+                        ) : (
+                            rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                                const test = processedTests[virtualRow.index]
+                                const selectedTest = selected.find(t => t.assayId === test.id)
+                                const isSelected = !!selectedTest
+                                const isDisabled = disabledSet.has(test.id)
+                                const specialty = test.specialty_id ? specialtiesMap.get(test.specialty_id) : null
+
+                                return (
+                                    <div
+                                        key={test.id}
+                                        style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            width: '100%',
+                                            transform: `translateY(${virtualRow.start}px)`,
+                                        }}
+                                    >
+                                        <MobileTestCard
+                                            test={test}
+                                            isSelected={isSelected}
+                                            selectedTest={selectedTest}
+                                            onToggle={toggleTestSelection}
+                                            onMethodChange={handleMethodChange}
+                                            isDisabled={isDisabled}
+                                            specialty={specialty}
+                                        />
+                                    </div>
+                                )
+                            })
+                        )}
+                    </div>
+                </div>
+
+                {/* 3. Bottom Bar */}
+                <MobileBottomBar
+                    selectedCount={selected.length}
+                    selectedTests={selected}
+                    onSave={onSave}
+                    onRemoveTest={handleRemove}
+                    onClearAll={() => onChange([])}
+                    isSaving={isSaving}
+                />
+            </div>
+        )
+    }
+
+    // --- DESKTOP LAYOUT (Original 3-Panel) ---
     return (
         <div className="flex flex-col h-[calc(100vh-200px)] min-h-[600px]">
             <ResizablePanelGroup

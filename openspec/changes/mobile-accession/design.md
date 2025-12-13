@@ -1,120 +1,117 @@
-# Mobile-First Accession Page Redesign
+# Mobile-First Accession Page Design Specification (UI/UX Pro Max)
 
-## **1. Design Philosophy**
-- **Mobile-First & Touch-Friendly**: Targets tablet/mobile (<1280px) users specifically (POS terminals on tablets, quick scan on phones).
-- **Native App Feel**: Uses transitions, bottom sheets, and large touch targets to mimic native iOS/Android behavior.
-- **Biotech/Clinical Aesthetics**: Clean, sterile white/slate backgrounds with high-contrast text and Sky-700/600 accents for actions.
-- **Context-Aware**: Information is progressively disclosed. Users don't need to see "Selected Tests" 100% of the time while searching.
+## **1. Executive Summary**
+This redesign transforms the desktop-centric "POS" test assignment interface into a **responsive, native-app-like experience** for tablet and mobile devices (<1280px). 
+The goal is to enable rapid sample accessioning and test assignment on handheld devices (iPad/Android tablets) used in phlebotomy or sample reception areas.
 
-## **2. Layout Strategy: Adaptive Dual-Mode**
+**Core Philosophy:** "Clinical Minimalism"
+- **Cleanliness**: High whitespace, `slate-50` backgrounds, clear hierarchy.
+- **Speed**: Large touch targets (>44px), sticky controls, fewer clicks.
+- **Focus**: Progressive disclosure of information (hide complex filters until needed).
 
-### **A. Desktop (>1280px)**
-*Maintains the power-user 3-panel density for rapid mouse/keyboard entry.*
-- **Left**: Context/Inputs (20%)
-- **Center**: Virtualized Data Grid (55%)
-- **Right**: Selected Staging/Cart (25%)
-- *Enhancement*: Improve `ResizablePanel` constraints to prevent breaking layout on resizing.
+## **2. Design System & Tokens**
 
-### **B. Tablet & Mobile (<1280px)**
-*Transforms into a linear flow with accessible overlays.*
+### **Color Palette (Clinical Sky)**
+| Token | Tailwind Class | Hex | Usage |
+|-------|----------------|-----|-------|
+| **Background** | `bg-slate-50` | `#F8FAFC` | App background (Mobile) |
+| **Surface** | `bg-white` | `#FFFFFF` | Cards, Bottom Bar, Header |
+| **Primary** | `bg-sky-600` | `#0284C7` | Primary Actions, Checked States |
+| **Primary-Sub** | `bg-sky-50` | `#F0F9FF` | Selected Row/Card Background |
+| **Border** | `border-slate-200` | `#E2E8F0` | Dividers, Card Borders |
+| **Text-Main** | `text-slate-900` | `#0F172A` | Test Names, Headers |
+| **Text-Muted** | `text-slate-500` | `#64748B` | Methods, Metadata |
+| **Text-Tiny** | `text-slate-400` | `#94A3B8` | Codes, IDs |
 
-#### **Component 1: Sticky Top Bar (Search & Filter)**
-- **Sticky Header**: `DashboardHeader` remains, but potentially simplified.
-- **Search Bar**: Prominent, full-width or large expandable search bar pinned to top below header.
-- **Quick Filters**: Horizontal scrolling chips for "Specimen Type", "Specialty" (e.g., [All] [Biochem] [Micro] [Hematology]).
+### **Typography**
+- **Font**: Inter (System Default)
+- **Headers**: `text-base font-semibold tracking-tight`
+- **Body**: `text-sm font-medium`
+- **Meta**: `text-xs lg:text-[13px] text-slate-500`
 
-#### **Component 2: The "Card List" (Replaces Center Grid)**
-- **Transformation**: The Data Grid rows transform into rich **Cards**.
-- **Card Content**:
-  - **Left**: Large Checkbox/Selection indicator (accessible touch target 44x44px).
-  - **Middle**: 
-    - **Header**: Test Name (Bold, Slate-900).
-    - **Sub**: Method (Slate-500, small).
-    - **Badge**: Specialty (Color-coded pill).
-  - **Right**: "Method" selector (Drop-down becomes a Sheet/Modal trigger on mobile if complex, or inline standard select if simple).
-- **Virtualization**: Continue using `tanstack-virtual` but rendering `div` cards instead of `tr`.
+### **Layout Breakpoints**
+- **Desktop (>1280px)**: 3-Panel Fixed Layout (Context | Grid | Cart).
+- **Mobile/Tablet (<1280px)**: Single Column Flow with Fixed Top/Bottom Bars.
 
-#### **Component 3: "Shopping Cart" Bottom Bar (Replaces Right Panel)**
-- **Behavior**: Fixed at bottom of screen (z-50).
-- **State**:
-  - *Empty*: "Choose tests to continue" (Disabled button).
-  - *Has Selection*: 
-    - Left: "5 tests selected" badge.
-    - Right: "Review & Save" Primary Button.
-- **Interaction**: Clicking the bar opens a **Sheet (Drawer)** from the bottom.
-  - **Sheet Content**: The "Right Panel" content (List of selected tests).
-  - **Actions**: "Remove All", "Remove Single", "Confirm Save".
+## **3. Mobile UI Components**
 
-#### **Component 4: Context Drawer (Replaces Left Panel)**
-- **Trigger**: A "Sample Info" button or small summary card at the very top.
-- **Behavior**: collapsible section or a Drawer that holds:
-  - Client Selector
-  - Sample Type Selector
-  - Date/Time Picker
+### **A. Sticky Context Header (Top Bar)**
+*Pins to the top, providing global actions and quick filters.*
+- **Z-Index**: `z-40`
+- **Content**:
+  1. **Search Input**: Full width or expanded. `h-10`, `rounded-full` or `rounded-md`.
+  2. **Filter Chips**: Horizontal ScrollView.
+     - `[Tất cả]` (Active: `bg-slate-900 text-white`)
+     - `[Sinh hóa]` (Default: `bg-white border border-slate-200`)
+     - `[Huyết học]`
+  3. **View Toggle**: (Optional) Switch between "List" and "Grid" if needed.
 
-## **3. Implementation Details**
+### **B. Test Card (The List Item)**
+*Replaces the Data Grid Row. Optimized for thumb interactions.*
+- **Container**: `p-4 bg-white border-b border-slate-100 active:bg-slate-50`
+- **Interaction**: Entire card is tappable.
+- **Visual States**:
+  - **Default**: White background.
+  - **Selected**: `bg-sky-50/60`, Border-l-4 `border-l-sky-500` (Visual indicator).
+- **Anatomy**:
+  ```
+  [ Checkbox (24px) ]  [ Test Name (Bold)        Badge (Specialty) ]
+                       [ Method (Muted)                            ]
+  ```
+- **Method Selector**: logic simplifies on mobile. If >1 method, show "Dropdown" icon or "More" menu triggering a bottom drawer selector.
 
-### **Stack Components (Shadcn UI)**
-- `Sheet`: For the "Selected Tests" cart and complex "Filter" menus.
-- `Drawer`: Alternative to Sheet for mobile-native feel (pull-to-close).
-- `ScrollArea`: For horizontal filter chips.
-- `Card`: Base for test items.
-- `Button` (Size: `lg`): For touch targets.
+### **C. Accession Context Card**
+*Collapsible section at the top of the list.*
+- **State**: Collapsed by default after Client is selected to save space.
+- **Content**: Client Name, Sample Type, Received Date.
+- **Edit Action**: Opens full `AccessionInfoCard` form in a Drawer.
 
-### **Responsive Logic (Hook)**
-```typescript
-const isDesktop = useMediaQuery("(min-width: 1280px)")
+### **D. "Shopping Cart" Bottom Bar**
+*Fixed footer for managing the 'Selection' state.*
+- **Position**: Fixed `bottom-0`, `left-0`, `right-0`.
+- **Z-Index**: `z-50`
+- **Style**: `bg-white/90 backdrop-blur-md border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]`
+- **Content**:
+  - **Left**: "5 Tests Selected" (Typography: `font-semibold text-sky-700`).
+  - **Right**: Button `[Review & Assign >]`.
+- **Transition**: Slide up when selection > 0.
 
-return isDesktop ? <ThreePaneLayout /> : <MobileFlowLayout />
-```
+### **E. Review Sheet (Bottom Sheet)**
+*Triggered by the Bottom Bar 'Review' button.*
+- **Component**: `Sheet` (Shadcn) with `side="bottom"`.
+- **Content**: 
+  - List of selected tests (Compact view).
+  - Ability to remove items.
+  - Final "Confirm" button (`w-full`, `h-12`, `text-lg`).
 
-### **Color Palette (Clinical Pro)**
-- **Background**: `bg-slate-50` (App background).
-- **Card**: `bg-white` with `shadow-sm`, `border-slate-200`.
-- **Selected State**: `bg-sky-50`, `border-sky-200`.
-- **Primary Action**: `bg-sky-600` (CDC Blue).
-- **Text**: `text-slate-900` (Primary), `text-slate-500` (Secondary).
+## **4. Interaction Flow (Mobile)**
 
-## **4. Mockup Descriptions**
+1.  **Start**: User lands on page. Header & Search visible.
+2.  **Context**: User selects "Client" (Popup/Drawer).
+3.  **Search**: User taps Search, types "Glu". List filters instantly.
+4.  **Select**: User taps "Glucose". 
+    - Card turns Blue (`bg-sky-50`).
+    - Bottom Bar slides up: "1 Selected".
+5.  **Refine**: User scrolls horizontal chips, taps "Huyết học". List updates.
+6.  **Review**: User taps "Review & Assign" on Bottom Bar.
+    - Sheet opens. User checks list.
+7.  **Commit**: User taps "Confirm". loading state -> Success Toast.
 
-### **View: Mobile Main**
-```
-[ Header: < Back | Accession ]
-[ Collapsible Card: Sample Info (Client: Benh Vien A...) v ]
-[ Sticky: Search Icon | Search Loop... | Filter Button ]
-[ Scroll: [All] [Sinh Hoa] [Huyet Hoc] [Vi Sinh] ... ]
+## **5. Technical Implementation Plan**
 
-[ Card: Glucose (Mau)     ] [ ] (Checkbox)
-[ Method: GOD-PAP         ]
----------------------------
-[ Card: Urea (Mau)        ] [x] (Checked)
-[ Method: Urease UV       ]
----------------------------
-[ Card: Creatinine        ] [x] (Checked)
-...
+### **Phase 1: Component Construction**
+- [ ] **`MobileTestCard.tsx`**: Enhance existing component with `active:scale-[0.99]` feedback and proper spacing.
+- [ ] **`MobileFilterBar.tsx`**: Implement sticky header with horizontal scroll area for specialty badges.
+- [ ] **`MobileBottomBar.tsx`**: Implement the fixed footer with distinct "Review" state.
 
-[ Bottom Fixed Bar: 2 Tests selected  |  [Review & Create >] ]
-```
+### **Phase 2: Layout Integration**
+- [ ] **`TestAssignmentGrid.tsx`**:
+  - Use `useMediaQuery` to switch between `<table>` (Desktop) and `virtuoso`/`map` (Mobile).
+  - *Note*: TanStack Virtual is preferred for performance if list > 50 items.
+- [ ] **`SampleAccessionForm.tsx`**:
+  - Restructure flex layout to ensure Bottom Bar sits above mobile browser chrome.
 
-### **View: Mobile Bottom Sheet (Cart)**
-```
-[ Handle ]
-[ Title: Selected Tests (2)         [Clear All] ]
-----------------------------------------------
-[ Row: Glucose                     [Trash Icon] ]
-[ Row: Urea                        [Trash Icon] ]
-----------------------------------------------
-[ Button: Confirm Create (Loading...)           ]
-```
-
-## **5. Action Plan**
-1.  **Refactor `TestAssignmentGrid.tsx`**:
-    - Extract `MobileTestCard` component.
-    - Extract `MobileBottomBar` component.
-    - Implement conditional rendering based on media query.
-2.  **Refactor `SampleAccessionForm.tsx`**:
-    - Adapt layout to hold the `TestAssignmentGrid` differently on mobile.
-    - Move form inputs to a compact header or drawer on mobile.
-3.  **Refine CSS**:
-    - Ensure virtualizer works with variable heights or fixed card heights.
-    - Test `z-index` for sticky overlapping.
+### **Phase 3: Refinement**
+- [ ] **Touch Targets**: Ensure all clickable zones are min 44x44px.
+- [ ] **SafeArea**: Handle iPhone "Home Indicator" spacing in Bottom Bar (`pb-safe`).
+- [ ] **Testing**: Verify on actual mobile device or Simulator.

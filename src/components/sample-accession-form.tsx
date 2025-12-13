@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { CreateSampleWithAssignmentsSchema, type CreateSampleWithAssignments, type CreateSample, type Client, type LabSpecialty, type SampleType } from '@/types'
+import { CreateSampleWithAssignmentsSchema, type CreateSampleWithAssignments, type CreateSample, type Client, type LabSpecialty, type SampleType, type SelectedTest } from '@/types'
 import { accessionAndAssignTestsClient, createSampleClient } from '@/lib/api-client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { TestAssignmentGrid, type SelectedTest } from '@/components/test-assignment-grid'
+import { TestAssignmentGrid } from '@/components/test-assignment-grid'
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import { ClientSelector } from '@/components/client-selector'
@@ -49,6 +49,7 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
         formState: { errors },
         reset,
         setValue,
+        watch
     } = useForm<FormData>({
         resolver: zodResolver(FormSchema),
         defaultValues: {
@@ -163,6 +164,11 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
                 isSaving={isSubmitting}
                 onSave={handleSubmit(onSubmit)}
                 saveLabel="Tạo mẫu và chỉ định"
+                summaryInfo={{
+                    clientName: selectedClient?.name,
+                    sampleType: selectedSampleType,
+                    receivedAt: watch('received_at') ? new Date(watch('received_at')!).toLocaleString('vi-VN') : 'Hiện tại'
+                }}
                 context={
                     <div className="space-y-6">
                         {/* Client Selector */}
@@ -274,4 +280,3 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
         </form>
     )
 }
-

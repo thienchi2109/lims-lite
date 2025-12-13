@@ -29,6 +29,15 @@ async function callClientAction<T = any>(action: ClientActionName, payload?: unk
         body: JSON.stringify({ action, payload }),
     })
 
+    if (response.status === 401) {
+        // Handle session expiry
+        console.error('Session expired or invalid, redirecting to login...')
+        if (typeof window !== 'undefined') {
+            window.location.href = '/login?error=SessionExpired'
+        }
+        throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+    }
+
     if (!response.ok) {
         let errorMessage = 'Không thể kết nối đến máy chủ'
         try {
@@ -44,6 +53,14 @@ async function callClientAction<T = any>(action: ClientActionName, payload?: unk
 
     const data = await response.json()
     if (data && typeof data === 'object' && 'error' in data && (data as any).error) {
+        // Double check if the error inside payload suggests auth failure
+        const errorMsg = String((data as any).error).toLowerCase()
+        if (errorMsg.includes('jws') || errorMsg.includes('signature') || errorMsg.includes('jwt')) {
+            if (typeof window !== 'undefined') {
+                window.location.href = '/login?error=SessionExpired'
+            }
+            throw new Error('Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.')
+        }
         throw new Error(String((data as any).error))
     }
 
@@ -107,12 +124,12 @@ export function removeMethodFromAssayClient(assayMethodId: string) {
 }
 
 export function createAssayDefinitionClient(payload: { name: string; specialty_id?: string; methodId?: string; units?: string; validationRules?: Record<string, unknown> }) {
-	    return callClientAction('createAssayDefinition', payload)
-	}
+    return callClientAction('createAssayDefinition', payload)
+}
 
 export function updateAssayDefinitionClient(payload: { id: string; name: string; specialty_id?: string; units?: string; validationRules?: Record<string, unknown> }) {
-	    return callClientAction('updateAssayDefinition', payload)
-	}
+    return callClientAction('updateAssayDefinition', payload)
+}
 
 export function deleteAssayDefinitionClient(id: string) {
     return callClientAction('deleteAssayDefinition', { id })

@@ -79,7 +79,8 @@ function isAllowedOrigin(request: Request) {
 
 function mapErrorToStatus(message: string) {
     const normalized = message.toLowerCase()
-    if (normalized.includes('unauthorized')) return 401
+    // Map JWS/JWT errors to 401 so client can handle redirect
+    if (normalized.includes('unauthorized') || normalized.includes('jws') || normalized.includes('signature') || normalized.includes('jwt')) return 401
     if (normalized.includes('forbidden')) return 403
     if (normalized.includes('not found')) return 404
     return 400
@@ -137,40 +138,40 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
         }
         return removeMethodFromAssay(payload.assayMethodId)
     },
-	    createAssayDefinition: async (payload) => {
-	        if (!payload?.name) {
-	            return { error: 'Tên chỉ tiêu là bắt buộc' }
-	        }
-	        const formData = new FormData()
-	        formData.append('name', payload.name)
-	        if (payload.specialty_id) {
-	            formData.append('specialty_id', payload.specialty_id)
-	        }
-	        if (payload.methodId) {
-	            formData.append('method_id', payload.methodId)
-	        }
-	        if (payload.units) {
-	            formData.append('units', payload.units)
+    createAssayDefinition: async (payload) => {
+        if (!payload?.name) {
+            return { error: 'Tên chỉ tiêu là bắt buộc' }
+        }
+        const formData = new FormData()
+        formData.append('name', payload.name)
+        if (payload.specialty_id) {
+            formData.append('specialty_id', payload.specialty_id)
+        }
+        if (payload.methodId) {
+            formData.append('method_id', payload.methodId)
+        }
+        if (payload.units) {
+            formData.append('units', payload.units)
         }
         if (payload.validationRules) {
             formData.append('validation_rules', JSON.stringify(payload.validationRules))
         }
         return createAssayDefinition(formData)
     },
-	    updateAssayDefinition: async (payload) => {
-	        if (!payload?.id || !payload?.name) {
-	            return { error: 'id và tên chỉ tiêu là bắt buộc' }
-	        }
-	        const formData = new FormData()
-	        formData.append('id', payload.id)
-	        formData.append('name', payload.name)
-	        if (payload.specialty_id) {
-	            formData.append('specialty_id', payload.specialty_id)
-	        }
-	        if (payload.units) {
-	            formData.append('units', payload.units)
-	        }
-	        if (payload.validationRules) {
+    updateAssayDefinition: async (payload) => {
+        if (!payload?.id || !payload?.name) {
+            return { error: 'id và tên chỉ tiêu là bắt buộc' }
+        }
+        const formData = new FormData()
+        formData.append('id', payload.id)
+        formData.append('name', payload.name)
+        if (payload.specialty_id) {
+            formData.append('specialty_id', payload.specialty_id)
+        }
+        if (payload.units) {
+            formData.append('units', payload.units)
+        }
+        if (payload.validationRules) {
             formData.append('validation_rules', JSON.stringify(payload.validationRules))
         }
         return updateAssayDefinition(formData)
