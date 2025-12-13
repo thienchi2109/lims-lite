@@ -30,6 +30,11 @@ import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { AssayMethodsList } from './assay-methods-list'
 import { LabSpecialty } from '@/types'
+import { CreateLabSpecialtySchema } from '@/types'
+import { createLabSpecialty } from '@/app/actions/lab-specialties'
+import { Textarea } from '@/components/ui/textarea'
+import { Plus, X, Save } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 type Method = {
     id: string
@@ -76,6 +81,20 @@ export function AssayDefinitionDialog({
     const [isPending, startTransition] = useTransition()
     const [methods, setMethods] = useState<Method[]>([])
     const [loadingMethods, setLoadingMethods] = useState(true)
+
+    // Local state for specialties to allow immediate updates
+    // Local state for specialties
+    const [localSpecialties, setLocalSpecialties] = useState<LabSpecialty[]>(specialties)
+
+    // Inline specialty creation state
+    const [isCreatingSpecialty, setIsCreatingSpecialty] = useState(false)
+    const [newSpecialtyCode, setNewSpecialtyCode] = useState('')
+    const [newSpecialtyName, setNewSpecialtyName] = useState('')
+    const [newSpecialtyDescription, setNewSpecialtyDescription] = useState('')
+
+    useEffect(() => {
+        setLocalSpecialties(specialties)
+    }, [specialties])
 
     const router = useRouter()
 
@@ -128,6 +147,62 @@ export function AssayDefinitionDialog({
             setMethods(uniqueMethods)
         }
         setLoadingMethods(false)
+    }
+
+    const handleCreateSpecialty = (e: React.MouseEvent) => {
+        e.preventDefault() // prevent form submission of the main form
+
+        const rawData = {
+            name: newSpecialtyName,
+            code: newSpecialtyCode,
+            description: newSpecialtyDescription || undefined,
+        }
+
+        const validation = CreateLabSpecialtySchema.safeParse(rawData)
+
+        if (!validation.success) {
+            const errorMessages = Object.values(validation.error.flatten().fieldErrors)
+                .flat()
+                .join(', ')
+            toast.error(errorMessages || 'Dữ liệu không hợp lệ')
+            return
+        }
+
+        const formData = new FormData()
+        formData.append('name', newSpecialtyName)
+        formData.append('code', newSpecialtyCode)
+        if (newSpecialtyDescription) formData.append('description', newSpecialtyDescription)
+
+        startTransition(async () => {
+            const result = await createLabSpecialty(formData)
+
+            if (result.error) {
+                toast.error(result.error)
+            } else if (result.success && result.data) {
+                toast.success('Đã tạo nhóm kỹ thuật thành công')
+                const newSpecialty = result.data
+                setLocalSpecialties((prev) => [...prev, newSpecialty].sort((a, b) => (a.display_order - b.display_order)))
+                setSpecialtyId(newSpecialty.id)
+                // Reset inline form
+                setIsCreatingSpecialty(false)
+                setNewSpecialtyCode('')
+                setNewSpecialtyName('')
+                setNewSpecialtyDescription('')
+            }
+        })
+    }
+
+    const toggleSpecialtyMode = () => {
+        if (isCreatingSpecialty) {
+            // Cancel creation
+            setIsCreatingSpecialty(false)
+            setNewSpecialtyCode('')
+            setNewSpecialtyName('')
+            setNewSpecialtyDescription('')
+        } else {
+            // Start creation
+            setIsCreatingSpecialty(true)
+        }
     }
 
     const resetForm = () => {
@@ -259,23 +334,107 @@ export function AssayDefinitionDialog({
                             {/* Specialty - Required */}
                             <div className="space-y-2">
                                 <Label htmlFor="specialty">Nhóm kỹ thuật <span className="text-red-500">*</span></Label>
-                                <Select
-                                    value={specialtyId}
-                                    onValueChange={setSpecialtyId}
-                                    disabled={isPending}
-                                    required
-                                >
-                                    <SelectTrigger id="specialty">
-                                        <SelectValue placeholder="Chọn Nhóm kỹ thuật" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {specialties?.map((specialty) => (
-                                            <SelectItem key={specialty.id} value={specialty.id}>
-                                                {specialty.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+
+                                {isCreatingSpecialty ? (
+                                    <div className="space-y-3 p-3 border rounded-md bg-muted/20">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <h4 className="text-sm font-medium">Tạo nhóm kỹ thuật mới</h4>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={toggleSpecialtyMode}
+                                                className="h-6 w-6 p-0"
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1">
+                                                <Label htmlFor="newSpecCode" className="text-xs">Mã (viết tắt)</Label>
+                                                <Input
+                                                    id="newSpecCode"
+                                                    value={newSpecialtyCode}
+                                                    onChange={(e) => setNewSpecialtyCode(e.target.value.toUpperCase())}
+                                                    placeholder="VD: MIC"
+                                                    className="h-8 text-sm"
+                                                    maxLength={20}
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label htmlFor="newSpecName" className="text-xs">Tên nhóm</Label>
+                                                <Input
+                                                    id="newSpecName"
+                                                    value={newSpecialtyName}
+                                                    onChange={(e) => setNewSpecialtyName(e.target.value)}
+                                                    placeholder="VD: Vi sinh vật"
+                                                    className="h-8 text-sm"
+                                                />
+                                            </div>
+                                            <div className="col-span-2 space-y-1">
+                                                <Label htmlFor="newSpecDesc" className="text-xs">Mô tả</Label>
+                                                <Textarea
+                                                    id="newSpecDesc"
+                                                    value={newSpecialtyDescription}
+                                                    onChange={(e) => setNewSpecialtyDescription(e.target.value)}
+                                                    placeholder="Mô tả thêm..."
+                                                    className="h-16 text-sm resize-none"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            className="w-full mt-2"
+                                            onClick={handleCreateSpecialty}
+                                            disabled={isPending || !newSpecialtyCode || !newSpecialtyName}
+                                        >
+                                            {isPending ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Save className="h-3 w-3 mr-2" />}
+                                            Lưu nhóm kỹ thuật
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <div className="flex gap-2">
+                                        <Select
+                                            value={specialtyId}
+                                            onValueChange={setSpecialtyId}
+                                            disabled={isPending}
+                                            required
+                                        >
+                                            <SelectTrigger id="specialty" className="w-full">
+                                                <SelectValue placeholder="Chọn Nhóm kỹ thuật" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {localSpecialties?.map((specialty) => (
+                                                    <SelectItem key={specialty.id} value={specialty.id}>
+                                                        {specialty.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="flex-shrink-0"
+                                                        onClick={toggleSpecialtyMode}
+                                                        disabled={isPending}
+                                                    >
+                                                        <Plus className="h-4 w-4" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>Thêm nhóm kỹ thuật mới</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Method - Only show in create mode */}

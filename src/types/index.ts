@@ -136,6 +136,14 @@ export const LabSpecialtySchema = z.object({
 
 export type LabSpecialty = z.infer<typeof LabSpecialtySchema>
 
+export const CreateLabSpecialtySchema = z.object({
+    name: z.string().min(1, 'Name is required').max(100),
+    code: z.string().min(1, 'Code is required').max(20).regex(/^[A-Z0-9]+$/, 'Code must be uppercase alphanumeric'),
+    description: z.string().optional(),
+})
+
+export type CreateLabSpecialty = z.infer<typeof CreateLabSpecialtySchema>
+
 export const MethodSchema = z.object({
     id: z.string().uuid(),
     name: z.string().min(1).max(200),
