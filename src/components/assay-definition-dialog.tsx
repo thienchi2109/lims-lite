@@ -224,6 +224,16 @@ export function AssayDefinitionDialog({
             return
         }
 
+        if (isCreatingSpecialty) {
+            toast.error('Vui lòng hoàn tất hoặc hủy tạo nhóm kỹ thuật trước khi lưu')
+            return
+        }
+
+        if (!specialtyId) {
+            toast.error('Vui lòng chọn nhóm kỹ thuật')
+            return
+        }
+
         // Build validation rules from individual fields
         const validationRules: Record<string, any> = {}
 
