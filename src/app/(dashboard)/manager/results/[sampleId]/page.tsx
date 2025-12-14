@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft, RefreshCcw } from 'lucide-react'
 import Link from 'next/link'
 import { SampleStatusBadge } from '@/components/sample-status-badge'
+import { CoAStatusBadge } from '@/components/coa-status-badge'
 import {
     Collapsible,
     CollapsibleContent,
@@ -85,7 +86,7 @@ export default async function ManagerResultsPage({ params }: PageProps) {
         .eq('sample_id', resolvedParams.sampleId)
         .order('generated_at', { ascending: false })
         .limit(1)
-        .single()
+        .maybeSingle()
 
     // Get results for this sample
     const { data: results, error } = await getResultsBySample(resolvedParams.sampleId)
@@ -115,7 +116,12 @@ export default async function ManagerResultsPage({ params }: PageProps) {
                     </div>
                     <div className="flex items-center gap-3">
                         <h1 className="text-3xl font-bold tracking-tight">Xem xét kết quả</h1>
-                        <SampleStatusBadge status={sample.status} />
+                        <div className="flex items-center gap-2">
+                            <SampleStatusBadge status={sample.status} />
+                            {sample.status === 'completed' && (
+                                <CoAStatusBadge status={coaReport?.status} />
+                            )}
+                        </div>
                     </div>
                     <p className="text-muted-foreground">
                         Quản lý: {userData.full_name}
