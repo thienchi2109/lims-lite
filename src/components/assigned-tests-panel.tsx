@@ -311,16 +311,18 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
                     </Badge>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2 border-slate-200 bg-white text-slate-600 hover:border-indigo-200 hover:text-indigo-600"
-                        disabled={results.length === 0}
-                        onClick={handlePrint}
-                    >
-                        <Printer className="h-4 w-4" />
-                        Xuất Phiếu
-                    </Button>
+                    {/* Print Button - Only show for completed samples */}
+                    {sampleStatus === 'completed' && results.length > 0 && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-2 border-slate-200 bg-white text-slate-600 hover:border-indigo-200 hover:text-indigo-600"
+                            onClick={handlePrint}
+                        >
+                            <Printer className="h-4 w-4" />
+                            In kết quả
+                        </Button>
+                    )}
 
                     {/* Submit for Review Button */}
                     {sampleStatus === 'in_progress' && allResultsEntered && (
