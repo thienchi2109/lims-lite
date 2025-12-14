@@ -1,11 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
+import { getSupabaseServerUrl, getSupabaseServiceRoleKey } from '@/lib/supabase/env'
 
 export function createEdgeAdminClient() {
-    const supabaseUrl = process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseUrl = getSupabaseServerUrl()
 
     return createClient(
         supabaseUrl,
-        process.env.SERVICE_ROLE_KEY!,
+        getSupabaseServiceRoleKey(),
         {
             auth: {
                 autoRefreshToken: false,
@@ -14,4 +15,3 @@ export function createEdgeAdminClient() {
         }
     )
 }
-

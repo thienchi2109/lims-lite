@@ -1,16 +1,16 @@
 import { createServerClient } from '@supabase/ssr'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import { getSupabaseAnonKey, getSupabaseServerUrl, getSupabaseServiceRoleKey } from '@/lib/supabase/env'
 
 export async function createClient() {
     const cookieStore = await cookies()
 
-    // Prioritize internal Docker URL for server-side requests
-    const supabaseUrl = process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseUrl = getSupabaseServerUrl()
 
     return createServerClient(
         supabaseUrl,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        getSupabaseAnonKey(),
         {
             cookies: {
                 getAll() {
@@ -33,12 +33,11 @@ export async function createClient() {
 }
 
 export function createAdminClient() {
-    // Prefer internal Docker URL for server-side requests (e.g., API routes / server actions)
-    const supabaseUrl = process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseUrl = getSupabaseServerUrl()
 
     return createSupabaseClient(
         supabaseUrl,
-        process.env.SERVICE_ROLE_KEY!,
+        getSupabaseServiceRoleKey(),
         {
             auth: {
                 autoRefreshToken: false,

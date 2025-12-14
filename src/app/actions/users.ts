@@ -134,7 +134,19 @@ export async function createUser(data: z.infer<typeof CreateUserSchema>) {
         }
     })
 
-    if (authError) throw new Error(`Auth creation failed: ${authError.message}`)
+    if (authError) {
+        const message = authError.message || 'Unknown error'
+        if (message.toLowerCase().includes('invalid jwt')) {
+            throw new Error(
+                [
+                    'Auth creation failed: invalid JWT.',
+                    'Nguyên nhân thường gặp: `SERVICE_ROLE_KEY`/`ANON_KEY` không khớp với `JWT_SECRET` trong Docker (chữ ký JWT không hợp lệ).',
+                    'Cách sửa: chạy `node scripts/sync-supabase-jwt-keys.js`, rồi restart Docker + restart Next.js và đăng nhập lại.',
+                ].join(' ')
+            )
+        }
+        throw new Error(`Auth creation failed: ${message}`)
+    }
     if (!authUser.user) throw new Error('Auth creation failed: No user returned')
 
     // 2. Create in public.users
