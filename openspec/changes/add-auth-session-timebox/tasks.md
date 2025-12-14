@@ -17,6 +17,6 @@
 - [x] 4.1 Update `/login` to show a Vietnamese “session expired, please log in again” message when `reason=session_expired`
 
 ## 5. Docs & Verification
-- [ ] 5.1 Update `docs/test-token-expiry.md` to explain "sliding refresh expiry" vs "hard session timebox"
-- [ ] 5.2 Update `tests/check_tokens.sql` to display session age and validate timebox enforcement inputs
-- [ ] 5.3 Manual verification: login, advance time > 4h, confirm redirect on protected routes and on server actions/API calls
+- [x] 5.1 Update `docs/test-token-expiry.md` to explain "sliding refresh expiry" vs "hard session timebox"
+- [x] 5.2 Update `tests/check_tokens.sql` to display session age and validate timebox enforcement inputs
+- [x] 5.3 Manual verification: login, advance time > 4h, confirm redirect on protected routes and on server actions/API calls
