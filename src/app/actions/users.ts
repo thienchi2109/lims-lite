@@ -136,7 +136,18 @@ export async function createUser(data: z.infer<typeof CreateUserSchema>) {
 
     if (authError) {
         const message = authError.message || 'Unknown error'
-        if (message.toLowerCase().includes('invalid jwt')) {
+        const normalized = message.toLowerCase()
+
+        if (
+            normalized.includes('email') &&
+            (normalized.includes('already been registered') ||
+                normalized.includes('already registered') ||
+                normalized.includes('already exists'))
+        ) {
+            throw new Error('Email này đã được đăng ký. Vui lòng sử dụng email khác.')
+        }
+
+        if (normalized.includes('invalid jwt')) {
             throw new Error(
                 [
                     'Auth creation failed: invalid JWT.',
