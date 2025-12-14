@@ -683,8 +683,8 @@ export type CoAReport = z.infer<typeof CoAReportSchema>
 
 export const CoAAccessLogSchema = z.object({
     id: z.string().uuid(),
-    client_id: z.string().uuid(),
-    sample_id: z.string().uuid(),
+    client_id: z.string().uuid().nullable().optional(),
+    sample_id: z.string().uuid().nullable().optional(),
     coa_report_id: z.string().uuid().nullable().optional(),
     accessed_at: z.string().datetime(),
     ip_address: z.string().nullable().optional(),
