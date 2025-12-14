@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { CreateUserSchema, UpdateUserSchema, type CreateUser, type UpdateUser, type User } from '@/types'
-import { createUserClient, updateUserClient } from '@/lib/api-client'
+import { createUserClient, updateUserClient, uploadSignatureClient } from '@/lib/api-client'
 import { Button } from '@/components/ui/button'
 import {
     Form,
@@ -22,7 +22,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { toast } from 'sonner' // Assuming sonner is used, if not I'll check toast availability
+import { SignatureUploadField } from '@/components/signature-upload-field'
+import { toast } from 'sonner'
 import { z } from 'zod'
 
 // We need a combined schema or handling logic because Create and Update are different
@@ -36,6 +37,8 @@ interface UserFormProps {
 
 export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [signatureFile, setSignatureFile] = useState<File | null>(null)
+    const [signatureError, setSignatureError] = useState<string | null>(null)
     const isEdit = !!user
 
     const updateSchema = UpdateUserSchema.extend({
@@ -72,6 +75,8 @@ export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
 
     async function onSubmit(values: UserFormValues) {
         setIsSubmitting(true)
+        setSignatureError(null)
+
         try {
             if (isEdit && user) {
                 const updateValues = values as UpdateUserFormValues
@@ -107,7 +112,35 @@ export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
                 if (hasActionError(result)) {
                     throw new Error(result.error)
                 }
-                toast.success('Đã tạo người dùng mới')
+
+                // If manager role and signature file provided, upload signature
+                if (createValues.role === 'manager' && signatureFile) {
+                    try {
+                        const formData = new FormData()
+                        formData.append('file', signatureFile)
+
+                        const signatureResult = await uploadSignatureClient(formData)
+                        if (!signatureResult.success) {
+                            // Signature upload failed, but user was created
+                            setSignatureError(signatureResult.error)
+                            toast.warning(
+                                'Tài khoản đã được tạo nhưng chữ ký tải lên thất bại. ' +
+                                'Vui lòng tải lên chữ ký trong Cài đặt.'
+                            )
+                        } else {
+                            toast.success('Đã tạo người dùng mới và tải lên chữ ký thành công')
+                        }
+                    } catch (signatureErr) {
+                        console.error('Signature upload error:', signatureErr)
+                        setSignatureError('Tải lên chữ ký thất bại')
+                        toast.warning(
+                            'Tài khoản đã được tạo nhưng chữ ký tải lên thất bại. ' +
+                            'Vui lòng tải lên chữ ký trong Cài đặt.'
+                        )
+                    }
+                } else {
+                    toast.success('Đã tạo người dùng mới')
+                }
             }
             onSuccess()
         } catch (error) {
@@ -216,6 +249,16 @@ export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
                         </FormItem>
                     )}
                 />
+
+                {/* Signature upload for manager role (only during creation) */}
+                {!isEdit && form.watch('role') === 'manager' && (
+                    <SignatureUploadField
+                        value={signatureFile}
+                        onChange={setSignatureFile}
+                        error={signatureError || undefined}
+                        required={false}
+                    />
+                )}
 
                 {form.formState.errors.root && (
                     <div className="text-red-500 text-sm">
