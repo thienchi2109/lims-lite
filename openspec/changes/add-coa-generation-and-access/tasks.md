@@ -44,11 +44,11 @@
 - [x] 6.5 Add loading states and error handling
 - [x] 6.6 Test responsive design and accessibility
 
-## 7. Frontend - Manager Features
-- [ ] 7.1 Add CoA status indicator to sample detail panel
-- [ ] 7.2 Create "Tạo lại CoA" (Regenerate CoA) button for failed generations
-- [ ] 7.3 Display CoA generation errors to managers with retry option
-- [ ] 7.4 Add CoA access log viewer for managers (audit trail)
+## 7. Frontend - Manager Features ✅
+- [x] 7.1 Add CoA status indicator to sample detail panel
+- [x] 7.2 Create "Tạo lại CoA" (Regenerate CoA) button for failed generations
+- [x] 7.3 Display CoA generation errors to managers with retry option
+- [x] 7.4 Add CoA access log viewer for managers (audit trail)
 
 ## 8. Testing & Validation
 - [ ] 8.1 Test full workflow: approve sample → HTML auto-generated → verify Storage upload with file hash
