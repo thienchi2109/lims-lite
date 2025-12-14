@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { LoginSchema } from '@/types'
 import { redirect } from 'next/navigation'
 
@@ -21,12 +21,35 @@ export async function login(prevState: any, formData: FormData) {
         }
     }
 
-    const { username, password } = validation.data
+    const usernameInput = validation.data.username.trim()
+    const { password } = validation.data
 
-    // Map username to the seeded auth email (usernames don't exist in auth.users)
-    // Allow logging in with either the full email or just the username.
+    // Allow logging in with email OR username.
+    // If user enters a username, resolve it to the user's email in `public.users`
+    // (falling back to the seeded `@cdc-lims.local` convention).
     const emailSuffix = '@cdc-lims.local'
-    const email = username.includes('@') ? username : `${username}${emailSuffix}`
+    let email = usernameInput
+
+    if (!usernameInput.includes('@')) {
+        try {
+            const adminClient = createAdminClient()
+            const { data: userRow, error: lookupError } = await adminClient
+                .from('users')
+                .select('email')
+                .eq('username', usernameInput)
+                .is('deleted_at', null)
+                .maybeSingle()
+
+            const resolvedEmail = userRow?.email ?? null
+            if (!lookupError && resolvedEmail) {
+                email = resolvedEmail
+            } else {
+                email = `${usernameInput}${emailSuffix}`
+            }
+        } catch {
+            email = `${usernameInput}${emailSuffix}`
+        }
+    }
 
     const { data, error } = await supabase.auth.signInWithPassword({
         email,
