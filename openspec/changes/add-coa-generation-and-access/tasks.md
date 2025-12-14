@@ -1,22 +1,22 @@
-## 1. Design & Decisions
-- [ ] 1.1 Review existing HTML template structure (`docs/references/CoATemplate.html`)
-- [ ] 1.2 Define CoA retention policy (suggest 2 years minimum per compliance, configurable)
-- [ ] 1.3 Finalize RLS policy matrix for coa_reports, coa_access_log, and Storage bucket
-- [ ] 1.4 Review security checklist and rate limiting strategy
-- [ ] 1.5 Decide on HTML template data binding approach (server-side string interpolation vs template engine)
+## 1. Design & Decisions ✅
+- [x] 1.1 Review existing HTML template structure (`docs/references/CoATemplate.html`)
+- [x] 1.2 Define CoA retention policy (suggest 2 years minimum per compliance, configurable)
+- [x] 1.3 Finalize RLS policy matrix for coa_reports, coa_access_log, and Storage bucket
+- [x] 1.4 Review security checklist and rate limiting strategy
+- [x] 1.5 Decide on HTML template data binding approach (server-side string interpolation vs template engine)
 
-## 2. Database Migration
-- [ ] 2.1 Create `coa_reports` table with file_hash, version, superseded_by columns; constraints, indexes, audit triggers, RLS policies; document Security Impact: Medium
-- [ ] 2.2 Create `coa_access_log` table with constraints, indexes, audit triggers, RLS policies
-- [ ] 2.3 Add AFTER UPDATE trigger on `samples` to auto-generate CoA HTML on status='approved'
-- [ ] 2.4 Create indexes: `coa_reports(sample_id)`, `coa_reports(version)`, `coa_access_log(client_id, accessed_at)`
-- [ ] 2.5 Run `run_security_tests()` and validate constraints
+## 2. Database Migration ✅
+- [x] 2.1 Create `coa_reports` table with file_hash, version, superseded_by columns; constraints, indexes, audit triggers, RLS policies; document Security Impact: Medium
+- [x] 2.2 Create `coa_access_log` table with constraints, indexes, audit triggers, RLS policies
+- [x] 2.3 Add AFTER UPDATE trigger on `samples` to auto-generate CoA HTML on status='approved'
+- [x] 2.4 Create indexes: `coa_reports(sample_id)`, `coa_reports(version)`, `coa_access_log(client_id, accessed_at)`
+- [x] 2.5 Run `run_security_tests()` and validate constraints
 
-## 3. Storage Infrastructure
-- [ ] 3.1 Create `coa-reports` bucket in Supabase Storage with RLS policies
-- [ ] 3.2 Configure bucket policies: INSERT (manager/analyst), SELECT (manager/analyst/signed URLs), deny UPDATE/DELETE
-- [ ] 3.3 Test signed URL generation with 1-hour expiry
-- [ ] 3.4 Document storage path structure: `{sample_id}/{version}-{iso-timestamp}.html`
+## 3. Storage Infrastructure ✅
+- [x] 3.1 Create `coa-reports` bucket in Supabase Storage with RLS policies
+- [x] 3.2 Configure bucket policies: INSERT (manager/analyst), SELECT (manager/analyst/signed URLs), deny UPDATE/DELETE
+- [x] 3.3 Test signed URL generation with 1-hour expiry
+- [x] 3.4 Document storage path structure: `{sample_id}/{version}-{iso-timestamp}.html`
 
 ## 4. Backend - HTML Generation
 - [ ] 4.1 Create server action `generateCoA(sample_id)` with error handling
