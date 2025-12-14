@@ -601,3 +601,60 @@ export const SignatureHistoryItemSchema = z.object({
 })
 
 export type SignatureHistoryItem = z.infer<typeof SignatureHistoryItemSchema>
+
+// ============================================================================
+// COA AUTHENTICATION SCHEMAS (Phase 5)
+// ============================================================================
+
+// Phone + passcode authentication request
+export const CoAAuthRequestSchema = z.object({
+    phone: z.string()
+        .min(10, 'Số điện thoại không hợp lệ')
+        .max(15, 'Số điện thoại không hợp lệ'),
+    passcode: z.string()
+        .length(6, 'Mật khẩu phải có 6 chữ số')
+        .regex(/^[0-9]{6}$/, 'Mật khẩu chỉ chứa chữ số'),
+})
+
+export type CoAAuthRequest = z.infer<typeof CoAAuthRequestSchema>
+
+// Sample info returned after successful authentication
+export const CoASampleInfoSchema = z.object({
+    id: z.string().uuid(),
+    sample_id_display: z.string(),
+    sample_type: z.string().nullable(),
+    received_date: z.string().nullable(),
+    approved_at: z.string().nullable(),
+    has_coa: z.boolean(),
+})
+
+export type CoASampleInfo = z.infer<typeof CoASampleInfoSchema>
+
+// Authentication response
+export const CoAAuthResponseSchema = z.object({
+    success: z.boolean(),
+    client_id: z.string().uuid().optional(),
+    client_name: z.string().optional(),
+    samples: z.array(CoASampleInfoSchema).optional(),
+    token: z.string().optional(), // JWT token for downloads
+    error: z.string().optional(),
+})
+
+export type CoAAuthResponse = z.infer<typeof CoAAuthResponseSchema>
+
+// Download token payload (JWT)
+export const CoADownloadTokenSchema = z.object({
+    client_id: z.string().uuid(),
+    sample_id: z.string().uuid().optional(), // Optional: if omitted, can download any client sample
+    exp: z.number(), // Expiry timestamp
+})
+
+export type CoADownloadToken = z.infer<typeof CoADownloadTokenSchema>
+
+// Download request
+export const CoADownloadRequestSchema = z.object({
+    sample_id: z.string().uuid(),
+    token: z.string(),
+})
+
+export type CoADownloadRequest = z.infer<typeof CoADownloadRequestSchema>

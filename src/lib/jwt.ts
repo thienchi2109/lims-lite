@@ -24,3 +24,97 @@ export function decodeJwtPayload<T extends Record<string, unknown>>(jwt: string)
         return null
     }
 }
+
+// ============================================================================
+// COA DOWNLOAD TOKEN UTILITIES (Phase 5)
+// ============================================================================
+
+/**
+ * JWT Utilities for CoA Download Tokens
+ *
+ * Provides JWT signing and verification for CoA download tokens
+ */
+
+import { SignJWT, jwtVerify } from 'jose'
+import type { CoADownloadToken } from '@/types'
+
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
+
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET || 'fallback-secret-change-in-production'
+const TOKEN_EXPIRY_HOURS = 1 // 1 hour token expiry
+
+// Convert secret to Uint8Array for jose library
+const secret = new TextEncoder().encode(JWT_SECRET)
+
+// ============================================================================
+// JWT SIGNING
+// ============================================================================
+
+/**
+ * Create JWT token for CoA download authorization
+ *
+ * @param payload - Token payload with client_id and optional sample_id
+ * @returns Signed JWT token string
+ */
+export async function createCoAToken(payload: Omit<CoADownloadToken, 'exp'>): Promise<string> {
+    const exp = Math.floor(Date.now() / 1000) + (TOKEN_EXPIRY_HOURS * 60 * 60)
+
+    const token = await new SignJWT({ ...payload, exp })
+        .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+        .setIssuedAt()
+        .setExpirationTime(exp)
+        .sign(secret)
+
+    return token
+}
+
+// ============================================================================
+// JWT VERIFICATION
+// ============================================================================
+
+/**
+ * Verify and decode CoA download token
+ *
+ * @param token - JWT token string
+ * @returns Decoded token payload if valid
+ * @throws Error if token is invalid or expired
+ */
+export async function verifyCoAToken(token: string): Promise<CoADownloadToken> {
+    try {
+        const { payload } = await jwtVerify(token, secret, {
+            algorithms: ['HS256'],
+        })
+
+        // Validate payload structure
+        if (
+            typeof payload.client_id !== 'string' ||
+            typeof payload.exp !== 'number'
+        ) {
+            throw new Error('Invalid token payload structure')
+        }
+
+        return {
+            client_id: payload.client_id,
+            sample_id: payload.sample_id as string | undefined,
+            exp: payload.exp,
+        }
+    } catch (error) {
+        if (error instanceof Error) {
+            throw new Error(`Token verification failed: ${error.message}`)
+        }
+        throw new Error('Token verification failed')
+    }
+}
+
+/**
+ * Check if token is expired
+ *
+ * @param token - Decoded token payload
+ * @returns true if token is expired
+ */
+export function isTokenExpired(token: CoADownloadToken): boolean {
+    const now = Math.floor(Date.now() / 1000)
+    return token.exp < now
+}
