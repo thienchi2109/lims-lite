@@ -100,7 +100,6 @@ export async function POST(request: NextRequest) {
             .from('clients')
             .select('id, name, phone')
             .eq('phone', normalizedPhone)
-            .is('deleted_at', null)
             .single()
 
         // Step 6: Log failed attempt to access log (don't reveal if phone exists)
@@ -158,15 +157,13 @@ export async function POST(request: NextRequest) {
             .from('samples')
             .select(`
                 id,
-                sample_id_display,
-                sample_type,
-                received_date,
-                approved_at
+                sample_id,
+                type,
+                received_at
             `)
             .eq('client_id', client.id)
             .eq('status', 'completed')
-            .is('deleted_at', null)
-            .order('approved_at', { ascending: false })
+            .order('received_at', { ascending: false })
 
         if (samplesError) {
             console.error('Error fetching samples:', samplesError)
@@ -192,10 +189,10 @@ export async function POST(request: NextRequest) {
 
         const sampleInfoList: CoASampleInfo[] = (samples || []).map(sample => ({
             id: sample.id,
-            sample_id_display: sample.sample_id_display,
-            sample_type: sample.sample_type,
-            received_date: sample.received_date,
-            approved_at: sample.approved_at,
+            sample_id_display: sample.sample_id,
+            sample_type: sample.type,
+            received_date: sample.received_at,
+            approved_at: null, // Not tracked in samples table
             has_coa: samplesWithCoA.has(sample.id),
         }))
 
