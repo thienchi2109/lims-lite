@@ -65,35 +65,52 @@ interface CoAData {
 async function fetchSampleWithApprover(sampleId: string): Promise<SampleData | null> {
     const supabase = await createClient()
 
-    const { data, error } = await supabase
+    // Fetch sample with client info
+    const { data: sample, error: sampleError } = await supabase
         .from('samples')
         .select(`
             id,
-            sample_id_display,
-            approved_by,
-            approved_at,
-            sample_type,
-            received_date,
+            sample_id,
+            type,
+            received_at,
+            status,
             clients!inner (
                 name
             )
         `)
         .eq('id', sampleId)
+        .is('deleted_at', null)
         .single()
 
-    if (error || !data) {
-        console.error('Fetch sample error:', error)
+    if (sampleError || !sample) {
+        console.error('Fetch sample error:', sampleError)
+        return null
+    }
+
+    // Get approver info from the first approved result
+    const { data: approvedResult, error: resultError } = await supabase
+        .from('results')
+        .select('approved_by, approved_at')
+        .eq('sample_id', sampleId)
+        .eq('status', 'approved')
+        .not('approved_by', 'is', null)
+        .order('approved_at', { ascending: false })
+        .limit(1)
+        .single()
+
+    if (resultError || !approvedResult) {
+        console.error('Fetch approved result error:', resultError)
         return null
     }
 
     return {
-        id: data.id,
-        sample_id_display: data.sample_id_display,
-        approved_by: data.approved_by,
-        approved_at: data.approved_at,
-        client_name: (data.clients as any)?.name,
-        sample_type: data.sample_type,
-        received_date: data.received_date
+        id: sample.id,
+        sample_id_display: sample.sample_id,
+        approved_by: approvedResult.approved_by,
+        approved_at: approvedResult.approved_at,
+        client_name: (sample.clients as any)?.name,
+        sample_type: sample.type,
+        received_date: sample.received_at
     }
 }
 
@@ -120,10 +137,10 @@ async function fetchTestResults(sampleId: string): Promise<TestResult[]> {
         .from('results')
         .select(`
             value,
-            assays!inner (
+            assay_definitions!inner (
                 name,
-                unit,
-                normal_range
+                units,
+                validation_rules
             ),
             methods (
                 name
@@ -131,20 +148,32 @@ async function fetchTestResults(sampleId: string): Promise<TestResult[]> {
         `)
         .eq('sample_id', sampleId)
         .eq('status', 'approved')
-        .order('assays(name)', { ascending: true })
 
     if (error || !data) {
         console.error('Fetch test results error:', error)
         return []
     }
 
-    return data.map((row: any) => ({
-        assay_name: row.assays?.name || 'N/A',
-        value: row.value,
-        unit: row.assays?.unit || null,
-        normal_range: row.assays?.normal_range || null,
-        method_name: row.methods?.name || null
-    }))
+    // Sort by assay name
+    const sorted = data.sort((a: any, b: any) => {
+        const nameA = a.assay_definitions?.name || ''
+        const nameB = b.assay_definitions?.name || ''
+        return nameA.localeCompare(nameB)
+    })
+
+    return sorted.map((row: any) => {
+        // Extract normal_range from validation_rules if it exists
+        const validationRules = row.assay_definitions?.validation_rules || {}
+        const normalRange = validationRules.normal_range || null
+
+        return {
+            assay_name: row.assay_definitions?.name || 'N/A',
+            value: row.value,
+            unit: row.assay_definitions?.units || null,
+            normal_range: normalRange,
+            method_name: row.methods?.name || null
+        }
+    })
 }
 
 /**
