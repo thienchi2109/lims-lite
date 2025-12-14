@@ -5,6 +5,7 @@ import { getResultsBySample } from '@/app/actions/results'
 import { AssignedTestsPanel } from '@/components/assigned-tests-panel'
 import { ApprovalActions } from '@/components/approval-actions'
 import { CoAActions } from '@/components/coa-actions'
+import { CoAAccessLogViewer } from '@/components/coa-access-log-viewer'
 import { SampleActivityFeed } from '@/components/sample-activity-feed'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, RefreshCcw } from 'lucide-react'
@@ -178,6 +179,11 @@ export default async function ManagerResultsPage({ params }: PageProps) {
                 sampleStatus={sample.status}
                 coaReport={coaReport || null}
             />
+
+            {/* CoA Access Log Viewer - Only show for completed samples with CoA */}
+            {sample.status === 'completed' && coaReport?.status === 'ready' && (
+                <CoAAccessLogViewer sampleId={resolvedParams.sampleId} />
+            )}
 
             {/* Activity Feed */}
             <Collapsible defaultOpen={false}>
