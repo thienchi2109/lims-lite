@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getResultsBySample } from '@/app/actions/results'
 import { AssignedTestsPanel } from '@/components/assigned-tests-panel'
 import { ApprovalActions } from '@/components/approval-actions'
+import { CoAActions } from '@/components/coa-actions'
 import { SampleActivityFeed } from '@/components/sample-activity-feed'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, RefreshCcw } from 'lucide-react'
@@ -170,6 +171,13 @@ export default async function ManagerResultsPage({ params }: PageProps) {
 
             {/* Approval Actions */}
             <ApprovalActions sampleId={resolvedParams.sampleId} results={results} />
+
+            {/* CoA Actions */}
+            <CoAActions
+                sampleId={resolvedParams.sampleId}
+                sampleStatus={sample.status}
+                coaReport={coaReport || null}
+            />
 
             {/* Activity Feed */}
             <Collapsible defaultOpen={false}>
