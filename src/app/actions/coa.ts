@@ -99,36 +99,308 @@ async function verifySignatureHash(
  * For now, this is a placeholder
  */
 function renderCoATemplate(coaData: CoAData): string {
-    // TODO Phase 4: Implement actual HTML template rendering
-    // This should use the template from docs/references/CoATemplate.html
+    // Based on docs/references/CoATemplate.html structure
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${coaData.sample.sample_id_display}&margin=0`
+    const logoUrl = "https://i.postimg.cc/8zFZ52j1/cdc-logo-150.png"
+    const dateStr = coaData.approvalDate
+
     return `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>Giấy chứng nhận phân tích - ${coaData.sample.sample_id_display}</title>
-        </head>
-        <body>
-            <h1>GIẤY CHỨNG NHẬN PHÂN TÍCH</h1>
-            <p>Mẫu: ${coaData.sample.sample_id_display}</p>
-            <p>Khách hàng: ${coaData.sample.client_name || 'N/A'}</p>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giấy chứng nhận phân tích - ${coaData.sample.sample_id_display}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
 
-            <!-- Signature Section -->
-            <div class="signature-section">
-                <div class="signature-block">
-                    <p class="signature-title">LÃNH ĐẠO KHOA XÉT NGHIỆM</p>
-                    <img src="${coaData.approverSignature}" alt="Chữ ký" class="signature-image" />
-                    <p class="approver-name">${coaData.approverName}</p>
-                    <p class="approval-date">Ngày ${coaData.approvalDate}</p>
+        /* Cấu hình khổ giấy A4 */
+        @page {
+            margin: 15mm;
+            size: A4;
+        }
+
+        body {
+            font-family: 'Times New Roman', serif;
+            font-size: 14px;
+            color: #000;
+            line-height: 1.4;
+            background: #fff;
+            margin: 0;
+            padding: 10px;
+        }
+
+        .container {
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        /* HEADER */
+        .header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 15px;
+        }
+
+        .header-left {
+            flex: 0 0 15%;
+            display: flex;
+            justify-content: center;
+        }
+
+        .logo {
+            width: 100px;
+            height: auto;
+            display: block;
+        }
+
+        .header-center {
+            flex: 1;
+            text-align: center;
+            padding: 0 15px;
+        }
+
+        .org-parent {
+            font-size: 14px;
+            text-transform: uppercase;
+            margin: 0;
+        }
+
+        .org-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin: 5px 0 0 0;
+            text-transform: uppercase;
+        }
+
+        .org-address {
+            font-size: 12px;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        .form-name {
+            font-size: 26px;
+            font-weight: bold;
+            margin-top: 20px;
+            text-transform: uppercase;
+            color: #b91c1c;
+        }
+
+        .header-right {
+            flex: 0 0 15%;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .qr-img {
+            width: 90px;
+            height: 90px;
+            margin-bottom: 8px;
+        }
+
+        .sample-id-box {
+            font-family: monospace;
+            font-size: 12px;
+            font-weight: bold;
+            border: 1px solid #000;
+            padding: 4px;
+            border-radius: 4px;
+        }
+
+        /* INFO TABLE */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        td, th {
+            border: 1px solid #000;
+            padding: 8px;
+            vertical-align: middle;
+        }
+
+        .info-label {
+            font-weight: bold;
+            background-color: #f3f4f6;
+            width: 150px;
+        }
+
+        .info-value {
+            font-weight: 500;
+        }
+
+        /* SIGNATURE SECTION */
+        .signature-section {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 40px;
+            page-break-inside: avoid;
+        }
+
+        .signature-block {
+            text-align: center;
+            width: 250px;
+        }
+
+        .signature-title {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .signature-date {
+            font-style: italic;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+
+        .signature-image-container {
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 15px 0;
+        }
+
+        .signature-image {
+            max-width: 200px;
+            max-height: 80px;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .signature-placeholder {
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-style: italic;
+            color: #666;
+            font-size: 12px;
+        }
+
+        .approver-name {
+            font-weight: bold;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .footer-disclaimer {
+            margin-top: 30px;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
+            font-size: 12px;
+            font-style: italic;
+            text-align: center;
+            color: #555;
+        }
+
+        /* Hidden metadata for verification */
+        .metadata {
+            display: none;
+        }
+
+        @media print {
+            body {
+                -webkit-print-color-adjust: exact;
+            }
+            .signature-section {
+                margin-top: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <div class="header">
+            <div class="header-left">
+                <img src="${logoUrl}" class="logo" alt="Logo" />
+            </div>
+            <div class="header-center">
+                <div class="org-parent">SỞ Y TẾ THÀNH PHỐ CẦN THƠ</div>
+                <div class="org-name">TRUNG TÂM KIỂM SOÁT BỆNH TẬT (CDC)</div>
+                <div class="org-address">400 Nguyễn Văn Cừ, P. An Bình, TP. Cần Thơ</div>
+                <div class="form-name">GIẤY CHỨNG NHẬN PHÂN TÍCH</div>
+            </div>
+            <div class="header-right">
+                <img src="${qrCodeUrl}" class="qr-img" alt="QR Code" />
+                <div class="sample-id-box">${coaData.sample.sample_id_display}</div>
+            </div>
+        </div>
+
+        <!-- INFO -->
+        <div style="margin-bottom: 20px;">
+            <table>
+                <tr>
+                    <td class="info-label">Khách hàng:</td>
+                    <td class="info-value" colspan="3" style="text-transform: uppercase; font-size: 16px; font-weight: bold;">
+                        ${coaData.sample.client_name || 'N/A'}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="info-label">Mã mẫu:</td>
+                    <td class="info-value">${coaData.sample.sample_id_display}</td>
+                    <td class="info-label">Ngày phê duyệt:</td>
+                    <td class="info-value">${dateStr}</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- RESULTS PLACEHOLDER -->
+        <div style="margin-bottom: 20px;">
+            <p style="font-style: italic; color: #666;">
+                [Kết quả xét nghiệm sẽ được hiển thị ở đây - Phase 4]
+            </p>
+        </div>
+
+        <!-- SIGNATURE SECTION -->
+        <div class="signature-section">
+            <div class="signature-block">
+                <div class="signature-title">PHỤ TRÁCH XÉT NGHIỆM</div>
+                <div class="signature-image-container">
+                    <div class="signature-placeholder">(Ký và ghi rõ họ tên)</div>
                 </div>
+                <div style="font-weight: bold;">KTV. ........................</div>
             </div>
 
-            <!-- Hidden metadata for verification -->
-            <div style="display:none">
-                <span data-signature-id="${coaData.signatureId}"></span>
+            <div class="signature-block">
+                <div class="signature-date">Cần Thơ, ${dateStr}</div>
+                <div class="signature-title">LÃNH ĐẠO KHOA XÉT NGHIỆM</div>
+                <div class="signature-image-container">
+                    ${coaData.approverSignature ? `
+                        <img src="${coaData.approverSignature}" alt="Chữ ký" class="signature-image" />
+                    ` : `
+                        <div class="signature-placeholder">(Ký và ghi rõ họ tên)</div>
+                    `}
+                </div>
+                <div class="approver-name">${coaData.approverName}</div>
             </div>
-        </body>
-        </html>
+        </div>
+
+        <div class="footer-disclaimer">
+            Giấy chứng nhận này chỉ có giá trị trên mẫu xét nghiệm tại thời điểm kiểm tra.
+        </div>
+
+        <!-- Hidden metadata for verification -->
+        <div class="metadata">
+            <span data-signature-id="${coaData.signatureId}"></span>
+            <span data-sample-id="${coaData.sample.id}"></span>
+            <span data-approved-by="${coaData.sample.approved_by}"></span>
+            <span data-approved-at="${coaData.sample.approved_at}"></span>
+        </div>
+    </div>
+</body>
+</html>
     `
 }
 
