@@ -50,8 +50,8 @@ interface CoAData {
     sample: SampleData
     results: TestResult[]
     approverName: string
-    approverSignature: string // base64 data URI
-    signatureId: string
+    approverSignature: string | null // base64 data URI (optional - null shows placeholder)
+    signatureId: string | null
     approvalDate: string
 }
 
@@ -584,54 +584,42 @@ export async function generateCoA(sampleId: string): Promise<GenerateCoAResult> 
 
         const approverId = sample.approved_by
 
-        // Step 2: Fetch approver's active signature
+        // Step 2: Fetch approver's active signature (OPTIONAL - use placeholder if not available)
+        let signatureDataUri: string | null = null
+        let signatureId: string | null = null
+
         const signatureResult = await getActiveSignature(approverId)
-        if (!signatureResult.success) {
-            return {
-                success: false,
-                error: 'Người phê duyệt chưa tải lên chữ ký điện tử. ' +
-                    'Vui lòng tải lên chữ ký trong Cài đặt tài khoản trước khi tạo CoA.'
+        if (signatureResult.success) {
+            const signature = signatureResult.signature
+
+            // Step 3: Download signature file from storage
+            const downloadResult = await downloadSignature(signature.signature_path)
+            if (downloadResult.success) {
+                // Step 4: Verify signature integrity
+                const { data: signatureFileData, error: downloadError } = await supabase.storage
+                    .from('user-signatures')
+                    .download(signature.signature_path)
+
+                if (signatureFileData && !downloadError) {
+                    const signatureBuffer = await signatureFileData.arrayBuffer()
+                    const hashValid = await verifySignatureHash(signatureBuffer, signature.signature_hash)
+
+                    if (hashValid) {
+                        // Signature is valid - use it
+                        signatureDataUri = downloadResult.dataUri
+                        signatureId = signature.id
+                    } else {
+                        console.warn('Signature hash verification failed, using placeholder')
+                    }
+                } else {
+                    console.warn('Could not download signature file, using placeholder')
+                }
+            } else {
+                console.warn('Could not download signature, using placeholder')
             }
+        } else {
+            console.warn('No active signature found for approver, using placeholder')
         }
-
-        const signature = signatureResult.signature
-
-        // Step 3: Download signature file from storage
-        const downloadResult = await downloadSignature(signature.signature_path)
-        if (!downloadResult.success) {
-            return {
-                success: false,
-                error: 'Không thể tải xuống file chữ ký. File có thể đã bị xóa. ' +
-                    'Vui lòng tải lên chữ ký mới trong Cài đặt tài khoản.'
-            }
-        }
-
-        // Step 4: Verify signature integrity
-        // Download the actual file for hash verification
-        const { data: signatureFileData, error: downloadError } = await supabase.storage
-            .from('user-signatures')
-            .download(signature.signature_path)
-
-        if (downloadError || !signatureFileData) {
-            return {
-                success: false,
-                error: 'Không thể tải xuống file chữ ký để xác minh'
-            }
-        }
-
-        const signatureBuffer = await signatureFileData.arrayBuffer()
-        const hashValid = await verifySignatureHash(signatureBuffer, signature.signature_hash)
-
-        if (!hashValid) {
-            return {
-                success: false,
-                error: 'Xác minh tính toàn vẹn chữ ký thất bại. ' +
-                    'File chữ ký có thể đã bị thay đổi. Vui lòng tải lên chữ ký mới.'
-            }
-        }
-
-        // Step 5: Get signature as base64 data URI (already done by downloadSignature)
-        const signatureDataUri = downloadResult.dataUri
 
         // Step 6: Get approver name
         const { data: approverData, error: approverError } = await supabase
@@ -653,7 +641,7 @@ export async function generateCoA(sampleId: string): Promise<GenerateCoAResult> 
             results,
             approverName: approverData.full_name,
             approverSignature: signatureDataUri,
-            signatureId: signature.id,
+            signatureId: signatureId,
             approvalDate: sample.approved_at ? new Date(sample.approved_at).toLocaleDateString('vi-VN') : 'N/A'
         }
 
@@ -684,7 +672,7 @@ export async function generateCoA(sampleId: string): Promise<GenerateCoAResult> 
                 sample_id: sampleId,
                 file_path: filePath,
                 file_hash: htmlHash,
-                signature_id: signature.id, // ✅ Immutable link to signature version
+                signature_id: signatureId, // ✅ Immutable link to signature version (null if no signature)
                 version,
                 status: 'ready',
             })
