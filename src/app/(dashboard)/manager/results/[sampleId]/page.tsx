@@ -78,6 +78,15 @@ export default async function ManagerResultsPage({ params }: PageProps) {
         )
     }
 
+    // Get CoA report for this sample (if exists)
+    const { data: coaReport } = await supabase
+        .from('coa_reports')
+        .select('id, status, error_message, file_path, generated_at')
+        .eq('sample_id', resolvedParams.sampleId)
+        .order('generated_at', { ascending: false })
+        .limit(1)
+        .single()
+
     // Get results for this sample
     const { data: results, error } = await getResultsBySample(resolvedParams.sampleId)
 
