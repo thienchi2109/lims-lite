@@ -567,6 +567,26 @@ export async function generateCoA(sampleId: string): Promise<GenerateCoAResult> 
     try {
         const supabase = await createClient()
 
+        // Only managers can generate CoA
+        const {
+            data: { user },
+            error: authError,
+        } = await supabase.auth.getUser()
+
+        if (authError || !user) {
+            return { success: false, error: 'Unauthorized' }
+        }
+
+        const { data: userData, error: roleError } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+        if (roleError || !userData || userData.role !== 'manager') {
+            return { success: false, error: 'Chỉ Quản lý mới có thể tạo CoA' }
+        }
+
         // Step 1: Fetch sample data
         const sample = await fetchSampleWithApprover(sampleId)
         if (!sample) {
