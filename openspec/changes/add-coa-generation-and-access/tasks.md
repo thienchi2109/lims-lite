@@ -37,12 +37,12 @@
 - [x] 5.7 Update Zod schemas and types for CoA authentication and download
 
 ## 6. Frontend - Public Portal
-- [ ] 6.1 Create `/coa/access` public page with Vietnamese UI
-- [ ] 6.2 Build phone + passcode form with validation (6-digit masked input)
-- [ ] 6.3 Display approved samples list with download links on success
-- [ ] 6.4 Handle auth errors with generic message (don't reveal if phone exists)
-- [ ] 6.5 Add loading states and error handling
-- [ ] 6.6 Test responsive design and accessibility
+- [x] 6.1 Create `/coa/access` public page with Vietnamese UI
+- [x] 6.2 Build phone + passcode form with validation (6-digit masked input)
+- [x] 6.3 Display approved samples list with download links on success
+- [x] 6.4 Handle auth errors with generic message (don't reveal if phone exists)
+- [x] 6.5 Add loading states and error handling
+- [x] 6.6 Test responsive design and accessibility
 
 ## 7. Frontend - Manager Features
 - [ ] 7.1 Add CoA status indicator to sample detail panel

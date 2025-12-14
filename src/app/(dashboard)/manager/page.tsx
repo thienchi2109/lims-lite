@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
-import { FlaskConical, CheckCircle2, ClipboardList, User } from 'lucide-react'
+import { FlaskConical, CheckCircle2, ClipboardList, User, QrCode } from 'lucide-react'
 import { DashboardHeader } from '@/components/dashboard-header'
 import { getSamplesForApproval } from '@/app/actions/samples'
 import { Badge } from '@/components/ui/badge'
@@ -134,6 +134,30 @@ export default async function ManagerDashboard() {
                             <CardContent>
                                 <p className="text-sm text-muted-foreground">
                                     Thêm, sửa, xóa người dùng và quản lý vai trò trong hệ thống
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </Link>
+
+                    {/* QR Code Portal Card */}
+                    <Link href="/manager/qr-code">
+                        <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full border-cyan-200 bg-gradient-to-br from-cyan-50/50 to-blue-50/50">
+                            <CardHeader>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-cyan-600/10 rounded-lg">
+                                        <QrCode className="h-6 w-6 text-cyan-600" />
+                                    </div>
+                                    <div>
+                                        <CardTitle>Mã QR Cổng Tra Cứu</CardTitle>
+                                        <CardDescription>
+                                            Tạo và in mã QR cho khách hàng
+                                        </CardDescription>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-sm text-muted-foreground">
+                                    Khách hàng quét mã QR để truy cập và xem kết quả xét nghiệm
                                 </p>
                             </CardContent>
                         </Card>

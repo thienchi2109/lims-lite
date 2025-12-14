@@ -5,7 +5,7 @@
  *
  * Utilities for:
  * - Phone number normalization (Vietnamese format)
- * - Passcode verification (last 6 digits)
+ * - Optional passcode helpers (last 6 digits)
  * - Rate limiting for authentication attempts
  */
 

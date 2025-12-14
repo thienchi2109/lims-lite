@@ -606,14 +606,11 @@ export type SignatureHistoryItem = z.infer<typeof SignatureHistoryItemSchema>
 // COA AUTHENTICATION SCHEMAS (Phase 5)
 // ============================================================================
 
-// Phone + passcode authentication request
+// Phone-only authentication request (simplified)
 export const CoAAuthRequestSchema = z.object({
     phone: z.string()
         .min(10, 'Số điện thoại không hợp lệ')
         .max(15, 'Số điện thoại không hợp lệ'),
-    passcode: z.string()
-        .length(6, 'Mật khẩu phải có 6 chữ số')
-        .regex(/^[0-9]{6}$/, 'Mật khẩu chỉ chứa chữ số'),
 })
 
 export type CoAAuthRequest = z.infer<typeof CoAAuthRequestSchema>

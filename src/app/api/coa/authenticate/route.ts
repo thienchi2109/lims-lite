@@ -5,7 +5,7 @@
  *
  * Phase 5: Backend - Authentication & Access
  *
- * Authenticates clients using phone number + passcode (last 6 digits)
+ * Authenticates clients using phone number only (simplified auth)
  * Returns JWT token and list of approved samples with CoA status
  */
 
@@ -15,7 +15,6 @@ import { CoAAuthRequestSchema, type CoAAuthResponse, type CoASampleInfo } from '
 import {
     normalizePhoneVN,
     isValidVietnamesePhone,
-    verifyPasscode,
     checkRateLimit,
     recordAuthAttempt,
 } from '@/lib/coa-auth'
@@ -72,13 +71,13 @@ export async function POST(request: NextRequest) {
             return NextResponse.json<CoAAuthResponse>(
                 {
                     success: false,
-                    error: 'Số điện thoại hoặc mật khẩu không hợp lệ',
+                    error: 'Số điện thoại không hợp lệ',
                 },
                 { status: 400 }
             )
         }
 
-        const { phone, passcode } = validation.data
+        const { phone } = validation.data
 
         // Step 3: Validate Vietnamese phone format
         if (!isValidVietnamesePhone(phone)) {
@@ -102,7 +101,7 @@ export async function POST(request: NextRequest) {
             .eq('phone', normalizedPhone)
             .single()
 
-        // Step 6: Log failed attempt to access log (don't reveal if phone exists)
+        // Step 6: Log failed attempt if phone doesn't exist (don't reveal if phone exists)
         if (clientError || !client) {
             // Log failed attempt
             await supabase.from('coa_access_log').insert({
@@ -112,7 +111,7 @@ export async function POST(request: NextRequest) {
                 ip_address: clientIP,
                 user_agent: request.headers.get('user-agent') || 'Unknown',
                 success: false,
-                failure_reason: 'Invalid phone or passcode',
+                failure_reason: 'Invalid phone',
             })
 
             recordAuthAttempt(clientIP, false)
@@ -120,39 +119,13 @@ export async function POST(request: NextRequest) {
             return NextResponse.json<CoAAuthResponse>(
                 {
                     success: false,
-                    error: 'Không tìm thấy mẫu hoặc mật khẩu không đúng',
+                    error: 'Không tìm thấy thông tin khách hàng',
                 },
                 { status: 401 }
             )
         }
 
-        // Step 7: Verify passcode (last 6 digits of phone)
-        const isPasscodeValid = verifyPasscode(client.phone, passcode)
-
-        if (!isPasscodeValid) {
-            // Log failed attempt
-            await supabase.from('coa_access_log').insert({
-                client_id: client.id,
-                sample_id: null,
-                coa_report_id: null,
-                ip_address: clientIP,
-                user_agent: request.headers.get('user-agent') || 'Unknown',
-                success: false,
-                failure_reason: 'Invalid passcode',
-            })
-
-            recordAuthAttempt(clientIP, false)
-
-            return NextResponse.json<CoAAuthResponse>(
-                {
-                    success: false,
-                    error: 'Không tìm thấy mẫu hoặc mật khẩu không đúng',
-                },
-                { status: 401 }
-            )
-        }
-
-        // Step 8: Fetch approved samples for this client
+        // Step 7: Fetch approved samples for this client
         const { data: samples, error: samplesError } = await supabase
             .from('samples')
             .select(`
@@ -176,7 +149,7 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Step 9: Check which samples have CoA reports
+        // Step 8: Check which samples have CoA reports
         const sampleIds = samples?.map(s => s.id) || []
         const { data: coaReports } = await supabase
             .from('coa_reports')
@@ -196,12 +169,12 @@ export async function POST(request: NextRequest) {
             has_coa: samplesWithCoA.has(sample.id),
         }))
 
-        // Step 10: Generate JWT token for downloads
+        // Step 9: Generate JWT token for downloads
         const token = await createCoAToken({
             client_id: client.id,
         })
 
-        // Step 11: Log successful authentication
+        // Step 10: Log successful authentication
         await supabase.from('coa_access_log').insert({
             client_id: client.id,
             sample_id: null,
@@ -214,7 +187,7 @@ export async function POST(request: NextRequest) {
 
         recordAuthAttempt(clientIP, true)
 
-        // Step 12: Return success response
+        // Step 11: Return success response
         return NextResponse.json<CoAAuthResponse>({
             success: true,
             client_id: client.id,
