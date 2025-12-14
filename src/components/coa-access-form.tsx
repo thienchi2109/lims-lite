@@ -13,7 +13,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2, Download, CheckCircle, XCircle, AlertCircle, LogOut, Phone } from 'lucide-react'
+import { Loader2, FileText, CheckCircle, XCircle, AlertCircle, LogOut, Phone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -96,15 +96,13 @@ export function CoAAccessForm() {
     // ========================================================================
 
     const handleDownload = (sampleId: string, sampleIdDisplay: string) => {
-        if (!authResponse?.token) {
-            setError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
-            return
-        }
-
-        const downloadUrl = `/api/coa/download?sample_id=${sampleId}&token=${authResponse.token}`
+        const downloadUrl = `/api/coa/download?sample_id=${sampleId}`
 
         // Open in new tab (signed URL will redirect to file)
-        window.open(downloadUrl, '_blank')
+        const newTab = window.open(downloadUrl, '_blank', 'noopener')
+        if (!newTab) {
+            setError('Trình duyệt đã chặn cửa sổ mới. Vui lòng cho phép popup và thử lại.')
+        }
     }
 
     // ========================================================================
@@ -112,6 +110,7 @@ export function CoAAccessForm() {
     // ========================================================================
 
     const handleLogout = () => {
+        void fetch('/api/coa/logout', { method: 'POST' })
         setAuthResponse(null)
         setError(null)
         reset()
@@ -326,8 +325,8 @@ function SampleCard({ sample, onDownload }: SampleCardProps) {
                             size="sm"
                             className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white shadow-sm"
                         >
-                            <Download className="mr-2 h-4 w-4" />
-                            Tải về
+                            <FileText className="mr-2 h-4 w-4" />
+                            Xem KQ
                         </Button>
                     ) : (
                         <div className="text-xs text-center text-amber-700 bg-amber-50 px-3 py-2 rounded-md border border-amber-200">

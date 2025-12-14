@@ -6,7 +6,7 @@
  * Phase 5: Backend - Authentication & Access
  *
  * Authenticates clients using phone number only (simplified auth)
- * Returns JWT token and list of approved samples with CoA status
+ * Returns list of approved samples and sets CoA session cookie
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
             has_coa: samplesWithCoA.has(sample.id),
         }))
 
-        // Step 9: Generate JWT token for downloads
+        // Step 9: Generate JWT token for CoA viewing (stored in HttpOnly cookie)
         const token = await createCoAToken({
             client_id: client.id,
         })
@@ -188,13 +188,24 @@ export async function POST(request: NextRequest) {
         recordAuthAttempt(clientIP, true)
 
         // Step 11: Return success response
-        return NextResponse.json<CoAAuthResponse>({
+        const response = NextResponse.json<CoAAuthResponse>({
             success: true,
             client_id: client.id,
             client_name: client.name,
             samples: sampleInfoList,
-            token,
         })
+
+        response.cookies.set({
+            name: 'coa_token',
+            value: token,
+            httpOnly: true,
+            sameSite: 'strict',
+            secure: process.env.NODE_ENV === 'production',
+            path: '/api/coa',
+            maxAge: 60 * 60, // 1 hour
+        })
+
+        return response
 
     } catch (error) {
         console.error('CoA authentication error:', error)

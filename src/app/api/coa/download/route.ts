@@ -1,11 +1,11 @@
 /**
  * CoA Download Endpoint
  *
- * GET /api/coa/download?sample_id={uuid}&token={jwt}
+ * GET /api/coa/download?sample_id={uuid}
  *
  * Phase 5: Backend - Authentication & Access
  *
- * Downloads CoA HTML file with token validation and audit logging
+ * Serves CoA HTML file with token validation and audit logging
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -42,14 +42,36 @@ export async function GET(request: NextRequest) {
 
         const { searchParams } = new URL(request.url)
         const sampleId = searchParams.get('sample_id')
-        const token = searchParams.get('token')
+        const authorization = request.headers.get('authorization')
+        const headerToken = authorization?.match(/^Bearer\s+(.+)$/i)?.[1]
+        const cookieToken = request.cookies.get('coa_token')?.value
+        const token = headerToken || cookieToken
 
         // Step 1: Validate query parameters
-        if (!sampleId || !token) {
+        if (!sampleId) {
             return NextResponse.json(
-                { error: 'Missing sample_id or token' },
+                { error: 'Thiếu mã mẫu' },
                 { status: 400 }
             )
+        }
+
+        if (!token) {
+            const response = NextResponse.json(
+                { error: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại' },
+                { status: 401 }
+            )
+
+            response.cookies.set({
+                name: 'coa_token',
+                value: '',
+                httpOnly: true,
+                sameSite: 'strict',
+                secure: process.env.NODE_ENV === 'production',
+                path: '/api/coa',
+                maxAge: 0,
+            })
+
+            return response
         }
 
         // Step 2: Verify JWT token
@@ -57,18 +79,42 @@ export async function GET(request: NextRequest) {
         try {
             tokenPayload = await verifyCoAToken(token)
         } catch (error) {
-            return NextResponse.json(
+            const response = NextResponse.json(
                 { error: 'Token không hợp lệ hoặc đã hết hạn' },
                 { status: 401 }
             )
+
+            response.cookies.set({
+                name: 'coa_token',
+                value: '',
+                httpOnly: true,
+                sameSite: 'strict',
+                secure: process.env.NODE_ENV === 'production',
+                path: '/api/coa',
+                maxAge: 0,
+            })
+
+            return response
         }
 
         // Step 3: Check token expiry
         if (isTokenExpired(tokenPayload)) {
-            return NextResponse.json(
+            const response = NextResponse.json(
                 { error: 'Token đã hết hạn. Vui lòng đăng nhập lại' },
                 { status: 401 }
             )
+
+            response.cookies.set({
+                name: 'coa_token',
+                value: '',
+                httpOnly: true,
+                sameSite: 'strict',
+                secure: process.env.NODE_ENV === 'production',
+                path: '/api/coa',
+                maxAge: 0,
+            })
+
+            return response
         }
 
         // Step 4: Verify sample belongs to authenticated client
