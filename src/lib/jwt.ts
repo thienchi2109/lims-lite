@@ -8,7 +8,6 @@ function decodeBase64Url(input: string): string {
     }
 
     // Node.js fallback (some runtimes do not provide atob)
-    // eslint-disable-next-line no-restricted-globals
     const buffer = Buffer.from(padded, 'base64')
     return buffer.toString('utf-8')
 }
@@ -42,11 +41,25 @@ import type { CoADownloadToken } from '@/types'
 // CONFIGURATION
 // ============================================================================
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET || 'fallback-secret-change-in-production'
 const TOKEN_EXPIRY_HOURS = 1 // 1 hour token expiry
 
-// Convert secret to Uint8Array for jose library
-const secret = new TextEncoder().encode(JWT_SECRET)
+let cachedSecret: Uint8Array | null = null
+
+function getJwtSigningSecret(): Uint8Array {
+    if (cachedSecret) return cachedSecret
+
+    const rawSecret = process.env.JWT_SECRET?.trim() || process.env.SUPABASE_JWT_SECRET?.trim()
+    if (!rawSecret) {
+        throw new Error('Missing JWT secret: set JWT_SECRET (recommended) or SUPABASE_JWT_SECRET')
+    }
+
+    if (rawSecret.length < 32) {
+        throw new Error('JWT secret must be at least 32 characters long')
+    }
+
+    cachedSecret = new TextEncoder().encode(rawSecret)
+    return cachedSecret
+}
 
 // ============================================================================
 // JWT SIGNING
@@ -65,7 +78,7 @@ export async function createCoAToken(payload: Omit<CoADownloadToken, 'exp'>): Pr
         .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
         .setIssuedAt()
         .setExpirationTime(exp)
-        .sign(secret)
+        .sign(getJwtSigningSecret())
 
     return token
 }
@@ -83,7 +96,7 @@ export async function createCoAToken(payload: Omit<CoADownloadToken, 'exp'>): Pr
  */
 export async function verifyCoAToken(token: string): Promise<CoADownloadToken> {
     try {
-        const { payload } = await jwtVerify(token, secret, {
+        const { payload } = await jwtVerify(token, getJwtSigningSecret(), {
             algorithms: ['HS256'],
         })
 
