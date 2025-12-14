@@ -14,7 +14,7 @@
 - [x] 3.2 Add a dashboard-scoped client guard that schedules forced logout at the expiry time
 
 ## 4. Login UX
-- [ ] 4.1 Update `/login` to show a Vietnamese “session expired, please log in again” message when `reason=session_expired`
+- [x] 4.1 Update `/login` to show a Vietnamese “session expired, please log in again” message when `reason=session_expired`
 
 ## 5. Docs & Verification
 - [ ] 5.1 Update `docs/test-token-expiry.md` to explain "sliding refresh expiry" vs "hard session timebox"
