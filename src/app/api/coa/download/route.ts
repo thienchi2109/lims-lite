@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
         // Step 4: Verify sample belongs to authenticated client
         const { data: sample, error: sampleError } = await supabase
             .from('samples')
-            .select('id, sample_id_display, client_id, status')
+            .select('id, sample_id, client_id, status')
             .eq('id', sampleId)
             .is('deleted_at', null)
             .single()
@@ -150,14 +150,14 @@ export async function GET(request: NextRequest) {
             )
         }
 
-        // Step 8: Generate signed URL for file download (1 hour expiry)
-        const { data: signedUrlData, error: signedUrlError } = await supabase
+        // Step 8: Download file from storage
+        const { data: fileData, error: downloadError } = await supabase
             .storage
             .from('coa-reports')
-            .createSignedUrl(coaReport.file_path, 3600) // 1 hour = 3600 seconds
+            .download(coaReport.file_path)
 
-        if (signedUrlError || !signedUrlData) {
-            console.error('Signed URL error:', signedUrlError)
+        if (downloadError || !fileData) {
+            console.error('Download error:', downloadError)
 
             await supabase.from('coa_access_log').insert({
                 client_id: tokenPayload.client_id,
@@ -166,11 +166,11 @@ export async function GET(request: NextRequest) {
                 ip_address: clientIP,
                 user_agent: request.headers.get('user-agent') || 'Unknown',
                 success: false,
-                failure_reason: 'Failed to generate download URL',
+                failure_reason: 'Failed to download file',
             })
 
             return NextResponse.json(
-                { error: 'Không thể tạo liên kết tải xuống' },
+                { error: 'Không thể tải xuống file' },
                 { status: 500 }
             )
         }
@@ -186,8 +186,16 @@ export async function GET(request: NextRequest) {
             failure_reason: null,
         })
 
-        // Step 10: Redirect to signed URL (browser will download/display HTML)
-        return NextResponse.redirect(signedUrlData.signedUrl)
+        // Step 10: Convert blob to text and return with proper Content-Type header
+        const htmlContent = await fileData.text()
+
+        return new NextResponse(htmlContent, {
+            status: 200,
+            headers: {
+                'Content-Type': 'text/html; charset=utf-8',
+                'Cache-Control': 'private, max-age=3600',
+            },
+        })
 
     } catch (error) {
         console.error('CoA download error:', error)

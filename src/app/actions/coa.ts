@@ -190,9 +190,9 @@ function renderCoATemplate(coaData: CoAData): string {
     return `
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Giấy chứng nhận phân tích - ${coaData.sample.sample_id_display}</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
@@ -273,6 +273,7 @@ function renderCoATemplate(coaData: CoAData): string {
             color: #b91c1c;
         }
 
+        /* Màu đỏ cho tiêu đề chính */
         .header-right {
             flex: 0 0 15%;
             text-align: center;
@@ -296,7 +297,7 @@ function renderCoATemplate(coaData: CoAData): string {
             border-radius: 4px;
         }
 
-        /* INFO TABLE */
+        /* TABLES */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -304,18 +305,14 @@ function renderCoATemplate(coaData: CoAData): string {
             font-size: 14px;
         }
 
-        td, th {
+        td,
+        th {
             border: 1px solid #000;
             padding: 8px;
             vertical-align: middle;
         }
 
-        th {
-            background-color: #e5e7eb;
-            font-weight: bold;
-            text-align: center;
-        }
-
+        /* Info Table Specifics */
         .info-label {
             font-weight: bold;
             background-color: #f3f4f6;
@@ -326,38 +323,64 @@ function renderCoATemplate(coaData: CoAData): string {
             font-weight: 500;
         }
 
-        /* SIGNATURE SECTION */
-        .signature-section {
-            display: flex;
-            justify-content: space-around;
-            margin-top: 40px;
-            page-break-inside: avoid;
-        }
-
-        .signature-block {
-            text-align: center;
-            width: 250px;
-        }
-
-        .signature-title {
+        /* Result Table Specifics */
+        .res-table th {
+            background-color: #e5e7eb;
             font-weight: bold;
-            font-size: 14px;
-            margin-bottom: 10px;
             text-transform: uppercase;
+            text-align: center;
+            border-bottom: 2px solid #000;
         }
 
-        .signature-date {
+        .res-name {
+            font-weight: 500;
+        }
+
+        .res-value {
+            font-weight: bold;
+            text-align: center;
+            font-size: 15px;
+        }
+
+        .res-unit {
+            text-align: center;
+        }
+
+        .res-range {
+            text-align: center;
             font-style: italic;
-            margin-bottom: 10px;
-            font-size: 13px;
         }
 
-        .signature-image-container {
+        .res-method {
+            text-align: center;
+            font-size: 12px;
+        }
+
+        /* FOOTER */
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 40px;
+        }
+
+        .footer-col {
+            text-align: center;
+            width: 45%;
+        }
+
+        .footer-title {
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+
+        .footer-sign-area {
             height: 100px;
+            margin-top: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 15px 0;
         }
 
         .signature-image {
@@ -367,24 +390,8 @@ function renderCoATemplate(coaData: CoAData): string {
             margin: 0 auto;
         }
 
-        .signature-placeholder {
-            height: 80px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-style: italic;
-            color: #666;
-            font-size: 12px;
-        }
-
-        .approver-name {
-            font-weight: bold;
-            font-size: 14px;
-            margin-top: 10px;
-        }
-
         .footer-disclaimer {
-            margin-top: 30px;
+            margin-top: 50px;
             border-top: 1px solid #ccc;
             padding-top: 10px;
             font-size: 12px;
@@ -402,27 +409,26 @@ function renderCoATemplate(coaData: CoAData): string {
             body {
                 -webkit-print-color-adjust: exact;
             }
-            .signature-section {
-                margin-top: 30px;
+
+            .header-center {
+                flex: 1;
             }
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <!-- HEADER -->
         <div class="header">
-            <div class="header-left">
-                <img src="${logoUrl}" class="logo" alt="Logo" />
-            </div>
+            <div class="header-left"><img src="${logoUrl}" class="logo" /></div>
             <div class="header-center">
                 <div class="org-parent">SỞ Y TẾ THÀNH PHỐ CẦN THƠ</div>
                 <div class="org-name">TRUNG TÂM KIỂM SOÁT BỆNH TẬT (CDC)</div>
                 <div class="org-address">400 Nguyễn Văn Cừ, P. An Bình, TP. Cần Thơ</div>
                 <div class="form-name">GIẤY CHỨNG NHẬN PHÂN TÍCH</div>
             </div>
-            <div class="header-right">
-                <img src="${qrCodeUrl}" class="qr-img" alt="QR Code" />
+            <div class="header-right"><img src="${qrCodeUrl}" class="qr-img" />
                 <div class="sample-id-box">${coaData.sample.sample_id_display}</div>
             </div>
         </div>
@@ -432,9 +438,8 @@ function renderCoATemplate(coaData: CoAData): string {
             <table>
                 <tr>
                     <td class="info-label">Khách hàng:</td>
-                    <td class="info-value" colspan="3" style="text-transform: uppercase; font-size: 16px; font-weight: bold;">
-                        ${coaData.sample.client_name || 'N/A'}
-                    </td>
+                    <td class="info-value" style="text-transform: uppercase; font-size: 16px; font-weight: bold;"
+                        colspan="3">${coaData.sample.client_name || 'N/A'}</td>
                 </tr>
                 <tr>
                     <td class="info-label">Mã mẫu:</td>
@@ -451,63 +456,52 @@ function renderCoATemplate(coaData: CoAData): string {
             </table>
         </div>
 
-        <!-- RESULTS TABLE -->
-        <div style="margin-bottom: 20px;">
-            <table>
-                <thead>
-                    <tr style="background-color: #e5e7eb;">
-                        <th style="text-align: center; width: 10%;">STT</th>
-                        <th style="text-align: left; width: 30%;">Chỉ tiêu xét nghiệm</th>
-                        <th style="text-align: left; width: 25%;">Phương pháp</th>
-                        <th style="text-align: center; width: 15%;">Kết quả</th>
-                        <th style="text-align: center; width: 20%;">Chỉ số bình thường</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${coaData.results.length > 0 ? coaData.results.map((result, index) => `
-                    <tr>
-                        <td style="text-align: center;">${index + 1}</td>
-                        <td>${result.assay_name}</td>
-                        <td style="font-style: italic; font-size: 13px;">${result.method_name || 'N/A'}</td>
-                        <td style="text-align: center; font-weight: bold;">
-                            ${result.value || 'Chưa có'} ${result.unit || ''}
-                        </td>
-                        <td style="text-align: center; font-size: 13px;">
-                            ${result.normal_range || 'N/A'}
-                        </td>
-                    </tr>
-                    `).join('') : `
-                    <tr>
-                        <td colspan="5" style="text-align: center; font-style: italic; color: #666;">
-                            Không có kết quả xét nghiệm
-                        </td>
-                    </tr>
-                    `}
-                </tbody>
-            </table>
-        </div>
+        <!-- RESULTS -->
+        <table class="res-table">
+            <thead>
+                <tr>
+                    <th width="5%">STT</th>
+                    <th width="30%">Chỉ Tiêu Xét Nghiệm</th>
+                    <th width="15%">Kết Quả</th>
+                    <th width="10%">Đơn Vị</th>
+                    <th width="20%">Khoảng Tham Chiếu</th>
+                    <th width="20%">Phương Pháp</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${coaData.results.length > 0 ? coaData.results.map((result, index) => `
+                <tr>
+                    <td style="text-align: center;">${index + 1}</td>
+                    <td class="res-name">${result.assay_name}</td>
+                    <td class="res-value">${result.value || '-'}</td>
+                    <td class="res-unit">${result.unit || ''}</td>
+                    <td class="res-range">${result.normal_range || ''}</td>
+                    <td class="res-method">${result.method_name || ''}</td>
+                </tr>
+                `).join('') : `
+                <tr>
+                    <td colspan="6" style="text-align: center; font-style: italic; color: #666;">
+                        Không có kết quả xét nghiệm
+                    </td>
+                </tr>
+                `}
+            </tbody>
+        </table>
 
-        <!-- SIGNATURE SECTION -->
-        <div class="signature-section">
-            <div class="signature-block">
-                <div class="signature-title">PHỤ TRÁCH XÉT NGHIỆM</div>
-                <div class="signature-image-container">
-                    <div class="signature-placeholder">(Ký và ghi rõ họ tên)</div>
-                </div>
-                <div style="font-weight: bold;">KTV. ........................</div>
+        <!-- FOOTER -->
+        <div class="footer">
+            <div class="footer-col">
+                <div class="footer-title">PHỤ TRÁCH XÉT NGHIỆM</div>
+                <div class="footer-sign-area"></div>
+                <div style="font-weight: bold;">KTV. .................................</div>
             </div>
-
-            <div class="signature-block">
-                <div class="signature-date">Cần Thơ, ${dateStr}</div>
-                <div class="signature-title">LÃNH ĐẠO KHOA XÉT NGHIỆM</div>
-                <div class="signature-image-container">
-                    ${coaData.approverSignature ? `
-                        <img src="${coaData.approverSignature}" alt="Chữ ký" class="signature-image" />
-                    ` : `
-                        <div class="signature-placeholder">(Ký và ghi rõ họ tên)</div>
-                    `}
+            <div class="footer-col">
+                <div style="font-style: italic; margin-bottom: 5px;">Cần Thơ, ${dateStr}</div>
+                <div class="footer-title">LÃNH ĐẠO KHOA XÉT NGHIỆM</div>
+                <div class="footer-sign-area">
+                    ${coaData.approverSignature ? `<img src="${coaData.approverSignature}" alt="Chữ ký" class="signature-image" />` : ''}
                 </div>
-                <div class="approver-name">${coaData.approverName}</div>
+                <div style="font-weight: bold;">${coaData.approverName}</div>
             </div>
         </div>
 
@@ -524,6 +518,7 @@ function renderCoATemplate(coaData: CoAData): string {
         </div>
     </div>
 </body>
+
 </html>
     `
 }
