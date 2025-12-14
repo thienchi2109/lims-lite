@@ -25,7 +25,10 @@
       "Bash(bun run build:*)",
       "Bash(bun run:*)",
       "Bash(gh api:*)",
-      "Bash(zip -r:*)"
+      "Bash(zip -r:*)",
+      "Skill(superpowers:writing-plans)",
+      "Skill(superpowers:subagent-driven-development)",
+      "Bash(npm run typecheck)"
     ],
     "deny": [],
     "ask": []

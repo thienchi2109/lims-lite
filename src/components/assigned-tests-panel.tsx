@@ -22,6 +22,8 @@ import {
     CheckCircle,
     Printer,
     AlertCircle,
+    FileText,
+    Download,
 } from 'lucide-react'
 import {
     Dialog,
@@ -42,9 +44,12 @@ import { ResultWithAssay, SampleStatus, type LabSpecialty } from '@/types'
 import { ResultCellEditor } from '@/components/result-cell-editor'
 import { BatchSaveToolbar } from '@/components/batch-save-toolbar'
 import { ResultStatusBadge } from '@/components/result-status-badge'
+import { CoAStatusBadge } from '@/components/coa-status-badge'
 import { toast } from 'sonner'
 import { TestAssignmentModule } from '@/components/test-assignment-module'
 import { generatePrintTemplate } from '@/lib/print-template'
+import { regenerateCoA } from '@/app/actions/coa'
+import type { CoAReportStatus } from '@/types'
 
 interface AssignedTestsPanelProps {
     sampleId: string
@@ -72,6 +77,10 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
     // Test assignment state
     const [showAssignmentDialog, setShowAssignmentDialog] = useState(false)
 
+    // CoA state
+    const [coaStatus, setCoaStatus] = useState<CoAReportStatus | null>(null)
+    const [isGeneratingCoA, setIsGeneratingCoA] = useState(false)
+
     const fetchTests = useCallback(async () => {
         try {
             setLoading(true)
@@ -96,6 +105,26 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
     useEffect(() => {
         fetchTests()
     }, [fetchTests])
+
+    // Handle CoA generation
+    const handleGenerateCoA = async () => {
+        setIsGeneratingCoA(true)
+        try {
+            const result = await regenerateCoA(sampleId)
+            if (result.success) {
+                toast.success('Đã tạo CoA thành công')
+                setCoaStatus('ready')
+            } else {
+                toast.error(`Lỗi khi tạo CoA: ${result.error}`)
+                setCoaStatus('failed')
+            }
+        } catch (error) {
+            toast.error('Có lỗi không mong đợi khi tạo CoA')
+            console.error(error)
+        } finally {
+            setIsGeneratingCoA(false)
+        }
+    }
 
     // Determine if editing is allowed based on sample status
     const isEditable = useCallback(() => {
@@ -309,6 +338,10 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
                     <Badge variant="secondary" className="ml-2 bg-slate-100 text-slate-600 hover:bg-slate-200">
                         {results.length}
                     </Badge>
+                    {/* CoA Status Badge - Show for completed samples */}
+                    {sampleStatus === 'completed' && (
+                        <CoAStatusBadge status={coaStatus} />
+                    )}
                 </div>
                 <div className="flex items-center gap-2">
                     {/* Test Order Form Print Button - Available for all samples */}
@@ -320,8 +353,36 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
                         onClick={handlePrint}
                     >
                         <Printer className="h-4 w-4" />
-                        Xuất Phiếu
+                        In Phiếu chỉ định
                     </Button>
+
+                    {/* CoA Generation/Download Button - Only for completed samples */}
+                    {sampleStatus === 'completed' && (
+                        <>
+                            {!coaStatus || coaStatus === 'failed' ? (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-2 border-emerald-200 bg-white text-emerald-600 hover:bg-emerald-50"
+                                    onClick={handleGenerateCoA}
+                                    disabled={isGeneratingCoA}
+                                >
+                                    <FileText className={`h-4 w-4 ${isGeneratingCoA ? 'animate-spin' : ''}`} />
+                                    {isGeneratingCoA ? 'Đang tạo...' : coaStatus === 'failed' ? 'Tạo lại CoA' : 'Tạo CoA'}
+                                </Button>
+                            ) : coaStatus === 'ready' && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-2 border-blue-200 bg-white text-blue-600 hover:bg-blue-50"
+                                    onClick={() => toast.info('Chức năng tải xuống đang được phát triển')}
+                                >
+                                    <Download className="h-4 w-4" />
+                                    Tải CoA
+                                </Button>
+                            )}
+                        </>
+                    )}
 
                     {/* Submit for Review Button */}
                     {sampleStatus === 'in_progress' && allResultsEntered && (
