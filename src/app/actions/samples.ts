@@ -520,7 +520,8 @@ export async function getSamplesForApproval() {
                 received_at,
                 updated_at,
                 received_by_user:users!samples_received_by_fkey(full_name),
-                results(id, status)
+                results(id, status),
+                coa_reports!left(status)
             `
             )
             .eq('status', 'review')

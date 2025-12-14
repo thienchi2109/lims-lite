@@ -16,7 +16,8 @@ import { cn } from '@/lib/utils'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { ChevronLeft, ChevronRight, ClipboardPen, FileSearch } from 'lucide-react'
 import { SampleStatusBadge } from '@/components/sample-status-badge'
-import { type SampleStatus } from '@/types'
+import { CoAStatusBadge } from '@/components/coa-status-badge'
+import { type SampleStatus, type CoAReportStatus } from '@/types'
 import {
     Tooltip,
     TooltipContent,
@@ -37,6 +38,7 @@ interface ApprovalQueueSample {
     entered_count: number
     approved_count: number
     pending_count: number
+    coa_reports?: Array<{ status: CoAReportStatus }> | null
 }
 
 interface ApprovalQueueTableProps {
@@ -84,6 +86,14 @@ export function ApprovalQueueTable({ data, selectedSampleId }: ApprovalQueueTabl
             cell: ({ row }) => (
                 <SampleStatusBadge status={row.getValue('status')} />
             ),
+        },
+        {
+            id: 'coa_status',
+            header: 'CoA',
+            cell: ({ row }) => {
+                const coaStatus = row.original.coa_reports?.[0]?.status
+                return <CoAStatusBadge status={coaStatus} />
+            },
         },
         {
             id: 'progress',
