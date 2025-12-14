@@ -7,14 +7,17 @@ import { getActiveSignature, downloadSignature } from './signatures'
 /**
  * Certificate of Analysis (CoA) Generation
  *
- * Phase 3.5: Integrated with Manager E-Signature
- * Phase 4: HTML Generation and Access Control (To be implemented)
+ * Phase 3.5: Integrated with Manager E-Signature ✅
+ * Phase 4: HTML Generation with Test Results ✅
  *
  * Features:
+ * - Fetches approved test results from database
  * - Fetches approver's active signature
  * - Verifies signature integrity (SHA-256 hash)
  * - Converts signature to base64 data URI for HTML embedding
  * - Links signature_id to coa_reports record for 21 CFR Part 11 compliance
+ * - Generates production-ready HTML with test results table
+ * - Uploads to coa-reports storage bucket with file hash
  */
 
 // ============================================================================
@@ -31,12 +34,21 @@ interface SampleData {
     approved_by: string | null
     approved_at: string | null
     client_name?: string
-    // ... other sample fields to be added in Phase 4
+    sample_type?: string
+    received_date?: string
+}
+
+interface TestResult {
+    assay_name: string
+    value: string | null
+    unit: string | null
+    normal_range: string | null
+    method_name: string | null
 }
 
 interface CoAData {
     sample: SampleData
-    results: any[] // To be defined in Phase 4
+    results: TestResult[]
     approverName: string
     approverSignature: string // base64 data URI
     signatureId: string
@@ -60,6 +72,8 @@ async function fetchSampleWithApprover(sampleId: string): Promise<SampleData | n
             sample_id_display,
             approved_by,
             approved_at,
+            sample_type,
+            received_date,
             clients!inner (
                 name
             )
@@ -77,7 +91,9 @@ async function fetchSampleWithApprover(sampleId: string): Promise<SampleData | n
         sample_id_display: data.sample_id_display,
         approved_by: data.approved_by,
         approved_at: data.approved_at,
-        client_name: (data.clients as any)?.name
+        client_name: (data.clients as any)?.name,
+        sample_type: data.sample_type,
+        received_date: data.received_date
     }
 }
 
@@ -95,8 +111,46 @@ async function verifySignatureHash(
 }
 
 /**
- * Generate HTML from template (Phase 4 - to be implemented)
- * For now, this is a placeholder
+ * Fetch approved test results for CoA
+ */
+async function fetchTestResults(sampleId: string): Promise<TestResult[]> {
+    const supabase = await createClient()
+
+    const { data, error } = await supabase
+        .from('results')
+        .select(`
+            value,
+            assays!inner (
+                name,
+                unit,
+                normal_range
+            ),
+            methods (
+                name
+            )
+        `)
+        .eq('sample_id', sampleId)
+        .eq('status', 'approved')
+        .order('assays(name)', { ascending: true })
+
+    if (error || !data) {
+        console.error('Fetch test results error:', error)
+        return []
+    }
+
+    return data.map((row: any) => ({
+        assay_name: row.assays?.name || 'N/A',
+        value: row.value,
+        unit: row.assays?.unit || null,
+        normal_range: row.assays?.normal_range || null,
+        method_name: row.methods?.name || null
+    }))
+}
+
+/**
+ * Generate HTML from CoA template
+ * Based on docs/references/CoATemplate.html structure
+ * Production-ready Vietnamese CDC lab CoA format
  */
 function renderCoATemplate(coaData: CoAData): string {
     // Based on docs/references/CoATemplate.html structure
@@ -227,6 +281,12 @@ function renderCoATemplate(coaData: CoAData): string {
             vertical-align: middle;
         }
 
+        th {
+            background-color: #e5e7eb;
+            font-weight: bold;
+            text-align: center;
+        }
+
         .info-label {
             font-weight: bold;
             background-color: #f3f4f6;
@@ -350,17 +410,52 @@ function renderCoATemplate(coaData: CoAData): string {
                 <tr>
                     <td class="info-label">Mã mẫu:</td>
                     <td class="info-value">${coaData.sample.sample_id_display}</td>
+                    <td class="info-label">Loại mẫu:</td>
+                    <td class="info-value">${coaData.sample.sample_type || 'N/A'}</td>
+                </tr>
+                <tr>
+                    <td class="info-label">Ngày nhận mẫu:</td>
+                    <td class="info-value">${coaData.sample.received_date ? new Date(coaData.sample.received_date).toLocaleDateString('vi-VN') : 'N/A'}</td>
                     <td class="info-label">Ngày phê duyệt:</td>
                     <td class="info-value">${dateStr}</td>
                 </tr>
             </table>
         </div>
 
-        <!-- RESULTS PLACEHOLDER -->
+        <!-- RESULTS TABLE -->
         <div style="margin-bottom: 20px;">
-            <p style="font-style: italic; color: #666;">
-                [Kết quả xét nghiệm sẽ được hiển thị ở đây - Phase 4]
-            </p>
+            <table>
+                <thead>
+                    <tr style="background-color: #e5e7eb;">
+                        <th style="text-align: center; width: 10%;">STT</th>
+                        <th style="text-align: left; width: 30%;">Chỉ tiêu xét nghiệm</th>
+                        <th style="text-align: left; width: 25%;">Phương pháp</th>
+                        <th style="text-align: center; width: 15%;">Kết quả</th>
+                        <th style="text-align: center; width: 20%;">Chỉ số bình thường</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${coaData.results.length > 0 ? coaData.results.map((result, index) => `
+                    <tr>
+                        <td style="text-align: center;">${index + 1}</td>
+                        <td>${result.assay_name}</td>
+                        <td style="font-style: italic; font-size: 13px;">${result.method_name || 'N/A'}</td>
+                        <td style="text-align: center; font-weight: bold;">
+                            ${result.value || 'Chưa có'} ${result.unit || ''}
+                        </td>
+                        <td style="text-align: center; font-size: 13px;">
+                            ${result.normal_range || 'N/A'}
+                        </td>
+                    </tr>
+                    `).join('') : `
+                    <tr>
+                        <td colspan="5" style="text-align: center; font-style: italic; color: #666;">
+                            Không có kết quả xét nghiệm
+                        </td>
+                    </tr>
+                    `}
+                </tbody>
+            </table>
         </div>
 
         <!-- SIGNATURE SECTION -->
@@ -426,14 +521,17 @@ function generateHtmlHash(html: string): string {
  * 3. Download signature file from storage
  * 4. Verify signature integrity (hash check)
  * 5. Convert signature to base64 data URI
- * 6. Generate HTML with embedded signature
- * 7. Upload HTML to coa-reports storage bucket
- * 8. Insert coa_reports record with signature_id linkage
+ * 6. Get approver name
+ * 7. Fetch approved test results
+ * 8. Generate HTML with embedded signature and test results
+ * 9. Upload HTML to coa-reports storage bucket
+ * 10. Insert coa_reports record with signature_id linkage
  *
  * Requirements:
  * - Sample must be approved (status = 'approved' or 'completed')
  * - Approver must have an active signature uploaded
  * - Signature file must pass integrity verification
+ * - At least one approved test result exists
  *
  * Compliance:
  * - Signature embedded in immutable HTML file
@@ -517,10 +615,13 @@ export async function generateCoA(sampleId: string): Promise<GenerateCoAResult> 
             return { success: false, error: 'Không tìm thấy thông tin người phê duyệt' }
         }
 
-        // Step 7: Generate HTML with embedded signature
+        // Step 7: Fetch test results
+        const results = await fetchTestResults(sampleId)
+
+        // Step 8: Generate HTML with embedded signature and test results
         const coaData: CoAData = {
             sample,
-            results: [], // TODO Phase 4: Fetch test results
+            results,
             approverName: approverData.full_name,
             approverSignature: signatureDataUri,
             signatureId: signature.id,
@@ -530,7 +631,7 @@ export async function generateCoA(sampleId: string): Promise<GenerateCoAResult> 
         const html = renderCoATemplate(coaData)
         const htmlHash = generateHtmlHash(html)
 
-        // Step 8: Upload HTML to storage
+        // Step 9: Upload HTML to storage
         const timestamp = new Date().toISOString()
         const version = 1 // TODO Phase 4: Implement versioning logic
         const filePath = `${sampleId}/${version}-${timestamp}.html`
