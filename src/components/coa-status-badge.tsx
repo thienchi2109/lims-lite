@@ -41,7 +41,7 @@ export function CoAStatusBadge({ status }: CoAStatusBadgeProps) {
         return (
             <Badge
                 variant="outline"
-                className="capitalize rounded-full px-2.5 py-0.5 text-[11px] font-medium shadow-sm bg-slate-50 text-slate-500 border-slate-200"
+                className="capitalize rounded-full px-2.5 py-0.5 text-[11px] font-medium shadow-sm bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800"
             >
                 Chưa tạo
             </Badge>
