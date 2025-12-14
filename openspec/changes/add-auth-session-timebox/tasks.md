@@ -10,13 +10,13 @@
 - [x] 2.5 Ensure existing role redirects still work (analyst vs manager)
 
 ## 3. Client Enforcement (Open Tabs + Direct Supabase Calls)
-- [ ] 3.1 Add an app endpoint that returns the authoritative session expiry timestamp for the current session
-- [ ] 3.2 Add a dashboard-scoped client guard that schedules forced logout at the expiry time
+- [x] 3.1 Add an app endpoint that returns the authoritative session expiry timestamp for the current session
+- [x] 3.2 Add a dashboard-scoped client guard that schedules forced logout at the expiry time
 
 ## 4. Login UX
 - [ ] 4.1 Update `/login` to show a Vietnamese “session expired, please log in again” message when `reason=session_expired`
 
 ## 5. Docs & Verification
-- [ ] 5.1 Update `docs/test-token-expiry.md` to explain “sliding refresh expiry” vs “hard session timebox”
+- [ ] 5.1 Update `docs/test-token-expiry.md` to explain "sliding refresh expiry" vs "hard session timebox"
 - [ ] 5.2 Update `tests/check_tokens.sql` to display session age and validate timebox enforcement inputs
 - [ ] 5.3 Manual verification: login, advance time > 4h, confirm redirect on protected routes and on server actions/API calls

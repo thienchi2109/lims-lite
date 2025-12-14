@@ -18,6 +18,21 @@ import type {
 import type { ClientActionName } from '@/lib/client-actions/types'
 
 const ENDPOINT = '/api/client-actions'
+const SESSION_EXPIRY_ENDPOINT = '/api/auth/session-expiry'
+
+export type SessionTimeboxExpiryClientResponse =
+    | {
+          authenticated: true
+          timebox_seconds: number
+          expires_at: string | null
+          expires_in_ms: number | null
+          source: 'sessions.created_at' | 'auth.users.last_sign_in_at' | 'unknown'
+      }
+    | {
+          authenticated: false
+          error: string
+          reason?: string
+      }
 
 async function callClientAction<T = any>(action: ClientActionName, payload?: unknown): Promise<T> {
     const response = await fetch(ENDPOINT, {
@@ -33,7 +48,7 @@ async function callClientAction<T = any>(action: ClientActionName, payload?: unk
         // Handle session expiry
         console.error('Session expired or invalid, redirecting to login...')
         if (typeof window !== 'undefined') {
-            window.location.href = '/login?error=SessionExpired'
+            window.location.href = '/login?reason=session_expired'
         }
         throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
     }
@@ -194,4 +209,37 @@ export async function logoutClient() {
     }
 
     return response.json()
+}
+
+export async function getSessionTimeboxExpiryClient(
+    options?: { signal?: AbortSignal }
+): Promise<SessionTimeboxExpiryClientResponse> {
+    const response = await fetch(SESSION_EXPIRY_ENDPOINT, {
+        method: 'GET',
+        credentials: 'include',
+        cache: 'no-store',
+        signal: options?.signal,
+    })
+
+    if (response.status === 401) {
+        try {
+            const body = (await response.json()) as any
+            return {
+                authenticated: false,
+                error: String(body?.error || 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'),
+                reason: typeof body?.reason === 'string' ? body.reason : undefined,
+            } satisfies SessionTimeboxExpiryClientResponse
+        } catch {
+            return {
+                authenticated: false,
+                error: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+            } satisfies SessionTimeboxExpiryClientResponse
+        }
+    }
+
+    if (!response.ok) {
+        throw new Error('Không thể kiểm tra thời hạn phiên đăng nhập. Vui lòng thử lại.')
+    }
+
+    return (await response.json()) as SessionTimeboxExpiryClientResponse
 }

@@ -33,8 +33,11 @@ export async function createClient() {
 }
 
 export function createAdminClient() {
+    // Prefer internal Docker URL for server-side requests (e.g., API routes / server actions)
+    const supabaseUrl = process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!
+
     return createSupabaseClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        supabaseUrl,
         process.env.SERVICE_ROLE_KEY!,
         {
             auth: {
