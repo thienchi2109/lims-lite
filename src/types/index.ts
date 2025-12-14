@@ -655,3 +655,53 @@ export const CoADownloadRequestSchema = z.object({
 })
 
 export type CoADownloadRequest = z.infer<typeof CoADownloadRequestSchema>
+
+// ============================================================================
+// COA MANAGEMENT SCHEMAS (Manager Features)
+// ============================================================================
+
+export const CoAReportStatusSchema = z.enum(['pending', 'ready', 'failed'])
+export type CoAReportStatus = z.infer<typeof CoAReportStatusSchema>
+
+export const CoAReportSchema = z.object({
+    id: z.string().uuid(),
+    sample_id: z.string().uuid(),
+    file_path: z.string(),
+    file_hash: z.string(),
+    version: z.number().int().default(1),
+    status: CoAReportStatusSchema,
+    superseded_by: z.string().uuid().nullable().optional(),
+    error_message: z.string().nullable().optional(),
+    signature_id: z.string().uuid().nullable().optional(),
+    generated_at: z.string().datetime(),
+    created_at: z.string().datetime(),
+    updated_at: z.string().datetime(),
+    deleted_at: z.string().datetime().nullable().optional(),
+})
+
+export type CoAReport = z.infer<typeof CoAReportSchema>
+
+export const CoAAccessLogSchema = z.object({
+    id: z.string().uuid(),
+    client_id: z.string().uuid(),
+    sample_id: z.string().uuid(),
+    coa_report_id: z.string().uuid().nullable().optional(),
+    accessed_at: z.string().datetime(),
+    ip_address: z.string().nullable().optional(),
+    user_agent: z.string().nullable().optional(),
+    success: z.boolean(),
+    failure_reason: z.string().nullable().optional(),
+    created_at: z.string().datetime(),
+    updated_at: z.string().datetime(),
+    deleted_at: z.string().datetime().nullable().optional(),
+})
+
+export type CoAAccessLog = z.infer<typeof CoAAccessLogSchema>
+
+// CoA Access Log with client name (for display)
+export const CoAAccessLogWithClientSchema = CoAAccessLogSchema.extend({
+    client_name: z.string(),
+    sample_id_display: z.string(),
+})
+
+export type CoAAccessLogWithClient = z.infer<typeof CoAAccessLogWithClientSchema>
