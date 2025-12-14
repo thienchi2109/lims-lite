@@ -36,6 +36,12 @@ import {
     getClients,
     updateClient,
 } from '@/app/actions/clients'
+import {
+    uploadManagerSignature,
+    getActiveSignature,
+    getSignatureHistory,
+    downloadSignature,
+} from '@/app/actions/signatures'
 import { isIsoDateString } from '@/lib/iso-date'
 import type { ClientActionName, ClientActionRequest } from '@/lib/client-actions/types'
 
@@ -215,6 +221,21 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
             return { error: 'Client ID là bắt buộc' }
         }
         return updateClient(payload.id, payload.data)
+    },
+    // Signature management actions
+    uploadManagerSignature: async (payload) => {
+        if (!payload || !(payload instanceof FormData)) {
+            return { error: 'FormData là bắt buộc' }
+        }
+        return uploadManagerSignature(payload)
+    },
+    getActiveSignature: async () => getActiveSignature(),
+    getSignatureHistory: async () => getSignatureHistory(),
+    downloadSignature: async (payload) => {
+        if (!payload?.signaturePath) {
+            return { error: 'Signature path là bắt buộc' }
+        }
+        return downloadSignature(payload.signaturePath)
     },
 }
 

@@ -28,6 +28,10 @@ export type ClientActionName =
     | 'getClient'
     | 'getClients'
     | 'updateClient'
+    | 'uploadManagerSignature'
+    | 'getActiveSignature'
+    | 'getSignatureHistory'
+    | 'downloadSignature'
 
 export interface ClientActionRequest {
     action: ClientActionName

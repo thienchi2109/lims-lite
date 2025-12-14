@@ -243,3 +243,39 @@ export async function getSessionTimeboxExpiryClient(
 
     return (await response.json()) as SessionTimeboxExpiryClientResponse
 }
+
+// ============================================================================
+// SIGNATURE MANAGEMENT (Phase 3.5)
+// ============================================================================
+
+/**
+ * Upload manager signature file
+ * Client-side wrapper that calls uploadManagerSignature server action
+ */
+export function uploadSignatureClient(formData: FormData) {
+    return callClientAction('uploadManagerSignature', formData)
+}
+
+/**
+ * Get active signature for current user
+ * Returns signature metadata and path (not the actual image data)
+ */
+export function getActiveSignatureClient() {
+    return callClientAction('getActiveSignature')
+}
+
+/**
+ * Get signature history for current user
+ * Returns all signatures ordered by upload date
+ */
+export function getSignatureHistoryClient() {
+    return callClientAction('getSignatureHistory')
+}
+
+/**
+ * Download signature as base64 data URI
+ * Used for preview and display in UI
+ */
+export function downloadSignatureClient(signaturePath: string) {
+    return callClientAction('downloadSignature', { signaturePath })
+}
