@@ -524,3 +524,80 @@ export const DiscardSampleSchema = z.object({
 })
 
 export type DiscardSample = z.infer<typeof DiscardSampleSchema>
+
+// ============================================================================
+// USER SIGNATURE SCHEMAS (Phase 3.5)
+// ============================================================================
+
+export const UserSignatureSchema = z.object({
+    id: z.string().uuid(),
+    user_id: z.string().uuid(),
+    signature_path: z.string(),
+    signature_hash: z.string(),
+    file_size: z.number().int(),
+    mime_type: z.enum(['image/png', 'image/jpeg']),
+    uploaded_at: z.string().datetime(),
+    is_active: z.boolean(),
+    created_at: z.string().datetime(),
+    updated_at: z.string().datetime(),
+    deleted_at: z.string().datetime().nullable().optional(),
+})
+
+export type UserSignature = z.infer<typeof UserSignatureSchema>
+
+// Signature validation constants
+export const SIGNATURE_VALIDATION = {
+    maxFileSize: 500 * 1024,  // 500KB
+    allowedMimeTypes: ['image/png', 'image/jpeg'] as const,
+    minWidth: 200,  // pixels
+    minHeight: 80,   // pixels
+    maxWidth: 800,
+    maxHeight: 400,
+} as const
+
+// Client-side file validation schema (before upload)
+export const SignatureFileValidationSchema = z.object({
+    size: z.number()
+        .max(SIGNATURE_VALIDATION.maxFileSize, 'Kích thước file tối đa 500KB'),
+    type: z.enum(['image/png', 'image/jpeg'], {
+        message: 'Chỉ chấp nhận file PNG hoặc JPEG'
+    }),
+})
+
+export type SignatureFileValidation = z.infer<typeof SignatureFileValidationSchema>
+
+// Server-side upload validation schema
+export const UploadSignatureSchema = z.object({
+    file: z.instanceof(File)
+        .refine(f => f.size <= SIGNATURE_VALIDATION.maxFileSize, 'Kích thước file tối đa 500KB')
+        .refine(f => SIGNATURE_VALIDATION.allowedMimeTypes.includes(f.type as any), 'Chỉ chấp nhận file PNG hoặc JPEG'),
+    width: z.number()
+        .min(SIGNATURE_VALIDATION.minWidth, `Chiều rộng tối thiểu ${SIGNATURE_VALIDATION.minWidth}px`)
+        .max(SIGNATURE_VALIDATION.maxWidth, `Chiều rộng tối đa ${SIGNATURE_VALIDATION.maxWidth}px`),
+    height: z.number()
+        .min(SIGNATURE_VALIDATION.minHeight, `Chiều cao tối thiểu ${SIGNATURE_VALIDATION.minHeight}px`)
+        .max(SIGNATURE_VALIDATION.maxHeight, `Chiều cao tối đa ${SIGNATURE_VALIDATION.maxHeight}px`),
+})
+
+export type UploadSignature = z.infer<typeof UploadSignatureSchema>
+
+// Server action response types
+export const ActiveSignatureSchema = z.object({
+    id: z.string().uuid(),
+    signature_path: z.string(),
+    signature_hash: z.string(),
+    mime_type: z.enum(['image/png', 'image/jpeg']),
+    uploaded_at: z.string().datetime(),
+})
+
+export type ActiveSignature = z.infer<typeof ActiveSignatureSchema>
+
+export const SignatureHistoryItemSchema = z.object({
+    id: z.string().uuid(),
+    uploaded_at: z.string().datetime(),
+    is_active: z.boolean(),
+    file_size: z.number().int(),
+    mime_type: z.enum(['image/png', 'image/jpeg']),
+})
+
+export type SignatureHistoryItem = z.infer<typeof SignatureHistoryItemSchema>
