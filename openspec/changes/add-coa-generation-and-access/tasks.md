@@ -19,22 +19,22 @@
 - [x] 3.4 Document storage path structure: `{sample_id}/{version}-{iso-timestamp}.html`
 
 ## 4. Backend - HTML Generation
-- [ ] 4.1 Create server action `generateCoA(sample_id)` with error handling
-- [ ] 4.2 Implement data fetching logic (sample + client + test results)
-- [ ] 4.3 Create HTML template rendering function based on `CoATemplate.html`
-- [ ] 4.4 Implement file hash generation (SHA-256) for integrity verification
-- [ ] 4.5 Upload HTML to Storage and insert `coa_reports` record with file_hash and status
-- [ ] 4.6 Test HTML output matches reference template
-- [ ] 4.7 Handle errors: insert failed status + error_message on failure
+- [x] 4.1 Create server action `generateCoA(sample_id)` with error handling
+- [x] 4.2 Implement data fetching logic (sample + client + test results)
+- [x] 4.3 Create HTML template rendering function based on `CoATemplate.html`
+- [x] 4.4 Implement file hash generation (SHA-256) for integrity verification
+- [x] 4.5 Upload HTML to Storage and insert `coa_reports` record with file_hash and status
+- [x] 4.6 Test HTML output matches reference template
+- [x] 4.7 Handle errors: insert failed status + error_message on failure
 
 ## 5. Backend - Authentication & Access
-- [ ] 5.1 Create phone normalization helper `normalizePhoneVN()` (+84 ↔ 0 conversion)
-- [ ] 5.2 Implement rate limiting middleware (5 attempts/15min/IP, in-memory or Redis)
-- [ ] 5.3 Create `/api/coa/authenticate` POST endpoint with validation
-- [ ] 5.4 Implement passcode verification (last 6 digits of phone)
-- [ ] 5.5 Create JWT signing/verification for download tokens (1-hour expiry)
-- [ ] 5.6 Create `/api/coa/download` endpoint with token validation, signed URL generation (1-hour expiry), audit logging
-- [ ] 5.7 Update Zod schemas and types for CoA authentication and download
+- [x] 5.1 Create phone normalization helper `normalizePhoneVN()` (+84 ↔ 0 conversion)
+- [x] 5.2 Implement rate limiting middleware (5 attempts/15min/IP, in-memory or Redis)
+- [x] 5.3 Create `/api/coa/authenticate` POST endpoint with validation
+- [x] 5.4 Implement passcode verification (last 6 digits of phone)
+- [x] 5.5 Create JWT signing/verification for download tokens (1-hour expiry)
+- [x] 5.6 Create `/api/coa/download` endpoint with token validation, signed URL generation (1-hour expiry), audit logging
+- [x] 5.7 Update Zod schemas and types for CoA authentication and download
 
 ## 6. Frontend - Public Portal
 - [ ] 6.1 Create `/coa/access` public page with Vietnamese UI
