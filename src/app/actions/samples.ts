@@ -582,55 +582,29 @@ export async function submitSampleForReview(sampleId: string) {
             return { error: 'Unauthorized' }
         }
 
-        // 1. Fetch sample and its results to validate
-        const { data: sample, error: sampleError } = await supabase
-            .from('samples')
-            .select(`
-                id,
-                status,
-                results (
-                    id,
-                    value,
-                    status
-                )
-            `)
-            .eq('id', sampleId)
+        // Verify user is analyst (RPC enforces too, but this provides clearer errors)
+        const { data: userData } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
             .single()
 
-        if (sampleError) {
-            console.error('Error fetching sample for submission:', sampleError)
-            return { error: sampleError.message }
+        if (userData?.role !== 'analyst') {
+            return { error: 'Only analysts can submit samples for review' }
         }
 
-        if (!sample) {
-            return { error: 'Sample not found' }
+        // Use RPC so submission works even when sample was received by a manager (RLS can make UPDATE affect 0 rows)
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('submit_sample_for_review', {
+            p_sample_id: sampleId,
+        })
+
+        if (rpcError) {
+            console.error('Error in submit_sample_for_review RPC:', rpcError)
+            return { error: rpcError.message }
         }
 
-        // 2. Validate status
-        if (sample.status !== 'in_progress') {
-            return { error: 'Sample must be in progress to submit for review' }
-        }
-
-        // 3. Validate all results have values
-        const results = sample.results || []
-        if (results.length === 0) {
-            return { error: 'Cannot submit sample with no assigned tests' }
-        }
-
-        const missingValues = results.filter((r: any) => r.value === null || r.value === '')
-        if (missingValues.length > 0) {
-            return { error: 'All tests must have results before submitting' }
-        }
-
-        // 4. Update sample status
-        const { error: updateError } = await supabase
-            .from('samples')
-            .update({ status: 'review' })
-            .eq('id', sampleId)
-
-        if (updateError) {
-            console.error('Error updating sample status:', updateError)
-            return { error: updateError.message }
+        if (!rpcResult) {
+            return { error: 'Failed to submit sample for review' }
         }
 
         // 5. Revalidate paths
