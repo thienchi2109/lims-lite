@@ -33,15 +33,12 @@ export async function login(prevState: any, formData: FormData) {
     if (!usernameInput.includes('@')) {
         try {
             const adminClient = createAdminClient()
-            const { data: userRow, error: lookupError } = await adminClient
-                .from('users')
-                .select('email')
-                .eq('username', usernameInput)
-                .is('deleted_at', null)
-                .maybeSingle()
+            const { data: resolvedEmail, error: lookupError } = await adminClient.rpc(
+                'get_user_email_by_username',
+                { p_username: usernameInput }
+            )
 
-            const resolvedEmail = userRow?.email ?? null
-            if (!lookupError && resolvedEmail) {
+            if (!lookupError && typeof resolvedEmail === 'string' && resolvedEmail) {
                 email = resolvedEmail
             } else {
                 email = `${usernameInput}${emailSuffix}`
