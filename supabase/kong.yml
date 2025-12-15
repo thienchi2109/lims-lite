@@ -25,6 +25,16 @@ services:
           - /storage/v1
         strip_path: true
 
+  - name: realtime
+    url: http://realtime:4000/socket
+    routes:
+      - name: realtime-route
+        paths:
+          - /realtime/v1
+        strip_path: true
+    plugins:
+      - name: cors
+
   - name: meta
     url: http://meta:8080
     routes:
