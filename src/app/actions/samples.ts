@@ -534,12 +534,12 @@ export async function getSamplesForApproval() {
         }
 
         // Transform data with result counts (computed from nested results, no additional queries)
-        const samplesWithCounts = samples.map((sample: any) => {
+        const samplesWithCounts = samples.map((sample) => {
             const results = sample.results || []
             const totalTests = results.length
-            const pendingCount = results.filter((r: any) => r.status === 'pending').length
-            const enteredCount = results.filter((r: any) => r.status === 'entered').length
-            const approvedCount = results.filter((r: any) => r.status === 'approved').length
+            const pendingCount = results.filter((r) => r.status === 'pending').length
+            const enteredCount = results.filter((r) => r.status === 'entered').length
+            const approvedCount = results.filter((r) => r.status === 'approved').length
 
             return {
                 id: sample.id,
@@ -548,11 +548,12 @@ export async function getSamplesForApproval() {
                 status: sample.status,
                 received_at: sample.received_at,
                 updated_at: sample.updated_at,
-                received_by_name: sample.received_by_user?.full_name || null,
+                received_by_name: (sample.received_by_user as unknown as { full_name: string } | null)?.full_name || null,
                 total_tests: totalTests,
                 pending_count: pendingCount,
                 entered_count: enteredCount,
                 approved_count: approvedCount,
+                coa_status: sample.coa_reports?.[0]?.status || null,
             }
         })
 
@@ -561,6 +562,94 @@ export async function getSamplesForApproval() {
     } catch (error) {
         console.error('Error in getSamplesForApproval:', error)
         return { error: error instanceof Error ? error.message : 'Failed to fetch samples for approval' }
+    }
+}
+
+/**
+ * Gets samples filtered by tab (Manager only)
+ * Returns samples with status 'review' or 'completed' based on tab parameter
+ * Includes result counts and CoA status
+ */
+export async function getSamplesWithTab(tab: 'review' | 'completed') {
+    try {
+        const supabase = await createClient()
+
+        // Get current user
+        const {
+            data: { user },
+        } = await supabase.auth.getUser()
+
+        if (!user) {
+            return { error: 'Unauthorized' }
+        }
+
+        // Verify user is manager
+        const { data: userData } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+        if (userData?.role !== 'manager') {
+            return { error: 'Only managers can view approval queue' }
+        }
+
+        // Map tab to status
+        const status = tab === 'review' ? 'review' : 'completed'
+
+        // Fetch samples filtered by status
+        const { data: samples, error } = await supabase
+            .from('samples')
+            .select(
+                `
+                id,
+                sample_id,
+                client_name,
+                status,
+                received_at,
+                updated_at,
+                received_by_user:users!samples_received_by_fkey(full_name),
+                results(id, status),
+                coa_reports!left(status)
+            `
+            )
+            .eq('status', status)
+            .is('deleted_at', null)
+            .order('updated_at', { ascending: false })
+
+        if (error) {
+            console.error('Error fetching samples with tab:', error)
+            return { error: error.message }
+        }
+
+        // Transform data with result counts (computed from nested results, no additional queries)
+        const samplesWithCounts = samples.map((sample) => {
+            const results = sample.results || []
+            const totalTests = results.length
+            const pendingCount = results.filter((r) => r.status === 'pending').length
+            const enteredCount = results.filter((r) => r.status === 'entered').length
+            const approvedCount = results.filter((r) => r.status === 'approved').length
+
+            return {
+                id: sample.id,
+                sample_id: sample.sample_id,
+                client_name: sample.client_name,
+                status: sample.status,
+                received_at: sample.received_at,
+                updated_at: sample.updated_at,
+                received_by_name: (sample.received_by_user as unknown as { full_name: string } | null)?.full_name || null,
+                total_tests: totalTests,
+                pending_count: pendingCount,
+                entered_count: enteredCount,
+                approved_count: approvedCount,
+                coa_status: sample.coa_reports?.[0]?.status || null,
+            }
+        })
+
+        return { data: samplesWithCounts }
+    } catch (error) {
+        console.error('Error in getSamplesWithTab:', error)
+        return { error: error instanceof Error ? error.message : 'Failed to fetch samples' }
     }
 }
 
