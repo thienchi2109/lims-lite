@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getSamplesForApproval, getSample } from '@/app/actions/samples'
+import { getSamplesForApproval, getSample, getSamplesWithTab } from '@/app/actions/samples'
 import { getResultsBySample } from '@/app/actions/results'
 import { ApprovalQueueTable } from '@/components/approval-queue-table'
 import { ApprovalBottomRow } from '@/components/approval-bottom-row'
@@ -9,6 +9,7 @@ import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { DashboardHeader } from '@/components/dashboard-header'
 import type { ResultWithAssay } from '@/types'
+import { ApprovalTabsClient } from '@/components/approval-tabs-client'
 
 interface ApprovalsPageProps {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>
@@ -39,9 +40,14 @@ export default async function ApprovalsPage({ searchParams }: ApprovalsPageProps
 
     // Parse search params
     const sampleId = resolvedParams.sampleId as string | undefined
+    const tab = (resolvedParams.tab as 'review' | 'completed') || 'review'
 
-    // Fetch samples awaiting approval
-    const { data: samples, error } = await getSamplesForApproval()
+    // Fetch samples based on tab
+    const { data: samples, error } = await getSamplesWithTab(tab)
+
+    // Fetch review samples count for badge
+    const { data: reviewSamples } = await getSamplesForApproval()
+    const reviewCount = reviewSamples?.length || 0
 
     // Fetch selected sample and results if ID is present
     let selectedSample = null
@@ -75,7 +81,7 @@ export default async function ApprovalsPage({ searchParams }: ApprovalsPageProps
                         </Button>
                     </Link>
                     <div className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                        {samples?.length || 0} mẫu đang chờ phê duyệt
+                        {samples?.length || 0} mẫu {tab === 'review' ? 'đang chờ phê duyệt' : 'đã hoàn thành'}
                     </div>
                 </div>
 
@@ -86,8 +92,10 @@ export default async function ApprovalsPage({ searchParams }: ApprovalsPageProps
                             Lỗi khi tải hàng đợi phê duyệt: {error}
                         </div>
                     ) : (
-                        <ApprovalQueueTable
-                            data={samples || []}
+                        <ApprovalTabsClient
+                            tab={tab}
+                            samples={samples || []}
+                            reviewCount={reviewCount}
                             selectedSampleId={selectedSample?.id}
                         />
                     )}

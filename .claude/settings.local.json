@@ -28,7 +28,9 @@
       "Bash(zip -r:*)",
       "Skill(superpowers:writing-plans)",
       "Skill(superpowers:subagent-driven-development)",
-      "Bash(npm run typecheck)"
+      "Bash(npm run typecheck)",
+      "Skill(superpowers:brainstorming)",
+      "Bash(docker exec:*)"
     ],
     "deny": [],
     "ask": []
