@@ -663,9 +663,30 @@ export async function generateCoA(sampleId: string): Promise<GenerateCoAResult> 
         const html = renderCoATemplate(coaData)
         const htmlHash = generateHtmlHash(html)
 
-        // Step 9: Upload HTML to storage
-        const timestamp = new Date().toISOString()
+        // Step 9: Check for existing CoA record
         const version = 1 // TODO Phase 4: Implement versioning logic
+        const { data: existingCoa, error: checkError } = await supabase
+            .from('coa_reports')
+            .select('id, status, file_path')
+            .eq('sample_id', sampleId)
+            .eq('version', version)
+            .maybeSingle()
+
+        if (checkError) {
+            console.error('Error checking existing CoA:', checkError)
+            return { success: false, error: 'Lỗi khi kiểm tra CoA hiện có' }
+        }
+
+        // If CoA exists and is ready, return error (already generated)
+        if (existingCoa && existingCoa.status === 'ready') {
+            return {
+                success: false,
+                error: 'CoA đã được tạo cho mẫu này. Sử dụng chức năng tạo lại CoA nếu cần cập nhật.'
+            }
+        }
+
+        // Step 10: Upload HTML to storage
+        const timestamp = new Date().toISOString()
         const filePath = `${sampleId}/${version}-${timestamp}.html`
 
         const { error: uploadError } = await supabase.storage
@@ -680,30 +701,66 @@ export async function generateCoA(sampleId: string): Promise<GenerateCoAResult> 
             return { success: false, error: 'Tải lên file CoA thất bại' }
         }
 
-        // Step 9: Insert coa_reports record with signature_id
-        const { data: coaData_db, error: insertError } = await supabase
-            .from('coa_reports')
-            .insert({
-                sample_id: sampleId,
-                file_path: filePath,
-                file_hash: htmlHash,
-                signature_id: signatureId, // ✅ Immutable link to signature version (null if no signature)
-                version,
-                status: 'ready',
-            })
-            .select('id')
-            .single()
+        // Step 11: Insert or Update coa_reports record
+        let coaId: string
 
-        if (insertError || !coaData_db) {
-            console.error('Insert coa_reports error:', insertError)
-            // Try to clean up uploaded file
-            await supabase.storage.from('coa-reports').remove([filePath])
-            return { success: false, error: 'Lưu thông tin CoA thất bại' }
+        if (existingCoa) {
+            // Update existing pending/failed record
+            const { data: updatedCoa, error: updateError } = await supabase
+                .from('coa_reports')
+                .update({
+                    file_path: filePath,
+                    file_hash: htmlHash,
+                    signature_id: signatureId,
+                    status: 'ready',
+                    error_message: null,
+                    generated_at: new Date().toISOString(),
+                })
+                .eq('id', existingCoa.id)
+                .select('id')
+                .single()
+
+            if (updateError || !updatedCoa) {
+                console.error('Update coa_reports error:', updateError)
+                // Try to clean up uploaded file
+                await supabase.storage.from('coa-reports').remove([filePath])
+                return { success: false, error: 'Lưu thông tin CoA thất bại' }
+            }
+
+            // Clean up old file if it exists
+            if (existingCoa.file_path) {
+                await supabase.storage.from('coa-reports').remove([existingCoa.file_path])
+            }
+
+            coaId = updatedCoa.id
+        } else {
+            // Insert new record
+            const { data: newCoa, error: insertError } = await supabase
+                .from('coa_reports')
+                .insert({
+                    sample_id: sampleId,
+                    file_path: filePath,
+                    file_hash: htmlHash,
+                    signature_id: signatureId,
+                    version,
+                    status: 'ready',
+                })
+                .select('id')
+                .single()
+
+            if (insertError || !newCoa) {
+                console.error('Insert coa_reports error:', insertError)
+                // Try to clean up uploaded file
+                await supabase.storage.from('coa-reports').remove([filePath])
+                return { success: false, error: 'Lưu thông tin CoA thất bại' }
+            }
+
+            coaId = newCoa.id
         }
 
         return {
             success: true,
-            coaId: coaData_db.id,
+            coaId,
             filePath
         }
 
@@ -714,17 +771,51 @@ export async function generateCoA(sampleId: string): Promise<GenerateCoAResult> 
 }
 
 /**
- * Regenerate CoA (for failed generations)
+ * Regenerate CoA (for failed generations or updating existing CoAs)
  *
  * This function can be called when:
  * - Previous CoA generation failed
  * - Manager wants to regenerate with updated signature
  * - Template was updated and needs regeneration
+ * - CoA already exists and needs to be updated
  */
 export async function regenerateCoA(sampleId: string): Promise<GenerateCoAResult> {
-    // For now, just call generateCoA
-    // In Phase 4, this should handle versioning properly
-    return generateCoA(sampleId)
+    try {
+        const supabase = await createClient()
+
+        // Check if CoA exists
+        const version = 1 // TODO Phase 4: Implement versioning logic
+        const { data: existingCoa, error: checkError } = await supabase
+            .from('coa_reports')
+            .select('id, status, file_path')
+            .eq('sample_id', sampleId)
+            .eq('version', version)
+            .maybeSingle()
+
+        if (checkError) {
+            console.error('Error checking existing CoA:', checkError)
+            return { success: false, error: 'Lỗi khi kiểm tra CoA hiện có' }
+        }
+
+        // If CoA exists with status='ready', mark it as failed so generateCoA can update it
+        if (existingCoa && existingCoa.status === 'ready') {
+            const { error: updateError } = await supabase
+                .from('coa_reports')
+                .update({ status: 'failed', error_message: 'Regenerating CoA' })
+                .eq('id', existingCoa.id)
+
+            if (updateError) {
+                console.error('Error marking CoA as failed:', updateError)
+                return { success: false, error: 'Lỗi khi chuẩn bị tạo lại CoA' }
+            }
+        }
+
+        // Now call generateCoA which will update the existing record
+        return generateCoA(sampleId)
+    } catch (error) {
+        console.error('Regenerate CoA error:', error)
+        return { success: false, error: 'Đã xảy ra lỗi khi tạo lại CoA' }
+    }
 }
 
 // ============================================================================
