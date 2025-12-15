@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getSamplesForApproval, getSample, getSamplesWithTab } from '@/app/actions/samples'
+import { getSamplesForApprovalCount, getSample, getSamplesWithTab } from '@/app/actions/samples'
 import { getResultsBySample } from '@/app/actions/results'
 import { ApprovalQueueTable } from '@/components/approval-queue-table'
 import { ApprovalBottomRow } from '@/components/approval-bottom-row'
@@ -45,10 +45,9 @@ export default async function ApprovalsPage({ searchParams }: ApprovalsPageProps
     // Fetch samples based on tab
     const { data: samples, error } = await getSamplesWithTab(tab)
 
-    // Fetch review samples count for badge (optimize: reuse samples if on review tab)
-    const reviewCount = tab === 'review'
-        ? samples?.length || 0
-        : (await getSamplesForApproval()).data?.length || 0
+    // Fetch review samples count for badge (realtime client will keep it fresh)
+    const { data: reviewCountData } = await getSamplesForApprovalCount()
+    const reviewCount = reviewCountData ?? 0
 
     // Fetch selected sample and results if ID is present
     let selectedSample = null

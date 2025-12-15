@@ -1,10 +1,14 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { ApprovalQueueTable } from '@/components/approval-queue-table'
 import { type SampleStatus, type CoAReportStatus } from '@/types'
+import { createClient } from '@/lib/supabase/client'
+import { fetchSamplesForApprovalCountClient } from '@/lib/api-client'
+import { useFaviconBadge } from '@/hooks/use-favicon-badge'
 
 // Type for approval queue data (matches approval-queue-table.tsx)
 interface ApprovalQueueSample {
@@ -37,6 +41,70 @@ export function ApprovalTabsClient({
 }: ApprovalTabsClientProps) {
     const router = useRouter()
     const searchParams = useSearchParams()
+    const [liveReviewCount, setLiveReviewCount] = useState(reviewCount)
+    const tabRef = useRef(tab)
+
+    useFaviconBadge(liveReviewCount)
+
+    useEffect(() => {
+        tabRef.current = tab
+    }, [tab])
+
+    useEffect(() => {
+        setLiveReviewCount(reviewCount)
+    }, [reviewCount])
+
+    useEffect(() => {
+        const supabase = createClient()
+        let timeoutId: ReturnType<typeof setTimeout> | null = null
+        let isCancelled = false
+        let isFetching = false
+
+        const refetchCount = async () => {
+            if (isFetching) return
+            isFetching = true
+
+            try {
+                const response = await fetchSamplesForApprovalCountClient()
+                const nextCount = typeof response?.data === 'number' ? response.data : 0
+                if (!isCancelled) {
+                    setLiveReviewCount(nextCount)
+                }
+            } catch {
+                // ignore; keep last known count
+            } finally {
+                isFetching = false
+            }
+        }
+
+        const scheduleUpdate = () => {
+            if (timeoutId) return
+            timeoutId = setTimeout(async () => {
+                timeoutId = null
+                await refetchCount()
+                if (tabRef.current === 'review') {
+                    router.refresh()
+                }
+            }, 250)
+        }
+
+        const channel = supabase
+            .channel('manager-approvals-pending-review-count')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'samples' }, () => {
+                scheduleUpdate()
+            })
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    scheduleUpdate()
+                }
+            })
+
+        return () => {
+            isCancelled = true
+            if (timeoutId) clearTimeout(timeoutId)
+            void supabase.removeChannel(channel)
+        }
+    }, [router])
 
     const handleTabChange = (newTab: string) => {
         const params = new URLSearchParams(searchParams.toString())
@@ -63,9 +131,9 @@ export function ApprovalTabsClient({
                     className="relative rounded-none border-b-2 border-transparent px-4 py-3 text-sm font-medium transition-colors duration-200 data-[state=active]:border-cyan-600 data-[state=active]:text-cyan-700 data-[state=active]:font-semibold data-[state=inactive]:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900/50 data-[state=active]:bg-transparent gap-2"
                 >
                     Chờ duyệt
-                    {reviewCount > 0 && (
+                    {liveReviewCount > 0 && (
                         <Badge className="rounded-full px-2 py-0.5 text-xs bg-red-500 text-white border-0">
-                            {reviewCount}
+                            {liveReviewCount}
                         </Badge>
                     )}
                 </TabsTrigger>

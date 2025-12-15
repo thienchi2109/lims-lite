@@ -6,6 +6,7 @@ import {
     accessionAndAssignTests,
     getSampleTests,
     getSamples,
+    getSamplesForApprovalCount,
     submitSampleForReview,
     rejectSample,
     discardSample,
@@ -94,6 +95,7 @@ function mapErrorToStatus(message: string) {
 
 const actionHandlers: Record<ClientActionName, ActionHandler> = {
     getSamples: async (payload) => getSamples(payload),
+    getSamplesForApprovalCount: async () => getSamplesForApprovalCount(),
     assignTests: async (payload) => assignTests(payload),
     updateSample: async (payload) => updateSample(payload),
     createSample: async (payload) => createSample(payload),

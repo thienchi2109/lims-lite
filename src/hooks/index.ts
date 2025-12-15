@@ -10,3 +10,6 @@ export { useSamples } from './use-samples'
 export { useSampleDetail } from './use-sample-detail'
 export { useSampleTests } from './use-sample-tests'
 export { useAssignTests } from './use-assign-tests'
+
+// UI utilities
+export { useFaviconBadge } from './use-favicon-badge'

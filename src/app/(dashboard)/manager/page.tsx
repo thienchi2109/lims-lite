@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import Link from 'next/link'
 import { FlaskConical, CheckCircle2, ClipboardList, User, QrCode } from 'lucide-react'
 import { DashboardHeader } from '@/components/dashboard-header'
-import { getSamplesForApproval } from '@/app/actions/samples'
+import { getSamplesForApprovalCount } from '@/app/actions/samples'
 import { Badge } from '@/components/ui/badge'
 
 export default async function ManagerDashboard() {
@@ -24,8 +24,8 @@ export default async function ManagerDashboard() {
         .eq('id', user.id)
         .single()
 
-    const { data: samples } = await getSamplesForApproval()
-    const pendingCount = samples?.length || 0
+    const { data: pendingCountData } = await getSamplesForApprovalCount()
+    const pendingCount = pendingCountData ?? 0
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950">

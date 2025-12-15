@@ -566,6 +566,50 @@ export async function getSamplesForApproval() {
 }
 
 /**
+ * Gets the count of samples awaiting manager approval (status='review')
+ */
+export async function getSamplesForApprovalCount() {
+    try {
+        const supabase = await createClient()
+
+        const {
+            data: { user },
+        } = await supabase.auth.getUser()
+
+        if (!user) {
+            return { error: 'Unauthorized' }
+        }
+
+        // Verify user is manager
+        const { data: userData } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+        if (userData?.role !== 'manager') {
+            return { error: 'Only managers can view approval queue' }
+        }
+
+        const { count, error } = await supabase
+            .from('samples')
+            .select('id', { count: 'exact', head: true })
+            .eq('status', 'review')
+            .is('deleted_at', null)
+
+        if (error) {
+            console.error('Error counting samples for approval:', error)
+            return { error: error.message }
+        }
+
+        return { data: count ?? 0 }
+    } catch (error) {
+        console.error('Error in getSamplesForApprovalCount:', error)
+        return { error: error instanceof Error ? error.message : 'Failed to count samples for approval' }
+    }
+}
+
+/**
  * Gets samples filtered by tab (Manager only)
  * Returns samples with status 'review' or 'completed' based on tab parameter
  * Includes result counts and CoA status

@@ -86,6 +86,10 @@ export function fetchSamplesClient(params: SampleListParams) {
     return callClientAction('getSamples', params)
 }
 
+export function fetchSamplesForApprovalCountClient() {
+    return callClientAction<{ data: number }>('getSamplesForApprovalCount')
+}
+
 export function assignTestsClient(data: AssignTests) {
     return callClientAction('assignTests', data)
 }
