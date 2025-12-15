@@ -45,9 +45,10 @@ export default async function ApprovalsPage({ searchParams }: ApprovalsPageProps
     // Fetch samples based on tab
     const { data: samples, error } = await getSamplesWithTab(tab)
 
-    // Fetch review samples count for badge
-    const { data: reviewSamples } = await getSamplesForApproval()
-    const reviewCount = reviewSamples?.length || 0
+    // Fetch review samples count for badge (optimize: reuse samples if on review tab)
+    const reviewCount = tab === 'review'
+        ? samples?.length || 0
+        : (await getSamplesForApproval()).data?.length || 0
 
     // Fetch selected sample and results if ID is present
     let selectedSample = null
