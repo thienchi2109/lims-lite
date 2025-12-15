@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
+import { regenerateCoA } from '@/app/actions/coa'
 import {
     type ColumnDef,
     flexRender,
@@ -14,7 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { ChevronLeft, ChevronRight, ClipboardPen, FileSearch } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ClipboardPen, FileSearch, FileText } from 'lucide-react'
 import { SampleStatusBadge } from '@/components/sample-status-badge'
 import { CoAStatusBadge } from '@/components/coa-status-badge'
 import { type SampleStatus, type CoAReportStatus } from '@/types'
@@ -151,27 +153,75 @@ export function ApprovalQueueTable({ data, selectedSampleId }: ApprovalQueueTabl
             id: 'actions',
             header: 'Hành động',
             cell: ({ row }) => {
+                const [isGeneratingCoA, setIsGeneratingCoA] = useState(false)
+                const isCompleted = row.original.status === 'completed'
+                const coaStatus = row.original.coa_reports?.[0]?.status
+
+                const handleGenerateCoA = async (e: React.MouseEvent) => {
+                    e.stopPropagation()
+                    setIsGeneratingCoA(true)
+                    try {
+                        const result = await regenerateCoA(row.original.id)
+                        if (result.success) {
+                            toast.success('Đã tạo CoA thành công')
+                            // Trigger a refresh of the data
+                            window.location.reload()
+                        } else {
+                            toast.error(`Lỗi khi tạo CoA: ${result.error}`)
+                        }
+                    } catch (error) {
+                        toast.error('Có lỗi không mong đợi khi tạo CoA')
+                        console.error(error)
+                    } finally {
+                        setIsGeneratingCoA(false)
+                    }
+                }
+
                 return (
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={(e) => {
-                                        e.stopPropagation()
-                                        handleRowClick(row.original.id)
-                                    }}
-                                    className="h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50"
-                                >
-                                    <FileSearch className="h-4 w-4" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Xem chi tiết và phê duyệt</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
+                    <div className="flex items-center gap-1">
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            handleRowClick(row.original.id)
+                                        }}
+                                        className="h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950"
+                                    >
+                                        <FileSearch className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Xem chi tiết và phê duyệt</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+
+                        {/* CoA Generation Button - Only for completed samples */}
+                        {isCompleted && (!coaStatus || coaStatus === 'failed') && (
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={handleGenerateCoA}
+                                            disabled={isGeneratingCoA}
+                                            className="h-8 w-8 text-slate-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-950 disabled:opacity-50"
+                                        >
+                                            <FileText className={`h-4 w-4 ${isGeneratingCoA ? 'animate-spin' : ''}`} />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>{coaStatus === 'failed' ? 'Tạo lại CoA' : 'Tạo CoA'}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        )}
+                    </div>
                 )
             },
         },
