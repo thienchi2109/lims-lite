@@ -103,6 +103,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
+      APP_NAME: realtime
       PORT: 4000
       DB_HOST: postgres
       DB_PORT: 5432
