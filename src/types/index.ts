@@ -394,7 +394,7 @@ export const AssignTestsSchema = z.object({
     sampleId: z.string().uuid(),
     tests: z.array(z.object({
         assayId: z.string().uuid(),
-        methodId: z.string(), // Relaxed from .uuid() to allow test data with non-standard UUIDs
+        methodId: z.string().nullable(), // Allow null for method-less test assignments
     })).min(1, 'At least one test must be selected'),
 })
 

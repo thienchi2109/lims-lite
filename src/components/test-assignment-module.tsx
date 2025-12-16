@@ -28,6 +28,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
+import {
+    getMethodForAssay,
+    validateAssignments,
+    prepareAssignmentData,
+    type AssayWithMethods,
+} from '@/lib/test-assignment-logic'
 
 interface TestAssignmentModuleProps {
     sampleId: string
@@ -38,19 +44,9 @@ interface TestAssignmentModuleProps {
     specialties?: LabSpecialty[]
 }
 
-interface Assay {
-    id: string
-    name: string
-    method_name: string | null
-    default_method_id: string | null
-    units: string | null
-    specialty_id: string | null
-    category?: string // Optional category for filtering
-}
-
 export function TestAssignmentModule({ sampleId, sampleStatus, onClose, onSuccess, onRefocus, specialties = [] }: TestAssignmentModuleProps) {
     const queryClient = useQueryClient()
-    const [assays, setAssays] = useState<Assay[]>([])
+    const [assays, setAssays] = useState<AssayWithMethods[]>([])
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
@@ -84,17 +80,25 @@ export function TestAssignmentModule({ sampleId, sampleStatus, onClose, onSucces
                 toast.error('Không thể tải danh sách xét nghiệm')
                 console.error(error)
             } else if (data) {
-                // Transform data to match Assay interface
-                const transformedAssays = data.map((a: any) => {
-                    // Find default method or first method
-                    const defaultMethod = a.methods.find((m: any) => m.is_default) || a.methods[0]
+                // Transform data to match AssayWithMethods interface
+                const transformedAssays: AssayWithMethods[] = data.map((a: any) => {
+                    // Map all methods with proper structure
+                    const methods = a.methods.map((m: { method_id: string; name: string; is_default: boolean }) => ({
+                        id: m.method_id,
+                        name: m.name,
+                        is_default: m.is_default || false,
+                    }))
+
+                    // Find default method ID
+                    const defaultMethod = methods.find((m: { id: string; name: string; is_default: boolean }) => m.is_default)
+
                     return {
                         id: a.id,
                         name: a.name,
-                        method_name: defaultMethod?.name || null,
-                        default_method_id: defaultMethod?.method_id || null,
-                        units: a.units,
+                        code: a.code,
                         specialty_id: a.specialty_id ?? null,
+                        default_method_id: defaultMethod?.id ?? null,
+                        methods: methods,
                     }
                 })
                 setAssays(transformedAssays)
@@ -117,9 +121,9 @@ export function TestAssignmentModule({ sampleId, sampleStatus, onClose, onSucces
     }, [assays, selectedAssayIds])
 
     // To persist selected items across searches, we need to store the full assay object when selected
-    const [selectedAssayObjects, setSelectedAssayObjects] = useState<Map<string, Assay>>(new Map())
+    const [selectedAssayObjects, setSelectedAssayObjects] = useState<Map<string, AssayWithMethods>>(new Map())
 
-    const toggleAssay = useCallback((assay: Assay) => {
+    const toggleAssay = useCallback((assay: AssayWithMethods) => {
         startTransition(() => {
             setSelectedAssayObjects((prev) => {
                 const next = new Map(prev)
@@ -151,15 +155,42 @@ export function TestAssignmentModule({ sampleId, sampleStatus, onClose, onSucces
 
         setSubmitting(true)
         try {
-            const testsToAssign = Array.from(selectedAssayObjects.values()).map(a => {
-                if (!a.default_method_id) {
-                    throw new Error(`Xét nghiệm "${a.name}" chưa có phương pháp mặc định`)
+            // Prepare assignments using shared logic
+            const assignments = Array.from(selectedAssayObjects.values()).map(assay => {
+                const methodSelection = getMethodForAssay(assay)
+
+                // Show warning if exists
+                if (methodSelection.warning) {
+                    console.warn(methodSelection.warning)
                 }
+
                 return {
-                    assayId: a.id,
-                    methodId: a.default_method_id,
+                    assay,
+                    methodId: methodSelection.methodId,
                 }
             })
+
+            // Validate assignments
+            const validation = validateAssignments(assignments)
+
+            if (!validation.valid) {
+                toast.error(validation.errors[0])
+                setSubmitting(false)
+                return
+            }
+
+            // Show warnings if any
+            if (validation.warnings.length > 0) {
+                validation.warnings.forEach(warning => toast.warning(warning))
+            }
+
+            // Prepare data for RPC
+            const testsToAssign = prepareAssignmentData(
+                assignments.map(a => ({
+                    assayId: a.assay.id,
+                    methodId: a.methodId,
+                }))
+            )
 
             const result = await assignTestsClient({
                 sampleId,
@@ -278,9 +309,27 @@ export function TestAssignmentModule({ sampleId, sampleStatus, onClose, onSucces
                                             )}
                                         </div>
                                         <div className="flex items-center gap-2 text-xs text-slate-500">
-                                            <Badge variant="secondary" className="bg-slate-100 font-normal text-slate-500">
-                                                {assay.method_name || 'Chưa có PP'}
-                                            </Badge>
+                                            {(() => {
+                                                const methodSelection = getMethodForAssay(assay)
+                                                const methodLabel = methodSelection.methodId
+                                                    ? assay.methods.find(m => m.id === methodSelection.methodId)?.name || 'Chưa có PP'
+                                                    : 'Không có PP'
+                                                const hasWarning = !!methodSelection.warning
+
+                                                return (
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className={cn(
+                                                            "font-normal",
+                                                            hasWarning
+                                                                ? "bg-amber-100 text-amber-700"
+                                                                : "bg-slate-100 text-slate-500"
+                                                        )}
+                                                    >
+                                                        {methodLabel}
+                                                    </Badge>
+                                                )
+                                            })()}
                                             {specialty && (
                                                 <Badge
                                                     variant="outline"
@@ -291,9 +340,6 @@ export function TestAssignmentModule({ sampleId, sampleStatus, onClose, onSucces
                                                 >
                                                     {specialty.name}
                                                 </Badge>
-                                            )}
-                                            {assay.units && (
-                                                <span>{assay.units}</span>
                                             )}
                                         </div>
                                     </div>
@@ -331,9 +377,22 @@ export function TestAssignmentModule({ sampleId, sampleStatus, onClose, onSucces
                                         <span className="truncate font-medium text-slate-700 group-hover:text-red-700">
                                             {assay.name}
                                         </span>
-                                        <span className="truncate text-xs text-slate-500 group-hover:text-red-500">
-                                            {assay.method_name}
-                                        </span>
+                                        {(() => {
+                                            const methodSelection = getMethodForAssay(assay)
+                                            const methodLabel = methodSelection.methodId
+                                                ? assay.methods.find(m => m.id === methodSelection.methodId)?.name || 'Chưa có PP'
+                                                : 'Không có PP'
+
+                                            return (
+                                                <span className={cn(
+                                                    "truncate text-xs group-hover:text-red-500",
+                                                    methodSelection.warning ? "text-amber-600" : "text-slate-500"
+                                                )}>
+                                                    {methodLabel}
+                                                    {methodSelection.warning && ' ⚠'}
+                                                </span>
+                                            )
+                                        })()}
                                         {assay.specialty_id && specialtiesMap.get(assay.specialty_id) && (
                                             <Badge
                                                 variant="outline"
