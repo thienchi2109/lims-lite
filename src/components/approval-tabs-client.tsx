@@ -130,7 +130,7 @@ export function ApprovalTabsClient({
                     value="review"
                     className="relative rounded-none border-b-2 border-transparent px-4 py-3 text-sm font-medium transition-colors duration-200 data-[state=active]:border-cyan-600 data-[state=active]:text-cyan-700 data-[state=active]:font-semibold data-[state=inactive]:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900/50 data-[state=active]:bg-transparent gap-2"
                 >
-                    Chờ duyệt
+                    Chờ duyệt KQ
                     {liveReviewCount > 0 && (
                         <Badge className="rounded-full px-2 py-0.5 text-xs bg-red-500 text-white border-0">
                             {liveReviewCount}
@@ -141,7 +141,7 @@ export function ApprovalTabsClient({
                     value="completed"
                     className="relative rounded-none border-b-2 border-transparent px-4 py-3 text-sm font-medium transition-colors duration-200 data-[state=active]:border-cyan-600 data-[state=active]:text-cyan-700 data-[state=active]:font-semibold data-[state=inactive]:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900/50 data-[state=active]:bg-transparent"
                 >
-                    Đã hoàn thành
+                    Đã duyệt KQ
                 </TabsTrigger>
             </TabsList>
 
