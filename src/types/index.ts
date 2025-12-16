@@ -64,7 +64,7 @@ export const CreateUserSchema = z.object({
 export type CreateUser = z.infer<typeof CreateUserSchema>
 
 export const UpdateUserSchema = z.object({
-    id: z.string().uuid(),
+    id: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, 'Invalid UUID format'),
     full_name: z.string().min(1).max(100).optional(),
     email: z.string().email().optional(),
     lab: z.string().optional(),

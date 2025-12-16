@@ -255,9 +255,37 @@ export async function getSessionTimeboxExpiryClient(
 /**
  * Upload manager signature file
  * Client-side wrapper that calls uploadManagerSignature server action
+ * NOTE: This bypasses the JSON API because FormData cannot be JSON-serialized
  */
-export function uploadSignatureClient(formData: FormData) {
-    return callClientAction('uploadManagerSignature', formData)
+export async function uploadSignatureClient(formData: FormData) {
+    const response = await fetch('/api/signatures/upload', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData, // Send FormData directly, not JSON
+    })
+
+    if (response.status === 401) {
+        console.error('Session expired or invalid, redirecting to login...')
+        if (typeof window !== 'undefined') {
+            window.location.href = '/login?reason=session_expired'
+        }
+        throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+    }
+
+    if (!response.ok) {
+        let errorMessage = 'Không thể tải lên chữ ký'
+        try {
+            const errorBody = await response.json()
+            if (errorBody?.error) {
+                errorMessage = errorBody.error
+            }
+        } catch {
+            // ignore json parse error
+        }
+        throw new Error(errorMessage)
+    }
+
+    return await response.json()
 }
 
 /**

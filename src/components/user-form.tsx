@@ -47,6 +47,10 @@ export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormP
     const isOtherEdit = isEdit && !isSelfEdit
 
     const updateSchema = UpdateUserSchema.extend({
+        id: z.string().uuid().optional(), // Make optional - we use user.id in onSubmit, not form value
+        full_name: z.string().min(1).max(100).optional().or(z.literal('')),
+        email: z.string().email().optional().or(z.literal('')),
+        lab: z.string().optional().or(z.literal('')),
         password: z.string().min(8).optional().or(z.literal('')),
     })
 
@@ -58,7 +62,7 @@ export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormP
         resolver: zodResolver(isEdit ? updateSchema : CreateUserSchema),
         defaultValues: (isEdit
             ? {
-                  id: user?.id ?? '',
+                  // id is NOT included - we use user.id directly in onSubmit
                   full_name: user?.full_name ?? '',
                   email: user?.email || '',
                   lab: user?.lab || '',
@@ -353,7 +357,10 @@ export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormP
                     <Button type="button" variant="outline" onClick={onCancel}>
                         Hủy
                     </Button>
-                    <Button type="submit" disabled={isSubmitting}>
+                    <Button
+                        type="submit"
+                        disabled={isSubmitting}
+                    >
                         {isSubmitting ? 'Đang lưu...' : (isEdit ? 'Cập nhật' : 'Tạo mới')}
                     </Button>
                 </div>
