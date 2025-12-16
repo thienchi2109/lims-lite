@@ -44,6 +44,7 @@ interface TestResult {
     unit: string | null
     normal_range: string | null
     method_name: string | null
+    lab_specialty_name: string | null
 }
 
 interface CoAData {
@@ -140,7 +141,11 @@ async function fetchTestResults(sampleId: string): Promise<TestResult[]> {
             assay_definitions!inner (
                 name,
                 units,
-                validation_rules
+                validation_rules,
+                lab_specialties (
+                    name,
+                    display_order
+                )
             ),
             methods (
                 name
@@ -154,8 +159,13 @@ async function fetchTestResults(sampleId: string): Promise<TestResult[]> {
         return []
     }
 
-    // Sort by assay name
+    // Sort by lab specialty order, then assay name
     const sorted = data.sort((a: any, b: any) => {
+        const orderA = a.assay_definitions?.lab_specialties?.display_order ?? 9999
+        const orderB = b.assay_definitions?.lab_specialties?.display_order ?? 9999
+
+        if (orderA !== orderB) return orderA - orderB
+
         const nameA = a.assay_definitions?.name || ''
         const nameB = b.assay_definitions?.name || ''
         return nameA.localeCompare(nameB)
@@ -171,7 +181,8 @@ async function fetchTestResults(sampleId: string): Promise<TestResult[]> {
             value: row.value,
             unit: row.assay_definitions?.units || null,
             normal_range: normalRange,
-            method_name: row.methods?.name || null
+            method_name: row.methods?.name || null,
+            lab_specialty_name: row.assay_definitions?.lab_specialties?.name || null
         }
     })
 }
@@ -186,6 +197,8 @@ function renderCoATemplate(coaData: CoAData): string {
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${coaData.sample.sample_id_display}&margin=0`
     const logoUrl = "https://i.postimg.cc/8zFZ52j1/cdc-logo-150.png"
     const dateStr = coaData.approvalDate
+
+
 
     return `
 <!DOCTYPE html>
@@ -456,6 +469,8 @@ function renderCoATemplate(coaData: CoAData): string {
             </table>
         </div>
 
+
+
         <!-- RESULTS -->
         <table class="res-table">
             <thead>
@@ -469,22 +484,54 @@ function renderCoATemplate(coaData: CoAData): string {
                 </tr>
             </thead>
             <tbody>
-                ${coaData.results.length > 0 ? coaData.results.map((result, index) => `
-                <tr>
-                    <td style="text-align: center;">${index + 1}</td>
-                    <td class="res-name">${result.assay_name}</td>
-                    <td class="res-value">${result.value || '-'}</td>
-                    <td class="res-unit">${result.unit || ''}</td>
-                    <td class="res-range">${result.normal_range || ''}</td>
-                    <td class="res-method">${result.method_name || ''}</td>
-                </tr>
-                `).join('') : `
-                <tr>
-                    <td colspan="6" style="text-align: center; font-style: italic; color: #666;">
-                        Không có kết quả xét nghiệm
-                    </td>
-                </tr>
-                `}
+                ${(() => {
+            const groups: { [key: string]: TestResult[] } = {};
+            const order: string[] = [];
+
+            // Group by specialty
+            coaData.results.forEach(result => {
+                const key = result.lab_specialty_name || 'KHÁC';
+                if (!groups[key]) {
+                    groups[key] = [];
+                    order.push(key);
+                }
+                groups[key].push(result);
+            });
+
+            if (coaData.results.length === 0) {
+                return `
+                        <tr>
+                            <td colspan="6" style="text-align: center; font-style: italic; color: #666;">
+                                Không có kết quả xét nghiệm
+                            </td>
+                        </tr>
+                        `;
+            }
+
+            return order.map(groupName => `
+                        ${groupName !== 'KHÁC' && groupName !== 'N/A' ? `
+                        <tr>
+                            <td colspan="6" style="background-color: #fce7f3; font-weight: bold; color: #9d174d; text-transform: uppercase; padding-left: 15px;">
+                                ${groupName}
+                            </td>
+                        </tr>
+                        ` : ''}
+                        ${groups[groupName].map((result, index) => {
+                // Calculate global index or per-group index? usually global for CoA
+                const totalIndex = coaData.results.indexOf(result) + 1;
+                return `
+                             <tr>
+                                <td style="text-align: center;">${totalIndex}</td>
+                                <td class="res-name">${result.assay_name}</td>
+                                <td class="res-value">${result.value || '-'}</td>
+                                <td class="res-unit">${result.unit || ''}</td>
+                                <td class="res-range">${result.normal_range || ''}</td>
+                                <td class="res-method">${result.method_name || ''}</td>
+                            </tr>
+                             `;
+            }).join('')}
+                    `).join('');
+        })()}
             </tbody>
         </table>
 
