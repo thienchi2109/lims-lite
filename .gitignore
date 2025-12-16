@@ -43,3 +43,9 @@ next-env.d.ts
 # python
 __pycache__/
 *.pyc
+
+# database backups (sensitive data - do not commit)
+*.sql
+*.dump
+*.backup
+/backups/
