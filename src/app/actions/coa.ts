@@ -797,8 +797,17 @@ export async function regenerateCoA(sampleId: string): Promise<GenerateCoAResult
             return { success: false, error: 'Lỗi khi kiểm tra CoA hiện có' }
         }
 
-        // If CoA exists with status='ready', mark it as failed so generateCoA can update it
+        // If CoA exists with status='ready', save state before marking as failed
+        let previousState: { status: string; filePath: string | null } | null = null
+
         if (existingCoa && existingCoa.status === 'ready') {
+            // Save previous state for potential restoration
+            previousState = {
+                status: existingCoa.status,
+                filePath: existingCoa.file_path
+            }
+
+            // Mark as failed so generateCoA can update it
             const { error: updateError } = await supabase
                 .from('coa_reports')
                 .update({ status: 'failed', error_message: 'Regenerating CoA' })
@@ -811,7 +820,34 @@ export async function regenerateCoA(sampleId: string): Promise<GenerateCoAResult
         }
 
         // Now call generateCoA which will update the existing record
-        return generateCoA(sampleId)
+        const result = await generateCoA(sampleId)
+
+        // If regeneration failed and we had a previously ready CoA, restore it
+        if (!result.success && previousState && existingCoa) {
+            console.warn('Regeneration failed, restoring previous ready state for CoA:', existingCoa.id)
+            const { error: restoreError } = await supabase
+                .from('coa_reports')
+                .update({
+                    status: previousState.status,
+                    file_path: previousState.filePath,
+                    error_message: null
+                })
+                .eq('id', existingCoa.id)
+
+            if (restoreError) {
+                console.error('Failed to restore previous CoA state:', restoreError)
+                // Return error indicating both regeneration and restoration failed
+                return {
+                    success: false,
+                    error: 'Tạo lại CoA thất bại và không thể khôi phục trạng thái trước đó. Vui lòng liên hệ quản trị viên.'
+                }
+            }
+
+            // State restored, return the original generation error
+            return result
+        }
+
+        return result
     } catch (error) {
         console.error('Regenerate CoA error:', error)
         return { success: false, error: 'Đã xảy ra lỗi khi tạo lại CoA' }
