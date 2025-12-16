@@ -193,7 +193,7 @@ function renderCoATemplate(coaData: CoAData): string {
 
 <head>
     <meta charset="UTF-8">
-    <title>Giấy chứng nhận phân tích - ${coaData.sample.sample_id_display}</title>
+    <title>Kết quả xét nghiệm - ${coaData.sample.sample_id_display}</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
 
@@ -426,7 +426,7 @@ function renderCoATemplate(coaData: CoAData): string {
                 <div class="org-parent">SỞ Y TẾ THÀNH PHỐ CẦN THƠ</div>
                 <div class="org-name">TRUNG TÂM KIỂM SOÁT BỆNH TẬT (CDC)</div>
                 <div class="org-address">400 Nguyễn Văn Cừ, P. An Bình, TP. Cần Thơ</div>
-                <div class="form-name">GIẤY CHỨNG NHẬN PHÂN TÍCH</div>
+                <div class="form-name">KẾT QUẢ XÉT NHIỆM</div>
             </div>
             <div class="header-right"><img src="${qrCodeUrl}" class="qr-img" />
                 <div class="sample-id-box">${coaData.sample.sample_id_display}</div>
@@ -506,7 +506,7 @@ function renderCoATemplate(coaData: CoAData): string {
         </div>
 
         <div class="footer-disclaimer">
-            Giấy chứng nhận này chỉ có giá trị trên mẫu xét nghiệm tại thời điểm kiểm tra.
+            Kết quả xét nghiệm chỉ có giá trị trên mẫu xét nghiệm tại thời điểm kiểm tra.
         </div>
 
         <!-- Hidden metadata for verification -->
