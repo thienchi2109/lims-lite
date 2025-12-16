@@ -481,6 +481,8 @@ export const ResultWithAssaySchema = ResultSchema.extend({
     sample_id_display: z.string(),
     sample_status: SampleStatus.nullable(),
     entered_by_name: z.string().nullable(),
+    lab_specialty_name: z.string().nullable().optional(),
+    lab_specialty_order: z.number().int().optional(),
 })
 
 export type ResultWithAssay = z.infer<typeof ResultWithAssaySchema>

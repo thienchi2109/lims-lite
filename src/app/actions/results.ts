@@ -39,7 +39,11 @@ export async function getResultsBySample(sampleId: string) {
                     id,
                     name,
                     units,
-                    validation_rules
+                    validation_rules,
+                    lab_specialties (
+                        name,
+                        display_order
+                    )
                 ),
                 method:methods!results_method_id_fkey(
                     name
@@ -66,6 +70,8 @@ export async function getResultsBySample(sampleId: string) {
             sample_id_display: result.sample?.sample_id || '',
             sample_status: result.sample?.status || null,
             entered_by_name: result.entered_by_user?.full_name || null,
+            lab_specialty_name: result.assay?.lab_specialties?.name || null,
+            lab_specialty_order: result.assay?.lab_specialties?.display_order ?? 9999,
         }))
 
         return { data: transformedResults }

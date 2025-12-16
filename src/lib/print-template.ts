@@ -16,9 +16,9 @@ export function generatePrintTemplate(sample: SampleForPrint, results: ResultWit
   const clientName = client?.name || sample.client_name || ''
   const birthYear = client?.date_of_birth
     ? (() => {
-        const year = new Date(client.date_of_birth).getFullYear()
-        return Number.isFinite(year) ? String(year) : ''
-      })()
+      const year = new Date(client.date_of_birth).getFullYear()
+      return Number.isFinite(year) ? String(year) : ''
+    })()
     : ''
   const gender = client?.gender || ''
   const address = client?.address || ''
@@ -26,12 +26,31 @@ export function generatePrintTemplate(sample: SampleForPrint, results: ResultWit
   const healthInsuranceNum = client?.health_insurance_num || ''
   const sampleType = sample.type || ''
 
-  // Group results by category
+  // Group results by category (Lab Specialty)
   const testsByCategory: { [key: string]: ResultWithAssay[] } = {};
+  const categoryOrder: { [key: string]: number } = {};
+
   results.forEach(result => {
-    const cat = 'XÉT NGHIỆM'; // Default category
-    if (!testsByCategory[cat]) testsByCategory[cat] = [];
+    const cat = result.lab_specialty_name || 'KHÁC';
+    if (!testsByCategory[cat]) {
+      testsByCategory[cat] = [];
+      categoryOrder[cat] = result.lab_specialty_order ?? 9999;
+    }
     testsByCategory[cat].push(result);
+  });
+
+  // Sort categories by order
+  const sortedCategories = Object.keys(testsByCategory).sort((a, b) => {
+    const orderA = categoryOrder[a];
+    const orderB = categoryOrder[b];
+    return orderA - orderB;
+  });
+
+  // Flatten results for sequential numbering
+  const displayResults: ResultWithAssay[] = [];
+  sortedCategories.forEach(cat => {
+    testsByCategory[cat].sort((a, b) => (a.assay_name || '').localeCompare(b.assay_name || ''));
+    displayResults.push(...testsByCategory[cat]);
   });
 
   return `
@@ -306,13 +325,13 @@ export function generatePrintTemplate(sample: SampleForPrint, results: ResultWit
               </tr>
             </thead>
             <tbody>
-              ${Object.entries(testsByCategory).map(([category, tests], catIndex) => `
+              ${sortedCategories.map((category) => `
                 <tr class="cat-row">
                   <td colspan="5">${category}</td>
                 </tr>
-                ${tests.map((test, index) => `
+                ${testsByCategory[category].map((test, index) => `
                   <tr>
-                    <td class="center-text">${index + 1}</td>
+                    <td class="center-text">${displayResults.indexOf(test) + 1}</td>
                     <td class="checkbox-cell">☐</td>
                     <td class="center-text" style="font-weight:bold;">${test.assay_name}</td> 
                     <td style="font-weight: 500;">${test.assay_name}</td>
