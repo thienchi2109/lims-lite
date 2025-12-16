@@ -16,7 +16,7 @@ BEGIN
         INSERT INTO audit_logs (
             table_name,
             record_id,
-            action,
+            operation,
             old_values,
             new_values,
             changed_by
