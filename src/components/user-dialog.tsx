@@ -15,9 +15,10 @@ interface UserDialogProps {
     onOpenChange: (open: boolean) => void
     mode: 'create' | 'edit'
     user?: User
+    currentUserId?: string
 }
 
-export function UserDialog({ open, onOpenChange, mode, user }: UserDialogProps) {
+export function UserDialog({ open, onOpenChange, mode, user, currentUserId }: UserDialogProps) {
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[500px]">
@@ -27,9 +28,10 @@ export function UserDialog({ open, onOpenChange, mode, user }: UserDialogProps) 
                          {mode === 'create' ? 'Tạo tài khoản mới cho nhân viên.' : 'Cập nhật thông tin tài khoản.'}
                     </DialogDescription>
                 </DialogHeader>
-                <UserForm 
-                    user={user} 
-                    onSuccess={() => onOpenChange(false)} 
+                <UserForm
+                    user={user}
+                    currentUserId={currentUserId}
+                    onSuccess={() => onOpenChange(false)}
                     onCancel={() => onOpenChange(false)}
                 />
             </DialogContent>

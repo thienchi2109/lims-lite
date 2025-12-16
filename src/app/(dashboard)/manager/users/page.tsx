@@ -84,6 +84,7 @@ export default async function UsersPage({
                             pageSize={pageSize}
                             totalPages={totalPages || 1}
                             totalCount={count || 0}
+                            currentUserId={user.id}
                         />
                     </CardContent>
                 </Card>

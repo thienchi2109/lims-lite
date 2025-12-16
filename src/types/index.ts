@@ -42,6 +42,12 @@ export const UserSchema = z.object({
     created_at: z.string().datetime(),
     updated_at: z.string().datetime(),
     deleted_at: z.string().datetime().nullable().optional(),
+    // Signature status (from left join with user_signatures)
+    user_signatures: z.array(z.object({
+        id: z.string().uuid(),
+        is_active: z.boolean(),
+        uploaded_at: z.string().datetime(),
+    })).optional(),
 })
 
 export type User = z.infer<typeof UserSchema>

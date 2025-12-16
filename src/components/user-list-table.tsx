@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { User } from '@/types'
 import { Button } from '@/components/ui/button'
-import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight, CheckCircle2, XCircle } from 'lucide-react'
 import {
     Table,
     TableBody,
@@ -31,6 +31,7 @@ interface UserListTableProps {
     pageSize: number
     totalPages: number
     totalCount: number
+    currentUserId?: string
 }
 
 export function UserListTable({
@@ -39,6 +40,7 @@ export function UserListTable({
     pageSize,
     totalPages,
     totalCount,
+    currentUserId,
 }: UserListTableProps) {
     const [editingUser, setEditingUser] = useState<User | null>(null)
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
@@ -92,18 +94,24 @@ export function UserListTable({
                             <TableHead>Email</TableHead>
                             <TableHead>Phòng Lab</TableHead>
                             <TableHead>Vai trò</TableHead>
+                            <TableHead className="w-[80px] text-center">Chữ ký</TableHead>
                             <TableHead className="w-[100px]">Thao tác</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {users.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} className="h-24 text-center">
+                                <TableCell colSpan={7} className="h-24 text-center">
                                     Không tìm thấy người dùng nào.
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            users.map((user) => (
+                            users.map((user) => {
+                                // Check if manager has active signature
+                                const hasSignature = user.role === 'manager' &&
+                                    user.user_signatures?.some(sig => sig.is_active) || false
+
+                                return (
                                 <TableRow key={user.id}>
                                     <TableCell className="font-medium font-mono">
                                         {user.username}
@@ -115,6 +123,21 @@ export function UserListTable({
                                         <Badge variant={user.role === 'manager' ? 'default' : 'secondary'} className="capitalize">
                                             {user.role === 'manager' ? 'Quản lý' : 'Kỹ thuật viên'}
                                         </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        {user.role === 'manager' ? (
+                                            hasSignature ? (
+                                                <div className="flex justify-center" title="Đã có chữ ký">
+                                                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                                                </div>
+                                            ) : (
+                                                <div className="flex justify-center" title="Chưa có chữ ký">
+                                                    <XCircle className="h-5 w-5 text-slate-300" />
+                                                </div>
+                                            )
+                                        ) : (
+                                            <span className="text-slate-400">-</span>
+                                        )}
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
@@ -137,7 +160,8 @@ export function UserListTable({
                                         </div>
                                     </TableCell>
                                 </TableRow>
-                            ))
+                                )
+                            })
                         )}
                     </TableBody>
                 </Table>
@@ -196,6 +220,7 @@ export function UserListTable({
                 open={isAddDialogOpen}
                 onOpenChange={setIsAddDialogOpen}
                 mode="create"
+                currentUserId={currentUserId}
             />
 
             {editingUser && (
@@ -204,6 +229,7 @@ export function UserListTable({
                     onOpenChange={(open) => !open && setEditingUser(null)}
                     mode="edit"
                     user={editingUser}
+                    currentUserId={currentUserId}
                 />
             )}
         </div>

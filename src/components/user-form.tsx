@@ -25,21 +25,26 @@ import {
 import { SignatureUploadField } from '@/components/signature-upload-field'
 import { toast } from 'sonner'
 import { z } from 'zod'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Info } from 'lucide-react'
 
 // We need a combined schema or handling logic because Create and Update are different
 // But for the form, we can just use a loose schema or separate them.
 
 interface UserFormProps {
     user?: User
+    currentUserId?: string  // ID of the logged-in user
     onSuccess: () => void
     onCancel: () => void
 }
 
-export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
+export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [signatureFile, setSignatureFile] = useState<File | null>(null)
     const [signatureError, setSignatureError] = useState<string | null>(null)
     const isEdit = !!user
+    const isSelfEdit = isEdit && currentUserId && user.id === currentUserId
+    const isOtherEdit = isEdit && !isSelfEdit
 
     const updateSchema = UpdateUserSchema.extend({
         password: z.string().min(8).optional().or(z.literal('')),
@@ -96,7 +101,31 @@ export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
                 if (hasActionError(result)) {
                     throw new Error(result.error)
                 }
-                toast.success('Đã cập nhật người dùng thành công')
+
+                // If self-edit and manager role and signature file provided, upload signature
+                if (isSelfEdit && user.role === 'manager' && signatureFile) {
+                    try {
+                        const formData = new FormData()
+                        formData.append('file', signatureFile)
+
+                        const signatureResult = await uploadSignatureClient(formData)
+                        if (!signatureResult.success) {
+                            setSignatureError(signatureResult.error)
+                            toast.warning(
+                                'Thông tin đã được cập nhật nhưng chữ ký tải lên thất bại. ' +
+                                signatureResult.error
+                            )
+                        } else {
+                            toast.success('Đã cập nhật thông tin và chữ ký thành công')
+                        }
+                    } catch (signatureErr) {
+                        console.error('Signature upload error:', signatureErr)
+                        setSignatureError('Tải lên chữ ký thất bại')
+                        toast.warning('Thông tin đã được cập nhật nhưng chữ ký tải lên thất bại')
+                    }
+                } else {
+                    toast.success('Đã cập nhật người dùng thành công')
+                }
             } else {
                 const createValues = values as CreateUserFormValues
                 const createPayload: CreateUser = {
@@ -156,6 +185,17 @@ export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                {/* Compliance banner when editing other users */}
+                {isOtherEdit && (
+                    <Alert>
+                        <Info className="h-4 w-4" />
+                        <AlertDescription>
+                            <strong>Chế độ quản trị:</strong> Bạn chỉ có thể chỉnh sửa vai trò của người dùng này.
+                            Chỉ người dùng mới có thể cập nhật thông tin cá nhân của họ để đảm bảo tuân thủ quy định.
+                        </AlertDescription>
+                    </Alert>
+                )}
+
                 {!isEdit && (
                     <FormField
                         control={form.control}
@@ -179,7 +219,11 @@ export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
                         <FormItem>
                             <FormLabel>Họ và tên</FormLabel>
                             <FormControl>
-                                <Input placeholder="Nguyễn Văn A" {...field} />
+                                <Input
+                                    placeholder="Nguyễn Văn A"
+                                    {...field}
+                                    disabled={isOtherEdit}
+                                />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -193,7 +237,12 @@ export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
                         <FormItem>
                             <FormLabel>Email</FormLabel>
                             <FormControl>
-                                <Input type="email" placeholder="example@cdc.gov.vn" {...field} />
+                                <Input
+                                    type="email"
+                                    placeholder="example@cdc.gov.vn"
+                                    {...field}
+                                    disabled={isOtherEdit}
+                                />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -207,7 +256,11 @@ export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
                         <FormItem>
                             <FormLabel>Phòng Lab</FormLabel>
                             <FormControl>
-                                <Input placeholder="Phòng xét nghiệm..." {...field} />
+                                <Input
+                                    placeholder="Phòng xét nghiệm..."
+                                    {...field}
+                                    disabled={isOtherEdit}
+                                />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -243,14 +296,20 @@ export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
                         <FormItem>
                             <FormLabel>{isEdit ? 'Mật khẩu mới (để trống nếu không đổi)' : 'Mật khẩu'}</FormLabel>
                             <FormControl>
-                                <Input type="password" {...field} />
+                                <Input
+                                    type="password"
+                                    {...field}
+                                    disabled={isOtherEdit}
+                                    placeholder={isOtherEdit ? 'Người dùng tự đặt lại mật khẩu' : ''}
+                                />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
                     )}
                 />
 
-                {/* Signature upload for manager role (only during creation) */}
+                {/* Signature upload section */}
+                {/* Case 1: Creating new manager - allow signature upload */}
                 {!isEdit && form.watch('role') === 'manager' && (
                     <SignatureUploadField
                         value={signatureFile}
@@ -258,6 +317,30 @@ export function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
                         error={signatureError || undefined}
                         required={false}
                     />
+                )}
+
+                {/* Case 2: Manager editing their own account - allow signature upload/change */}
+                {isSelfEdit && user.role === 'manager' && (
+                    <SignatureUploadField
+                        value={signatureFile}
+                        onChange={setSignatureFile}
+                        error={signatureError || undefined}
+                        required={false}
+                    />
+                )}
+
+                {/* Case 3: Editing someone else who is a manager - show signature status only */}
+                {isOtherEdit && user.role === 'manager' && (
+                    <div className="space-y-2">
+                        <FormLabel>Chữ ký điện tử</FormLabel>
+                        <Alert>
+                            <Info className="h-4 w-4" />
+                            <AlertDescription className="text-sm">
+                                Người dùng này cần tự tải lên chữ ký điện tử của họ khi đăng nhập.
+                                Bạn không thể tải lên chữ ký thay họ để đảm bảo tuân thủ quy định.
+                            </AlertDescription>
+                        </Alert>
+                    </div>
                 )}
 
                 {form.formState.errors.root && (

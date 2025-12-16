@@ -25,10 +25,13 @@ export async function getUsers(params: z.infer<typeof PaginationSchema> & { role
         throw new Error('Unauthorized: Manager access required')
     }
 
-    // Build query
+    // Build query with signature status
     let query = supabase
         .from('users')
-        .select('*', { count: 'exact' })
+        .select(`
+            *,
+            user_signatures!left(id, is_active, uploaded_at)
+        `, { count: 'exact' })
         .is('deleted_at', null) // Exclude soft-deleted
 
     if (params.search) {
