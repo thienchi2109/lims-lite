@@ -84,6 +84,12 @@ postgres:
 
 Then restart and you can use the command-line approach.
 
+⚠️ **Realtime requirement:** Supabase Realtime `postgres_changes` needs the `wal2json` output plugin.
+The vanilla `postgres:15-alpine` image does **not** include `wal2json`, so Realtime will log:
+`could not access file "wal2json": No such file or directory`
+and no realtime updates will be delivered. If you need realtime, use a Postgres image that bundles `wal2json`
+(e.g. `supabase/postgres`) or build a custom Postgres image with `wal2json` installed.
+
 ## Verification
 Once complete, you can start the Next.js app:
 ```bash

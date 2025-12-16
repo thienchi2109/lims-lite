@@ -103,7 +103,9 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      APP_NAME: realtime
+      # Supabase Realtime is multi-tenant and requires a seeded tenant.
+      # The built-in seed uses external_id "realtime-dev", so APP_NAME must match.
+      APP_NAME: realtime-dev
       PORT: 4000
       DB_HOST: postgres
       DB_PORT: 5432
@@ -111,9 +113,12 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}
       DB_NAME: postgres
       DB_SSL: "false"
-      SLOT_NAME: supabase_realtime_rls
-      TEMPORARY_SLOT: "true"
-      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-token-with-at-least-32-characters-long}
+      # Required for auth + tenant seeding
+      API_JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-token-with-at-least-32-characters-long}
+      # Required for encrypting tenant secrets in Postgres (must be 16 bytes for aes_128_ecb)
+      DB_ENC_KEY: ${DB_ENC_KEY:-0123456789abcdef}
+      SEED_SELF_HOST: "true"
+      REGION: us-east-1
       SECRET_KEY_BASE: ${SECRET_KEY_BASE:-EAx3IQ/wRG1v47ZD4NE4/9RzBI8Jmil3x0yhcW4V2NHBP6c2iPIzwjofi2Ep4HIG}
       ERL_AFLAGS: -proto_dist inet_tcp
       DNS_NODES: "''"

@@ -34,6 +34,14 @@ services:
         strip_path: true
     plugins:
       - name: cors
+      # Realtime is multi-tenant and derives tenant external_id from the Host header.
+      # Kong defaults to upstream Host ("realtime"), which causes TenantNotFound.
+      # Force a stable tenant id that matches the built-in SEED_SELF_HOST tenant ("realtime-dev").
+      - name: request-transformer
+        config:
+          replace:
+            headers:
+              - host:realtime-dev
 
   - name: meta
     url: http://meta:8080

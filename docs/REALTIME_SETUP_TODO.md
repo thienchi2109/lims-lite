@@ -39,10 +39,15 @@ docker compose ps realtime
 docker compose logs --tail 50 realtime
 docker exec lims-postgres psql -U postgres -d postgres -c "SELECT pubname FROM pg_publication WHERE pubname='supabase_realtime';"
 docker exec lims-postgres psql -U postgres -d postgres -c "SELECT schemaname, tablename FROM pg_publication_tables WHERE pubname='supabase_realtime';"
+docker exec lims-postgres psql -U postgres -d postgres -c "SELECT external_id FROM public.tenants ORDER BY external_id;"
+docker exec lims-postgres psql -U postgres -d postgres -c "SELECT slot_name, active FROM pg_replication_slots ORDER BY slot_name;"
 curl -i http://localhost:8000/realtime/v1/ | head
 ```
 
 Expected:
 - `lims-realtime` is `Up` (not `Restarting`)
 - `supabase_realtime` publication exists and includes `public.samples`
+- `public.tenants` includes `realtime-dev` (otherwise Realtime logs `TenantNotFound`)
+- `pg_replication_slots` shows an active slot (otherwise no `postgres_changes` will fire)
+- `docker compose logs realtime` does NOT show `could not access file "wal2json"` (requires a Postgres image with wal2json installed)
 - `curl` returns a 404 from upstream `Cowboy` (means Kong routing is working)
