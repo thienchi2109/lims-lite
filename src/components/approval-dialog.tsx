@@ -38,7 +38,6 @@ export function ApprovalDialog({
     const [isSubmitting, setIsSubmitting] = useState(false)
     const router = useRouter()
     const queryClient = useQueryClient()
-    const pathname = '/manager/approvals' // Current page path
 
     const handleSubmit = async () => {
         if (mode === 'cancel' && note.trim().length < 3) {
@@ -66,9 +65,8 @@ export function ApprovalDialog({
                     onOpenChange(false)
                     setNote('')
 
-                    // Force Server Component re-fetch by navigating to current path
-                    // This ensures the sample list updates immediately after approval
-                    router.push(pathname)
+                    // Refresh server components without dropping current query params (tab/sampleId)
+                    router.refresh()
                 }
             } else {
                 const result = await cancelApprovalClient({
@@ -87,9 +85,8 @@ export function ApprovalDialog({
                     onOpenChange(false)
                     setNote('')
 
-                    // Force Server Component re-fetch by navigating to current path
-                    // This ensures the sample list updates immediately after canceling approval
-                    router.push(pathname)
+                    // Refresh server components without dropping current query params (tab/sampleId)
+                    router.refresh()
                 }
             }
         } catch (error) {
