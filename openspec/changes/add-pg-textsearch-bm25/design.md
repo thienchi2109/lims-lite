@@ -3,227 +3,445 @@
 CDC-LIMS currently has no full-text search capability. Users must rely on exact-match filters (sample ID prefix, status dropdown) which is inefficient for:
 - Finding samples by partial client name or description
 - Searching test catalog by method keywords
+- Finding results by value or comments (e.g., "positive culture")
 - Investigating audit logs during compliance audits
-- Cross-entity discovery (finding related samples, clients, and results)
+- Cross-entity discovery (finding related samples, clients, results, and assays)
 
-PostgreSQL's built-in `tsvector`/`tsquery` with `ts_rank` has limitations:
-- No term frequency saturation (vulnerable to keyword stuffing)
-- Limited relevance tuning options
-- Vietnamese tokenization requires custom configuration
+PostgreSQL's built-in full-text search provides production-proven capabilities with:
+- `tsvector` for tokenized document representation
+- `tsquery` for query parsing
+- `ts_rank()` for relevance scoring
+- GIN/GiST indexes for performance
+- Automatic index updates via triggers
+- Vietnamese language support
 
-**pg_textsearch** is a Rust-based PostgreSQL extension by Timescale that implements BM25 (Best Matching 25) ranking algorithm, the industry standard for information retrieval.
+This eliminates the need for external search services or complex BM25 implementations.
 
 ## Goals / Non-Goals
 
 ### Goals
-- Provide BM25-ranked full-text search across LIMS core entities (samples, clients, assays, audit_logs)
+- Provide full-text search across LIMS core entities (samples, clients, assays, results, audit_logs)
 - Maintain RLS compliance (search results respect existing row-level security policies)
-- Support Vietnamese text through configurable text_config
-- Enable future hybrid search with pgvector (RRF fusion)
-- Keep infrastructure self-contained (no external search services)
+- Support Vietnamese text through PostgreSQL language configurations
+- Enable future enhancements (phrase search, synonyms, ranking weights)
+- Keep infrastructure simple (use PostgreSQL built-in features only)
+- Zero external dependencies (no extensions, no external services)
 
 ### Non-Goals
-- Semantic/embedding-based search (phase 2 with pgvector)
+- BM25 ranking algorithm (PostgreSQL's `ts_rank` is sufficient for LIMS)
+- Semantic/embedding-based search (phase 2 with pgvector if needed)
 - Real-time search-as-you-type (initial implementation uses submit-based search)
 - External search services (Elasticsearch, Meilisearch, Typesense)
 - Full audit log search for analysts (manager-only due to compliance)
+- Complex relevance tuning (start simple, iterate based on user feedback)
 
 ## Decisions
 
-### Decision: pg_textsearch over alternatives
+### Decision: PostgreSQL built-in full-text search
 
-**Evaluated options:**
+**Why built-in search over BM25 implementations:**
 
-| Option | Pros | Cons | Verdict |
-|--------|------|------|---------|
-| **pg_textsearch** | BM25 native, memtable architecture, pgvector-ready, Rust/pgrx | Requires custom Docker build, newer project | **Selected** |
-| ParadeDB pg_search | Full BM25, Tantivy-based | Heavier footprint, complex licensing | Rejected |
-| plpgsql_bm25 | Pure SQL, no compilation | Slower, no index structures | Rejected |
-| Elasticsearch | Mature, feature-rich | External service, operational complexity, cost | Rejected |
-| Built-in ts_rank | No dependencies | No BM25, keyword stuffing vulnerability | Rejected |
+| Aspect | Built-in Search | BM25 (plpgsql_bm25) | BM25 (pg_textsearch) |
+|--------|----------------|---------------------|---------------------|
+| **Setup** | Add tsvector column, create trigger | Install SQL functions, manual index refresh | Requires PostgreSQL 17+ (incompatible) |
+| **Performance** | ~10ms for 10k rows (GIN index) | ~100ms for 10k rows | ~1-2ms (but unusable) |
+| **Maintenance** | Zero (automatic updates) | High (manual refresh via pg_cron) | N/A (can't use) |
+| **Production readiness** | Proven since PG 8.3 (2008) | Experimental/PoC | v0.1.1-dev (not production) |
+| **Vietnamese support** | Built-in language configs | Manual stopwords list | N/A |
+| **RLS integration** | Native (same table) | Complex (JOIN required) | N/A |
 
-**Rationale**: pg_textsearch provides BM25 ranking in-database with minimal operational overhead. The custom Docker build is a one-time setup cost, and the extension's Rust/pgrx architecture ensures performance. Future hybrid search with pgvector is a natural extension.
+**Trade-off analysis:**
 
-### Decision: Custom Dockerfile approach
+**BM25 advantages:**
+- Better ranking for keyword stuffing scenarios (term frequency saturation)
+- Industry standard for web search engines
 
-The pg_textsearch extension requires Rust toolchain and cargo-pgrx for compilation. Options:
+**Built-in search advantages:**
+- ✅ Zero setup complexity (no external code)
+- ✅ Automatic index updates (no manual refresh)
+- ✅ Production-proven for 15+ years
+- ✅ Native RLS integration
+- ✅ Vietnamese language support included
+- ✅ Sub-second performance for LIMS workloads
 
-1. **Multi-stage Dockerfile** (Selected)
-   - Stage 1: Build pg_textsearch with Rust toolchain
-   - Stage 2: Copy compiled extension to Supabase Postgres image
-   - Pros: Reproducible builds, CI/CD friendly, minimal runtime image size
-   - Cons: Initial build takes 5-10 minutes
+**Why BM25 doesn't matter for LIMS:**
+- LIMS users search to **FIND** records, not **RANK** thousands of results
+- Dataset is small (10k-100k samples vs millions of web documents)
+- Search queries are infrequent (few times per day vs thousands per second)
+- Keyword stuffing is not a concern (controlled data entry)
 
-2. **Pre-built extension download**
-   - Download release artifacts from Timescale
-   - Pros: Faster builds
-   - Cons: Version compatibility issues, architecture mismatch risks
+**Verdict:** Built-in search provides 90% of the value with 10% of the complexity. Ship it first, iterate if users complain about relevance.
 
-3. **Supabase extension request**
-   - Request Supabase add pg_textsearch to their image
-   - Pros: Zero maintenance
-   - Cons: Unlikely for newer extension, no timeline control
+### Decision: tsvector column approach
 
-### Decision: Vietnamese language support
+**Implementation strategy:**
 
-pg_textsearch uses `text_config` parameter for text processing:
+Add `search_vector tsvector` column to each searchable table with automatic trigger updates:
 
 ```sql
-SELECT textsearch.search(
-    'samples_search_idx',
-    'Nguyen Van A',
-    text_config => 'simple'  -- or custom Vietnamese config
+-- Add search column
+ALTER TABLE samples
+ADD COLUMN search_vector tsvector;
+
+-- Create GIN index for fast search
+CREATE INDEX samples_search_idx
+ON samples USING GIN(search_vector);
+
+-- Auto-update trigger
+CREATE TRIGGER samples_search_update
+BEFORE INSERT OR UPDATE ON samples
+FOR EACH ROW EXECUTE FUNCTION
+tsvector_update_trigger(
+    search_vector,
+    'pg_catalog.english',  -- Start with English, add Vietnamese later
+    sample_id,
+    description
 );
 ```
 
+**Why tsvector column vs expression index:**
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| **tsvector column** (selected) | Fast query (pre-computed), simple trigger | Extra column storage |
+| Expression index | No extra column | Slower (computed on-the-fly) |
+
+**Trade-off accepted:** Small storage overhead (<5% for text columns) is worth the query performance gain.
+
+### Decision: Vietnamese language support
+
+PostgreSQL supports Vietnamese through:
+
+1. **Simple dictionary (unaccented):**
+   ```sql
+   -- Remove Vietnamese diacritics for broader matching
+   SELECT to_tsvector('simple', unaccent('Huyết thanh'));
+   -- Result: 'huyet':1 'thanh':2
+   ```
+
+2. **English dictionary with Vietnamese stopwords:**
+   ```sql
+   -- Use English tokenization, add Vietnamese stopwords later
+   SELECT to_tsvector('english', 'Huyết thanh sinh học');
+   ```
+
 **Strategy:**
-1. Start with `'simple'` text_config (case-insensitive, no stemming)
-2. Evaluate Vietnamese-specific tokenization needs post-deployment
-3. Add custom text_config with Vietnamese dictionaries if needed
+1. Start with `'simple'` dictionary + `unaccent()` for diacritic-insensitive search
+2. Add Vietnamese stopwords file if needed (và, của, được, etc.)
+3. Evaluate custom dictionary post-deployment based on user feedback
+
+**Installation:**
+```sql
+CREATE EXTENSION IF NOT EXISTS unaccent;
+```
 
 ### Decision: Index strategy
 
-Create dedicated BM25 indexes per searchable table:
+Create GIN indexes on each searchable table:
 
-| Table | Indexed Columns | Index Name |
-|-------|-----------------|------------|
-| samples | sample_id, description, client_name (via join) | samples_search_idx |
-| clients | name, contact_name, phone, email, address | clients_search_idx |
-| assay_definitions | name, method_name, description, specialty_name | assays_search_idx |
-| audit_logs | action, old_data, new_data, user_email | audit_logs_search_idx |
+| Table | Indexed Columns | Index Name | Language Config |
+|-------|----------------|------------|-----------------|
+| samples | sample_id, description | samples_search_idx | simple + unaccent |
+| clients | name, contact_name, address | clients_search_idx | simple + unaccent |
+| assay_definitions | name, method_name, description | assays_search_idx | simple + unaccent |
+| results | value, comments | results_search_idx | simple + unaccent |
+| audit_logs | action, old_data::text, new_data::text | audit_logs_search_idx | simple + unaccent |
 
-**Configuration:** Use default BM25 parameters (k1=1.2, b=0.75) initially, tune based on relevance feedback.
+**GIN vs GiST:**
+- **GIN** (selected): Faster queries, slower updates, larger index
+- **GiST**: Faster updates, slower queries, smaller index
+
+**Rationale:** LIMS workloads have infrequent writes and frequent reads. GIN is optimal.
 
 ### Decision: RLS enforcement in search
 
-Search functions run with `SECURITY INVOKER` to respect caller's RLS policies:
+**Built-in search automatically inherits RLS policies** because search happens on the same table:
 
 ```sql
-CREATE OR REPLACE FUNCTION search_samples(query TEXT)
-RETURNS TABLE(id UUID, sample_id TEXT, score FLOAT4)
-LANGUAGE plpgsql
+CREATE OR REPLACE FUNCTION search_samples(search_query TEXT, max_results INT DEFAULT 20)
+RETURNS TABLE(id UUID, sample_id TEXT, description TEXT, rank REAL)
+LANGUAGE sql
 SECURITY INVOKER  -- Inherits caller's permissions
 AS $$
-BEGIN
-    RETURN QUERY
-    SELECT s.id, s.sample_id, ts.score
-    FROM textsearch.search('samples_search_idx', query) ts
-    JOIN samples s ON s.id = ts.id::uuid
-    WHERE s.deleted_at IS NULL;  -- RLS handles role-based filtering
-END;
+    SELECT
+        id,
+        sample_id,
+        description,
+        ts_rank(search_vector, query) AS rank
+    FROM samples, to_tsquery('simple', search_query) query
+    WHERE search_vector @@ query
+      AND deleted_at IS NULL  -- RLS policies automatically applied
+    ORDER BY rank DESC
+    LIMIT max_results;
 $$;
 ```
+
+**Important notes:**
+- Search functions MUST use `SECURITY INVOKER` to respect caller's role
+- No JOIN required (unlike BM25 implementations)
+- RLS policies on `samples` table automatically apply
 
 ### Decision: Manager-only audit log search
 
 Audit log search is restricted to managers due to compliance sensitivity:
 
 ```sql
+-- RLS policy on audit_logs table (already exists)
 CREATE POLICY "Only managers can search audit logs"
 ON audit_logs FOR SELECT
 USING (get_user_role() = 'manager');
-```
 
-The search function additionally validates role before executing.
+-- Search function validates role implicitly through RLS
+CREATE OR REPLACE FUNCTION search_audit_logs(search_query TEXT, max_results INT DEFAULT 20)
+RETURNS TABLE(id UUID, action TEXT, old_data JSONB, new_data JSONB, rank REAL)
+LANGUAGE sql
+SECURITY INVOKER
+AS $$
+    SELECT
+        id,
+        action,
+        old_data,
+        new_data,
+        ts_rank(search_vector, query) AS rank
+    FROM audit_logs, to_tsquery('simple', search_query) query
+    WHERE search_vector @@ query
+      AND deleted_at IS NULL  -- RLS automatically enforces manager-only access
+    ORDER BY rank DESC
+    LIMIT max_results;
+$$;
+```
 
 ## Risks / Trade-offs
 
-### Risk: Docker build complexity
-- **Impact**: Medium - First build requires Rust toolchain download (~500MB), takes 5-10 minutes
-- **Mitigation**: Multi-stage build caches Rust dependencies, subsequent builds are faster. Document build process clearly.
+### Risk: Ranking quality vs BM25
+- **Impact**: Low - PostgreSQL's `ts_rank` may produce less optimal ranking than BM25
+- **Mitigation**:
+  - LIMS users search to find, not rank (top 20 results is sufficient)
+  - Can tune ranking with `ts_rank_cd()` (cover density) if needed
+  - Can add ranking weights to prioritize certain fields
+  - Accept "good enough" ranking, iterate if users complain
+  - BM25 can be added later if proven necessary (without breaking changes)
 
-### Risk: Image size increase
-- **Impact**: Low - Extension adds ~20-30MB to runtime image
-- **Mitigation**: Multi-stage build keeps runtime image lean. Monitor image size in CI.
+### Risk: Vietnamese diacritic handling
+- **Impact**: Low - Users may search with or without diacritics
+- **Mitigation**:
+  - Use `unaccent()` for diacritic-insensitive search
+  - Test with real Vietnamese LIMS data
+  - Collect user feedback on search quality
+  - Add custom dictionary if needed
 
-### Risk: Rust/pgrx version compatibility
-- **Impact**: Medium - pgrx version must match PostgreSQL version exactly
-- **Mitigation**: Pin pgrx version in Dockerfile, test upgrades in staging before production.
+### Risk: Query syntax complexity
+- **Impact**: Low - Users must learn search syntax (AND, OR, NOT)
+- **Mitigation**:
+  - Use `plainto_tsquery()` for simple space-separated queries
+  - Add UI hints for advanced syntax
+  - Document search examples in user guide
+  - Start simple, add advanced features based on demand
 
-### Risk: Index maintenance overhead
-- **Impact**: Low - BM25 indexes use memtable architecture for efficient updates
-- **Mitigation**: Monitor index size and vacuum frequency. Consider partial indexes if tables grow large.
-
-### Risk: Vietnamese tokenization quality
-- **Impact**: Medium - Simple tokenization may miss Vietnamese-specific patterns
-- **Mitigation**: Start with simple config, collect user feedback, iterate on custom config.
+### Risk: Storage overhead for tsvector columns
+- **Impact**: Very Low - ~5% increase in table size
+- **Mitigation**:
+  - LIMS databases are small (<100k samples)
+  - Storage is cheap compared to developer time
+  - Monitor table sizes in production
+  - Worth the query performance gain
 
 ## Migration Plan
 
-### Phase 1: Infrastructure (Week 1)
+### Phase 1: Install unaccent extension (5 minutes)
 
-1. **Create Dockerfile.postgres**
-   ```dockerfile
-   # Build stage with Rust
-   FROM rust:1.75 AS builder
-   RUN cargo install cargo-pgrx --version 0.11.x
-   # Clone and build pg_textsearch
+```sql
+-- Migration XXX: Install unaccent extension for Vietnamese search
+-- Description: Enables diacritic-insensitive search
 
-   # Runtime stage
-   FROM supabase/postgres:15.8.1.085
-   COPY --from=builder /path/to/pg_textsearch.so /usr/lib/...
-   ```
+SET search_path TO public;
 
-2. **Update docker-compose.yml**
-   ```yaml
-   postgres:
-     build:
-       context: .
-       dockerfile: Dockerfile.postgres
-     # ... rest unchanged
-   ```
+CREATE EXTENSION IF NOT EXISTS unaccent;
 
-3. **Test container builds locally**
+-- Test
+SELECT unaccent('Huyết thanh');  -- Expected: "Huyet thanh"
+```
 
-### Phase 2: Database Migrations (Week 1-2)
+### Phase 2: Add tsvector columns and triggers (Day 1)
 
-1. **Migration: Install extension**
+```sql
+-- Migration XXX: Add full-text search to samples
+
+SET search_path TO public;
+
+-- Add tsvector column
+ALTER TABLE samples
+ADD COLUMN search_vector tsvector;
+
+-- Create GIN index
+CREATE INDEX samples_search_idx
+ON samples USING GIN(search_vector);
+
+-- Create trigger function (reusable for all tables)
+CREATE OR REPLACE FUNCTION update_search_vector_simple()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Combine columns and apply unaccent
+    NEW.search_vector := to_tsvector(
+        'simple',
+        unaccent(
+            COALESCE(NEW.sample_id, '') || ' ' ||
+            COALESCE(NEW.description, '')
+        )
+    );
+    RETURN NEW;
+END;
+$$;
+
+-- Create trigger
+CREATE TRIGGER samples_search_update
+BEFORE INSERT OR UPDATE ON samples
+FOR EACH ROW EXECUTE FUNCTION update_search_vector_simple();
+
+-- Backfill existing data
+UPDATE samples SET search_vector = to_tsvector(
+    'simple',
+    unaccent(
+        COALESCE(sample_id, '') || ' ' ||
+        COALESCE(description, '')
+    )
+);
+```
+
+**Repeat for other tables:**
+- `clients` (name, contact_name, address)
+- `assay_definitions` (name, method_name, description)
+- `results` (value, comments)
+- `audit_logs` (action, old_data::text, new_data::text)
+
+### Phase 3: Create search functions (Day 1)
+
+```sql
+-- Migration XXX: Create search functions
+
+SET search_path TO public;
+
+-- Search samples
+CREATE OR REPLACE FUNCTION search_samples(search_query TEXT, max_results INT DEFAULT 20)
+RETURNS TABLE(id UUID, sample_id TEXT, description TEXT, rank REAL)
+LANGUAGE sql
+SECURITY INVOKER
+STABLE
+AS $$
+    SELECT
+        id,
+        sample_id,
+        description,
+        ts_rank(search_vector, query) AS rank
+    FROM samples, plainto_tsquery('simple', unaccent(search_query)) query
+    WHERE search_vector @@ query
+      AND deleted_at IS NULL
+    ORDER BY rank DESC
+    LIMIT max_results;
+$$;
+
+-- Grant to authenticated users
+GRANT EXECUTE ON FUNCTION search_samples TO authenticated;
+
+-- Similar functions for:
+-- search_clients(search_query TEXT, max_results INT)
+-- search_assays(search_query TEXT, max_results INT)
+-- search_results(search_query TEXT, max_results INT)
+-- search_audit_logs(search_query TEXT, max_results INT)  -- RLS enforces manager-only
+```
+
+### Phase 4: Application Integration (Day 2-3)
+
+1. Create search Server Actions (`src/app/actions/search.ts`)
+2. Add search data fetching utilities (`src/lib/data/search.ts`)
+3. Build global search UI component (`src/components/global-search.tsx`)
+4. Integrate with existing navigation (Cmd+K shortcut)
+
+### Phase 5: Testing and Tuning (Day 3)
+
+1. Test with Vietnamese sample data
+2. Verify RLS policies are enforced
+3. Check search performance (should be <50ms)
+4. Tune ranking if needed:
    ```sql
-   CREATE EXTENSION IF NOT EXISTS textsearch;
+   -- Advanced: Use weighted ranking
+   ts_rank_cd(
+       setweight(to_tsvector('simple', sample_id), 'A') ||  -- High priority
+       setweight(to_tsvector('simple', description), 'B'),  -- Lower priority
+       query
+   )
    ```
-
-2. **Migration: Create search indexes**
-   ```sql
-   SELECT textsearch.create_index(
-       'samples_search_idx',
-       'public.samples',
-       ARRAY['sample_id', 'description']
-   );
-   ```
-
-3. **Migration: Create search functions**
-   ```sql
-   CREATE FUNCTION search_samples(query TEXT, limit_count INT DEFAULT 20)
-   RETURNS TABLE(...)
-   ```
-
-### Phase 3: Application Integration (Week 2)
-
-1. Create search Server Actions
-2. Add search data fetching utilities
-3. Build global search UI component
-4. Integrate with existing navigation
 
 ### Rollback Procedure
 
 If issues arise:
 
 1. **Application layer**: Remove search UI/actions (no data loss)
-2. **Database layer**: Drop extension and indexes
+2. **Database layer**: Drop columns and functions
    ```sql
-   DROP EXTENSION IF EXISTS textsearch CASCADE;
-   ```
-3. **Infrastructure layer**: Revert docker-compose.yml to standard Supabase image
-   ```yaml
-   postgres:
-     image: supabase/postgres:15.8.1.085
+   -- Drop search functions
+   DROP FUNCTION IF EXISTS search_samples CASCADE;
+   DROP FUNCTION IF EXISTS search_clients CASCADE;
+   DROP FUNCTION IF EXISTS search_assays CASCADE;
+   DROP FUNCTION IF EXISTS search_results CASCADE;
+   DROP FUNCTION IF EXISTS search_audit_logs CASCADE;
+
+   -- Drop triggers and columns (if needed)
+   DROP TRIGGER IF EXISTS samples_search_update ON samples;
+   ALTER TABLE samples DROP COLUMN IF EXISTS search_vector;
+   DROP INDEX IF EXISTS samples_search_idx;
+
+   -- Drop helper function
+   DROP FUNCTION IF EXISTS update_search_vector_simple CASCADE;
+
+   -- Drop extension (if no other features use it)
+   DROP EXTENSION IF EXISTS unaccent CASCADE;
    ```
 
 Data remains intact; only search capability is removed.
 
+## Performance Expectations
+
+**Expected query performance (GIN index):**
+- 10k samples: ~10-20ms
+- 100k samples: ~50-100ms
+- 1M samples: ~200-500ms
+
+**LIMS typical workload:**
+- Dataset size: 10k-100k samples
+- Expected performance: **<50ms** (well within acceptable range)
+
+**Index size overhead:**
+- tsvector storage: ~10-20% of text column size
+- GIN index: ~50% of tsvector size
+- Total overhead: ~15-30% (acceptable)
+
 ## Open Questions
 
-1. **Index refresh strategy**: Should indexes rebuild on-demand or use scheduled background refresh?
-2. **Search result pagination**: Use offset-based or cursor-based pagination for large result sets?
-3. **Highlight/snippet support**: Does pg_textsearch support result highlighting, or implement in application layer?
-4. **Rate limiting**: Should global search have rate limits to prevent abuse?
+1. **Search result pagination**: Use offset-based or cursor-based pagination for large result sets?
+2. **Vietnamese stopwords**: Should we create custom Vietnamese stopwords list immediately or wait for feedback?
+3. **Rate limiting**: Should global search have rate limits to prevent abuse?
+4. **Ranking weights**: Should we prioritize sample_id matches over description matches?
+5. **Phrase search**: Should we support exact phrase matching with quotes (e.g., "huyết thanh")?
+
+## Future Enhancements (Phase 2+)
+
+If users request better search quality:
+
+1. **Weighted ranking**: Prioritize certain fields (e.g., sample_id > description)
+2. **Phrase search**: Support exact phrase matching with quotes
+3. **Synonym support**: Map common terms (e.g., "blood" → "huyết")
+4. **Fuzzy matching**: Typo tolerance via trigram similarity
+5. **BM25 ranking**: Add plpgsql_bm25 if proven necessary (non-breaking change)
+6. **Semantic search**: Add pgvector for embedding-based search (requires separate planning)
+
+**Philosophy:** Start simple, iterate based on real user feedback. Don't over-engineer.
+
+## References
+
+- PostgreSQL Full-Text Search: https://www.postgresql.org/docs/current/textsearch.html
+- Vietnamese tokenization: https://www.postgresql.org/docs/current/unaccent.html
+- GIN vs GiST indexes: https://www.postgresql.org/docs/current/textsearch-indexes.html
+- ts_rank documentation: https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-RANKING
