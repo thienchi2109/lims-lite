@@ -17,40 +17,53 @@
 
 - [ ] 2.1 Create migration `0XX_add_search_to_samples.sql`
   - Add `search_vector tsvector` column to samples table
-  - Create GIN index `samples_search_idx`
+  - Create GIN index `samples_search_idx` (use CONCURRENTLY for production)
   - Create trigger function `update_search_vector_simple()`
-  - Create trigger `samples_search_update` on samples table
+  - Create trigger `samples_search_update` on samples table (UPDATE OF sample_id, description)
   - Backfill existing data
-- [ ] 2.2 Apply migration to development database
+- [ ] 2.2 Update audit trigger to exclude search_vector from change diffs
+  - Modify `trigger_audit_log()` to exclude search_vector: `to_jsonb(OLD) - 'search_vector'`
+  - Reduces audit log noise from automatic search_vector updates
+- [ ] 2.3 Apply migration to development database
   ```powershell
   Get-Content supabase\migrations\0XX_add_search_to_samples.sql | docker exec -i lims-postgres psql -U postgres -d postgres
   ```
-- [ ] 2.3 Verify search column and index
+- [ ] 2.4 Verify search column and index
   ```sql
   \d samples  -- Check for search_vector column
   SELECT * FROM pg_indexes WHERE tablename = 'samples' AND indexname = 'samples_search_idx';
   ```
-- [ ] 2.4 Test trigger on insert/update
+- [ ] 2.5 Test trigger on insert/update
   ```sql
   INSERT INTO samples (sample_id, description) VALUES ('TEST-001', 'Huyết thanh');
   SELECT sample_id, search_vector FROM samples WHERE sample_id = 'TEST-001';
   -- Should show tsvector content
   ```
+- [ ] 2.6 Verify audit logs exclude search_vector
+  ```sql
+  UPDATE samples SET description = 'Updated description' WHERE sample_id = 'TEST-001';
+  SELECT new_data FROM audit_logs WHERE table_name = 'samples' ORDER BY timestamp DESC LIMIT 1;
+  -- Should NOT contain search_vector key
+  ```
 
 ## 3. Database Migrations - Add Search to Other Tables
 
 - [ ] 3.1 Create migration `0XX_add_search_to_clients.sql`
-  - Add search_vector column, GIN index, trigger
+  - Add search_vector column, GIN index (CONCURRENTLY for production), trigger
   - Index columns: name, contact_name, address
+  - Update audit trigger to exclude search_vector
 - [ ] 3.2 Create migration `0XX_add_search_to_assays.sql`
-  - Add search_vector column, GIN index, trigger
+  - Add search_vector column, GIN index (CONCURRENTLY for production), trigger
   - Index columns: name, method_name, description
+  - Update audit trigger to exclude search_vector
 - [ ] 3.3 Create migration `0XX_add_search_to_results.sql`
-  - Add search_vector column, GIN index, trigger
+  - Add search_vector column, GIN index (CONCURRENTLY for production), trigger
   - Index columns: value, comments
+  - Update audit trigger to exclude search_vector
 - [ ] 3.4 Create migration `0XX_add_search_to_audit_logs.sql`
-  - Add search_vector column, GIN index, trigger
+  - Add search_vector column, GIN index (CONCURRENTLY for production), trigger
   - Index columns: action, old_data::text, new_data::text
+  - Note: audit_logs table does NOT need to exclude search_vector from its own audit (no recursion)
 - [ ] 3.5 Apply all migrations to development database
 - [ ] 3.6 Verify all indexes created
   ```sql
@@ -68,9 +81,12 @@
   - `search_results(query TEXT, max_results INT DEFAULT 20)` - SECURITY INVOKER
   - `search_audit_logs(query TEXT, max_results INT DEFAULT 20)` - Manager only
   - `global_search(query TEXT, max_results INT DEFAULT 20)` - Combined results
-- [ ] 4.2 Use `plainto_tsquery()` for simple query parsing
+- [ ] 4.2 Use `plainto_tsquery()` for query safety (NOT raw `to_tsquery()`)
+  - Prevents syntax errors from user input (e.g., "C++" would break `to_tsquery()`)
+  - Prevents potential injection attacks
   - Automatically handles spaces and basic operators
-  - Apply `unaccent()` to search queries
+  - Apply `unaccent()` to search queries for Vietnamese support
+  - Example: `plainto_tsquery('simple', unaccent(search_query))`
 - [ ] 4.3 Add RLS-compliant result filtering
   - RLS policies automatically enforced (same table)
   - Filter out soft-deleted records (deleted_at IS NULL)
@@ -219,6 +235,11 @@
 ## 12. Deployment Verification
 
 - [ ] 12.1 Run all migrations on staging environment
+  - **IMPORTANT**: For production/staging with active users, modify migrations to use `CREATE INDEX CONCURRENTLY`
+  - Regular `CREATE INDEX` locks the table during index creation
+  - `CREATE INDEX CONCURRENTLY` allows concurrent reads/writes but takes longer
+  - Development: Use regular `CREATE INDEX` (faster)
+  - Production/Staging: Use `CREATE INDEX CONCURRENTLY` (no downtime)
 - [ ] 12.2 Run smoke tests on staging
   - Verify unaccent extension loaded
   - Verify search_vector columns exist
@@ -229,5 +250,5 @@
   - Index size (should be <30% overhead)
   - Memory usage
 - [ ] 12.4 Deploy to production
-  - Run migrations during maintenance window
+  - Run migrations during maintenance window (or use CONCURRENTLY)
   - Verify search functionality post-deployment

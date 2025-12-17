@@ -83,7 +83,9 @@ Add `search_vector tsvector` column to each searchable table with automatic trig
 ALTER TABLE samples
 ADD COLUMN search_vector tsvector;
 
--- Create GIN index for fast search
+-- Create GIN index
+-- Development: Use regular CREATE INDEX
+-- Production: Use CREATE INDEX CONCURRENTLY to avoid table locks
 CREATE INDEX samples_search_idx
 ON samples USING GIN(search_vector);
 
@@ -296,8 +298,9 @@ END;
 $$;
 
 -- Create trigger
+-- NOTE: Only trigger on relevant column changes to reduce overhead
 CREATE TRIGGER samples_search_update
-BEFORE INSERT OR UPDATE ON samples
+BEFORE INSERT OR UPDATE OF sample_id, description ON samples
 FOR EACH ROW EXECUTE FUNCTION update_search_vector_simple();
 
 -- Backfill existing data
@@ -315,6 +318,60 @@ UPDATE samples SET search_vector = to_tsvector(
 - `assay_definitions` (name, method_name, description)
 - `results` (value, comments)
 - `audit_logs` (action, old_data::text, new_data::text)
+
+**IMPORTANT - Exclude search_vector from audit logs:**
+
+Since `search_vector` is auto-generated and doesn't represent user changes, it should be excluded from audit log change diffs to reduce noise:
+
+```sql
+-- Update audit trigger function to exclude search_vector
+-- This assumes you have an audit trigger function that captures old_data/new_data JSONB
+-- Modify the function to exclude search_vector column:
+
+CREATE OR REPLACE FUNCTION trigger_audit_log()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    old_row JSONB;
+    new_row JSONB;
+BEGIN
+    -- Convert rows to JSONB, excluding search_vector
+    IF TG_OP = 'DELETE' THEN
+        old_row := to_jsonb(OLD) - 'search_vector';
+        new_row := NULL;
+    ELSIF TG_OP = 'UPDATE' THEN
+        old_row := to_jsonb(OLD) - 'search_vector';
+        new_row := to_jsonb(NEW) - 'search_vector';
+    ELSIF TG_OP = 'INSERT' THEN
+        old_row := NULL;
+        new_row := to_jsonb(NEW) - 'search_vector';
+    END IF;
+
+    -- Insert audit log entry
+    INSERT INTO audit_logs (
+        table_name,
+        record_id,
+        action,
+        old_data,
+        new_data,
+        user_id
+    ) VALUES (
+        TG_TABLE_NAME::TEXT,
+        COALESCE(NEW.id, OLD.id),
+        TG_OP,
+        old_row,
+        new_row,
+        auth.uid()
+    );
+
+    RETURN NEW;
+END;
+$$;
+```
+
+**Rationale:** `search_vector` changes on every update (even when only timestamps change). Including it in audit logs creates excessive noise without providing compliance value.
 
 ### Phase 3: Create search functions (Day 1)
 
@@ -373,6 +430,57 @@ GRANT EXECUTE ON FUNCTION search_samples TO authenticated;
        query
    )
    ```
+
+### Migration Security Best Practices
+
+Following the project's Migration Security Checklist (CLAUDE.md):
+
+**1. Always use DROP POLICY IF EXISTS before CREATE POLICY:**
+
+```sql
+-- BAD: Creates duplicate policies if migration is re-run
+CREATE POLICY "policy_name" ON table_name ...
+
+-- GOOD: Ensures clean state
+DROP POLICY IF EXISTS "policy_name" ON table_name;
+CREATE POLICY "policy_name" ON table_name ...
+```
+
+**2. Always run security tests after migration:**
+
+```bash
+# Apply migration
+Get-Content supabase\migrations\XXX_name.sql | docker exec -i lims-postgres psql -U postgres -d postgres
+
+# Run security tests (MANDATORY)
+docker exec lims-postgres psql -U postgres -d postgres -c "SELECT * FROM run_security_tests();"
+
+# Verify all tests passed
+# If any test fails, investigate immediately before proceeding
+```
+
+**3. Verify policy state after migration:**
+
+```bash
+# Check that old policies are removed and new policies exist
+docker exec lims-postgres psql -U postgres -d postgres -c "SELECT polname, polcmd FROM pg_policy WHERE polrelid = 'public.TABLE_NAME'::regclass ORDER BY polname;"
+
+# Verify policy includes role checks (for critical operations)
+docker exec lims-postgres psql -U postgres -d postgres -c "SELECT polname, pg_get_expr(polwithcheck, polrelid) FROM pg_policy WHERE polrelid = 'public.TABLE_NAME'::regclass AND polcmd = 'a';"
+```
+
+**4. Index creation considerations:**
+
+```sql
+-- Development: Regular index creation (fast, but locks table)
+CREATE INDEX samples_search_idx ON samples USING GIN(search_vector);
+
+-- Production: Concurrent index creation (slower, but no table lock)
+-- Use this when applying migrations to live databases with active users
+CREATE INDEX CONCURRENTLY samples_search_idx ON samples USING GIN(search_vector);
+```
+
+**Note:** This search implementation does NOT create or modify RLS policies (search functions inherit existing policies via SECURITY INVOKER), so policy verification is less critical. However, the audit log exclusion changes (Phase 2) DO modify trigger functions and should be tested thoroughly.
 
 ### Rollback Procedure
 
