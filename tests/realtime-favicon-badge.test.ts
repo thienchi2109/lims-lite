@@ -16,7 +16,7 @@ function simulateHook(hookFn: () => void, dependencies: unknown[] = []) {
   // Simulate useEffect
   const originalUseEffect = global.React?.useEffect
   if (global.React) {
-    global.React.useEffect = (effect: () => void | (() => void), deps?: unknown[]) => {
+    global.React.useEffect = (effect: () => void | (() => void), deps?: readonly unknown[]) => {
       const cleanupFn = effect()
       if (cleanupFn) cleanup.push(cleanupFn as () => void)
     }
@@ -308,7 +308,6 @@ describe('Image Loading', () => {
     expect(img.crossOrigin).toBe('anonymous')
   })
 
-<<<<<<< HEAD
   it.skip('should trigger onload when image loads successfully (browser behavior)', async () => {
     // Skipped: jsdom doesn't fully implement Image loading events
     // The actual implementation works in the browser
@@ -342,25 +341,6 @@ describe('Image Loading', () => {
     img.src = 'invalid-url-that-does-not-exist.png'
 
     await errorPromise
-=======
-  it('should trigger onload when image loads successfully', (done) => {
-    const img = new Image()
-    img.onload = () => {
-      expect(true).toBe(true)
-      done()
-    }
-    // Use a small data URL to avoid network request
-    img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
-  })
-
-  it('should trigger onerror when image fails to load', (done) => {
-    const img = new Image()
-    img.onerror = () => {
-      expect(true).toBe(true)
-      done()
-    }
-    img.src = 'invalid-url-that-does-not-exist.png'
->>>>>>> effb2c7ccea1877390a925300727b7b736b73002
   })
 })
 

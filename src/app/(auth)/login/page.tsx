@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useState, Suspense } from 'react'
 import { login } from '@/app/actions/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,14 +18,37 @@ type FormState = {
     }
 } | null
 
-export default function LoginPage() {
-    const [state, formAction, isPending] = useActionState<FormState, FormData>(login, null)
-    const [showPassword, setShowPassword] = useState(false)
+function SessionExpiredAlert() {
     const searchParams = useSearchParams()
-
     const reason = searchParams.get('reason')
     const errorParam = searchParams.get('error')
     const showSessionExpiredMessage = reason === 'session_expired' || errorParam === 'SessionExpired'
+
+    if (!showSessionExpiredMessage) return null
+
+    return (
+        <div
+            role="alert"
+            className="flex gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-blue-800 shadow-sm dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-200"
+        >
+            <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                <AlertCircle className="h-4 w-4" />
+            </div>
+            <div className="space-y-1">
+                <p className="text-sm font-semibold leading-snug">
+                    Phiên đăng nhập đã hết hạn
+                </p>
+                <p className="text-xs leading-relaxed text-blue-700/90 dark:text-blue-200/90">
+                    Vì lý do bảo mật, vui lòng đăng nhập lại để tiếp tục sử dụng hệ thống.
+                </p>
+            </div>
+        </div>
+    )
+}
+
+function LoginForm() {
+    const [state, formAction, isPending] = useActionState<FormState, FormData>(login, null)
+    const [showPassword, setShowPassword] = useState(false)
 
     return (
         <div className="min-h-screen w-full grid grid-cols-1 lg:grid-cols-2">
@@ -79,24 +102,9 @@ export default function LoginPage() {
                         </div>
                     </div>
 
-                    {showSessionExpiredMessage ? (
-                        <div
-                            role="alert"
-                            className="flex gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-blue-800 shadow-sm dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-200"
-                        >
-                            <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                                <AlertCircle className="h-4 w-4" />
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-sm font-semibold leading-snug">
-                                    Phiên đăng nhập đã hết hạn
-                                </p>
-                                <p className="text-xs leading-relaxed text-blue-700/90 dark:text-blue-200/90">
-                                    Vì lý do bảo mật, vui lòng đăng nhập lại để tiếp tục sử dụng hệ thống.
-                                </p>
-                            </div>
-                        </div>
-                    ) : null}
+                    <Suspense fallback={null}>
+                        <SessionExpiredAlert />
+                    </Suspense>
 
                     {/* Form */}
                     <form action={formAction} className="space-y-5">
@@ -248,4 +256,8 @@ export default function LoginPage() {
             </div>
         </div>
     )
+}
+
+export default function LoginPage() {
+    return <LoginForm />
 }
