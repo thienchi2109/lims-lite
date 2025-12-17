@@ -1,4 +1,5 @@
 import { UserProfileDropdown } from '@/components/user-profile-dropdown'
+import { DashboardNav } from '@/components/dashboard-nav'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
 
@@ -12,11 +13,11 @@ interface DashboardHeaderProps {
     className?: string
 }
 
-export function DashboardHeader({ 
-    title = "Hệ Thống Quản Lý Thông Tin Khoa Xét nghiệm", 
-    subtitle, 
+export function DashboardHeader({
+    title = "Hệ Thống Quản Lý Thông Tin Khoa Xét nghiệm",
+    subtitle,
     user,
-    className 
+    className
 }: DashboardHeaderProps) {
     return (
         <header className={cn(
@@ -43,8 +44,9 @@ export function DashboardHeader({
                         </p>
                     </div>
                 </div>
-                
+
                 <div className="flex items-center gap-3 sm:gap-6">
+                    <DashboardNav user={user} />
                     {user && <UserProfileDropdown user={user} />}
                 </div>
             </div>
