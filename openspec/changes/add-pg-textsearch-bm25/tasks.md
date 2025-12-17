@@ -1,13 +1,13 @@
 ## 1. Database Migrations - Install unaccent Extension
 
-- [ ] 1.1 Create migration `0XX_install_unaccent.sql`
+- [x] 1.1 Create migration `068_install_unaccent.sql`
   - Install unaccent extension for Vietnamese diacritic-insensitive search
   - Test with Vietnamese text
-- [ ] 1.2 Apply migration to development database
+- [x] 1.2 Apply migration to development database
   ```powershell
-  Get-Content supabase\migrations\0XX_install_unaccent.sql | docker exec -i lims-postgres psql -U postgres -d postgres
+  Get-Content supabase\migrations\068_install_unaccent.sql | docker exec -i lims-postgres psql -U postgres -d postgres
   ```
-- [ ] 1.3 Verify extension installation
+- [x] 1.3 Verify extension installation
   ```sql
   SELECT * FROM pg_extension WHERE extname = 'unaccent';
   SELECT unaccent('Huyết thanh');  -- Should return "Huyet thanh"
@@ -15,34 +15,34 @@
 
 ## 2. Database Migrations - Add Search to Samples
 
-- [ ] 2.1 Create migration `0XX_add_search_to_samples.sql`
+- [x] 2.1 Create migration `069_add_search_to_samples.sql`
   - Add `search_vector tsvector` column to samples table
   - Create GIN index `samples_search_idx` (use CONCURRENTLY for production)
-  - Create trigger function `update_search_vector_simple()`
-  - Create trigger `samples_search_update` on samples table (UPDATE OF sample_id, description)
+  - Create trigger function `update_search_vector_samples()`
+  - Create trigger `samples_search_update` on samples table (UPDATE OF sample_id, client_name, type, status, rejection_reason, received_at)
   - Backfill existing data
-- [ ] 2.2 Update audit trigger to exclude search_vector from change diffs
+- [x] 2.2 Update audit trigger to exclude search_vector from change diffs
   - Modify `trigger_audit_log()` to exclude search_vector: `to_jsonb(OLD) - 'search_vector'`
   - Reduces audit log noise from automatic search_vector updates
-- [ ] 2.3 Apply migration to development database
+- [x] 2.3 Apply migration to development database
   ```powershell
-  Get-Content supabase\migrations\0XX_add_search_to_samples.sql | docker exec -i lims-postgres psql -U postgres -d postgres
+  Get-Content supabase\migrations\069_add_search_to_samples.sql | docker exec -i lims-postgres psql -U postgres -d postgres
   ```
-- [ ] 2.4 Verify search column and index
+- [x] 2.4 Verify search column and index
   ```sql
   \d samples  -- Check for search_vector column
   SELECT * FROM pg_indexes WHERE tablename = 'samples' AND indexname = 'samples_search_idx';
   ```
-- [ ] 2.5 Test trigger on insert/update
+- [x] 2.5 Test trigger on insert/update
   ```sql
   INSERT INTO samples (sample_id, description) VALUES ('TEST-001', 'Huyết thanh');
   SELECT sample_id, search_vector FROM samples WHERE sample_id = 'TEST-001';
   -- Should show tsvector content
   ```
-- [ ] 2.6 Verify audit logs exclude search_vector
+- [x] 2.6 Verify audit logs exclude search_vector
   ```sql
   UPDATE samples SET description = 'Updated description' WHERE sample_id = 'TEST-001';
-  SELECT new_data FROM audit_logs WHERE table_name = 'samples' ORDER BY timestamp DESC LIMIT 1;
+  SELECT new_values FROM audit_logs WHERE table_name = 'samples' ORDER BY changed_at DESC LIMIT 1;
   -- Should NOT contain search_vector key
   ```
 
