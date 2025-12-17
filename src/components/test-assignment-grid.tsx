@@ -75,7 +75,14 @@ interface TestAssignmentGridProps {
 
 // --- Components ---
 
-const SortIcon = ({ column, sortConfig }: { column: string, sortConfig: any }) => {
+type SortKey = 'name' | 'units'
+type SortConfig = { key: SortKey; direction: 'asc' | 'desc' } | null
+
+type GridRow =
+    | { type: 'group'; key: string; label: string; badgeClass?: string; count: number }
+    | { type: 'assay'; key: string; assay: AssayDefinitionWithMethods }
+
+const SortIcon = ({ column, sortConfig }: { column: SortKey, sortConfig: SortConfig }) => {
     if (sortConfig?.key !== column) return <ArrowUpDown size={14} className="text-slate-300 opacity-0 group-hover:opacity-50" />
     return sortConfig.direction === 'asc'
         ? <ArrowUp size={14} className="text-sky-600" />
@@ -104,7 +111,7 @@ export function TestAssignmentGrid({
     const [selectedSpecialtyId, setSelectedSpecialtyId] = useState<string>('all')
     const [isLoading, setIsLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
-    const [sortConfig, setSortConfig] = useState<{ key: keyof AssayDefinitionWithMethods, direction: 'asc' | 'desc' } | null>({ key: 'name', direction: 'asc' })
+    const [sortConfig, setSortConfig] = useState<SortConfig>(null)
     const [showToast, setShowToast] = useState(false)
 
     // Virtualization Ref
@@ -174,44 +181,125 @@ export function TestAssignmentGrid({
     }
 
     // Sorting Handler
-    const requestSort = (key: keyof AssayDefinitionWithMethods) => {
-        let direction: 'asc' | 'desc' = 'asc'
-        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
-            direction = 'desc'
+    const requestSort = (key: SortKey) => {
+        if (!sortConfig || sortConfig.key !== key) {
+            setSortConfig({ key, direction: 'asc' })
+            return
         }
-        setSortConfig({ key, direction })
+
+        if (sortConfig.direction === 'asc') {
+            setSortConfig({ key, direction: 'desc' })
+            return
+        }
+
+        // Third click clears sort back to the server-provided order (grouped by specialty display_order)
+        setSortConfig(null)
     }
 
     // Derived State
-    const processedTests = useMemo(() => {
-        // Filter by search is now done on server
-        // Just apply sorting here
-        let data = [...availableAssays]
-
-        if (sortConfig) {
-            data.sort((a, b) => {
-                // Handle null values safely
-                const aValue = a[sortConfig.key] || ''
-                const bValue = b[sortConfig.key] || ''
-
-                if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1
-                if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1
-                return 0
-            })
-        }
-        return data
-    }, [availableAssays, sortConfig])
+    const processedAssays = useMemo(() => {
+        // Server already sorts by: specialty.display_order -> specialty.name -> assay.name
+        // Keep that order here; apply client-side sorting only within specialty groups (below).
+        return [...availableAssays]
+    }, [availableAssays])
 
     const disabledSet = useMemo(() => new Set(disabledAssayIds), [disabledAssayIds])
     const specialtiesMap = useMemo(() => {
         return new Map(specialties.map((s) => [s.id, s]))
     }, [specialties])
+    const sortedSpecialties = useMemo(() => {
+        return [...specialties].sort((a, b) => {
+            if (a.display_order !== b.display_order) return a.display_order - b.display_order
+            return a.name.localeCompare(b.name)
+        })
+    }, [specialties])
+
+    const groupedRows = useMemo<GridRow[]>(() => {
+        if (processedAssays.length === 0) return []
+
+        const compareAssays = (a: AssayDefinitionWithMethods, b: AssayDefinitionWithMethods) => {
+            if (!sortConfig) return 0
+
+            const aValue = sortConfig.key === 'units' ? (a.units ?? '') : a.name
+            const bValue = sortConfig.key === 'units' ? (b.units ?? '') : b.name
+
+            const base = aValue.localeCompare(bValue)
+            if (base !== 0) return sortConfig.direction === 'asc' ? base : -base
+
+            // Tie-breaker for stable ordering
+            return a.name.localeCompare(b.name)
+        }
+
+        const sortGroup = (assays: AssayDefinitionWithMethods[]) => {
+            if (!sortConfig) return assays
+            return [...assays].sort(compareAssays)
+        }
+
+        const rows: GridRow[] = []
+
+        const pushGroup = (groupKey: string, label: string, badgeClass: string | undefined, assays: AssayDefinitionWithMethods[]) => {
+            if (assays.length === 0) return
+            const sortedAssays = sortGroup(assays)
+            rows.push({
+                type: 'group',
+                key: groupKey,
+                label,
+                badgeClass,
+                count: sortedAssays.length,
+            })
+            sortedAssays.forEach((assay) => {
+                rows.push({ type: 'assay', key: assay.id, assay })
+            })
+        }
+
+        // When filtering to a single specialty, still show a single group header for clarity.
+        if (selectedSpecialtyId !== 'all') {
+            const specialty = specialtiesMap.get(selectedSpecialtyId)
+            const badgeClass = specialty?.code && SPECIALTY_BADGE_CLASSES[specialty.code]
+                ? SPECIALTY_BADGE_CLASSES[specialty.code]
+                : undefined
+
+            pushGroup(`group:${selectedSpecialtyId}`, specialty?.name ?? 'Chưa phân nhóm', badgeClass, processedAssays)
+            return rows
+        }
+
+        // Group by specialty display_order (as provided in specialties list)
+        const assaysBySpecialty = new Map<string, AssayDefinitionWithMethods[]>()
+        const ungrouped: AssayDefinitionWithMethods[] = []
+
+        processedAssays.forEach((assay) => {
+            if (!assay.specialty_id) {
+                ungrouped.push(assay)
+                return
+            }
+            const existing = assaysBySpecialty.get(assay.specialty_id) ?? []
+            existing.push(assay)
+            assaysBySpecialty.set(assay.specialty_id, existing)
+        })
+
+        sortedSpecialties.forEach((specialty) => {
+            const assays = assaysBySpecialty.get(specialty.id) ?? []
+            const badgeClass = specialty.code && SPECIALTY_BADGE_CLASSES[specialty.code]
+                ? SPECIALTY_BADGE_CLASSES[specialty.code]
+                : undefined
+            pushGroup(`group:${specialty.id}`, specialty.name, badgeClass, assays)
+        })
+
+        pushGroup('group:ungrouped', 'Chưa phân nhóm', undefined, ungrouped)
+
+        return rows
+    }, [processedAssays, sortConfig, sortedSpecialties, specialtiesMap, selectedSpecialtyId])
 
     // Virtualizer
     const rowVirtualizer = useVirtualizer({
-        count: processedTests.length,
+        count: groupedRows.length,
         getScrollElement: () => parentRef.current,
-        estimateSize: () => isDesktop ? 54 : 88, // Taller rows on mobile
+        estimateSize: (index) => {
+            const row = groupedRows[index]
+            const isGroup = row?.type === 'group'
+            if (isDesktop) return isGroup ? 40 : 54
+            return isGroup ? 44 : 88
+        },
         overscan: 20,
     })
 
@@ -363,20 +451,54 @@ export function TestAssignmentGrid({
                                 position: 'relative',
                             }}
                         >
-                            {isLoading && processedTests.length === 0 ? (
+                            {isLoading && processedAssays.length === 0 ? (
                                 <div className="absolute inset-0 flex items-center justify-center p-8 text-center text-muted-foreground pt-10">
                                     <div className="flex justify-center items-center gap-2">
                                         <Loader2 className="h-4 w-4 animate-spin" />
                                         Đang tải...
                                     </div>
                                 </div>
-                            ) : processedTests.length === 0 ? (
+                            ) : groupedRows.length === 0 ? (
                                 <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center pt-10">
                                     <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Không tìm thấy</h3>
                                 </div>
                             ) : (
                                 rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                                    const test = processedTests[virtualRow.index]
+                                    const row = groupedRows[virtualRow.index]
+                                    if (!row) return null
+
+                                    if (row.type === 'group') {
+                                        return (
+                                            <div
+                                                key={row.key}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: 0,
+                                                    left: 0,
+                                                    width: '100%',
+                                                    transform: `translateY(${virtualRow.start}px)`,
+                                                }}
+                                                className="px-2 pt-3"
+                                            >
+                                                <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
+                                                    {row.badgeClass ? (
+                                                        <span className={cn("px-2 py-0.5 rounded text-[10px] font-medium whitespace-nowrap", row.badgeClass)}>
+                                                            {row.label}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                                                            {row.label}
+                                                        </span>
+                                                    )}
+                                                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                                                        {row.count} chỉ tiêu
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )
+                                    }
+
+                                    const test = row.assay
                                     const selectedTest = selected.find(t => t.assayId === test.id)
                                     const isSelected = !!selectedTest
                                     const isDisabled = disabledSet.has(test.id)
@@ -579,7 +701,7 @@ export function TestAssignmentGrid({
                                 </div>
                             </div>
                             <div className="text-xs text-slate-500 font-medium whitespace-nowrap">
-                                {processedTests.length} chỉ tiêu
+                                {processedAssays.length} chỉ tiêu
                             </div>
                         </div>
 
@@ -619,20 +741,61 @@ export function TestAssignmentGrid({
                                     position: 'relative',
                                 }}
                             >
-                                {isLoading && processedTests.length === 0 ? (
+                                {isLoading && processedAssays.length === 0 ? (
                                     <div className="absolute inset-0 flex items-center justify-center p-8 text-center text-muted-foreground z-50 bg-white/50 dark:bg-slate-950/50">
                                         <div className="flex justify-center items-center gap-2">
                                             <Loader2 className="h-4 w-4 animate-spin" />
                                             Đang tải dữ liệu...
                                         </div>
                                     </div>
-                                ) : processedTests.length === 0 ? (
+                                ) : groupedRows.length === 0 ? (
                                     <div className="absolute inset-0 flex items-center justify-center p-8 text-center text-muted-foreground">
                                         Không tìm thấy chỉ tiêu nào
                                     </div>
                                 ) : (
                                     rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                                        const test = processedTests[virtualRow.index]
+                                        const row = groupedRows[virtualRow.index]
+                                        if (!row) return null
+
+                                        if (row.type === 'group') {
+                                            return (
+                                                <div
+                                                    key={row.key}
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: 0,
+                                                        left: 0,
+                                                        width: '100%',
+                                                        height: `${virtualRow.size}px`,
+                                                        transform: `translateY(${virtualRow.start}px)`,
+                                                    }}
+                                                    className="grid grid-cols-[48px_1fr_180px_190px_100px] border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 box-border"
+                                                >
+                                                    <div className="p-3" />
+                                                    <div className="p-3 col-span-4 flex items-center justify-between">
+                                                        <div className="flex items-center gap-2 min-w-0">
+                                                            {row.badgeClass ? (
+                                                                <Badge
+                                                                    variant="outline"
+                                                                    className={cn("px-2.5 py-0.5 rounded-full font-medium transition-colors", row.badgeClass)}
+                                                                >
+                                                                    {row.label}
+                                                                </Badge>
+                                                            ) : (
+                                                                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 truncate">
+                                                                    {row.label}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                                            {row.count} chỉ tiêu
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )
+                                        }
+
+                                        const test = row.assay
                                         const selectedTest = selected.find(t => t.assayId === test.id)
                                         const isSelected = !!selectedTest
                                         const isDisabled = disabledSet.has(test.id)
