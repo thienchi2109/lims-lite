@@ -48,24 +48,24 @@
 
 ## 3. Database Migrations - Add Search to Other Tables
 
-- [ ] 3.1 Create migration `0XX_add_search_to_clients.sql`
+- [x] 3.1 Create migration `071_add_search_to_clients.sql`
   - Add search_vector column, GIN index (CONCURRENTLY for production), trigger
-  - Index columns: name, contact_name, address
-  - Update audit trigger to exclude search_vector
-- [ ] 3.2 Create migration `0XX_add_search_to_assays.sql`
+  - Index columns: name, phone, address, id_card_num, health_insurance_num
+  - Note: audit_logs already excludes search_vector (migration 070)
+- [x] 3.2 Create migration `072_add_search_to_assays.sql`
   - Add search_vector column, GIN index (CONCURRENTLY for production), trigger
-  - Index columns: name, method_name, description
-  - Update audit trigger to exclude search_vector
-- [ ] 3.3 Create migration `0XX_add_search_to_results.sql`
+  - Index columns: name, units
+  - Note: audit_logs already excludes search_vector (migration 070)
+- [x] 3.3 Create migration `073_add_search_to_results.sql`
   - Add search_vector column, GIN index (CONCURRENTLY for production), trigger
-  - Index columns: value, comments
-  - Update audit trigger to exclude search_vector
-- [ ] 3.4 Create migration `0XX_add_search_to_audit_logs.sql`
+  - Index columns: value, status::text, approval_note
+  - Note: audit_logs already excludes search_vector (migration 070)
+- [x] 3.4 Create migration `074_add_search_to_audit_logs.sql`
   - Add search_vector column, GIN index (CONCURRENTLY for production), trigger
-  - Index columns: action, old_data::text, new_data::text
+  - Index columns: operation, table_name, old_values::text, new_values::text
   - Note: audit_logs table does NOT need to exclude search_vector from its own audit (no recursion)
-- [ ] 3.5 Apply all migrations to development database
-- [ ] 3.6 Verify all indexes created
+- [x] 3.5 Apply all migrations to development database
+- [x] 3.6 Verify all indexes created
   ```sql
   SELECT tablename, indexname FROM pg_indexes
   WHERE indexname LIKE '%_search_idx'
