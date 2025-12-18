@@ -713,3 +713,85 @@ export const CoAAccessLogWithClientSchema = CoAAccessLogSchema.extend({
 })
 
 export type CoAAccessLogWithClient = z.infer<typeof CoAAccessLogWithClientSchema>
+
+// ============================================================================
+// SEARCH SCHEMAS
+// ============================================================================
+
+// Search query validation (min 2 chars, max 200 chars)
+export const SearchQuerySchema = z.object({
+    query: z.string()
+        .trim()
+        .min(2, 'Từ khóa tìm kiếm phải có ít nhất 2 ký tự')
+        .max(200, 'Từ khóa tìm kiếm tối đa 200 ký tự'),
+    maxResults: z.number().int().min(1).max(100).optional().default(20),
+})
+
+export type SearchQuery = z.infer<typeof SearchQuerySchema>
+
+// Search result for samples
+export const SearchSampleResultSchema = z.object({
+    id: z.string().uuid(),
+    sample_id: z.string(),
+    client_name: z.string(),
+    type: z.string(),
+    status: SampleStatus,
+    received_at: z.string().datetime(),
+    rank: z.number(),
+})
+
+export type SearchSampleResult = z.infer<typeof SearchSampleResultSchema>
+
+// Search result for clients
+export const SearchClientResultSchema = z.object({
+    id: z.string().uuid(),
+    name: z.string(),
+    phone: z.string(),
+    address: z.string().nullable(),
+    rank: z.number(),
+})
+
+export type SearchClientResult = z.infer<typeof SearchClientResultSchema>
+
+// Search result for assays
+export const SearchAssayResultSchema = z.object({
+    id: z.string().uuid(),
+    name: z.string(),
+    units: z.string().nullable(),
+    rank: z.number(),
+})
+
+export type SearchAssayResult = z.infer<typeof SearchAssayResultSchema>
+
+// Search result for results
+export const SearchResultResultSchema = z.object({
+    id: z.string().uuid(),
+    sample_id: z.string().uuid(),
+    assay_id: z.string().uuid(),
+    value: z.string().nullable(),
+    status: ResultStatus,
+    rank: z.number(),
+})
+
+export type SearchResultResult = z.infer<typeof SearchResultResultSchema>
+
+// Search result for audit logs (manager only)
+export const SearchAuditLogResultSchema = z.object({
+    id: z.string().uuid(),
+    operation: z.string(),
+    table_name: z.string(),
+    changed_at: z.string().datetime(),
+    rank: z.number(),
+})
+
+export type SearchAuditLogResult = z.infer<typeof SearchAuditLogResultSchema>
+
+// Global search result (combined from all entities)
+export const GlobalSearchResultSchema = z.object({
+    entity_type: z.enum(['sample', 'client', 'assay', 'result']),
+    entity_id: z.string().uuid(),
+    description: z.string(),
+    rank: z.number(),
+})
+
+export type GlobalSearchResult = z.infer<typeof GlobalSearchResultSchema>

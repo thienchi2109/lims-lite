@@ -109,17 +109,17 @@
 
 ## 5. Application Integration - Server Actions
 
-- [ ] 5.1 Create `src/app/actions/search.ts`
+- [x] 5.1 Create `src/app/actions/search.ts`
   - `searchSamples(query: string)` Server Action
   - `searchClients(query: string)` Server Action
   - `searchAssays(query: string)` Server Action
   - `searchResults(query: string)` Server Action
   - `searchAuditLogs(query: string)` Server Action (manager only)
   - `globalSearch(query: string)` Server Action
-- [ ] 5.2 Add Zod validation schemas
+- [x] 5.2 Add Zod validation schemas
   - SearchQuerySchema (min 2 chars, max 200 chars, sanitized)
   - SearchResultSchema per entity type
-- [ ] 5.3 Add error handling and logging
+- [x] 5.3 Add error handling and logging
   - Log search queries for analytics (without PII)
   - Handle empty results gracefully
   - Return { data, error } pattern
