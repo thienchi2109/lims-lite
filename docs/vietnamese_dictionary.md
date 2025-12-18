@@ -36,6 +36,16 @@
 - Assign: Chỉ định
 - Scan QR: Quét QR
 
+## Search (Full-Text Search)
+- Search: Tìm kiếm
+- Global search: Tìm kiếm toàn bộ
+- Search results: Kết quả tìm kiếm
+- No results found: Không tìm thấy kết quả
+- Searching...: Đang tìm kiếm...
+- Search for samples, clients, assays...: Tìm kiếm mẫu, khách hàng, chỉ tiêu...
+- Relevance: Độ liên quan
+- Rank score: Điểm xếp hạng
+
 ## UI Elements
 - Dashboard: Bảng điều khiển
 - Settings: Cài đặt
