@@ -1,20 +1,43 @@
 ## 1. Database Setup
 
-- [ ] 1.1 Create migration `0XX_create_reports_functions.sql` with RPC functions:
+- [ ] 1.1 Create migration `0XX_create_reports_functions.sql` with RPC functions (LIMS industry-standard calculations):
   - [ ] `calculate_average_tat(start_date, end_date)` - TAT metrics
+    - Returns: `avg_tat_hours NUMERIC`, `median_tat_hours NUMERIC`, `sample_count BIGINT`, `on_time_count BIGINT`
+    - Calculation: `AVG(EXTRACT(EPOCH FROM (approved_at - received_at))/3600)` and `PERCENTILE_CONT(0.5)`
+    - Filters: WHERE status = 'completed' AND approved_at BETWEEN dates AND deleted_at IS NULL
   - [ ] `get_samples_by_status(start_date, end_date)` - Status distribution
+    - Returns: Table of (status TEXT, count BIGINT) for each workflow stage
+    - Sorted by workflow order: received, assigned, in_progress, review, completed
   - [ ] `get_approval_queue_metrics(start_date, end_date)` - Pending approvals
+    - Returns: `pending_count BIGINT`, `avg_wait_hours NUMERIC`, `overdue_count BIGINT`
+    - Alert threshold: >20 samples OR avg wait >24 hours
   - [ ] `get_error_rate_metrics(start_date, end_date)` - From audit logs
+    - Returns: `error_rate NUMERIC`, `total_modifications BIGINT`, `total_results BIGINT`
+    - Calculation: (audit log UPDATEs / total results) * 100
+    - Excludes approval actions, only counts corrections
   - [ ] `get_coa_statistics(start_date, end_date)` - CoA generation stats
+    - Returns: Table of (segment TEXT, count BIGINT, percentage NUMERIC)
+    - 3 segments: Generated (coa_generated_at IS NOT NULL), Pending CoA (completed + no coa), Not Approved
   - [ ] `get_staff_productivity(start_date, end_date)` - Manager-only
-- [ ] 1.2 Add database indexes for performance:
+    - Returns: Table of (analyst_id UUID, analyst_name TEXT, tests_completed BIGINT, results_modified BIGINT)
+    - Security: Add role check in RPC or rely on RLS policies
+    - Sort by tests_completed DESC
+- [ ] 1.2 Add database indexes for performance (LIMS best practice for <500ms query times):
   - [ ] `CREATE INDEX idx_samples_received_at ON samples(received_at) WHERE deleted_at IS NULL`
   - [ ] `CREATE INDEX idx_samples_approved_at ON samples(approved_at) WHERE deleted_at IS NULL`
+  - [ ] `CREATE INDEX idx_samples_status_received ON samples(status, received_at) WHERE deleted_at IS NULL` (composite for status filtering)
   - [ ] `CREATE INDEX idx_results_created_at ON results(created_at)`
   - [ ] `CREATE INDEX idx_audit_logs_timestamp ON audit_logs(timestamp) WHERE table_name = 'results'`
+  - [ ] Run `EXPLAIN ANALYZE` on each RPC function with 100k sample dataset to verify <500ms execution
 - [ ] 1.3 Test RPC functions with sample data
+  - [ ] Insert test data: 1000 samples with varied TAT (10h - 120h), statuses, and timestamps
+  - [ ] Verify calculations match expected values (manual spot-check)
+  - [ ] Test edge cases: 0 samples, all on-time, all late, missing coa_generated_at
 - [ ] 1.4 Run security tests: `docker exec lims-postgres psql -U postgres -d postgres -c "SELECT * FROM run_security_tests();"`
 - [ ] 1.5 Verify RLS compliance for all RPC functions
+  - [ ] Use `SECURITY INVOKER` for all RPC functions to enforce RLS policies automatically
+  - [ ] Test as analyst role: should see only non-deleted samples per existing policies
+  - [ ] Test manager-only functions: `get_staff_productivity` should fail for analyst role
 
 ## 2. Backend Implementation
 
@@ -69,31 +92,44 @@
 
 ## 4. UI Components - Charts
 
-- [ ] 4.1 Create `src/components/reports/tat-trend-chart.tsx`:
-  - [ ] Recharts LineChart with area fill
-  - [ ] X-axis: Dates (formatted Vietnamese)
-  - [ ] Y-axis: TAT in hours
-  - [ ] Reference line for SLA threshold (72 hours)
-  - [ ] Custom tooltip with sample count
+- [ ] 4.1 Create `src/components/reports/tat-trend-chart.tsx` (LIMS Control Chart Pattern):
+  - [ ] Recharts LineChart with area fill (gradient blue)
+  - [ ] X-axis: Dates (formatted Vietnamese `dd/MM`)
+  - [ ] Y-axis: TAT in hours (auto-scale with 0 baseline)
+  - [ ] **Reference line for SLA threshold (72 hours)** - red dotted line labeled "Giới hạn SLA"
+  - [ ] **Control chart principle**: Data points above reference line indicate process out of control
+  - [ ] Custom tooltip: `"Ngày: {date}\nTAT TB: {tat}h\nSố mẫu: {count}"`
+  - [ ] Responsive sizing (ResponsiveContainer)
+  - [ ] Loading skeleton state (shimmer effect)
+  - [ ] Empty state: "Không có dữ liệu TAT trong khoảng thời gian này"
+- [ ] 4.2 Create `src/components/reports/sample-status-chart.tsx` (WIP Distribution):
+  - [ ] Recharts BarChart (horizontal orientation - better for status labels)
+  - [ ] **Color-coded bars by status** (semantic colors matching LIMS UI):
+    - Received: slate-500, Assigned: blue-500, In Progress: amber-500, Review: purple-500, Completed: emerald-500
+  - [ ] **Sorted by workflow order** (not by count) to reflect sample journey
+  - [ ] Click handler to filter Recent Samples Table: `onClick={(data) => router.push('?status=' + data.status)}`
+  - [ ] Vietnamese status labels with sample counts: "{status} ({count} mẫu)"
   - [ ] Responsive sizing
-  - [ ] Loading state
-- [ ] 4.2 Create `src/components/reports/sample-status-chart.tsx`:
-  - [ ] Recharts BarChart (horizontal orientation)
-  - [ ] Color-coded bars by status
-  - [ ] Click handler to filter Recent Samples Table
-  - [ ] Vietnamese status labels
-  - [ ] Responsive sizing
-- [ ] 4.3 Create `src/components/reports/coa-statistics-chart.tsx`:
-  - [ ] Recharts PieChart with donut style
-  - [ ] 3 segments: Generated, Pending CoA, Not Approved
-  - [ ] Center label with total approved count
-  - [ ] Custom legend with counts and percentages
-  - [ ] Vietnamese labels
-- [ ] 4.4 Create `src/components/reports/staff-productivity-chart.tsx`:
-  - [ ] Recharts BarChart (vertical, grouped bars)
-  - [ ] Current period vs Previous period comparison
-  - [ ] Manager-only component (check role)
-  - [ ] Anonymization option (display initials or full names)
+  - [ ] Hover effect: highlight bar + show percentage of total
+- [ ] 4.3 Create `src/components/reports/coa-statistics-chart.tsx` (CoA Pipeline Funnel):
+  - [ ] Recharts PieChart with donut style (innerRadius=60%, outerRadius=80%)
+  - [ ] **3 segments** (color-coded):
+    - Generated (emerald-500), Pending CoA (amber-500), Not Approved (slate-400)
+  - [ ] **Center label**: Total approved count + "mẫu đã duyệt"
+  - [ ] Custom legend with counts and percentages: "{segment}: {count} ({percentage}%)"
+  - [ ] Vietnamese labels: "Đã tạo CoA", "Chờ tạo CoA", "Chưa phê duyệt"
+  - [ ] Tooltip: Segment name + count + percentage
+  - [ ] **Business insight**: Large "Pending CoA" segment (>30%) triggers manager alert
+- [ ] 4.4 Create `src/components/reports/staff-productivity-chart.tsx` (Analyst Comparison):
+  - [ ] Recharts BarChart (vertical, grouped bars for comparison)
+  - [ ] **Two bar groups**: Current period (blue-600) vs Previous period (slate-400)
+  - [ ] X-axis: Analyst names (full names or anonymized as "Analyst A, B, C")
+  - [ ] Y-axis: Tests completed count
+  - [ ] **Manager-only component**: Check `role === 'manager'` - return null for analysts
+  - [ ] **Sort by current period DESC** - top performers first
+  - [ ] Anonymization option in settings (future enhancement)
+  - [ ] Tooltip: "{analyst}: {count} xét nghiệm\n(Kỳ trước: {prev_count})"
+  - [ ] Privacy note: Component never exports individual data to analysts
   - [ ] Sort by current period descending
 - [ ] 4.5 Create shared chart utilities:
   - [ ] `src/components/reports/chart-container.tsx` - Wrapper with title and loading

@@ -28,8 +28,11 @@ The system SHALL display 5 core operational KPI cards with current values, trend
 - **WHEN** KPI cards render
 - **THEN** system displays "TAT Trung Bình" card showing:
   - Average TAT in hours or days (e.g., "2.3 ngày")
-  - Trend indicator (↑ or ↓) compared to previous period
+  - **Calculation**: `AVG(EXTRACT(EPOCH FROM (approved_at - received_at))/3600)` for samples WHERE status = 'completed' AND approved_at BETWEEN start_date AND end_date
+  - **LIMS best practice**: Display both average (mean) and median TAT to account for outliers
+  - Trend indicator (↑ or ↓) compared to previous period (same date range length shifted back)
   - Percentage change (e.g., "+12% vs tuần trước")
+  - **Alert threshold**: Show warning badge if average TAT >60 hours (approaching 72h SLA limit)
 
 #### Scenario: Display Samples in Progress (WIP)
 - **GIVEN** user is viewing Reports dashboard
@@ -49,16 +52,23 @@ The system SHALL display 5 core operational KPI cards with current values, trend
 - **WHEN** KPI cards render
 - **THEN** system displays "Tỷ Lệ Hoàn Thành Đúng Hạn" card showing:
   - Percentage of samples completed within SLA (default 72 hours)
+  - **Calculation**: `(COUNT(*) FILTER (WHERE (approved_at - received_at) <= INTERVAL '72 hours') / COUNT(*)) * 100` for completed samples in date range
+  - **LIMS industry benchmark**: Target ≥90% for operational excellence, ≥95% for best-in-class labs
   - Color coding: green if ≥90%, yellow if 80-89%, red if <80%
   - Trend compared to previous period
+  - **Actionable insight**: Red status triggers investigation of workflow bottlenecks
 
 #### Scenario: Display Error Rate from Audit Logs
 - **GIVEN** user is viewing Reports dashboard
 - **WHEN** KPI cards render
 - **THEN** system displays "Tỷ Lệ Lỗi" card showing:
   - Error rate percentage calculated as (result modifications / total results entered) × 100
+  - **Calculation**: `(COUNT(*) FROM audit_logs WHERE table_name = 'results' AND action = 'UPDATE' AND timestamp BETWEEN start_date AND end_date) / (SELECT COUNT(*) FROM results WHERE created_at BETWEEN start_date AND end_date) * 100`
+  - **LIMS quality metric**: Tracks rework/retest rate per ISO 17025 continuous improvement requirements
   - Data sourced from audit_logs table WHERE table_name = 'results' AND action = 'UPDATE'
+  - Excludes legitimate result approvals (only counts corrections/modifications)
   - Trend indicator
+  - **Compliance value**: High error rate (>5%) indicates training needs or process issues requiring corrective action
 
 ### Requirement: TAT Trend Chart Visualization
 
@@ -296,9 +306,15 @@ The system SHALL ensure Reports dashboard loads within 2 seconds on standard con
 - **WHEN** user applies date filter
 - **THEN** all RPC function calls complete within 500ms (using database indexes)
 - **AND** total page load time remains <2 seconds
+- **AND** system uses the following optimization strategies:
+  - **Indexed columns**: `received_at`, `approved_at`, `created_at`, `status` with composite indexes for common query patterns
+  - **LIMS best practice**: Use materialized views or snapshots for complex aggregations (refreshed every 5 minutes) to avoid real-time calculation overhead
+  - **Query pattern**: Single RPC call per KPI (not multiple queries) to minimize database roundtrips
+  - **SECURITY INVOKER**: All RPC functions enforce RLS policies automatically - no client-side filtering needed
 
 #### Scenario: Chart rendering performance
 - **GIVEN** TAT Trend chart displays 30 data points (last 30 days)
 - **WHEN** chart component renders
 - **THEN** Recharts completes rendering within 200ms
 - **AND** chart interactions (hover tooltips) are smooth (60fps)
+- **AND** system uses lazy loading for below-fold charts (Staff Productivity) to prioritize above-fold KPIs

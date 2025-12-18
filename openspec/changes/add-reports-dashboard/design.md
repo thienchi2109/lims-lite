@@ -147,10 +147,13 @@ GRANT EXECUTE ON FUNCTION calculate_average_tat TO authenticated;
 | Filter by Date Range | ✅ | ✅ |
 
 **Why analysts get lab-wide stats:**
-- Promotes **transparency** and **team accountability**
+- Promotes **transparency** and **team accountability** (LIMS best practice for operational dashboards)
 - Aligns with user's choice of "Lab-wide operational stats" during brainstorming
-- Analysts see aggregate metrics (not individual breakdowns)
-- Staff productivity comparison is **manager-only** to avoid competitive pressure
+- Analysts see aggregate metrics (not individual breakdowns) - provides context for their work without creating competitive pressure
+- Staff productivity comparison is **manager-only** to avoid anxiety and maintain psychological safety
+- **LIMS industry standard**: Analysts need tactical operational views (worklists, pending tasks) while managers need strategic oversight (productivity, cost per test, compliance metrics)
+- **Security best practice**: Each role has unique login (no shared credentials) - ensures attributable audit trail per ALCOA+ principles
+- **Audit trail enforcement**: All dashboard views logged with role + user ID for compliance verification
 
 **Implementation:**
 
@@ -303,6 +306,46 @@ function RecentSamplesTable({ statusFilter }: Props) {
 - Shareable filtered views (copy link to share specific status view)
 - Browser back/forward works naturally
 - Server-side filtering via searchParams in Server Component
+
+### Decision: Data Visualization Best Practices (LIMS Industry Standards)
+
+**Chart Type Selection Rationale:**
+
+Based on LIMS documentation research, the following chart types are industry-proven for dashboard KPIs:
+
+1. **TAT Trend Chart (Line Chart with Control Limits)**
+   - **Why**: Trend analysis and control charts (Shewhart rules) are standard for monitoring process variation over time
+   - **LIMS best practice**: Display both average and median TAT values to account for outliers
+   - **Control chart pattern**: 72h SLA reference line acts as upper control limit (UCL) - data points above this indicate process out of control
+   - **Actionable insight**: Identifies delay patterns by shift/day to pinpoint workflow bottlenecks
+
+2. **Sample Status Distribution (Horizontal Bar Chart)**
+   - **Why**: Status boards and matrix views are essential for visualizing work-in-progress (WIP) distribution
+   - **LIMS best practice**: Bars sorted by workflow order (not by count) to reflect actual sample journey
+   - **Bottleneck detection**: Long bars at specific stages (e.g., "Review") indicate workflow congestion
+   - **Color coding**: Semantic colors (slate=received, blue=assigned, amber=in_progress, purple=review, emerald=completed) - consistent with existing LIMS UI patterns
+
+3. **CoA Statistics (Donut Chart)**
+   - **Why**: Pipeline/funnel views are standard for tracking multi-stage approval processes
+   - **LIMS best practice**: Shows CoA generation funnel with clear segment labels and percentages
+   - **Business value**: Identifies pending CoA backlog (amber segment) requiring manager attention
+   - **Compliance tracking**: Ensures all approved samples have CoA generated (regulatory requirement)
+
+4. **Staff Productivity (Grouped Bar Chart)**
+   - **Why**: Comparative bar charts are proven for productivity benchmarking across team members
+   - **LIMS best practice**: Current vs previous period comparison shows individual trends and team patterns
+   - **Privacy consideration**: Manager-only view prevents analyst anxiety while enabling targeted coaching
+   - **Data integrity**: Tracks result modification counts per analyst - identifies training needs
+
+**Dashboard Design Principles (from LIMS Research):**
+
+- **Avoid data overload**: Dashboard overwhelm is a top complaint - limit to 5-7 key metrics per view
+- **Smart grouping**: Group related information logically (KPIs at top, charts in middle, detailed table at bottom)
+- **Meaningful color coding**: Use colors purposefully (red=alert, yellow=warning, green=healthy) - not decoratively
+- **Prevent alarm fatigue**: Only show alert badges for critical thresholds (>20 pending approvals, >24h wait time) - don't over-notify
+- **White space**: Keep layout uncluttered with sufficient spacing for readability
+- **Progressive disclosure**: Show summary first, allow drill-down to details on click (chart → filtered table pattern)
+- **Mobile-first**: Dashboard must be readable on tablets (managers check metrics on rounds)
 
 ## Risks / Trade-offs
 
