@@ -30,7 +30,14 @@
       "Skill(superpowers:subagent-driven-development)",
       "Bash(npm run typecheck)",
       "Skill(superpowers:brainstorming)",
-      "Bash(docker exec:*)"
+      "Bash(docker exec:*)",
+      "Skill(superpowers:test-driven-development)",
+      "Skill(superpowers:systematic-debugging)",
+      "Bash(openspec list:*)",
+      "Skill(notebooklm)",
+      "Skill(superpowers:executing-plans)",
+      "Skill(codex)",
+      "Bash(powershell -Command:*)"
     ],
     "deny": [],
     "ask": []

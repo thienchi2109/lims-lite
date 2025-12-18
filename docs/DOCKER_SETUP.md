@@ -73,22 +73,55 @@ If you change token expiry settings later, restart the stack so GoTrue picks up 
 docker-compose down && docker-compose up -d
 ```
 
-### Step 2: Start Docker Services
+### Step 2: Build Custom PostgreSQL Image (First Time Only)
 
-Open a terminal in the project directory and run:
+CDC-LIMS uses a **custom PostgreSQL image** with the **pg_textsearch** extension (Timescale's BM25 full-text search) compiled from source. This is a one-time build process.
+
+#### Initial Build (5-10 minutes)
 
 ```bash
-docker-compose up -d
+# Build the custom PostgreSQL image with pg_textsearch
+docker compose build postgres
+```
+
+**What happens during the build:**
+1. **Stage 1 (Builder)**: Installs PostgreSQL 15 dev tools, compiles pg_textsearch C extension using `make`
+2. **Stage 2 (Runtime)**: Creates final image based on `supabase/postgres:15.8.1.085` with the compiled extension
+
+**Expected output:**
+- Total build time: 2-3 minutes (first build)
+- Final image size: ~700MB (includes Supabase Postgres + pg_textsearch)
+- Extension files installed to:
+  - `/usr/lib/postgresql/15/lib/pg_textsearch.so`
+  - `/usr/share/postgresql/15/extension/pg_textsearch.control`
+  - `/usr/share/postgresql/15/extension/pg_textsearch--*.sql`
+
+**Subsequent builds** (when you rebuild due to docker-compose.yml changes) will be much faster thanks to Docker layer caching.
+
+#### Why Custom Build?
+
+The pg_textsearch extension is not available in the standard Supabase image. We compile it from source using:
+- **Git repository**: https://github.com/timescale/pg_textsearch
+- **Version**: v0.1.1-dev (latest from main branch)
+- **Build system**: PostgreSQL PGXS (traditional C extension)
+- **Base image**: supabase/postgres:15.8.1.085
+
+### Step 3: Start Docker Services
+
+After building the custom image, start all services:
+
+```bash
+docker compose up -d
 ```
 
 This will start all services in detached mode:
-- 🗄️ **PostgreSQL** (port 5432)
+- 🗄️ **PostgreSQL with pg_textsearch** (port 5432)
 - 🔐 **GoTrue Auth** (port 9999)
 - 🌐 **PostgREST API** (port 3001)
 - 📦 **Storage API** (port 5000)
 - 🚪 **Kong Gateway** (port 8000)
 
-### Step 3: Verify Services
+### Step 4: Verify Services
 
 Check that all services are running:
 
@@ -98,7 +131,7 @@ docker-compose ps
 
 You should see all 5 services with status "Up".
 
-### Step 4: Check Logs (if needed)
+### Step 5: Check Logs (if needed)
 
 View logs for all services:
 ```bash
@@ -112,7 +145,7 @@ docker-compose logs -f auth
 docker-compose logs -f rest
 ```
 
-### Step 5: Install Dependencies & Start Next.js
+### Step 6: Install Dependencies & Start Next.js
 
 In a new terminal, install npm dependencies:
 ```bash
@@ -199,6 +232,26 @@ docker exec -it lims-postgres psql -U postgres
 ```
 
 ## 🔍 Troubleshooting
+
+### pg_textsearch Build Issues
+
+#### Build fails with "make: command not found"
+The build-essential package installation failed. Check Docker has enough disk space (need ~1GB for build).
+
+#### Build takes longer than 5 minutes
+The C compilation should be fast. If it's slow, check your Docker resource allocation in Docker Desktop settings.
+
+#### Extension files not found after build
+The Dockerfile includes verification checks that will fail the build if extension files are missing. If you see this error, check:
+```bash
+docker compose build postgres --no-cache
+```
+
+#### Verify pg_textsearch installation
+After starting the stack, verify the extension is available:
+```bash
+docker exec lims-postgres psql -U postgres -c "SELECT * FROM pg_available_extensions WHERE name = 'textsearch';"
+```
 
 ### Port Conflicts
 
