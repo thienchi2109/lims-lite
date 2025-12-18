@@ -74,29 +74,29 @@
 
 ## 4. Database Migrations - Search Functions
 
-- [ ] 4.1 Create migration `0XX_create_search_functions.sql`
+- [x] 4.1 Create migration `075_create_search_functions.sql`
   - `search_samples(query TEXT, max_results INT DEFAULT 20)` - SECURITY INVOKER
   - `search_clients(query TEXT, max_results INT DEFAULT 20)` - SECURITY INVOKER
   - `search_assays(query TEXT, max_results INT DEFAULT 20)` - SECURITY INVOKER
   - `search_results(query TEXT, max_results INT DEFAULT 20)` - SECURITY INVOKER
   - `search_audit_logs(query TEXT, max_results INT DEFAULT 20)` - Manager only
   - `global_search(query TEXT, max_results INT DEFAULT 20)` - Combined results
-- [ ] 4.2 Use `plainto_tsquery()` for query safety (NOT raw `to_tsquery()`)
+- [x] 4.2 Use `plainto_tsquery()` for query safety (NOT raw `to_tsquery()`)
   - Prevents syntax errors from user input (e.g., "C++" would break `to_tsquery()`)
   - Prevents potential injection attacks
   - Automatically handles spaces and basic operators
   - Apply `unaccent()` to search queries for Vietnamese support
   - Example: `plainto_tsquery('simple', unaccent(search_query))`
-- [ ] 4.3 Add RLS-compliant result filtering
+- [x] 4.3 Add RLS-compliant result filtering
   - RLS policies automatically enforced (same table)
-  - Filter out soft-deleted records (deleted_at IS NULL)
+  - Filter out soft-deleted records (deleted_at IS NULL for samples/assays)
   - Return id, entity fields, and rank score
-- [ ] 4.4 Grant EXECUTE permissions to authenticated role
+- [x] 4.4 Grant EXECUTE permissions to authenticated role
   ```sql
   GRANT EXECUTE ON FUNCTION search_samples TO authenticated;
   -- Repeat for all search functions
   ```
-- [ ] 4.5 Apply migration and test functions
+- [x] 4.5 Apply migration and test functions
   ```sql
   -- Test sample search
   SELECT * FROM search_samples('huyết thanh', 10);
