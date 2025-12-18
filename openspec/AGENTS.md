@@ -452,3 +452,77 @@ openspec archive <change-id> [--yes|-y]  # Mark complete (add --yes for automati
 ```
 
 Remember: Specs are truth. Changes are proposals. Keep them in sync.
+
+---
+
+## Task Tracking & Execution with Beads
+
+We use **Beads (bd)** for task tracking and state management alongside OpenSpec.
+
+### Dual-System Workflow
+
+1. **OpenSpec (The "What"):** Defines specifications and high-level plans.
+2. **Beads (The "How" & "Where"):** Tracks execution state and detailed tasks.
+
+### Role of OpenSpec Files
+- `openspec/specs/`: The Source of Truth for system behavior.
+- `openspec/changes/<change_name>/proposal.md`: The approved design for the current feature.
+- `openspec/changes/<change_name>/tasks.md`: **READ-ONLY SKELETON**. Do NOT check off boxes here. Use this only to understand the high-level roadmap.
+
+### Role of Beads (bd)
+- **Beads is your memory.** You must use it to track what you are doing, what is blocked, and what to do next.
+- Before starting work, ALWAYS run `bd ready` to see the highest priority unblocked task.
+- When you discover new necessary work, use `bd create`.
+- When you finish a step, use `bd update <id> --status closed`.
+
+### The "Land the Plane" Protocol (CRITICAL)
+At the end of every response or before context compaction:
+1. Log your progress using `bd update <id> --notes "..."`.
+2. Ensure the next logical step is clearly defined in Beads.
+3. If a task is blocked by another, use `bd dep add <child> <parent>`.
+
+### Workflow Transition
+- When a new OpenSpec proposal is approved, DO NOT implement directly from `tasks.md`.
+- Instead, **ingest** the plan into Beads by running `bd create` for the items listed in `tasks.md`.
+
+### Essential Beads Commands
+
+```bash
+# 🎯 Start work (run this first every session!)
+bd ready
+
+# Create tasks
+bd create "Task description"
+bd create "Setup OAuth" -p P0  # With priority
+
+# Add dependencies
+bd dep add <child-id> <parent-id>  # Parent must finish before child
+
+# View task details
+bd show <id>
+
+# Update progress
+bd update <id> --notes "Progress notes"
+bd update <id> --status closed  # Mark as complete
+
+# List all tasks
+bd list
+
+# Search tasks
+bd search "keyword"
+```
+
+### Complete Workflow Integration
+
+| Stage | Action | Tool |
+|-------|--------|------|
+| **1. Proposal** | `/openspec:proposal [Feature]` | OpenSpec |
+| **2. Handshake** | Convert tasks.md → Beads issues | Beads |
+| **3. Execution** | `bd ready` → Code → `bd update` | Beads |
+| **4. Completion** | `/openspec:archive <change-id>` | OpenSpec |
+
+### Critical Rules
+- `tasks.md` is READ-ONLY - track execution in Beads, not in Markdown
+- Run `bd ready` at the start of EVERY session
+- Use `bd update` before ending sessions to preserve context
+- Dependencies matter: use `bd dep add` to model task relationships
