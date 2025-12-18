@@ -153,6 +153,33 @@ lims-lite/
 - 95% zoom scale for optimal fit and readability
 - Browser print dialog integration
 
+### Full-Text Search (Latest)
+- **Vietnamese language support:** Diacritic-insensitive search (finds "Máu" and "Mau" identically)
+- **PostgreSQL FTS:** GIN-indexed tsvector columns for sub-50ms query times
+- **Global search:** Search across samples, clients, assays, results, and audit logs
+- **Relevance ranking:** Results sorted by ts_rank score
+- **RLS-compliant:** Manager-only audit log search, role-based access enforcement
+- **Zero-downtime deployment:** Production migrations use CREATE INDEX CONCURRENTLY
+
+**Search Capabilities:**
+- **Samples:** Search by sample ID, client name, type, status, rejection reason, date
+- **Clients:** Search by name, phone, address, ID number, health insurance number
+- **Assays:** Search by assay name, units
+- **Results:** Search by result value, status, approval notes
+- **Audit Logs:** Search by operation, table name, change details (manager only)
+- **Global:** Combined search across all entity types
+
+**Technical Highlights:**
+- **`unaccent()` extension:** Removes Vietnamese diacritics for normalization
+- **`plainto_tsquery()`:** Safe user input handling, prevents syntax errors
+- **Automatic triggers:** search_vector columns updated on INSERT/UPDATE
+- **Idempotent migrations:** Safe to re-run if interrupted
+
+For detailed setup and usage, see:
+- `docs/SEARCH_SETUP.md` - PostgreSQL FTS implementation guide
+- `docs/DEPLOYMENT_SEARCH.md` - Production deployment with zero downtime
+- `CLAUDE.md` - Search patterns reference
+
 ## 🔍 Client Management & QR Intake Workflow
 
 ### Overview

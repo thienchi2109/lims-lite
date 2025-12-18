@@ -675,6 +675,137 @@ CREATE TRIGGER audit_log_trigger
   EXECUTE FUNCTION trigger_audit_log();
 ```
 
+### **PostgreSQL Full-Text Search**
+```sql
+-- Add search_vector column to table
+ALTER TABLE samples
+ADD COLUMN IF NOT EXISTS search_vector tsvector;
+
+-- Create GIN index for performance
+-- Use CONCURRENTLY for production (zero downtime)
+CREATE INDEX IF NOT EXISTS samples_search_idx
+ON samples USING GIN(search_vector);
+
+-- Create trigger function for automatic updates
+CREATE OR REPLACE FUNCTION update_search_vector_samples()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Apply unaccent() for Vietnamese diacritic-insensitive search
+    NEW.search_vector := to_tsvector(
+        'simple',
+        unaccent(
+            COALESCE(NEW.sample_id, '') || ' ' ||
+            COALESCE(NEW.description, '') || ' ' ||
+            COALESCE(NEW.type, '')
+        )
+    );
+    RETURN NEW;
+END;
+$$;
+
+-- Create trigger (only on relevant columns)
+CREATE TRIGGER samples_search_update
+BEFORE INSERT OR UPDATE OF sample_id, description, type ON samples
+FOR EACH ROW EXECUTE FUNCTION update_search_vector_samples();
+
+-- Search RPC function with RLS enforcement
+CREATE OR REPLACE FUNCTION search_samples(
+    search_query TEXT,
+    max_results INT DEFAULT 20
+)
+RETURNS TABLE (
+    id UUID,
+    sample_id TEXT,
+    rank REAL
+)
+LANGUAGE plpgsql
+SECURITY INVOKER  -- Enforces RLS policies
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        s.id,
+        s.sample_id,
+        ts_rank(s.search_vector, query) as rank
+    FROM samples s,
+         plainto_tsquery('simple', unaccent(search_query)) query
+    WHERE s.search_vector @@ query
+      AND s.deleted_at IS NULL  -- Exclude soft-deleted records
+    ORDER BY rank DESC
+    LIMIT max_results;
+END;
+$$;
+
+-- Grant permissions
+GRANT EXECUTE ON FUNCTION search_samples TO authenticated;
+```
+
+**Key Search Patterns:**
+
+1. **Use `plainto_tsquery()` (NOT `to_tsquery()`)**: Safer for user input, prevents syntax errors
+2. **Apply `unaccent()` for Vietnamese support**: Both in indexing and querying
+3. **Use `SECURITY INVOKER`**: Enforces RLS policies automatically
+4. **Index only relevant columns**: Reduces index size and improves performance
+5. **Use `ts_rank` for relevance ranking**: Higher scores = more relevant results
+6. **Idempotent backfills**: Use `WHERE search_vector IS NULL` for safe re-runs
+
+**Search Server Action Pattern:**
+```typescript
+// src/app/actions/search.ts
+'use server'
+import { z } from 'zod'
+import { createClient } from '@/lib/supabase/server'
+
+const SearchQuerySchema = z.string().min(2).max(200)
+
+export async function searchSamples(query: string) {
+  const supabase = await createClient()
+
+  // Validate input
+  const result = SearchQuerySchema.safeParse(query)
+  if (!result.success) {
+    return { data: [], error: 'Invalid search query' }
+  }
+
+  // Call search RPC function
+  const { data, error } = await supabase
+    .rpc('search_samples', {
+      search_query: result.data,
+      max_results: 20
+    })
+
+  if (error) return { data: [], error: error.message }
+
+  return { data, error: null }
+}
+```
+
+**Production Migration with CREATE INDEX CONCURRENTLY:**
+```sql
+-- Development migration: Regular CREATE INDEX (fast, locks table)
+CREATE INDEX IF NOT EXISTS samples_search_idx
+ON samples USING GIN(search_vector);
+
+-- Production migration: CREATE INDEX CONCURRENTLY (slow, no locks)
+-- CRITICAL: Cannot run inside transaction blocks
+CREATE INDEX CONCURRENTLY IF NOT EXISTS samples_search_idx
+ON samples USING GIN(search_vector);
+
+-- Idempotent backfill (safe to re-run if interrupted)
+UPDATE samples SET search_vector = to_tsvector(
+    'simple',
+    unaccent(COALESCE(sample_id, '') || ' ' || COALESCE(description, ''))
+)
+WHERE search_vector IS NULL;  -- Only process unindexed rows
+```
+
+**See Also:**
+- `docs/SEARCH_SETUP.md` - Complete PostgreSQL FTS guide
+- `docs/DEPLOYMENT_SEARCH.md` - Production deployment with zero downtime
+- `supabase/migrations/production/` - CREATE INDEX CONCURRENTLY versions
+
 ## **Error Handling Checklist**
 
 When a database error occurs:
