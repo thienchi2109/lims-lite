@@ -53,7 +53,7 @@ export function DashboardNav({ user, className }: DashboardNavProps) {
     return (
         <div className={cn("flex items-center", className)}>
             {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center gap-1 mx-6">
+            <nav className="hidden xl:flex items-center gap-1 mx-6">
                 {links.map((link) => {
                     const isActive = pathname === link.href || (pathname?.startsWith(link.href) && link.href !== `/` + role)
 
@@ -78,18 +78,18 @@ export function DashboardNav({ user, className }: DashboardNavProps) {
             {/* Mobile Navigation */}
             <Sheet open={open} onOpenChange={setOpen}>
                 <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className="lg:hidden ml-2 text-slate-500">
+                    <Button variant="ghost" size="icon" className="xl:hidden text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                         <Menu className="h-6 w-6" />
                         <span className="sr-only">Toggle menu</span>
                     </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-[300px] sm:w-[400px]">
-                    <SheetHeader>
-                        <SheetTitle className="text-left bg-gradient-to-r from-blue-700 to-indigo-600 bg-clip-text text-transparent font-bold text-xl">
-                            CDC LIMS-Lite
+                <SheetContent side="left" className="w-[300px] sm:w-[400px] p-0">
+                    <SheetHeader className="p-6 border-b border-slate-100 dark:border-slate-800">
+                        <SheetTitle className="text-left bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 dark:from-blue-400 dark:via-indigo-400 dark:to-violet-400 bg-clip-text text-transparent font-bold text-2xl">
+                            CDC-LIMS Pro
                         </SheetTitle>
                     </SheetHeader>
-                    <nav className="flex flex-col gap-2 mt-8">
+                    <nav className="flex flex-col gap-2 p-4">
                         {links.map((link) => {
                             const isActive = pathname === link.href || (pathname?.startsWith(link.href) && link.href !== `/` + role)
 
@@ -99,13 +99,13 @@ export function DashboardNav({ user, className }: DashboardNavProps) {
                                     href={link.href}
                                     onClick={() => setOpen(false)}
                                     className={cn(
-                                        "flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors",
+                                        "flex items-center gap-4 px-4 py-4 text-base font-medium rounded-xl transition-all duration-200",
                                         isActive
-                                            ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
+                                            ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 shadow-sm"
                                             : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800/50"
                                     )}
                                 >
-                                    <link.icon className={cn("h-5 w-5", isActive ? "text-blue-600 dark:text-blue-400" : "text-slate-500")} />
+                                    <link.icon className={cn("h-6 w-6", isActive ? "text-blue-600 dark:text-blue-400" : "text-slate-500")} />
                                     {link.label}
                                 </Link>
                             )
