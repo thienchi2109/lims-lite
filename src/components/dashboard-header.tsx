@@ -1,5 +1,8 @@
+'use client'
+
 import { UserProfileDropdown } from '@/components/user-profile-dropdown'
 import { DashboardNav } from '@/components/dashboard-nav'
+import { GlobalSearch } from '@/components/global-search'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
 
@@ -46,6 +49,7 @@ export function DashboardHeader({
                 </div>
 
                 <div className="flex items-center gap-3 sm:gap-6">
+                    <GlobalSearch />
                     <DashboardNav user={user} />
                     {user && <UserProfileDropdown user={user} />}
                 </div>

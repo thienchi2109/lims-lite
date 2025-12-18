@@ -13,6 +13,20 @@
 
 ## **Behavioral Directives**
 
+### **0. Beads Task Tracking (Windows)**
+- This project uses **bd** (Beads) for issue tracking integrated with git workflow
+- **CRITICAL FOR WINDOWS:** Always run bd commands through PowerShell explicitly:
+  ```bash
+  # Use this pattern in Claude Code's Bash tool
+  powershell -Command "bd ready"
+  powershell -Command "bd show <id>"
+  powershell -Command "bd update <id> --status in_progress"
+  powershell -Command "bd close <id> --notes 'Implementation details'"
+  powershell -Command "bd sync"
+  ```
+- Direct `bd` commands may fail with module resolution errors on Windows
+- See @AGENTS.md for complete Beads workflow
+
 ### **1. Compliance First**
 - **Never** suggest features that break auditability (e.g., "delete this result")
 - Always recommend "soft delete" or "void" status instead
