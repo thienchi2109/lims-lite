@@ -126,11 +126,11 @@
 
 ## 6. Application Integration - Data Layer
 
-- [ ] 6.1 Create `src/lib/data/search.ts`
+- [x] 6.1 Create `src/lib/data/search.ts`
   - Type definitions for search results (SearchSampleResult, etc.)
   - Search result transformers
   - Score normalization utilities (optional)
-- [ ] 6.2 Add TanStack Query hooks (optional)
+- [x] 6.2 Add TanStack Query hooks (optional)
   - `useSearchSamples(query: string)`
   - `useGlobalSearch(query: string)`
   - Configure appropriate staleTime and cacheTime

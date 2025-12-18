@@ -59,6 +59,56 @@ export const resultKeys = {
 }
 
 /**
+ * Query key factory for search queries
+ *
+ * Hierarchical structure:
+ * - ['search'] - All search queries
+ * - ['search', 'samples', query] - Sample search results
+ * - ['search', 'clients', query] - Client search results
+ * - ['search', 'assays', query] - Assay search results
+ * - ['search', 'results', query] - Result search results
+ * - ['search', 'audit-logs', query] - Audit log search results
+ * - ['search', 'global', query] - Global search results
+ */
+export const searchKeys = {
+    /**
+     * Base key for all search queries
+     * Use for invalidating all search-related data
+     */
+    all: ['search'] as const,
+
+    /**
+     * Key for sample search results
+     */
+    samples: (query: string, maxResults?: number) => ['search', 'samples', query, maxResults] as const,
+
+    /**
+     * Key for client search results
+     */
+    clients: (query: string, maxResults?: number) => ['search', 'clients', query, maxResults] as const,
+
+    /**
+     * Key for assay search results
+     */
+    assays: (query: string, maxResults?: number) => ['search', 'assays', query, maxResults] as const,
+
+    /**
+     * Key for result search results
+     */
+    results: (query: string, maxResults?: number) => ['search', 'results', query, maxResults] as const,
+
+    /**
+     * Key for audit log search results (manager only)
+     */
+    auditLogs: (query: string, maxResults?: number) => ['search', 'audit-logs', query, maxResults] as const,
+
+    /**
+     * Key for global search results
+     */
+    global: (query: string, maxResults?: number) => ['search', 'global', query, maxResults] as const,
+}
+
+/**
  * Type helper to extract query key from factory
  */
 export type QueryKey<T extends (...args: any[]) => readonly any[]> = ReturnType<T>

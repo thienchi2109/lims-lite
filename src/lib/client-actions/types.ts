@@ -33,6 +33,12 @@ export type ClientActionName =
     | 'getActiveSignature'
     | 'getSignatureHistory'
     | 'downloadSignature'
+    | 'searchSamples'
+    | 'searchClients'
+    | 'searchAssays'
+    | 'searchResults'
+    | 'searchAuditLogs'
+    | 'globalSearch'
 
 export interface ClientActionRequest {
     action: ClientActionName

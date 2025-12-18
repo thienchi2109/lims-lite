@@ -311,3 +311,55 @@ export function getSignatureHistoryClient() {
 export function downloadSignatureClient(signaturePath: string) {
     return callClientAction('downloadSignature', { signaturePath })
 }
+
+// ============================================================================
+// SEARCH (PostgreSQL Full-Text Search)
+// ============================================================================
+
+/**
+ * Search samples by query
+ * Client-side wrapper for searchSamples Server Action
+ */
+export function searchSamplesClient(query: string, maxResults?: number) {
+    return callClientAction('searchSamples', { query, maxResults })
+}
+
+/**
+ * Search clients by query
+ * Client-side wrapper for searchClients Server Action
+ */
+export function searchClientsClient(query: string, maxResults?: number) {
+    return callClientAction('searchClients', { query, maxResults })
+}
+
+/**
+ * Search assays by query
+ * Client-side wrapper for searchAssays Server Action
+ */
+export function searchAssaysClient(query: string, maxResults?: number) {
+    return callClientAction('searchAssays', { query, maxResults })
+}
+
+/**
+ * Search results by query
+ * Client-side wrapper for searchResults Server Action
+ */
+export function searchResultsClient(query: string, maxResults?: number) {
+    return callClientAction('searchResults', { query, maxResults })
+}
+
+/**
+ * Search audit logs by query (manager only)
+ * Client-side wrapper for searchAuditLogs Server Action
+ */
+export function searchAuditLogsClient(query: string, maxResults?: number) {
+    return callClientAction('searchAuditLogs', { query, maxResults })
+}
+
+/**
+ * Global search across all entities
+ * Client-side wrapper for globalSearch Server Action
+ */
+export function globalSearchClient(query: string, maxResults?: number) {
+    return callClientAction('globalSearch', { query, maxResults })
+}

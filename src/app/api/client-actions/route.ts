@@ -43,6 +43,14 @@ import {
     getSignatureHistory,
     downloadSignature,
 } from '@/app/actions/signatures'
+import {
+    searchSamples,
+    searchClients,
+    searchAssays,
+    searchResults,
+    searchAuditLogs,
+    globalSearch,
+} from '@/app/actions/search'
 import { isIsoDateString } from '@/lib/iso-date'
 import type { ClientActionName, ClientActionRequest } from '@/lib/client-actions/types'
 
@@ -238,6 +246,43 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
             return { error: 'Signature path là bắt buộc' }
         }
         return downloadSignature(payload.signaturePath)
+    },
+    // Search actions (PostgreSQL full-text search)
+    searchSamples: async (payload) => {
+        if (!payload?.query) {
+            return { error: 'Từ khóa tìm kiếm là bắt buộc' }
+        }
+        return searchSamples(payload.query, payload.maxResults)
+    },
+    searchClients: async (payload) => {
+        if (!payload?.query) {
+            return { error: 'Từ khóa tìm kiếm là bắt buộc' }
+        }
+        return searchClients(payload.query, payload.maxResults)
+    },
+    searchAssays: async (payload) => {
+        if (!payload?.query) {
+            return { error: 'Từ khóa tìm kiếm là bắt buộc' }
+        }
+        return searchAssays(payload.query, payload.maxResults)
+    },
+    searchResults: async (payload) => {
+        if (!payload?.query) {
+            return { error: 'Từ khóa tìm kiếm là bắt buộc' }
+        }
+        return searchResults(payload.query, payload.maxResults)
+    },
+    searchAuditLogs: async (payload) => {
+        if (!payload?.query) {
+            return { error: 'Từ khóa tìm kiếm là bắt buộc' }
+        }
+        return searchAuditLogs(payload.query, payload.maxResults)
+    },
+    globalSearch: async (payload) => {
+        if (!payload?.query) {
+            return { error: 'Từ khóa tìm kiếm là bắt buộc' }
+        }
+        return globalSearch(payload.query, payload.maxResults)
     },
 }
 
