@@ -22,6 +22,16 @@ export default async function ManagerDashboard() {
         .eq('id', user.id)
         .single()
 
+    // Role check: Only managers can access this dashboard
+    if (!userData || userData.role !== 'manager') {
+        // Redirect to role-specific dashboard
+        if (userData?.role === 'analyst') {
+            redirect('/analyst')
+        }
+        // Fallback for unknown roles
+        redirect('/login')
+    }
+
     const { data: pendingCountData } = await getSamplesForApprovalCount()
     const pendingCount = pendingCountData ?? 0
 

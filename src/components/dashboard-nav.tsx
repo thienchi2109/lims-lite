@@ -18,10 +18,11 @@ import {
     QrCode,
     BarChart3
 } from 'lucide-react'
+import type { UserRole } from '@/types'
 
 interface DashboardNavProps {
     user?: {
-        role: string | null
+        role: UserRole | null
     } | null
     className?: string
 }

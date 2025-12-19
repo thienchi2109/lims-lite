@@ -5,13 +5,14 @@ import { DashboardNav } from '@/components/dashboard-nav'
 import { GlobalSearch } from '@/components/global-search'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
+import type { UserRole } from '@/types'
 
 interface DashboardHeaderProps {
     title?: string
     subtitle: string
     user?: {
         full_name: string | null
-        role: string | null
+        role: UserRole | null
     } | null
     className?: string
 }
