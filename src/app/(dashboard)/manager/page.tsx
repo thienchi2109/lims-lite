@@ -106,15 +106,20 @@ export default async function ManagerDashboard() {
                             href={item.href}
                             className={`group relative animate-fade-in-up ${item.delay}`}
                         >
-                            <div className="absolute inset-0 bg-gradient-to-r from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 rounded-3xl opacity-0 transition-opacity duration-300 group-hover:opacity-100 shadow-xl pointer-events-none" />
+                            {/* Neumorphism Card */}
+                            <div className="relative h-full bg-slate-50 dark:bg-slate-950 rounded-3xl p-6 transition-all duration-200 ease-in-out
+                                shadow-[9px_9px_16px_#cbd5e1,-9px_-9px_16px_#ffffff] 
+                                dark:shadow-[10px_10px_20px_#020617,-10px_-10px_20px_#1e293b]
+                                hover:shadow-[12px_12px_24px_#cbd5e1,-12px_-12px_24px_#ffffff]
+                                dark:hover:shadow-[14px_14px_28px_#020617,-14px_-14px_28px_#1e293b]
+                                hover:scale-105 overflow-hidden">
+                                
+                                {/* Hover Gradient Glow (Subtle) */}
+                                <div className={`absolute -right-10 -top-10 w-32 h-32 bg-gradient-to-br ${item.color} opacity-0 group-hover:opacity-5 blur-2xl transition-opacity duration-500`} />
 
-                            <div className="relative h-full bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl border border-white/40 dark:border-slate-800 rounded-3xl p-6 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:border-blue-200/50 dark:hover:border-blue-800/50 overflow-hidden">
-                                {/* Hover Gradient Glow */}
-                                <div className={`absolute -right-10 -top-10 w-32 h-32 bg-gradient-to-br ${item.color} opacity-0 group-hover:opacity-10 blur-2xl transition-opacity duration-500`} />
-
-                                <div className="flex flex-col h-full">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div className={`p-4 rounded-2xl bg-gradient-to-br ${item.color} shadow-lg shadow-blue-900/5 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}>
+                                <div className="flex flex-col h-full relative z-10">
+                                    <div className="flex justify-between items-start mb-6">
+                                        <div className={`p-4 rounded-2xl bg-gradient-to-br ${item.color} shadow-lg shadow-blue-900/10 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}>
                                             <item.icon className={`h-7 w-7 ${item.iconColor}`} strokeWidth={2} />
                                         </div>
 
@@ -126,10 +131,10 @@ export default async function ManagerDashboard() {
                                     </div>
 
                                     <div className="mt-auto">
-                                        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors">
+                                        <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors">
                                             {item.title}
                                         </h3>
-                                        <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">
+                                        <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
                                             {item.description}
                                         </p>
                                     </div>
