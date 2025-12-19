@@ -41,22 +41,14 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
   const data = payload[0].payload
 
   return (
-    <div
-      style={{
-        backgroundColor: 'hsl(var(--background))',
-        border: '1px solid hsl(var(--border))',
-        borderRadius: '6px',
-        padding: '8px 12px',
-        fontSize: '12px',
-      }}
-    >
-      <div style={{ fontWeight: 600, marginBottom: '4px' }}>
+    <div style={chartConfig.tooltip.contentStyle}>
+      <div style={chartConfig.tooltip.labelStyle}>
         Nhà phân tích: {data.analystName}
       </div>
-      <div style={{ color: getChartColor('blue'), padding: '2px 0' }}>
+      <div style={{ ...chartConfig.tooltip.itemStyle, color: getChartColor('blue') }}>
         Xét nghiệm hoàn thành: {formatVietnameseNumber(data.testsCompleted)}
       </div>
-      <div style={{ color: getChartColor('purple'), padding: '2px 0' }}>
+      <div style={{ ...chartConfig.tooltip.itemStyle, color: getChartColor('purple') }}>
         Kết quả đã sửa: {formatVietnameseNumber(data.resultsModified)}
       </div>
     </div>
@@ -64,7 +56,7 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
 }
 
 export function StaffProductivityChart({
-  data,
+  data = [],
   isLoading = false,
   height = 300,
 }: StaffProductivityChartProps) {

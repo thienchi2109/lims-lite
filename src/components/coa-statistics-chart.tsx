@@ -52,22 +52,14 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
   const data = payload[0].payload
 
   return (
-    <div
-      style={{
-        backgroundColor: 'hsl(var(--background))',
-        border: '1px solid hsl(var(--border))',
-        borderRadius: '6px',
-        padding: '8px 12px',
-        fontSize: '12px',
-      }}
-    >
-      <div style={{ fontWeight: 600, marginBottom: '4px' }}>
+    <div className="bg-background border border-border rounded-md px-3 py-2 text-xs shadow-sm">
+      <div className="font-semibold mb-1">
         {segmentLabels[data.segment] || data.segment}
       </div>
-      <div style={{ color: 'hsl(var(--muted-foreground))', padding: '2px 0' }}>
+      <div className="text-muted-foreground py-0.5">
         Số lượng: {formatVietnameseNumber(data.count)}
       </div>
-      <div style={{ color: 'hsl(var(--muted-foreground))', padding: '2px 0' }}>
+      <div className="text-muted-foreground py-0.5">
         Tỷ lệ: {data.percentage.toFixed(1)}%
       </div>
     </div>
@@ -118,8 +110,8 @@ export function CoAStatisticsChart({
               strokeWidth: 1,
             }}
           >
-            {chartData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
+            {chartData.map((entry) => (
+              <Cell key={entry.segment} fill={entry.color} />
             ))}
           </Pie>
 
