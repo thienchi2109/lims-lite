@@ -26,6 +26,7 @@ export interface KPICardProps {
     direction: 'up' | 'down' | 'stable'
     label?: string // e.g., "vs tháng trước"
   }
+  trendType?: 'standard' | 'inverse' // Standard: up=good, Inverse: down=good (for TAT, error rates)
   icon: ReactNode
   gradient: 'blue' | 'green' | 'yellow' | 'red' | 'purple' | 'orange'
   alert?: {
@@ -55,10 +56,17 @@ const iconColorStyles = {
   orange: 'text-orange-500',
 }
 
-const trendColorStyles = {
-  up: 'text-green-600 dark:text-green-400',
-  down: 'text-red-600 dark:text-red-400',
-  stable: 'text-gray-600 dark:text-gray-400',
+const trendColorStyles: Record<'standard' | 'inverse', Record<'up' | 'down' | 'stable', string>> = {
+  standard: {
+    up: 'text-green-600 dark:text-green-400',
+    down: 'text-red-600 dark:text-red-400',
+    stable: 'text-gray-600 dark:text-gray-400',
+  },
+  inverse: {
+    up: 'text-red-600 dark:text-red-400',    // Up is bad for TAT/errors
+    down: 'text-green-600 dark:text-green-400', // Down is good for TAT/errors
+    stable: 'text-gray-600 dark:text-gray-400',
+  },
 }
 
 export function KPICard({
@@ -66,6 +74,7 @@ export function KPICard({
   value,
   unit,
   trend,
+  trendType = 'standard',
   icon,
   gradient,
   alert,
@@ -90,7 +99,7 @@ export function KPICard({
     )
   }
 
-  return (
+  const cardContent = (
     <Card
       className={cn(
         'relative overflow-hidden transition-all duration-300',
@@ -99,12 +108,11 @@ export function KPICard({
         onClick && 'cursor-pointer hover:shadow-lg hover:scale-[1.02]',
         className
       )}
-      onClick={onClick}
     >
       {/* Alert Badge */}
       {alert?.show && (
         <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full bg-red-500/20 border border-red-500/50 text-red-600 dark:text-red-400 text-xs font-medium">
-          <AlertCircle className="h-3 w-3" />
+          <AlertCircle className="h-3 w-3" aria-hidden="true" />
           {alert.message}
         </div>
       )}
@@ -136,10 +144,10 @@ export function KPICard({
         {/* Trend Indicator */}
         {trend && (
           <div className="flex items-center gap-2 text-sm">
-            <div className={cn('flex items-center gap-1', trendColorStyles[trend.direction])}>
-              {trend.direction === 'up' && <ArrowUp className="h-4 w-4" />}
-              {trend.direction === 'down' && <ArrowDown className="h-4 w-4" />}
-              {trend.direction === 'stable' && <Minus className="h-4 w-4" />}
+            <div className={cn('flex items-center gap-1', trendColorStyles[trendType][trend.direction])}>
+              {trend.direction === 'up' && <ArrowUp className="h-4 w-4" aria-hidden="true" />}
+              {trend.direction === 'down' && <ArrowDown className="h-4 w-4" aria-hidden="true" />}
+              {trend.direction === 'stable' && <Minus className="h-4 w-4" aria-hidden="true" />}
               <span className="font-semibold">
                 {trend.value > 0 && '+'}
                 {trend.value.toFixed(1)}%
@@ -155,4 +163,19 @@ export function KPICard({
       </CardContent>
     </Card>
   )
+
+  // Wrap in button for keyboard accessibility when clickable
+  if (onClick) {
+    return (
+      <button
+        onClick={onClick}
+        className="w-full text-left focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg"
+        aria-label={`${title}: ${value}${unit ? ' ' + unit : ''}`}
+      >
+        {cardContent}
+      </button>
+    )
+  }
+
+  return cardContent
 }

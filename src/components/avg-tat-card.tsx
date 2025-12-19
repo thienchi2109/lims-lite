@@ -12,7 +12,7 @@
 
 import { Clock } from 'lucide-react'
 import { KPICard } from '@/components/kpi-card'
-import { formatDuration } from '@/lib/utils-reports'
+import { formatDuration, getTATColor } from '@/lib/utils-reports'
 import type { KPIMetrics } from '@/types'
 
 export interface AvgTATCardProps {
@@ -22,14 +22,6 @@ export interface AvgTATCardProps {
 }
 
 export function AvgTATCard({ data, isLoading = false, onClick }: AvgTATCardProps) {
-  // Determine gradient color based on TAT value
-  // Green: <48h (2 days), Yellow: 48-60h, Red: >60h
-  const getTATGradient = (hours: number): 'green' | 'yellow' | 'red' => {
-    if (hours < 48) return 'green'
-    if (hours <= 60) return 'yellow'
-    return 'red'
-  }
-
   // Alert if TAT exceeds 60 hours (2.5 days)
   const showAlert = data.value > 60
 
@@ -37,12 +29,11 @@ export function AvgTATCard({ data, isLoading = false, onClick }: AvgTATCardProps
   const getTrendDirection = (current: number, previous: number): 'up' | 'down' | 'stable' => {
     const change = current - previous
     if (Math.abs(change) < 1) return 'stable'
-    // For TAT, increase is bad (down arrow = worse), decrease is good (up arrow = better)
-    // But we reverse the display logic to match common KPI conventions
     return change > 0 ? 'up' : 'down'
   }
 
-  const gradient = getTATGradient(data.value)
+  // Use shared utility with 60h SLA (getTATColor uses 80% threshold = 48h for green)
+  const gradient = getTATColor(data.value, 60)
   const trendDirection = getTrendDirection(data.value, data.previousValue)
 
   return (
@@ -58,6 +49,7 @@ export function AvgTATCard({ data, isLoading = false, onClick }: AvgTATCardProps
             }
           : undefined
       }
+      trendType="inverse"
       icon={<Clock className="h-5 w-5" />}
       gradient={gradient}
       alert={
