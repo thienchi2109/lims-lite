@@ -6,7 +6,6 @@ import {
   getTATTrendData,
   getSampleStatusDistribution,
   getCoAStatistics,
-  getStaffProductivity,
   getRecentSamples,
 } from '@/app/actions/reports'
 import { format, startOfMonth, isValid, parseISO } from 'date-fns'
@@ -26,7 +25,7 @@ interface SearchParams {
   statusFilter?: string | string[]
 }
 
-export default async function ManagerReportsPage({
+export default async function AnalystReportsPage({
   searchParams,
 }: {
   searchParams: SearchParams
@@ -49,8 +48,8 @@ export default async function ManagerReportsPage({
     .eq('id', user.id)
     .single()
 
-  if (!userData || userData.role !== 'manager') {
-    redirect('/analyst')
+  if (!userData || userData.role !== 'analyst') {
+    redirect('/manager')
   }
 
   // Coerce array params to single strings
@@ -112,26 +111,24 @@ export default async function ManagerReportsPage({
     ? (validatedParams.data.statusFilter as SampleStatus)
     : undefined
 
-  // Fetch all data in parallel for performance
+  // Fetch all data in parallel for performance (no staff productivity for analyst)
   const [
     kpiMetricsResult,
     tatTrendResult,
     statusDistributionResult,
     coaStatisticsResult,
-    staffProductivityResult,
     recentSamplesResult,
   ] = await Promise.all([
     getKPIMetrics(dateRange),
     getTATTrendData(dateRange),
     getSampleStatusDistribution(dateRange),
     getCoAStatistics(dateRange),
-    getStaffProductivity(dateRange),
     getRecentSamples(dateRange, validStatus ? { status: validStatus } : undefined),
   ])
 
   // Error handling for data fetches
   if (!kpiMetricsResult || !tatTrendResult || !statusDistributionResult ||
-      !coaStatisticsResult || !staffProductivityResult || !recentSamplesResult) {
+      !coaStatisticsResult || !recentSamplesResult) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -146,7 +143,6 @@ export default async function ManagerReportsPage({
   const tatTrendData = tatTrendResult
   const statusDistribution = statusDistributionResult
   const coaStatistics = coaStatisticsResult
-  const staffProductivity = staffProductivityResult
   const recentSamples = recentSamplesResult
 
   // Handle empty samples data
@@ -174,14 +170,13 @@ export default async function ManagerReportsPage({
 
   return (
     <ReportsLayout
-      role="manager"
+      role="analyst"
       fromDate={fromDate}
       toDate={toDate}
       kpiMetrics={kpiMetrics}
       tatTrendData={tatTrendData}
       statusDistribution={statusDistribution}
       coaStatistics={coaStatistics}
-      staffProductivity={staffProductivity}
       transformedSamples={transformedSamples}
       validStatus={validStatus}
     />
