@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { FlaskConical, CheckCircle2, ClipboardList, User, QrCode } from 'lucide-react'
+import { FlaskConical, CheckCircle2, ClipboardList, User, QrCode, BarChart3 } from 'lucide-react'
 import { DashboardHeader } from '@/components/dashboard-header'
 import { getSamplesForApprovalCount } from '@/app/actions/samples'
 
@@ -55,13 +55,22 @@ export default async function ManagerDashboard() {
             delay: "animate-delay-300"
         },
         {
+            title: "Báo cáo & Phân tích",
+            description: "Xem báo cáo và phân tích hiệu suất phòng lab",
+            icon: BarChart3,
+            href: "/manager/reports",
+            color: "from-orange-500 to-red-600",
+            iconColor: "text-orange-50",
+            delay: "animate-delay-400"
+        },
+        {
             title: "Quản lý người dùng",
             description: "Quản lý tài khoản và phân quyền",
             icon: User,
             href: "/manager/users",
             color: "from-pink-500 to-rose-600",
             iconColor: "text-pink-50",
-            delay: "animate-delay-400"
+            delay: "animate-delay-500"
         },
         {
             title: "Mã QR Cổng Tra Cứu",
@@ -70,7 +79,7 @@ export default async function ManagerDashboard() {
             href: "/manager/qr-code",
             color: "from-cyan-500 to-sky-600",
             iconColor: "text-cyan-50",
-            delay: "animate-delay-500"
+            delay: "animate-delay-600"
         }
     ]
 

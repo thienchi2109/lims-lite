@@ -15,7 +15,8 @@ import {
     User,
     Plus,
     List,
-    QrCode
+    QrCode,
+    BarChart3
 } from 'lucide-react'
 
 interface DashboardNavProps {
@@ -40,6 +41,7 @@ export function DashboardNav({ user, className }: DashboardNavProps) {
             { href: '/manager/approvals', label: 'Phê duyệt', icon: CheckCircle2 },
             { href: '/manager/assays', label: 'Chỉ tiêu', icon: ClipboardList },
             { href: '/manager/users', label: 'Người dùng', icon: User },
+            { href: '/manager/reports', label: 'Báo cáo', icon: BarChart3 },
             { href: '/manager/qr-code', label: 'Mã QR', icon: QrCode },
         ]
         : role === 'analyst'
@@ -47,6 +49,7 @@ export function DashboardNav({ user, className }: DashboardNavProps) {
                 { href: '/analyst', label: 'Dashboard', icon: LayoutDashboard },
                 { href: '/analyst/accession', label: 'Tiếp nhận', icon: Plus },
                 { href: '/analyst/samples', label: 'Danh sách mẫu', icon: List },
+                { href: '/analyst/reports', label: 'Báo cáo', icon: BarChart3 },
             ]
             : []
 
