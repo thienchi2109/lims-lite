@@ -23,6 +23,7 @@ export interface ChartContainerProps {
   emptyMessage?: string
   className?: string
   height?: number | string
+  skeletonVariant?: 'bar' | 'line' | 'donut'
 }
 
 export function ChartContainer({
@@ -34,6 +35,7 @@ export function ChartContainer({
   emptyMessage = 'Không có dữ liệu',
   className,
   height = 300,
+  skeletonVariant = 'bar',
 }: ChartContainerProps) {
   return (
     <Card
@@ -42,6 +44,9 @@ export function ChartContainer({
         'bg-gradient-to-br from-blue-500/10 to-purple-600/5 backdrop-blur-sm border-blue-500/20',
         className
       )}
+      role="region"
+      aria-label={title}
+      aria-busy={isLoading}
     >
       <CardHeader>
         <div className="space-y-1">
@@ -54,7 +59,7 @@ export function ChartContainer({
 
       <CardContent>
         {isLoading ? (
-          <ChartSkeleton height={height} />
+          <ChartSkeleton height={height} variant={skeletonVariant} />
         ) : isEmpty ? (
           <div
             className="flex items-center justify-center text-muted-foreground text-sm"

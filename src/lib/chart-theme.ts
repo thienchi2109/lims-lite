@@ -8,6 +8,9 @@
  * - Dark mode support via CSS variables
  */
 
+import { format, isValid, parseISO } from 'date-fns'
+import { vi } from 'date-fns/locale'
+
 export const chartColors = {
   primary: 'hsl(var(--primary))',
   secondary: 'hsl(var(--secondary))',
@@ -19,7 +22,7 @@ export const chartColors = {
   orange: '#f97316',
   gray: '#64748b',
   muted: 'hsl(var(--muted-foreground))',
-}
+} as const
 
 export const chartConfig = {
   // Axis styling
@@ -27,6 +30,8 @@ export const chartConfig = {
     stroke: 'hsl(var(--border))',
     fontSize: 12,
     fontFamily: 'inherit',
+    tickLine: false,
+    axisLine: false,
   },
 
   // Grid styling
@@ -34,6 +39,7 @@ export const chartConfig = {
     stroke: 'hsl(var(--border))',
     strokeDasharray: '3 3',
     opacity: 0.3,
+    vertical: false,
   },
 
   // Tooltip styling
@@ -54,6 +60,12 @@ export const chartConfig = {
     itemStyle: {
       color: 'hsl(var(--muted-foreground))',
       padding: '2px 0',
+    },
+    cursor: {
+      stroke: 'hsl(var(--muted-foreground))',
+      strokeWidth: 1,
+      strokeDasharray: '4 4',
+      opacity: 0.5,
     },
   },
 
@@ -79,7 +91,26 @@ export function getChartColor(name: keyof typeof chartColors): string {
  * Example: 1234567 -> "1.234.567"
  */
 export function formatVietnameseNumber(value: number): string {
-  return value.toLocaleString('vi-VN')
+  return new Intl.NumberFormat('vi-VN').format(value)
+}
+
+/**
+ * Format Vietnamese currency
+ * Example: 1000000 -> "1.000.000 ₫"
+ */
+export function formatVietnameseCurrency(value: number): string {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+  }).format(value)
+}
+
+/**
+ * Helper to safely parse date
+ */
+function safeParseDate(date: string | Date): Date {
+  if (date instanceof Date) return date
+  return parseISO(date)
 }
 
 /**
@@ -87,10 +118,9 @@ export function formatVietnameseNumber(value: number): string {
  * Example: 2024-01-15 -> "15/01"
  */
 export function formatChartDate(date: string | Date): string {
-  const d = typeof date === 'string' ? new Date(date) : date
-  const day = d.getDate().toString().padStart(2, '0')
-  const month = (d.getMonth() + 1).toString().padStart(2, '0')
-  return `${day}/${month}`
+  const d = safeParseDate(date)
+  if (!isValid(d)) return ''
+  return format(d, 'dd/MM', { locale: vi })
 }
 
 /**
@@ -98,9 +128,7 @@ export function formatChartDate(date: string | Date): string {
  * Example: 2024-01-15 -> "15/01/2024"
  */
 export function formatFullDate(date: string | Date): string {
-  const d = typeof date === 'string' ? new Date(date) : date
-  const day = d.getDate().toString().padStart(2, '0')
-  const month = (d.getMonth() + 1).toString().padStart(2, '0')
-  const year = d.getFullYear()
-  return `${day}/${month}/${year}`
+  const d = safeParseDate(date)
+  if (!isValid(d)) return ''
+  return format(d, 'dd/MM/yyyy', { locale: vi })
 }

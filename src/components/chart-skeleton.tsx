@@ -16,15 +16,14 @@ export function ChartSkeleton({
   height = 300,
   variant = 'bar'
 }: ChartSkeletonProps) {
-  const heightValue = typeof height === 'number' ? height : parseInt(height)
-
+  
   if (variant === 'donut') {
     return (
       <div
         className="flex items-center justify-center"
         style={{ height: typeof height === 'number' ? `${height}px` : height }}
       >
-        <Skeleton className="rounded-full" style={{ width: heightValue * 0.7, height: heightValue * 0.7 }} />
+        <Skeleton className="h-[70%] w-auto aspect-square rounded-full" />
       </div>
     )
   }
@@ -35,16 +34,14 @@ export function ChartSkeleton({
         className="flex items-end justify-between gap-2 px-4"
         style={{ height: typeof height === 'number' ? `${height}px` : height }}
       >
-        {Array.from({ length: 12 }).map((_, i) => {
-          const randomHeight = Math.random() * 0.6 + 0.3 // 30% to 90%
-          return (
-            <Skeleton
-              key={i}
-              className="flex-1 rounded-t"
-              style={{ height: `${randomHeight * 100}%` }}
-            />
-          )
-        })}
+        {/* Deterministic "random" heights for line chart (more points) to avoid hydration mismatch */}
+        {[0.4, 0.6, 0.5, 0.7, 0.6, 0.8, 0.7, 0.9, 0.6, 0.5, 0.4, 0.3].map((h, i) => (
+          <Skeleton
+            key={i}
+            className="flex-1 rounded-t"
+            style={{ height: `${h * 100}%` }}
+          />
+        ))}
       </div>
     )
   }
@@ -55,16 +52,14 @@ export function ChartSkeleton({
       className="flex items-end justify-between gap-2 px-4"
       style={{ height: typeof height === 'number' ? `${height}px` : height }}
     >
-      {Array.from({ length: 6 }).map((_, i) => {
-        const randomHeight = Math.random() * 0.6 + 0.3 // 30% to 90%
-        return (
-          <Skeleton
-            key={i}
-            className="flex-1 rounded-t"
-            style={{ height: `${randomHeight * 100}%` }}
-          />
-        )
-      })}
+      {/* Deterministic "random" heights for bar chart (fewer points) to avoid hydration mismatch */}
+      {[0.8, 0.4, 0.9, 0.5, 0.7, 0.3].map((h, i) => (
+        <Skeleton
+          key={i}
+          className="flex-1 rounded-t"
+          style={{ height: `${h * 100}%` }}
+        />
+      ))}
     </div>
   )
 }

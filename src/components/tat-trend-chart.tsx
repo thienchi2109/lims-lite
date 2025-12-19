@@ -12,7 +12,7 @@
 
 'use client'
 
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Area, AreaChart } from 'recharts'
+import { Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Area, AreaChart } from 'recharts'
 import { ChartContainer } from '@/components/chart-container'
 import { chartConfig, getChartColor, formatChartDate, formatVietnameseNumber } from '@/lib/chart-theme'
 import type { TATTrendData } from '@/types'
@@ -22,6 +22,26 @@ export interface TATTrendChartProps {
   isLoading?: boolean
   slaHours?: number
   height?: number
+}
+
+// Custom Tooltip to show Sample Count which isn't a chart series
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload as TATTrendData & { dateFormatted: string }
+    
+    return (
+      <div style={chartConfig.tooltip.contentStyle}>
+        <p style={chartConfig.tooltip.labelStyle}>Ngày: {label}</p>
+        <div style={chartConfig.tooltip.itemStyle}>
+          <span className="font-medium">TAT TB:</span> {data.avgTATHours.toFixed(1)} giờ
+        </div>
+        <div style={chartConfig.tooltip.itemStyle}>
+          <span className="font-medium">Số mẫu:</span> {formatVietnameseNumber(data.sampleCount)}
+        </div>
+      </div>
+    )
+  }
+  return null
 }
 
 export function TATTrendChart({
@@ -75,16 +95,7 @@ export function TATTrendChart({
             }}
           />
 
-          <Tooltip
-            {...chartConfig.tooltip}
-            formatter={(value?: number, name?: string) => {
-              if (value === undefined || name === undefined) return ['', '']
-              if (name === 'avgTATHours') return [`${value.toFixed(1)} giờ`, 'TAT TB']
-              if (name === 'sampleCount') return [formatVietnameseNumber(value), 'Số mẫu']
-              return [value, name]
-            }}
-            labelFormatter={(label) => `Ngày: ${label}`}
-          />
+          <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }} />
 
           {/* SLA Reference Line */}
           <ReferenceLine
@@ -101,17 +112,16 @@ export function TATTrendChart({
             }}
           />
 
-          {/* Area fill */}
+          {/* Area fill - stroke="none" to avoid double line with the Line component */}
           <Area
             type="monotone"
             dataKey="avgTATHours"
-            stroke={getChartColor('blue')}
-            strokeWidth={2}
+            stroke="none"
             fill="url(#tatGradient)"
             fillOpacity={1}
           />
 
-          {/* Line overlay for better visibility */}
+          {/* Line overlay for better visibility and dots */}
           <Line
             type="monotone"
             dataKey="avgTATHours"

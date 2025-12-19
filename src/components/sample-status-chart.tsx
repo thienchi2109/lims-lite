@@ -11,10 +11,11 @@
 
 'use client'
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, TooltipProps } from 'recharts'
+import { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent'
 import { ChartContainer } from '@/components/chart-container'
 import { chartConfig, getChartColor, formatVietnameseNumber } from '@/lib/chart-theme'
-import type { SampleStatusData } from '@/types'
+import type { SampleStatusData, SampleStatus } from '@/types'
 
 export interface SampleStatusChartProps {
   data: SampleStatusData[]
@@ -23,7 +24,7 @@ export interface SampleStatusChartProps {
 }
 
 // Vietnamese status labels
-const statusLabels: Record<string, string> = {
+const statusLabels: Record<SampleStatus, string> = {
   received: 'Đã nhận',
   assigned: 'Đã chỉ định',
   in_progress: 'Đang thực hiện',
@@ -33,7 +34,7 @@ const statusLabels: Record<string, string> = {
 }
 
 // Status colors matching LIMS workflow
-const statusColors: Record<string, string> = {
+const statusColors: Record<SampleStatus, string> = {
   received: getChartColor('blue'),
   assigned: getChartColor('purple'),
   in_progress: getChartColor('yellow'),
@@ -48,11 +49,15 @@ export function SampleStatusChart({
   height = 300,
 }: SampleStatusChartProps) {
   // Format data with Vietnamese labels
-  const chartData = data.map(item => ({
-    ...item,
-    statusLabel: statusLabels[item.status] || item.status,
-    color: statusColors[item.status] || getChartColor('gray'),
-  }))
+  const chartData = data.map(item => {
+    // Cast status to SampleStatus if it matches, otherwise fallback
+    const statusKey = item.status as SampleStatus
+    return {
+      ...item,
+      statusLabel: statusLabels[statusKey] || item.status,
+      color: statusColors[statusKey] || getChartColor('gray'),
+    }
+  })
 
   // Calculate total for percentage
   const total = data.reduce((sum, item) => sum + item.count, 0)
@@ -72,7 +77,7 @@ export function SampleStatusChart({
         <BarChart
           data={chartData}
           layout="vertical"
-          margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
         >
           <CartesianGrid {...chartConfig.grid} horizontal={false} />
 
@@ -87,16 +92,17 @@ export function SampleStatusChart({
             dataKey="statusLabel"
             {...chartConfig.axis}
             tick={{ fill: 'hsl(var(--muted-foreground))' }}
-            width={90}
+            width={110}
           />
 
           <Tooltip
             {...chartConfig.tooltip}
-            formatter={(value?: number, name?: string, props?: any) => {
-              if (value === undefined) return ['', '']
-              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0'
+            formatter={(value, name) => {
+              if (value === undefined || value === null) return ['', '']
+              const numValue = Number(value)
+              const percentage = total > 0 ? ((numValue / total) * 100).toFixed(1) : '0.0'
               return [
-                `${formatVietnameseNumber(value)} mẫu (${percentage}%)`,
+                `${formatVietnameseNumber(numValue)} mẫu (${percentage}%)`,
                 'Số lượng'
               ]
             }}
