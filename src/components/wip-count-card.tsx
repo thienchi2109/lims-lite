@@ -29,6 +29,26 @@ export function WIPCountCard({ data, isLoading = false, onClick }: WIPCountCardP
 
   const gradient = getGradient(data.value)
 
+  const statusLabels: Record<string, string> = {
+    received: 'Đã nhận',
+    assigned: 'Đã chỉ định',
+    in_progress: 'Đang thực hiện',
+    review: 'Chờ duyệt',
+  }
+
+  const breakdownContent = (
+    <div className="space-y-1">
+      {data.breakdown.map((item) => (
+        <div key={item.status} className="flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">
+            {statusLabels[item.status] || item.status}
+          </span>
+          <span className="font-medium">{item.count}</span>
+        </div>
+      ))}
+    </div>
+  )
+
   return (
     <KPICard
       title="Mẫu Đang Xử Lý"
@@ -36,6 +56,7 @@ export function WIPCountCard({ data, isLoading = false, onClick }: WIPCountCardP
       unit="mẫu"
       icon={<Package className="h-5 w-5" />}
       gradient={gradient}
+      extra={breakdownContent}
       isLoading={isLoading}
       onClick={onClick}
     />

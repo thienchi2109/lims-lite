@@ -33,6 +33,7 @@ export interface KPICardProps {
     show: boolean
     message: string
   }
+  extra?: ReactNode
   isLoading?: boolean
   onClick?: () => void
   className?: string
@@ -78,6 +79,7 @@ export function KPICard({
   icon,
   gradient,
   alert,
+  extra,
   isLoading = false,
   onClick,
   className,
@@ -158,6 +160,13 @@ export function KPICard({
                 {trend.label}
               </span>
             )}
+          </div>
+        )}
+
+        {/* Extra Content */}
+        {extra && (
+          <div className="pt-2 mt-2 border-t border-border/50">
+            {extra}
           </div>
         )}
       </CardContent>

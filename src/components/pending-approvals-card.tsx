@@ -12,7 +12,7 @@
 
 import { ClipboardCheck } from 'lucide-react'
 import { KPICard } from '@/components/kpi-card'
-import { formatDuration } from '@/lib/utils-reports'
+import { formatDuration, shouldAlertApprovalQueue } from '@/lib/utils-reports'
 import type { KPIMetrics } from '@/types'
 
 export interface PendingApprovalsCardProps {
@@ -22,9 +22,12 @@ export interface PendingApprovalsCardProps {
 }
 
 export function PendingApprovalsCard({ data, isLoading = false, onClick }: PendingApprovalsCardProps) {
+  // Check if critical threshold is exceeded
+  const isCritical = shouldAlertApprovalQueue(data.count, data.avgWaitHours)
+
   // Determine gradient based on count and wait time
   const getGradient = (): 'green' | 'yellow' | 'red' => {
-    if (data.count > 20 || data.avgWaitHours > 24) return 'red'
+    if (isCritical) return 'red'
     if (data.count > 10 || data.avgWaitHours > 12) return 'yellow'
     return 'green'
   }
@@ -48,7 +51,7 @@ export function PendingApprovalsCard({ data, isLoading = false, onClick }: Pendi
       icon={<ClipboardCheck className="h-5 w-5" />}
       gradient={gradient}
       alert={
-        data.isAlert && alertMessage
+        isCritical && alertMessage
           ? {
               show: true,
               message: alertMessage,
