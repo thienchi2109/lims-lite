@@ -52,3 +52,4 @@ __pycache__/
 
 # Exception: migrations should be version controlled
 !supabase/migrations/*.sql
+nul
