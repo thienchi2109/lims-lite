@@ -1,0 +1,372 @@
+'use server'
+
+import { createClient } from '@/lib/supabase/server'
+import type {
+  DateRange,
+  KPIMetrics,
+  TATTrendData,
+  SampleStatusData,
+  CoAStatistics,
+  StaffProductivityData,
+  RecentSample,
+} from '@/types'
+import { DateRangeSchema } from '@/types'
+import { z } from 'zod'
+import * as XLSX from 'xlsx'
+
+/**
+ * Fetches all 5 KPI metrics for the dashboard
+ * Returns: Average TAT, WIP count, pending approvals, on-time rate, error rate
+ */
+export async function getKPIMetrics(dateRange: DateRange): Promise<KPIMetrics> {
+  try {
+    // Validate input
+    const validated = DateRangeSchema.parse(dateRange)
+
+    const supabase = await createClient()
+
+    // Fetch all metrics in parallel (performance optimization)
+    const [
+      { data: tatData, error: tatError },
+      { data: statusData, error: statusError },
+      { data: approvalData, error: approvalError },
+      { data: errorData, error: errorError },
+    ] = await Promise.all([
+      supabase.rpc('calculate_average_tat', {
+        start_date: validated.start,
+        end_date: validated.end,
+      }),
+      supabase.rpc('get_samples_by_status', {
+        start_date: validated.start,
+        end_date: validated.end,
+      }),
+      supabase.rpc('get_approval_queue_metrics', {
+        start_date: validated.start,
+        end_date: validated.end,
+      }),
+      supabase.rpc('get_error_rate_metrics', {
+        start_date: validated.start,
+        end_date: validated.end,
+      }),
+    ])
+
+    if (tatError) throw tatError
+    if (statusError) throw statusError
+    if (approvalError) throw approvalError
+    if (errorError) throw errorError
+
+    // Calculate WIP (received + assigned + in_progress + review)
+    const wipCount = statusData
+      ?.filter((s: { status: string }) =>
+        ['received', 'assigned', 'in_progress', 'review'].includes(s.status)
+      )
+      .reduce((sum: number, s: { count: number | bigint }) => sum + Number(s.count), 0) || 0
+
+    // Calculate on-time delivery rate
+    const tatRecord = tatData?.[0]
+    const onTimeRate = tatRecord
+      ? (Number(tatRecord.on_time_count) / Number(tatRecord.sample_count)) * 100
+      : 0
+
+    return {
+      avgTAT: {
+        value: Number(tatRecord?.avg_tat_hours || 0),
+        unit: 'hours',
+        trend: 0, // TODO: Compare with previous period
+        previousValue: 0,
+      },
+      wipCount: {
+        value: wipCount,
+        breakdown: statusData?.map((s: { status: string; count: number | bigint }) => ({
+          status: s.status,
+          count: Number(s.count),
+        })) || [],
+      },
+      pendingApprovals: {
+        count: Number(approvalData?.[0]?.pending_count || 0),
+        avgWaitHours: Number(approvalData?.[0]?.avg_wait_hours || 0),
+        overdueCount: Number(approvalData?.[0]?.overdue_count || 0),
+        isAlert: Number(approvalData?.[0]?.pending_count || 0) > 20 ||
+          Number(approvalData?.[0]?.avg_wait_hours || 0) > 24,
+      },
+      onTimeRate: {
+        value: onTimeRate,
+        trend: 0, // TODO: Compare with previous period
+        color: onTimeRate >= 90 ? 'green' : onTimeRate >= 80 ? 'yellow' : 'red',
+      },
+      errorRate: {
+        value: Number(errorData?.[0]?.error_rate || 0),
+        totalModifications: Number(errorData?.[0]?.total_modifications || 0),
+        totalResults: Number(errorData?.[0]?.total_results || 0),
+        trend: 0, // TODO: Compare with previous period
+      },
+    }
+  } catch (error) {
+    console.error('Error fetching KPI metrics:', error)
+    throw error
+  }
+}
+
+/**
+ * Fetches TAT trend data for line chart (daily averages over date range)
+ * Uses database-side aggregation for optimal performance
+ */
+export async function getTATTrendData(dateRange: DateRange): Promise<TATTrendData[]> {
+  try {
+    // Validate input
+    const validated = DateRangeSchema.parse(dateRange)
+
+    const supabase = await createClient()
+
+    // Use database-side aggregation for better performance
+    const { data, error } = await supabase.rpc('get_tat_trend_daily', {
+      start_date: validated.start,
+      end_date: validated.end,
+    })
+
+    if (error) throw error
+
+    return (
+      data?.map((item: { date: string; avg_tat_hours: number; sample_count: number | bigint }) => ({
+        date: item.date,
+        avgTATHours: Number(item.avg_tat_hours),
+        sampleCount: Number(item.sample_count),
+      })) || []
+    )
+  } catch (error) {
+    console.error('Error fetching TAT trend data:', error)
+    throw error
+  }
+}
+
+/**
+ * Fetches sample status distribution for bar chart
+ */
+export async function getSampleStatusDistribution(
+  dateRange: DateRange
+): Promise<SampleStatusData[]> {
+  try {
+    // Validate input
+    const validated = DateRangeSchema.parse(dateRange)
+
+    const supabase = await createClient()
+
+    const { data, error } = await supabase.rpc('get_samples_by_status', {
+      start_date: validated.start,
+      end_date: validated.end,
+    })
+
+    if (error) throw error
+
+    return (
+      data?.map((item: { status: string; count: number | bigint }) => ({
+        status: item.status,
+        count: Number(item.count),
+      })) || []
+    )
+  } catch (error) {
+    console.error('Error fetching sample status distribution:', error)
+    throw error
+  }
+}
+
+/**
+ * Fetches CoA generation statistics for donut chart
+ */
+export async function getCoAStatistics(dateRange: DateRange): Promise<CoAStatistics[]> {
+  try {
+    // Validate input
+    const validated = DateRangeSchema.parse(dateRange)
+
+    const supabase = await createClient()
+
+    const { data, error } = await supabase.rpc('get_coa_statistics', {
+      start_date: validated.start,
+      end_date: validated.end,
+    })
+
+    if (error) throw error
+
+    return (
+      data?.map((item: { segment: string; count: number | bigint; percentage: number }) => ({
+        segment: item.segment,
+        count: Number(item.count),
+        percentage: Number(item.percentage),
+      })) || []
+    )
+  } catch (error) {
+    console.error('Error fetching CoA statistics:', error)
+    throw error
+  }
+}
+
+/**
+ * Fetches staff productivity data for manager-only comparison chart
+ * Throws error if called by non-manager role
+ */
+export async function getStaffProductivity(
+  dateRange: DateRange
+): Promise<StaffProductivityData[]> {
+  try {
+    // Validate input
+    const validated = DateRangeSchema.parse(dateRange)
+
+    const supabase = await createClient()
+
+    // This RPC function checks role internally and throws if not manager
+    const { data, error } = await supabase.rpc('get_staff_productivity', {
+      start_date: validated.start,
+      end_date: validated.end,
+    })
+
+    if (error) throw error
+
+    return (
+      data?.map((item: { analyst_id: string; analyst_name: string; tests_completed: number | bigint; results_modified: number | bigint }) => ({
+        analystId: item.analyst_id,
+        analystName: item.analyst_name,
+        testsCompleted: Number(item.tests_completed),
+        resultsModified: Number(item.results_modified),
+      })) || []
+    )
+  } catch (error) {
+    console.error('Error fetching staff productivity:', error)
+    throw error
+  }
+}
+
+/**
+ * Fetches recent samples for data table with optional status filter
+ * Returns paginated results (default 50 per page)
+ */
+export async function getRecentSamples(
+  dateRange: DateRange,
+  filters?: {
+    status?: string
+    page?: number
+    pageSize?: number
+  }
+): Promise<{ samples: RecentSample[]; total: number }> {
+  try {
+    // Validate input
+    const validated = DateRangeSchema.parse(dateRange)
+
+    // Validate page number (must be at least 1)
+    const page = Math.max(1, filters?.page || 1)
+    const pageSize = filters?.pageSize || 50
+    const offset = (page - 1) * pageSize
+
+    const supabase = await createClient()
+
+    // Build query
+    let query = supabase
+      .from('samples')
+      .select('id, sample_id, client_name, received_at, completed_at, status, deleted_at', {
+        count: 'exact',
+      })
+      .gte('received_at', validated.start)
+      .lte('received_at', validated.end)
+      .is('deleted_at', null)
+      .order('completed_at', { ascending: false, nullsFirst: false })
+      .range(offset, offset + pageSize - 1)
+
+    // Apply status filter if provided
+    if (filters?.status) {
+      query = query.eq('status', filters.status)
+    }
+
+    const { data, error, count } = await query
+
+    if (error) throw error
+
+    // Calculate TAT for each sample
+    const samples: RecentSample[] =
+      data?.map((sample) => {
+        let tatHours = null
+        if (sample.completed_at && sample.received_at) {
+          tatHours =
+            (new Date(sample.completed_at).getTime() -
+              new Date(sample.received_at).getTime()) /
+            (1000 * 60 * 60)
+        }
+
+        return {
+          id: sample.id,
+          sampleId: sample.sample_id,
+          clientName: sample.client_name,
+          receivedAt: sample.received_at,
+          completedAt: sample.completed_at || null,
+          status: sample.status,
+          tatHours,
+        }
+      }) || []
+
+    return {
+      samples,
+      total: count || 0,
+    }
+  } catch (error) {
+    console.error('Error fetching recent samples:', error)
+    throw error
+  }
+}
+
+/**
+ * Generates Excel workbook with 3 sheets: KPI Overview, Sample Details, CoA Statistics
+ * Returns base64 encoded workbook for download
+ */
+export async function exportReportsToExcel(dateRange: DateRange): Promise<string> {
+  try {
+    // Validate input
+    const validated = DateRangeSchema.parse(dateRange)
+
+    // Fetch all data
+    const kpiMetrics = await getKPIMetrics(validated)
+    const recentSamples = await getRecentSamples(validated, { pageSize: 10000 })
+    const coaStats = await getCoAStatistics(validated)
+
+    // Create workbook
+    const workbook = XLSX.utils.book_new()
+
+    // Sheet 1: KPI Overview
+    const kpiData = [
+      { 'Chỉ số': 'TAT Trung Bình', 'Giá trị': `${kpiMetrics.avgTAT.value.toFixed(2)} giờ` },
+      { 'Chỉ số': 'Mẫu Đang Xử Lý', 'Giá trị': kpiMetrics.wipCount.value },
+      { 'Chỉ số': 'Chờ Phê Duyệt', 'Giá trị': kpiMetrics.pendingApprovals.count },
+      { 'Chỉ số': 'Tỷ Lệ Đúng Hạn', 'Giá trị': `${kpiMetrics.onTimeRate.value.toFixed(2)}%` },
+      { 'Chỉ số': 'Tỷ Lệ Lỗi', 'Giá trị': `${kpiMetrics.errorRate.value.toFixed(2)}%` },
+    ]
+    const kpiSheet = XLSX.utils.json_to_sheet(kpiData)
+    XLSX.utils.book_append_sheet(workbook, kpiSheet, 'Tổng quan KPI')
+
+    // Sheet 2: Sample Details
+    const sampleData = recentSamples.samples.map((s) => ({
+      'Mã mẫu': s.sampleId,
+      'Khách hàng': s.clientName,
+      'Ngày nhận': new Date(s.receivedAt).toLocaleDateString('vi-VN'),
+      'Ngày hoàn thành': s.completedAt
+        ? new Date(s.completedAt).toLocaleDateString('vi-VN')
+        : '',
+      'TAT (giờ)': s.tatHours?.toFixed(2) || '',
+      'Trạng thái': s.status,
+    }))
+    const sampleSheet = XLSX.utils.json_to_sheet(sampleData)
+    XLSX.utils.book_append_sheet(workbook, sampleSheet, 'Chi tiết mẫu')
+
+    // Sheet 3: CoA Statistics
+    const coaData = coaStats.map((stat) => ({
+      'Phân loại': stat.segment,
+      'Số lượng': stat.count,
+      'Tỷ lệ': `${stat.percentage.toFixed(2)}%`,
+    }))
+    const coaSheet = XLSX.utils.json_to_sheet(coaData)
+    XLSX.utils.book_append_sheet(workbook, coaSheet, 'Thống kê CoA')
+
+    // Convert to base64
+    const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' })
+    return Buffer.from(excelBuffer).toString('base64')
+  } catch (error) {
+    console.error('Error exporting to Excel:', error)
+    throw error
+  }
+}
