@@ -37,7 +37,9 @@
       "Skill(notebooklm)",
       "Skill(superpowers:executing-plans)",
       "Skill(codex)",
-      "Bash(powershell -Command:*)"
+      "Bash(powershell -Command:*)",
+      "Skill(gemini-cli)",
+      "Bash(gemini:*)"
     ],
     "deny": [],
     "ask": []
