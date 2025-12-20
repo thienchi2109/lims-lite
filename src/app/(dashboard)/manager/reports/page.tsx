@@ -7,23 +7,20 @@ import {
   getSampleStatusDistribution,
   getCoAStatistics,
   getStaffProductivity,
-  getRecentSamples,
 } from '@/app/actions/reports'
 import { format, startOfMonth, isValid, parseISO } from 'date-fns'
-import type { DateRange, SampleStatus } from '@/types'
+import type { DateRange } from '@/types'
 import { z } from 'zod'
 
 // Zod schema for URL parameter validation
 const SearchParamsSchema = z.object({
   fromDate: z.string().optional(),
   toDate: z.string().optional(),
-  statusFilter: z.string().optional(),
 })
 
 interface SearchParams {
   fromDate?: string | string[]
   toDate?: string | string[]
-  statusFilter?: string | string[]
 }
 
 export default async function ManagerReportsPage(props: {
@@ -57,13 +54,11 @@ export default async function ManagerReportsPage(props: {
   // Coerce array params to single strings
   const rawFromDate = Array.isArray(searchParams.fromDate) ? searchParams.fromDate[0] : searchParams.fromDate
   const rawToDate = Array.isArray(searchParams.toDate) ? searchParams.toDate[0] : searchParams.toDate
-  const rawStatusFilter = Array.isArray(searchParams.statusFilter) ? searchParams.statusFilter[0] : searchParams.statusFilter
 
   // Validate and sanitize URL parameters
   const validatedParams = SearchParamsSchema.safeParse({
     fromDate: rawFromDate,
     toDate: rawToDate,
-    statusFilter: rawStatusFilter,
   })
 
   // Default date values
@@ -107,12 +102,6 @@ export default async function ManagerReportsPage(props: {
     end: toDate + 'T23:59:59Z', // End of day in UTC
   }
 
-  // Cast statusFilter to SampleStatus if it matches valid statuses
-  const validStatus = validatedParams.success && validatedParams.data.statusFilter &&
-    ['received', 'assigned', 'in_progress', 'review', 'discarded', 'completed'].includes(validatedParams.data.statusFilter)
-    ? (validatedParams.data.statusFilter as SampleStatus)
-    : undefined
-
   // Fetch all data in parallel for performance
   const [
     kpiMetricsResult,
@@ -120,19 +109,17 @@ export default async function ManagerReportsPage(props: {
     statusDistributionResult,
     coaStatisticsResult,
     staffProductivityResult,
-    recentSamplesResult,
   ] = await Promise.all([
     getKPIMetrics(dateRange),
     getTATTrendData(dateRange),
     getSampleStatusDistribution(dateRange),
     getCoAStatistics(dateRange),
     getStaffProductivity(dateRange),
-    getRecentSamples(dateRange, validStatus ? { status: validStatus } : undefined),
   ])
 
   // Error handling for data fetches
   if (!kpiMetricsResult || !tatTrendResult || !statusDistributionResult ||
-      !coaStatisticsResult || !staffProductivityResult || !recentSamplesResult) {
+      !coaStatisticsResult || !staffProductivityResult) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -148,30 +135,6 @@ export default async function ManagerReportsPage(props: {
   const statusDistribution = statusDistributionResult
   const coaStatistics = coaStatisticsResult
   const staffProductivity = staffProductivityResult
-  const recentSamples = recentSamplesResult
-
-  // Handle empty samples data
-  if (!recentSamples.samples) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-amber-600 mb-2">Không có dữ liệu</h2>
-          <p className="text-slate-600">Không tìm thấy mẫu nào trong khoảng thời gian này.</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Transform camelCase to snake_case for compatibility with Phase 5 components
-  const transformedSamples = recentSamples.samples.map((sample) => ({
-    id: sample.id,
-    sample_id: sample.sampleId,
-    client_name: sample.clientName,
-    status: sample.status as SampleStatus,
-    received_at: sample.receivedAt,
-    approved_at: sample.completedAt,
-    tat_hours: sample.tatHours,
-  }))
 
   return (
     <ReportsLayout
@@ -184,8 +147,6 @@ export default async function ManagerReportsPage(props: {
       statusDistribution={statusDistribution}
       coaStatistics={coaStatistics}
       staffProductivity={staffProductivity}
-      transformedSamples={transformedSamples}
-      validStatus={validStatus}
     />
   )
 }

@@ -39,7 +39,8 @@
       "Skill(codex)",
       "Bash(powershell -Command:*)",
       "Skill(gemini-cli)",
-      "Bash(gemini:*)"
+      "Bash(gemini:*)",
+      "Bash(docker compose ps:*)"
     ],
     "deny": [],
     "ask": []

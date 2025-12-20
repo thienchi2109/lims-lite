@@ -6,7 +6,6 @@ import { TATTrendChart } from '@/components/tat-trend-chart'
 import { SampleStatusChart } from '@/components/sample-status-chart'
 import { CoAStatisticsChart } from '@/components/coa-statistics-chart'
 import { StaffProductivityChart } from '@/components/staff-productivity-chart'
-import { RecentSamplesTable } from '@/components/reports/recent-samples-table'
 import { DashboardHeader } from '@/components/dashboard-header'
 import type { SampleStatus, TATTrendData, SampleStatusData, CoAStatistics, StaffProductivityData, KPIMetrics, UserRole } from '@/types'
 import { Activity, ClipboardCheck, AlertCircle, TrendingUp, AlertTriangle, ArrowLeft } from 'lucide-react'
@@ -35,16 +34,6 @@ interface ReportsLayoutProps {
   statusDistribution: SampleStatusData[]
   coaStatistics: CoAStatistics[]
   staffProductivity?: StaffProductivityData[]
-  transformedSamples: Array<{
-    id: string
-    sample_id: string
-    client_name: string
-    status: SampleStatus
-    received_at: string
-    approved_at: string | null
-    tat_hours: number | null
-  }>
-  validStatus?: SampleStatus
 }
 
 export function ReportsLayout({
@@ -57,8 +46,6 @@ export function ReportsLayout({
   statusDistribution,
   coaStatistics,
   staffProductivity,
-  transformedSamples,
-  validStatus,
 }: ReportsLayoutProps) {
   // Role-specific subtitle
   const subtitle = role === 'manager'
@@ -104,7 +91,7 @@ export function ReportsLayout({
                 { metric: 'Tỷ Lệ Hoàn Thành Đúng Hạn', value: kpiMetrics.onTimeRate.value, unit: '%' },
                 { metric: 'Tỷ Lệ Lỗi', value: kpiMetrics.errorRate.value, unit: '%' },
               ]}
-              samplesData={transformedSamples}
+              samplesData={[]}
               coaData={coaStatistics}
               dateRange={{ fromDate, toDate }}
             />
@@ -207,11 +194,6 @@ export function ReportsLayout({
             // For analyst, Sample Status takes full width on row 2
             role === 'analyst' && <div className="lg:col-span-2" />
           )}
-        </div>
-
-        {/* Recent Samples Table */}
-        <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm p-6 shadow-sm" role="region" aria-label="Bảng mẫu gần đây">
-          <RecentSamplesTable data={transformedSamples} statusFilter={validStatus} />
         </div>
       </div>
     </div>
