@@ -7,6 +7,53 @@ SET search_path TO public;
 
 -- Drop and recreate function with corrected formula
 -- Formula: (Number of samples with CoA created) / (Total number of samples approved by manager) * 100
+/**
+ * KPI Formula: Certificate of Analysis (CoA) Statistics
+ *
+ * Purpose: Track CoA generation progress for approved samples
+ *
+ * Formula:
+ *   Percentage (%) = (Segment Count / Total Approved Samples) * 100
+ *
+ * Base Calculation:
+ *   Total Approved Samples = COUNT(*) WHERE status = 'completed' AND deleted_at IS NULL
+ *   - Only samples approved by manager are included in denominator
+ *   - Excludes non-approved samples (received, assigned, in_progress, review)
+ *
+ * Segments:
+ *   1. Generated:
+ *      - Samples with CoA created (exists in coa_reports with generated_at IS NOT NULL)
+ *      - Percentage = (Generated Count / Total Approved) * 100
+ *
+ *   2. Pending CoA:
+ *      - Approved samples without CoA yet
+ *      - Percentage = (Pending Count / Total Approved) * 100
+ *
+ * Note: "Not Approved" segment removed in this migration (was incorrectly included)
+ *
+ * Example Query:
+ *   SELECT * FROM get_coa_statistics(
+ *     '2024-01-01 00:00:00+07'::TIMESTAMPTZ,
+ *     '2024-01-31 23:59:59+07'::TIMESTAMPTZ
+ *   );
+ *
+ * Example Result:
+ *   segment      | count | percentage
+ *   Generated    | 120   | 80.00
+ *   Pending CoA  | 30    | 20.00
+ *   (Total approved samples: 150)
+ *
+ * Business Logic:
+ *   - Only counts approved samples (status = 'completed')
+ *   - Percentage base changed from ALL samples to APPROVED samples only
+ *   - This makes the metric meaningful: "Of approved samples, how many have CoA?"
+ *   - Previously used all samples as base, making percentages misleading
+ *
+ * Compliance:
+ *   - ISO 17025 requires timely reporting of results
+ *   - Tracks CoA generation backlog
+ *   - High "Pending CoA" percentage indicates reporting delay
+ */
 CREATE OR REPLACE FUNCTION get_coa_statistics(
   start_date TIMESTAMPTZ,
   end_date TIMESTAMPTZ

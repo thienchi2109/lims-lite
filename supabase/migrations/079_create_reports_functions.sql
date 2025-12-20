@@ -7,6 +7,46 @@ SET search_path TO public;
 -- ============================================================================
 -- Function 1: Calculate Average TAT (Turnaround Time)
 -- ============================================================================
+/**
+ * KPI Formula: TAT (Turnaround Time) Calculation
+ *
+ * Purpose: Calculate average and median TAT for completed samples to measure lab efficiency
+ *
+ * Formula:
+ *   TAT (hours) = (Sample Completion Time - Sample Receipt Time) / 3600
+ *
+ * Components:
+ *   - Start Time: received_at (when sample was accessioned into LIMS)
+ *   - End Time: updated_at (when sample reached 'completed' status)
+ *   - Calculation: EXTRACT(EPOCH FROM (updated_at - received_at)) / 3600
+ *
+ * Aggregations:
+ *   1. Average TAT: AVG(TAT in hours) - Mean turnaround time
+ *   2. Median TAT: PERCENTILE_CONT(0.5) - 50th percentile, robust to outliers
+ *   3. Sample Count: COUNT(*) - Total samples completed
+ *   4. On-Time Count: COUNT(*) FILTER (TAT <= 72 hours) - Samples meeting SLA
+ *
+ * SLA Threshold:
+ *   - On-Time Definition: TAT <= 72 hours (3 days)
+ *   - ISO 17025 requirement for timely reporting
+ *   - Used to calculate On-Time Completion Rate KPI
+ *
+ * Example Query:
+ *   SELECT * FROM calculate_average_tat(
+ *     '2024-01-01 00:00:00+07'::TIMESTAMPTZ,
+ *     '2024-01-31 23:59:59+07'::TIMESTAMPTZ
+ *   );
+ *
+ * Example Result:
+ *   avg_tat_hours  | median_tat_hours | sample_count | on_time_count
+ *   48.50          | 45.25            | 150          | 142
+ *
+ * Business Logic:
+ *   - Only includes samples with status = 'completed' (approved by manager)
+ *   - Filters by completion date (updated_at), not receipt date
+ *   - Excludes soft-deleted samples (deleted_at IS NULL)
+ *   - Returns NULL for avg/median if no samples found (no division by zero)
+ */
 CREATE OR REPLACE FUNCTION calculate_average_tat(
   start_date TIMESTAMPTZ,
   end_date TIMESTAMPTZ
@@ -82,6 +122,45 @@ GRANT EXECUTE ON FUNCTION get_samples_by_status TO authenticated;
 -- ============================================================================
 -- Function 3: Get Approval Queue Metrics
 -- ============================================================================
+/**
+ * KPI Formula: Approval Queue Metrics
+ *
+ * Purpose: Monitor pending approvals to prevent bottlenecks and ensure timely manager review
+ *
+ * Metrics:
+ *   1. Pending Count: COUNT(*) WHERE status = 'review'
+ *      - Total samples waiting for manager approval
+ *
+ *   2. Average Wait Time (hours):
+ *      - Formula: AVG(EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - updated_at)) / 3600)
+ *      - Time since sample entered 'review' status
+ *      - updated_at = timestamp when status changed to 'review'
+ *
+ *   3. Overdue Count: COUNT(*) FILTER (wait_time > 24 hours)
+ *      - Samples exceeding 24-hour review SLA
+ *      - Indicates approval bottleneck
+ *
+ * Alert Thresholds:
+ *   - High Priority: pending_count > 20 samples
+ *   - High Priority: avg_wait_hours > 24 hours
+ *   - Visual Alert: overdue_count > 0
+ *
+ * Example Query:
+ *   SELECT * FROM get_approval_queue_metrics(
+ *     '2024-01-01 00:00:00+07'::TIMESTAMPTZ,
+ *     '2024-01-31 23:59:59+07'::TIMESTAMPTZ
+ *   );
+ *
+ * Example Result:
+ *   pending_count | avg_wait_hours | overdue_count
+ *   15            | 8.5            | 2
+ *
+ * Business Logic:
+ *   - Only includes samples in 'review' status (awaiting approval)
+ *   - Filters by received_at (accession date) for period comparison
+ *   - 24-hour SLA ensures timely reporting to clients
+ *   - Real-time calculation using CURRENT_TIMESTAMP
+ */
 CREATE OR REPLACE FUNCTION get_approval_queue_metrics(
   start_date TIMESTAMPTZ,
   end_date TIMESTAMPTZ
@@ -114,6 +193,53 @@ GRANT EXECUTE ON FUNCTION get_approval_queue_metrics TO authenticated;
 -- ============================================================================
 -- Function 4: Get Error Rate Metrics from Audit Logs
 -- ============================================================================
+/**
+ * KPI Formula: Error Rate Calculation
+ *
+ * Purpose: Measure data quality by tracking result corrections as a percentage
+ *
+ * Formula:
+ *   Error Rate (%) = (Number of Result Modifications / Total Results Created) * 100
+ *
+ * Components:
+ *   1. Total Results Created:
+ *      - COUNT(*) FROM results WHERE created_at BETWEEN start_date AND end_date
+ *      - Denominator: all results entered in the period
+ *
+ *   2. Result Modifications:
+ *      - COUNT(*) FROM audit_logs WHERE:
+ *        - table_name = 'results'
+ *        - operation = 'UPDATE'
+ *        - old_values->>'status' IS DISTINCT FROM new_values->>'status'
+ *      - Excludes approval workflow actions (status changes)
+ *      - Only counts corrections to entered data
+ *
+ *   3. Error Rate Calculation:
+ *      - If total_results > 0: (modifications / total_results) * 100
+ *      - If total_results = 0: 0% (prevents division by zero)
+ *
+ * Example Query:
+ *   SELECT * FROM get_error_rate_metrics(
+ *     '2024-01-01 00:00:00+07'::TIMESTAMPTZ,
+ *     '2024-01-31 23:59:59+07'::TIMESTAMPTZ
+ *   );
+ *
+ * Example Result:
+ *   error_rate | total_modifications | total_results
+ *   3.25       | 13                  | 400
+ *
+ * Business Logic:
+ *   - High error rate (>5%) indicates need for additional training
+ *   - Low error rate (<2%) indicates good data quality practices
+ *   - ISO 17025 compliance metric for quality assurance
+ *   - Excludes legitimate workflow actions (approval status changes)
+ *   - Tracks only corrections that indicate entry errors
+ *
+ * Audit Log Schema:
+ *   - operation: 'UPDATE' (not 'action')
+ *   - old_values/new_values: JSONB columns (not old_value/new_value)
+ *   - Status field check excludes approval workflow from error count
+ */
 CREATE OR REPLACE FUNCTION get_error_rate_metrics(
   start_date TIMESTAMPTZ,
   end_date TIMESTAMPTZ
@@ -242,6 +368,53 @@ GRANT EXECUTE ON FUNCTION get_coa_statistics TO authenticated;
 -- ============================================================================
 -- Function 6: Get Staff Productivity (Manager-Only)
 -- ============================================================================
+/**
+ * KPI Formula: Staff Productivity Metrics
+ *
+ * Purpose: Track individual analyst performance for workload balancing and training needs
+ *
+ * Metrics Per Analyst:
+ *   1. Tests Completed:
+ *      - Formula: COUNT(DISTINCT results.id) WHERE created_at BETWEEN start_date AND end_date
+ *      - Number of test results entered by analyst
+ *      - Primary productivity indicator
+ *
+ *   2. Results Modified:
+ *      - Formula: COUNT(DISTINCT audit_logs.id) WHERE:
+ *        - table_name = 'results'
+ *        - operation = 'UPDATE'
+ *        - changed_by = analyst_id
+ *      - Corrections made to previously entered results
+ *      - Quality indicator (high modifications may indicate training needs)
+ *
+ * Access Control:
+ *   - MANAGER-ONLY: Raises exception if called by non-manager
+ *   - get_user_role() must return 'manager'
+ *   - Protects analyst privacy per RBAC requirements
+ *
+ * Example Query:
+ *   SELECT * FROM get_staff_productivity(
+ *     '2024-01-01 00:00:00+07'::TIMESTAMPTZ,
+ *     '2024-01-31 23:59:59+07'::TIMESTAMPTZ
+ *   );
+ *
+ * Example Result:
+ *   analyst_id                            | analyst_name    | tests_completed | results_modified
+ *   a1b2c3d4-e5f6-7890-abcd-ef1234567890 | Nguyễn Văn A   | 150             | 5
+ *   b2c3d4e5-f6a7-8901-bcde-f12345678901 | Trần Thị B     | 142             | 3
+ *
+ * Business Logic:
+ *   - Only includes analysts (role = 'analyst')
+ *   - Excludes soft-deleted users (deleted_at IS NULL)
+ *   - HAVING clause filters out analysts with zero tests in period
+ *   - Sorted by tests_completed DESC (most productive first)
+ *   - Used for workload balancing and performance reviews
+ *
+ * Performance Interpretation:
+ *   - High tests_completed = Good productivity
+ *   - High results_modified = May need additional training or quality checks
+ *   - Modification rate = (results_modified / tests_completed) * 100
+ */
 CREATE OR REPLACE FUNCTION get_staff_productivity(
   start_date TIMESTAMPTZ,
   end_date TIMESTAMPTZ
