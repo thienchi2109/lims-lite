@@ -73,7 +73,7 @@ export function SampleStatusChart({
       emptyMessage="Chưa có dữ liệu phân bổ"
       height={height}
     >
-      <ResponsiveContainer width="100%" height="100%" minHeight={height}>
+      <ResponsiveContainer width="100%" height={height} minHeight={height} minWidth={0}>
         <BarChart
           data={chartData}
           layout="vertical"

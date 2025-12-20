@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { logoutClient } from '@/lib/api-client'
@@ -33,7 +33,12 @@ interface UserProfileDropdownProps {
 
 export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
     const [showLogoutDialog, setShowLogoutDialog] = useState(false)
+    const [isMounted, setIsMounted] = useState(false)
     const router = useRouter()
+
+    useEffect(() => {
+        setIsMounted(true)
+    }, [])
 
     const handleLogout = async () => {
         setShowLogoutDialog(false)
@@ -54,6 +59,8 @@ export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
             .toUpperCase()
             .slice(0, 2)
         : 'U'
+
+    if (!isMounted) return null
 
     return (
         <>

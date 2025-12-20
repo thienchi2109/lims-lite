@@ -72,7 +72,7 @@ export function StaffProductivityChart({
       height={height}
       skeletonVariant="bar"
     >
-      <ResponsiveContainer width="100%" height="100%" minHeight={height}>
+      <ResponsiveContainer width="100%" height={height} minHeight={height} minWidth={0}>
         <BarChart
           data={data}
           margin={{ top: 10, right: 30, left: 0, bottom: 20 }}
