@@ -176,6 +176,7 @@ export default async function ManagerReportsPage(props: {
   return (
     <ReportsLayout
       role="manager"
+      user={userData}
       fromDate={fromDate}
       toDate={toDate}
       kpiMetrics={kpiMetrics}

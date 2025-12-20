@@ -7,7 +7,8 @@ import { SampleStatusChart } from '@/components/sample-status-chart'
 import { CoAStatisticsChart } from '@/components/coa-statistics-chart'
 import { StaffProductivityChart } from '@/components/staff-productivity-chart'
 import { RecentSamplesTable } from '@/components/reports/recent-samples-table'
-import type { SampleStatus, TATTrendData, SampleStatusData, CoAStatistics, StaffProductivityData, KPIMetrics } from '@/types'
+import { DashboardHeader } from '@/components/dashboard-header'
+import type { SampleStatus, TATTrendData, SampleStatusData, CoAStatistics, StaffProductivityData, KPIMetrics, UserRole } from '@/types'
 import { Activity, ClipboardCheck, AlertCircle, TrendingUp, AlertTriangle, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
@@ -23,6 +24,10 @@ const statusTranslations: Record<SampleStatus, string> = {
 
 interface ReportsLayoutProps {
   role: 'manager' | 'analyst'
+  user?: {
+    full_name: string | null
+    role: UserRole | null
+  } | null
   fromDate: string
   toDate: string
   kpiMetrics: KPIMetrics
@@ -44,6 +49,7 @@ interface ReportsLayoutProps {
 
 export function ReportsLayout({
   role,
+  user,
   fromDate,
   toDate,
   kpiMetrics,
@@ -54,20 +60,25 @@ export function ReportsLayout({
   transformedSamples,
   validStatus,
 }: ReportsLayoutProps) {
-  // Role-specific welcome messages
-  const welcomeMessage = role === 'manager'
-    ? 'Xem tổng quan hiệu suất phòng lab và phân tích xu hướng'
-    : 'Theo dõi hiệu suất phòng lab và phân tích xu hướng'
+  // Role-specific subtitle
+  const subtitle = role === 'manager'
+    ? 'Bảng điều khiển Quản lý'
+    : 'Bảng điều khiển Kiểm nghiệm viên'
 
   return (
-    <div className="relative min-h-screen">
-      {/* Glassmorphism background decorations */}
-      <div className="absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-sky-400/20 to-blue-500/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-indigo-400/20 to-purple-500/20 rounded-full blur-3xl" />
-      </div>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 relative overflow-hidden font-sans">
+      {/* Background Decorations */}
+      <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-sky-50/80 to-transparent dark:from-sky-950/20 pointer-events-none" />
+      <div className="absolute top-[-100px] right-[-100px] w-[500px] h-[500px] bg-blue-200/20 dark:bg-blue-900/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-[200px] left-[-100px] w-[300px] h-[300px] bg-indigo-200/20 dark:bg-indigo-900/10 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="flex-1 max-w-7xl mx-auto space-y-6 p-4 sm:p-6 lg:p-8">
+      <DashboardHeader
+        subtitle={subtitle}
+        user={user}
+        className="relative z-10"
+      />
+
+      <div className="max-w-7xl mx-auto space-y-6 p-4 sm:p-6 lg:p-8 relative z-10">
         {/* Back Button */}
         <Link
           href={role === 'manager' ? '/manager' : '/analyst'}
@@ -83,9 +94,6 @@ export function ReportsLayout({
             <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
               Báo cáo & Phân tích
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {welcomeMessage}
-            </p>
           </div>
           <div aria-label="Xuất báo cáo Excel">
             <ExportExcelButton

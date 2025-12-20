@@ -172,6 +172,7 @@ export default async function AnalystReportsPage(props: {
   return (
     <ReportsLayout
       role="analyst"
+      user={userData}
       fromDate={fromDate}
       toDate={toDate}
       kpiMetrics={kpiMetrics}
