@@ -25,11 +25,12 @@ interface SearchParams {
   statusFilter?: string | string[]
 }
 
-export default async function AnalystReportsPage({
-  searchParams,
-}: {
-  searchParams: SearchParams
+export default async function AnalystReportsPage(props: {
+  searchParams: Promise<SearchParams>
 }) {
+  // Await searchParams (Next.js 16 requirement)
+  const searchParams = await props.searchParams
+
   const supabase = await createClient()
 
   // Auth check
@@ -101,8 +102,8 @@ export default async function AnalystReportsPage({
   }
 
   const dateRange: DateRange = {
-    start: fromDate,
-    end: toDate,
+    start: fromDate + 'T00:00:00Z', // Convert to ISO datetime with UTC timezone
+    end: toDate + 'T23:59:59Z', // End of day in UTC
   }
 
   // Cast statusFilter to SampleStatus if it matches valid statuses
