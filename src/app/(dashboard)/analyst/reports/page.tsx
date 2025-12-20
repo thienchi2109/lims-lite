@@ -6,6 +6,7 @@ import {
   getTATTrendData,
   getSampleStatusDistribution,
   getCoAStatistics,
+  getSampleAccessionTrend,
 } from '@/app/actions/reports'
 import { format, startOfMonth, isValid, parseISO } from 'date-fns'
 import type { DateRange } from '@/types'
@@ -107,16 +108,18 @@ export default async function AnalystReportsPage(props: {
     tatTrendResult,
     statusDistributionResult,
     coaStatisticsResult,
+    accessionTrendResult,
   ] = await Promise.all([
     getKPIMetrics(dateRange),
     getTATTrendData(dateRange),
     getSampleStatusDistribution(dateRange),
     getCoAStatistics(dateRange),
+    getSampleAccessionTrend(dateRange),
   ])
 
   // Error handling for data fetches
   if (!kpiMetricsResult || !tatTrendResult || !statusDistributionResult ||
-      !coaStatisticsResult) {
+      !coaStatisticsResult || !accessionTrendResult) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -131,6 +134,7 @@ export default async function AnalystReportsPage(props: {
   const tatTrendData = tatTrendResult
   const statusDistribution = statusDistributionResult
   const coaStatistics = coaStatisticsResult
+  const accessionTrendData = accessionTrendResult
 
   return (
     <ReportsLayout
@@ -141,6 +145,7 @@ export default async function AnalystReportsPage(props: {
       kpiMetrics={kpiMetrics}
       tatTrendData={tatTrendData}
       statusDistribution={statusDistribution}
+      accessionTrendData={accessionTrendData}
       coaStatistics={coaStatistics}
     />
   )

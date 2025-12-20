@@ -5,6 +5,7 @@ import type {
   DateRange,
   KPIMetrics,
   TATTrendData,
+  SampleAccessionTrendData,
   SampleStatusData,
   CoAStatistics,
   StaffProductivityData,
@@ -135,6 +136,48 @@ export async function getTATTrendData(dateRange: DateRange): Promise<TATTrendDat
     )
   } catch (error) {
     console.error('Error fetching TAT trend data:', error)
+    throw error
+  }
+}
+
+/**
+ * Fetches sample accession trend data with cumulative totals
+ * Automatically adjusts granularity based on date range:
+ * - ≤ 31 days → Daily aggregation
+ * - ≤ 365 days → Monthly aggregation
+ * - > 365 days → Yearly aggregation
+ */
+export async function getSampleAccessionTrend(
+  dateRange: DateRange
+): Promise<SampleAccessionTrendData[]> {
+  try {
+    // Validate input
+    const validated = DateRangeSchema.parse(dateRange)
+
+    const supabase = await createClient()
+
+    // Call RPC function (auto-determines granularity)
+    const { data, error } = await supabase.rpc('get_sample_accession_trend', {
+      start_date: validated.start,
+      end_date: validated.end,
+    })
+
+    if (error) throw error
+
+    // Transform to match TypeScript types
+    return (
+      data?.map((item: {
+        period: string
+        sample_count: number | bigint
+        cumulative_count: number | bigint
+      }) => ({
+        period: item.period,
+        sampleCount: Number(item.sample_count),
+        cumulativeCount: Number(item.cumulative_count),
+      })) || []
+    )
+  } catch (error) {
+    console.error('Error fetching sample accession trend:', error)
     throw error
   }
 }

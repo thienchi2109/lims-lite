@@ -853,6 +853,15 @@ export const TATTrendDataSchema = z.object({
 
 export type TATTrendData = z.infer<typeof TATTrendDataSchema>
 
+// Sample Accession Trend Data for combined bar + line chart
+export const SampleAccessionTrendDataSchema = z.object({
+  period: z.string(), // "2024-01-15" (daily), "2024-01" (monthly), "2024" (yearly)
+  sampleCount: z.number(), // Samples received in this period
+  cumulativeCount: z.number(), // Running total up to this period
+})
+
+export type SampleAccessionTrendData = z.infer<typeof SampleAccessionTrendDataSchema>
+
 // Sample Status Distribution for bar chart
 export const SampleStatusDataSchema = z.object({
   status: z.string(),

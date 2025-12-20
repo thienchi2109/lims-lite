@@ -4,10 +4,11 @@ import { KPICardsGrid } from '@/components/kpi-cards-grid'
 import { KPICard } from '@/components/kpi-card'
 import { TATTrendChart } from '@/components/tat-trend-chart'
 import { SampleStatusChart } from '@/components/sample-status-chart'
+import { SampleAccessionTrendChart } from '@/components/sample-accession-trend-chart'
 import { CoAStatisticsChart } from '@/components/coa-statistics-chart'
 import { StaffProductivityChart } from '@/components/staff-productivity-chart'
 import { DashboardHeader } from '@/components/dashboard-header'
-import type { SampleStatus, TATTrendData, SampleStatusData, CoAStatistics, StaffProductivityData, KPIMetrics, UserRole } from '@/types'
+import type { SampleStatus, TATTrendData, SampleAccessionTrendData, SampleStatusData, CoAStatistics, StaffProductivityData, KPIMetrics, UserRole } from '@/types'
 import { Activity, ClipboardCheck, AlertCircle, TrendingUp, AlertTriangle, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
@@ -32,6 +33,7 @@ interface ReportsLayoutProps {
   kpiMetrics: KPIMetrics
   tatTrendData: TATTrendData[]
   statusDistribution: SampleStatusData[]
+  accessionTrendData: SampleAccessionTrendData[]
   coaStatistics: CoAStatistics[]
   staffProductivity?: StaffProductivityData[]
 }
@@ -44,6 +46,7 @@ export function ReportsLayout({
   kpiMetrics,
   tatTrendData,
   statusDistribution,
+  accessionTrendData,
   coaStatistics,
   staffProductivity,
 }: ReportsLayoutProps) {
@@ -182,17 +185,19 @@ export function ReportsLayout({
             <CoAStatisticsChart data={coaStatistics} />
           </div>
 
-          {/* Row 2: Sample Status + Staff Productivity (manager only) */}
+          {/* Row 2: Sample Status (1 col) + Accession Trend (2 cols) */}
           <div className="lg:col-span-1" aria-label="Phân bổ trạng thái mẫu">
             <SampleStatusChart data={statusDistribution} />
           </div>
-          {role === 'manager' && staffProductivity ? (
+          <div className="lg:col-span-2" aria-label="Xu hướng tiếp nhận mẫu">
+            <SampleAccessionTrendChart data={accessionTrendData} />
+          </div>
+
+          {/* Row 3: Staff Productivity (manager only, full width 2 cols) */}
+          {role === 'manager' && staffProductivity && (
             <div className="lg:col-span-2" aria-label="Năng suất nhân viên">
               <StaffProductivityChart data={staffProductivity} />
             </div>
-          ) : (
-            // For analyst, Sample Status takes full width on row 2
-            role === 'analyst' && <div className="lg:col-span-2" />
           )}
         </div>
       </div>

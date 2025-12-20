@@ -86,8 +86,8 @@ describe('getKPIMetrics', () => {
 
     // Verify result structure
     expect(result).toBeDefined()
-    expect(result.averageTAT).toBe(48.5)
-    expect(result.samplesInProgress).toBeGreaterThan(0)
+    expect(result.avgTAT.value).toBe(48.5)
+    expect(result.wipCount.value).toBeGreaterThan(0)
   })
 
   it('should reject invalid date range (missing start)', async () => {
@@ -136,8 +136,8 @@ describe('getKPIMetrics', () => {
     const result = await getKPIMetrics(dateRange)
 
     // Should return default/fallback values when RPC fails
-    expect(result.averageTAT).toBe(0)
-    expect(result.medianTAT).toBe(0)
+    expect(result.avgTAT.value).toBe(0)
+    expect(result.avgTAT.previousValue).toBe(0)
   })
 
   it('should handle empty data gracefully', async () => {
@@ -167,11 +167,11 @@ describe('getKPIMetrics', () => {
 
     const result = await getKPIMetrics(dateRange)
 
-    expect(result.averageTAT).toBe(0)
-    expect(result.samplesInProgress).toBe(0)
-    expect(result.pendingApprovals).toBe(0)
-    expect(result.onTimeRate).toBe(0)
-    expect(result.errorRate).toBe(0)
+    expect(result.avgTAT.value).toBe(0)
+    expect(result.wipCount.value).toBe(0)
+    expect(result.pendingApprovals.count).toBe(0)
+    expect(result.onTimeRate.value).toBe(0)
+    expect(result.errorRate.value).toBe(0)
   })
 
   it('should calculate on-time rate correctly', async () => {
@@ -202,7 +202,7 @@ describe('getKPIMetrics', () => {
     const result = await getKPIMetrics(dateRange)
 
     // On-time rate should be 85% (85/100 * 100)
-    expect(result.onTimeRate).toBe(85)
+    expect(result.onTimeRate.value).toBe(85)
   })
 
   it('should validate date range format', async () => {
@@ -235,8 +235,8 @@ describe('getKPIMetrics', () => {
     const result = await getKPIMetrics(invalidDateRange)
 
     // Should handle gracefully (empty results)
-    expect(result.averageTAT).toBe(0)
-    expect(result.samplesInProgress).toBe(0)
+    expect(result.avgTAT.value).toBe(0)
+    expect(result.wipCount.value).toBe(0)
   })
 })
 
@@ -273,7 +273,7 @@ describe('RLS Compliance', () => {
 
     // Verify data is returned (RLS allows access)
     expect(result).toBeDefined()
-    expect(result.averageTAT).toBe(48.5)
+    expect(result.avgTAT.value).toBe(48.5)
 
     // Note: Actual RLS testing must be done at database level
     // These integration tests verify the Server Action calls RPC correctly
@@ -308,8 +308,8 @@ describe('RLS Compliance', () => {
     const result = await getKPIMetrics(dateRange)
 
     // Should return safe defaults when RLS blocks access
-    expect(result.averageTAT).toBe(0)
-    expect(result.medianTAT).toBe(0)
+    expect(result.avgTAT.value).toBe(0)
+    expect(result.avgTAT.previousValue).toBe(0)
   })
 })
 
@@ -355,7 +355,7 @@ describe('Error Handling', () => {
 
     // Should handle missing fields gracefully
     expect(result).toBeDefined()
-    expect(result.averageTAT).toBeDefined()
+    expect(result.avgTAT.value).toBeDefined()
   })
 
   it('should validate Zod schema for date range', async () => {
@@ -398,6 +398,6 @@ describe('Error Handling', () => {
     const result = await getKPIMetrics(dateRange)
 
     // Should return safe defaults for timed-out query
-    expect(result.averageTAT).toBe(0)
+    expect(result.avgTAT.value).toBe(0)
   })
 })
