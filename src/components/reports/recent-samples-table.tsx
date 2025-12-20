@@ -159,7 +159,7 @@ export function RecentSamplesTable({ data, statusFilter }: RecentSamplesTablePro
     onSortingChange: setSorting,
     initialState: {
       pagination: {
-        pageSize: 50,
+        pageSize: 10, // Default 10 rows per page
       },
     },
   })
@@ -246,7 +246,7 @@ export function RecentSamplesTable({ data, statusFilter }: RecentSamplesTablePro
       </div>
 
       {/* Pagination */}
-      {filteredData.length > 0 && pageCount > 1 && (
+      {filteredData.length > pageSize && (
         <div className="flex items-center justify-between shrink-0 px-1">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span>
