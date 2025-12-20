@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Plus, List } from 'lucide-react'
+import { Plus, List, BarChart3 } from 'lucide-react'
 import { DashboardHeader } from '@/components/dashboard-header'
 
 export default async function AnalystDashboard() {
@@ -37,6 +37,14 @@ export default async function AnalystDashboard() {
             href: "/analyst/samples",
             color: "from-blue-500 to-indigo-600",
             iconColor: "text-blue-50"
+        },
+        {
+            title: "Báo cáo",
+            description: "Xem báo cáo và phân tích hiệu suất phòng lab. Theo dõi TAT và tỷ lệ hoàn thành.",
+            icon: BarChart3,
+            href: "/analyst/reports",
+            color: "from-orange-500 to-red-600",
+            iconColor: "text-orange-50"
         }
     ]
 
