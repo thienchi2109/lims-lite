@@ -40,21 +40,21 @@ export interface KPICardProps {
 }
 
 const gradientStyles = {
-  blue: 'from-blue-500/20 to-blue-600/10 border-blue-500/30',
-  green: 'from-green-500/20 to-green-600/10 border-green-500/30',
-  yellow: 'from-yellow-500/20 to-yellow-600/10 border-yellow-500/30',
-  red: 'from-red-500/20 to-red-600/10 border-red-500/30',
-  purple: 'from-purple-500/20 to-purple-600/10 border-purple-500/30',
-  orange: 'from-orange-500/20 to-orange-600/10 border-orange-500/30',
+  blue: 'from-sky-100/80 to-blue-50/40 border-sky-200/50 dark:from-sky-950/30 dark:to-blue-950/20 dark:border-sky-800/30',
+  green: 'from-emerald-100/80 to-green-50/40 border-emerald-200/50 dark:from-emerald-950/30 dark:to-green-950/20 dark:border-emerald-800/30',
+  yellow: 'from-amber-100/80 to-yellow-50/40 border-amber-200/50 dark:from-amber-950/30 dark:to-yellow-950/20 dark:border-amber-800/30',
+  red: 'from-rose-100/80 to-red-50/40 border-rose-200/50 dark:from-rose-950/30 dark:to-red-950/20 dark:border-rose-800/30',
+  purple: 'from-violet-100/80 to-purple-50/40 border-violet-200/50 dark:from-violet-950/30 dark:to-purple-950/20 dark:border-violet-800/30',
+  orange: 'from-orange-100/80 to-orange-50/40 border-orange-200/50 dark:from-orange-950/30 dark:to-orange-950/20 dark:border-orange-800/30',
 }
 
 const iconColorStyles = {
-  blue: 'text-blue-500',
-  green: 'text-green-500',
-  yellow: 'text-yellow-500',
-  red: 'text-red-500',
-  purple: 'text-purple-500',
-  orange: 'text-orange-500',
+  blue: 'text-sky-600 dark:text-sky-400',
+  green: 'text-emerald-600 dark:text-emerald-400',
+  yellow: 'text-amber-600 dark:text-amber-400',
+  red: 'text-rose-600 dark:text-rose-400',
+  purple: 'text-violet-600 dark:text-violet-400',
+  orange: 'text-orange-600 dark:text-orange-400',
 }
 
 const trendColorStyles: Record<'standard' | 'inverse', Record<'up' | 'down' | 'stable', string>> = {
