@@ -91,7 +91,7 @@ export function CoAStatisticsChart({
       height={height}
       skeletonVariant="donut"
     >
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height="100%" minHeight={height}>
         <PieChart margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
           <Pie
             data={chartData}
