@@ -1,11 +1,12 @@
 /**
  * CoA Statistics Chart Component
  *
- * Donut chart showing Certificate of Analysis (CoA) pipeline funnel:
- * - Segment breakdown: Generated, Pending CoA, Not Approved
+ * Donut chart showing Certificate of Analysis (CoA) generation status:
+ * - Segment breakdown: Generated (has CoA), Pending CoA (approved but no CoA)
+ * - Percentage calculated based on APPROVED SAMPLES ONLY: (count / approved_samples) * 100
  * - Shows count and percentage for each segment
  * - Color-coded segments matching KPI gradients
- * - Center label with total count
+ * - Center label with total approved count
  * - Tooltip with detailed statistics
  * - Responsive with loading skeleton and empty state
  */
@@ -82,8 +83,8 @@ export function CoAStatisticsChart({
 
   return (
     <ChartContainer
-      title="Thống Kê Certificate of Analysis"
-      subtitle="Phân bổ theo giai đoạn xử lý"
+      title="Thống kê số phiếu Trả kết quả XN đã tạo"
+      subtitle="Phân bổ theo giai đoạn xử lý (chỉ tính mẫu đã duyệt)"
       isLoading={isLoading}
       isEmpty={isEmpty}
       emptyMessage="Chưa có dữ liệu CoA"
@@ -124,7 +125,7 @@ export function CoAStatisticsChart({
             formatter={(value) => value}
           />
 
-          {/* Center label with total count */}
+          {/* Center label with total approved count */}
           <text
             x="50%"
             y="50%"
@@ -149,7 +150,7 @@ export function CoAStatisticsChart({
               fill: 'hsl(var(--muted-foreground))',
             }}
           >
-            Tổng mẫu
+            Mẫu đã duyệt
           </text>
         </PieChart>
       </ResponsiveContainer>
