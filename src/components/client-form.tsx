@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { CreateClientSchema, type CreateClient, type Client, Gender } from '@/types'
@@ -38,15 +38,31 @@ export function ClientForm({
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [submitError, setSubmitError] = useState<string | null>(null)
 
+    // Prepare safe gender value from initialData
+    const safeGender: Gender = (() => {
+        if (!initialData?.gender) return 'Khác'
+        const parseResult = Gender.safeParse(initialData.gender)
+        return parseResult.success ? parseResult.data : 'Khác'
+    })()
+
     const {
         register,
         handleSubmit,
         formState: { errors },
         control,
-        reset,
     } = useForm<CreateClient>({
         resolver: zodResolver(CreateClientSchema),
-        defaultValues: {
+        // Use defaultValues with initialData - key prop forces remount
+        defaultValues: initialData ? {
+            name: initialData.name || '',
+            id_card_num: initialData.id_card_num || '',
+            date_of_birth: initialData.date_of_birth || '',
+            gender: safeGender,
+            phone: initialData.phone || '',
+            address: initialData.address || '',
+            health_insurance_num: initialData.health_insurance_num || '',
+            expiry_date: initialData.expiry_date || '',
+        } : {
             name: '',
             id_card_num: '',
             date_of_birth: '',
@@ -57,25 +73,6 @@ export function ClientForm({
             expiry_date: '',
         },
     })
-
-    // Reset form when initialData changes
-    useEffect(() => {
-        if (initialData) {
-            const genderResult = Gender.safeParse(initialData.gender)
-            const genderValue = genderResult.success ? genderResult.data : 'Khác'
-
-            reset({
-                name: initialData.name || '',
-                id_card_num: initialData.id_card_num || '',
-                date_of_birth: initialData.date_of_birth || '',
-                gender: genderValue,
-                phone: initialData.phone || '',
-                address: initialData.address || '',
-                health_insurance_num: initialData.health_insurance_num || '',
-                expiry_date: initialData.expiry_date || '',
-            })
-        }
-    }, [initialData, reset])
 
     const onSubmit = async (data: CreateClient) => {
         setIsSubmitting(true)

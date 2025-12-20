@@ -201,14 +201,16 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
             console.error('Error searching client', error)
         }
 
-        setClientFormData({
+        const formData = {
             name,
             id_card_num: idCardNum || '',
             date_of_birth: dateOfBirth,
             gender,
             phone: '', // Required
             address: address || '',
-        })
+        }
+
+        setClientFormData(formData)
         setShowClientForm(true)
     }
 

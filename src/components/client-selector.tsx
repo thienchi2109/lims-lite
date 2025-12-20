@@ -157,6 +157,7 @@ export function ClientSelector({
                     </Button>
                 </div>
                 <ClientForm
+                    key={clientFormData?.id_card_num || clientFormData?.name || 'new'}
                     initialData={clientFormData}
                     onSuccess={(client) => {
                         onSelect(client)
