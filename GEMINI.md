@@ -23,6 +23,10 @@ This project is in active development with core features implemented:
 - ✅ Results Grid (TanStack Table with editable cells)
 - ✅ Approval Queue & Workflow
 - ✅ Audit Logging (Database triggers)
+- ✅ Reports Dashboard
+  - KPI Cards (TAT, WIP, Error Rate)
+  - Interactive Charts (Sample Accession Trend, Sample Status, TAT Trend)
+  - Excel Export
 - 🚧 PDF Report Generation (In progress)
 
 ## **Behavioral Directives**
