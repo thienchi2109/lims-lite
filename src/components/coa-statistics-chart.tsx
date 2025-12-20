@@ -92,19 +92,31 @@ export function CoAStatisticsChart({
       skeletonVariant="donut"
     >
       <ResponsiveContainer width="100%" height="100%" minHeight={height}>
-        <PieChart margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+        <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
           <Pie
             data={chartData}
             dataKey="count"
             nameKey="segmentLabel"
             cx="50%"
             cy="50%"
-            innerRadius="60%"
-            outerRadius="80%"
+            innerRadius="50%"
+            outerRadius="65%"
             paddingAngle={2}
-            label={(props: any) => {
-              const { segmentLabel, percentage } = props as { segmentLabel: string; percentage: number }
-              return `${segmentLabel}: ${percentage.toFixed(1)}%`
+            label={({ cx, x, y, segmentLabel, percentage, fill }: any) => {
+              // Shorten label to avoid cutoff
+              const shortLabel = segmentLabel.replace(' CoA', '')
+              return (
+                <text
+                  x={x}
+                  y={y}
+                  fill={fill}
+                  textAnchor={x > cx ? 'start' : 'end'}
+                  dominantBaseline="central"
+                  style={{ fontSize: '10px', fontWeight: 500 }}
+                >
+                  {`${shortLabel} (${percentage.toFixed(0)}%)`}
+                </text>
+              )
             }}
             labelLine={{
               stroke: 'hsl(var(--muted-foreground))',

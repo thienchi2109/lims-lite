@@ -90,14 +90,14 @@ export function SampleAccessionTrendChart({
 
   return (
     <ChartContainer
-      title="Xu Hướng Tiếp Nhận Mẫu"
+      title="Số lượng mẫu xét nghiệm nhận hàng ngày"
       subtitle="Số lượng mẫu tiếp nhận theo thời gian"
       isLoading={isLoading}
       isEmpty={isEmpty}
       emptyMessage="Chưa có dữ liệu tiếp nhận mẫu"
       height={height}
     >
-      <ResponsiveContainer width="100%" height="100%" minHeight={height}>
+      <ResponsiveContainer width="100%" height="100%" minHeight={height} minWidth={0}>
         <ComposedChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={chartConfig.grid.stroke} />
 
