@@ -51,3 +51,22 @@
 - Settings: Cài đặt
 - Profile: Hồ sơ
 - Notifications: Thông báo
+
+## Reports & Analytics
+- Reports & Analytics: Báo cáo & Phân tích
+- Average TAT: TAT Trung Bình
+- Samples in Progress: Mẫu Đang Xử Lý
+- Pending Approval: Chờ Phê Duyệt
+- On-Time Completion Rate: Tỷ Lệ Hoàn Thành Đúng Hạn
+- Error Rate: Tỷ Lệ Lỗi
+- CoA Statistics: Thống kê CoA
+- Staff Productivity: Năng suất nhân viên
+- Today: Hôm nay
+- This Week: Tuần này
+- This Month: Tháng này
+- Custom: Tùy chỉnh
+- Export Excel: Xuất Excel
+- KPI: Chỉ số hiệu suất
+- Chart: Biểu đồ
+- Metric: Chỉ số
+- Trend: Xu hướng
