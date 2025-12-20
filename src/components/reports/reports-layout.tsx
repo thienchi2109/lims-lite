@@ -105,7 +105,7 @@ export function ReportsLayout({
         <DateRangeFilter fromDate={fromDate} toDate={toDate} />
 
         {/* KPI Cards Grid */}
-        <KPICardsGrid>
+        <KPICardsGrid className="lg:grid-cols-5">
           <KPICard
             title="TAT Trung Bình"
             value={kpiMetrics.avgTAT.value}
@@ -186,16 +186,16 @@ export function ReportsLayout({
           </div>
 
           {/* Row 2: Sample Status (1 col) + Accession Trend (2 cols) */}
-          <div className="lg:col-span-1" aria-label="Phân bổ trạng thái mẫu">
+          <div className="lg:col-span-3" aria-label="Phân bổ trạng thái mẫu">
             <SampleStatusChart data={statusDistribution} />
           </div>
-          <div className="lg:col-span-2" aria-label="Xu hướng tiếp nhận mẫu">
+          <div className="lg:col-span-3" aria-label="Xu hướng tiếp nhận mẫu">
             <SampleAccessionTrendChart data={accessionTrendData} />
           </div>
 
           {/* Row 3: Staff Productivity (manager only, full width 2 cols) */}
           {role === 'manager' && staffProductivity && (
-            <div className="lg:col-span-2" aria-label="Năng suất nhân viên">
+            <div className="lg:col-span-3" aria-label="Năng suất nhân viên">
               <StaffProductivityChart data={staffProductivity} />
             </div>
           )}
