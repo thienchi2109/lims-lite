@@ -111,14 +111,6 @@ export function KPICard({
         className
       )}
     >
-      {/* Alert Badge */}
-      {alert?.show && (
-        <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full bg-red-500/20 border border-red-500/50 text-red-600 dark:text-red-400 text-xs font-medium">
-          <AlertCircle className="h-3 w-3" aria-hidden="true" />
-          {alert.message}
-        </div>
-      )}
-
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -128,6 +120,13 @@ export function KPICard({
             {icon}
           </div>
         </div>
+        {/* Alert Badge - moved below header to avoid overlap */}
+        {alert?.show && (
+          <div className="flex items-center gap-1 px-2 py-1 mt-2 rounded-full bg-red-500/20 border border-red-500/50 text-red-600 dark:text-red-400 text-xs font-medium w-fit">
+            <AlertCircle className="h-3 w-3" aria-hidden="true" />
+            {alert.message}
+          </div>
+        )}
       </CardHeader>
 
       <CardContent className="space-y-2">

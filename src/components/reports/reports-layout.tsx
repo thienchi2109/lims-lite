@@ -8,7 +8,8 @@ import { CoAStatisticsChart } from '@/components/coa-statistics-chart'
 import { StaffProductivityChart } from '@/components/staff-productivity-chart'
 import { RecentSamplesTable } from '@/components/reports/recent-samples-table'
 import type { SampleStatus, TATTrendData, SampleStatusData, CoAStatistics, StaffProductivityData, KPIMetrics } from '@/types'
-import { Activity, ClipboardCheck, AlertCircle, TrendingUp, AlertTriangle } from 'lucide-react'
+import { Activity, ClipboardCheck, AlertCircle, TrendingUp, AlertTriangle, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
 
 // Vietnamese status translations
 const statusTranslations: Record<SampleStatus, string> = {
@@ -66,7 +67,16 @@ export function ReportsLayout({
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-indigo-400/20 to-purple-500/20 rounded-full blur-3xl" />
       </div>
 
-      <div className="flex-1 space-y-6 p-6 md:p-8">
+      <div className="flex-1 max-w-7xl mx-auto space-y-6 p-4 sm:p-6 lg:p-8">
+        {/* Back Button */}
+        <Link
+          href={role === 'manager' ? '/manager' : '/analyst'}
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span>Quay lại bảng điều khiển</span>
+        </Link>
+
         {/* Header with title and export button */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
