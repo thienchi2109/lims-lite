@@ -65,7 +65,7 @@ export async function getKPIMetrics(dateRange: DateRange): Promise<KPIMetrics> {
 
     // Calculate on-time delivery rate
     const tatRecord = tatData?.[0]
-    const onTimeRate = tatRecord
+    const onTimeRate = tatRecord && Number(tatRecord.sample_count) > 0
       ? (Number(tatRecord.on_time_count) / Number(tatRecord.sample_count)) * 100
       : 0
 
