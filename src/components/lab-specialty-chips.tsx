@@ -65,59 +65,101 @@ export function LabSpecialtyChips({
     const selectedCount = selectedIds.length
 
     return (
-        <div className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white/50 p-3 backdrop-blur-sm">
-            <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-slate-700">
-                    Lọc theo nhóm kỹ thuật:
-                </span>
-                {selectedCount > 0 && (
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-500">
-                            Đã chọn: {selectedCount} nhóm
+        <div className="flex flex-col gap-2">
+            {/* Collapsed Button */}
+            {!isExpanded && (
+                <button
+                    type="button"
+                    onClick={() => setIsExpanded(true)}
+                    className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white/50 px-3 py-2 hover:bg-slate-50 transition-colors w-fit"
+                    aria-expanded={false}
+                    aria-controls="specialty-filter-panel"
+                >
+                    <ListFilter className="h-4 w-4 text-slate-600" aria-hidden="true" />
+                    <span className="text-sm font-medium text-slate-700">
+                        Lọc theo nhóm kỹ thuật
+                    </span>
+                    {selectedCount > 0 && (
+                        <span className="bg-sky-500 text-white text-xs px-2 py-0.5 rounded-full font-medium">
+                            {selectedCount} nhóm
                         </span>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={clearAll}
-                            className="h-6 px-2 text-xs text-slate-500 hover:text-slate-700"
-                            aria-label="Xóa lọc nhóm kỹ thuật"
-                        >
-                            <X className="mr-1 h-3 w-3" aria-hidden="true" />
-                            Xóa
-                        </Button>
-                    </div>
-                )}
-            </div>
+                    )}
+                    <ChevronDown className="h-4 w-4 text-slate-500 transition-transform" aria-hidden="true" />
+                </button>
+            )}
 
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Lọc theo nhóm kỹ thuật">
-                {sortedSpecialties.map((specialty) => {
-                    const isSelected = selectedIds.includes(specialty.id)
-                    return (
-                        <button
-                            key={specialty.id}
-                            type="button"
-                            onClick={() => toggleSpecialty(specialty.id)}
-                            aria-pressed={isSelected}
-                            className={cn(
-                                'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-all',
-                                'focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-1',
-                                isSelected
-                                    ? 'border-sky-500 bg-sky-500 text-white hover:bg-sky-600'
-                                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+            {/* Expanded Panel - Original UI */}
+            {isExpanded && (
+                <div
+                    id="specialty-filter-panel"
+                    className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white/50 p-3 backdrop-blur-sm transition-all duration-200 ease-in-out"
+                >
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-slate-700">
+                            Lọc theo nhóm kỹ thuật:
+                        </span>
+                        <div className="flex items-center gap-2">
+                            {selectedCount > 0 && (
+                                <span className="text-xs text-slate-500">
+                                    Đã chọn: {selectedCount} nhóm
+                                </span>
                             )}
-                        >
-                            {isSelected && <Check className="h-3.5 w-3.5" aria-hidden="true" />}
-                            <span>{specialty.code}</span>
-                            <span className="hidden sm:inline">- {specialty.name}</span>
-                        </button>
-                    )
-                })}
-            </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setIsExpanded(false)}
+                                className="h-6 px-2 text-xs text-slate-500 hover:text-slate-700"
+                                aria-label="Thu gọn bộ lọc"
+                            >
+                                <ChevronDown className="mr-1 h-3 w-3 rotate-180 transition-transform" aria-hidden="true" />
+                                Thu gọn
+                            </Button>
+                            {selectedCount > 0 && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={clearAll}
+                                    className="h-6 px-2 text-xs text-slate-500 hover:text-slate-700"
+                                    aria-label="Xóa lọc nhóm kỹ thuật"
+                                >
+                                    <X className="mr-1 h-3 w-3" aria-hidden="true" />
+                                    Xóa
+                                </Button>
+                            )}
+                        </div>
+                    </div>
 
-            {selectedCount === 0 && (
-                <p className="text-xs text-slate-400">
-                    Nhấp vào nhóm kỹ thuật để lọc mẫu
-                </p>
+                    <div className="flex flex-wrap gap-2" role="group" aria-label="Lọc theo nhóm kỹ thuật">
+                        {sortedSpecialties.map((specialty) => {
+                            const isSelected = selectedIds.includes(specialty.id)
+                            return (
+                                <button
+                                    key={specialty.id}
+                                    type="button"
+                                    onClick={() => toggleSpecialty(specialty.id)}
+                                    aria-pressed={isSelected}
+                                    className={cn(
+                                        'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-all',
+                                        'focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-1',
+                                        isSelected
+                                            ? 'border-sky-500 bg-sky-500 text-white hover:bg-sky-600'
+                                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                    )}
+                                >
+                                    {isSelected && <Check className="h-3.5 w-3.5" aria-hidden="true" />}
+                                    <span>{specialty.code}</span>
+                                    <span className="hidden sm:inline">- {specialty.name}</span>
+                                </button>
+                            )
+                        })}
+                    </div>
+
+                    {selectedCount === 0 && (
+                        <p className="text-xs text-slate-400">
+                            Nhấp vào nhóm kỹ thuật để lọc mẫu
+                        </p>
+                    )}
+                </div>
             )}
         </div>
     )
