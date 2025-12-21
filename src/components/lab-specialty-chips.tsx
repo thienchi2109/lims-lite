@@ -1,8 +1,8 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { Check, X } from 'lucide-react'
+import { Check, X, ListFilter, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { LabSpecialty } from '@/types'
@@ -21,6 +21,8 @@ export function LabSpecialtyChips({
     specialties,
     selectedIds = [],
 }: LabSpecialtyChipsProps) {
+    const [isExpanded, setIsExpanded] = useState(false)
+
     const router = useRouter()
     const searchParams = useSearchParams()
     const pathname = usePathname()
