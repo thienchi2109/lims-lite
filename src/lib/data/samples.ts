@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { isValidUUID } from '@/lib/utils-lims'
 import {
     SampleListParamsSchema,
     type SampleListParams,
@@ -84,6 +85,35 @@ export async function fetchSamples(params: SampleListParams) {
         const endOfDay = new Date(validatedParams.toDate)
         endOfDay.setHours(23, 59, 59, 999)
         query = query.lte('received_at', endOfDay.toISOString())
+    }
+
+    // Apply lab specialty filter (OR logic - any match)
+    // Uses RPC function to avoid HTTP 414 (URI Too Long) with large result sets
+    if (validatedParams.specialtyIds) {
+        // Parse and validate UUID format
+        const specialtyIds = validatedParams.specialtyIds
+            .split(',')
+            .filter(isValidUUID)
+
+        if (specialtyIds.length > 0) {
+            // Call RPC function for scalable server-side filtering
+            const { data: matchingSamples, error: rpcError } = await supabase
+                .rpc('get_sample_ids_by_specialty', {
+                    p_specialty_ids: specialtyIds
+                })
+
+            if (rpcError) {
+                console.error('Error calling get_sample_ids_by_specialty:', rpcError)
+                // Fall back to empty result on error
+                query = query.eq('id', '00000000-0000-0000-0000-000000000000')
+            } else if (matchingSamples && matchingSamples.length > 0) {
+                const sampleIds = matchingSamples.map((r: { sample_id: string }) => r.sample_id)
+                query = query.in('id', sampleIds)
+            } else {
+                // No matching samples - return empty result
+                query = query.eq('id', '00000000-0000-0000-0000-000000000000')
+            }
+        }
     }
 
     // Apply sorting

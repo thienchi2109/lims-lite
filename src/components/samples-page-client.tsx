@@ -5,8 +5,10 @@ import { useSampleDetail } from '@/hooks/use-sample-detail'
 import { SampleListTable } from '@/components/sample-list-table'
 import { SampleFilters } from '@/components/sample-filters'
 import { SampleBottomRow } from '@/components/sample-bottom-row'
+import { LabSpecialtyChips } from '@/components/lab-specialty-chips'
 import { type SampleStatus } from '@/types'
 import type { LabSpecialty } from '@/types'
+import { isValidUUID } from '@/lib/utils-lims'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
@@ -55,7 +57,13 @@ export function SamplesPageClient({
     const sortOrder = searchParams.get('sortOrder') === 'asc' ? 'asc' : 'desc'
 
     const receiverIdParam = searchParams.get('receiverId') || ''
-    const receiverId = receiverIdParam.match(/^[0-9a-fA-F-]{36}$/) ? receiverIdParam : ''
+    const receiverId = isValidUUID(receiverIdParam) ? receiverIdParam : ''
+
+    // Parse specialty IDs (comma-separated UUIDs)
+    const specialtyIdsParam = searchParams.get('specialtyIds') || ''
+    const specialtyIds = specialtyIdsParam
+        .split(',')
+        .filter(isValidUUID)
 
     const sampleId = searchParams.get('sampleId') || undefined
 
@@ -71,6 +79,7 @@ export function SamplesPageClient({
             sortBy,
             sortOrder: sortOrder as 'asc' | 'desc',
             receiverId: receiverId || undefined,
+            specialtyIds: specialtyIds.length > 0 ? specialtyIds.join(',') : undefined,
         }
     })
 
@@ -119,7 +128,7 @@ export function SamplesPageClient({
 
             {/* Top Row: Filters & Grid (Fixed Height ~50%) */}
             <div className="flex flex-col gap-2 h-[50vh] min-h-[400px] shrink-0">
-                <div className="shrink-0">
+                <div className="shrink-0 flex flex-col gap-2">
                     <Suspense fallback={<div className="text-sm text-slate-500">Đang tải bộ lọc...</div>}>
                         <SampleFilters
                             search={searchTerm}
@@ -133,6 +142,12 @@ export function SamplesPageClient({
                             receiverOptions={receiverOptions}
                         />
                     </Suspense>
+                    {specialties.length > 0 && (
+                        <LabSpecialtyChips
+                            specialties={specialties}
+                            selectedIds={specialtyIds}
+                        />
+                    )}
                 </div>
                 <div className="flex-1 min-h-0">
                     <SampleListTable

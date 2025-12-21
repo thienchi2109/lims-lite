@@ -3,6 +3,22 @@
  */
 
 /**
+ * UUID v4 validation regex pattern.
+ * Matches standard UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+ * Used for validating URL parameters and user inputs.
+ */
+export const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
+
+/**
+ * Validates if a string is a valid UUID v4 format.
+ * @param id - String to validate
+ * @returns true if valid UUID format
+ */
+export function isValidUUID(id: string): boolean {
+    return UUID_REGEX.test(id)
+}
+
+/**
  * Generates a unique sample ID in the format: CDC-XN-ddmmyyyy-000x
  * @param existingCount - Number of samples already created today
  * @returns Generated sample ID

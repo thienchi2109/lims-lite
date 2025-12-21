@@ -412,6 +412,7 @@ export const SampleListParamsSchema = PaginationSchema.extend({
     fromDate: z.string().optional(),
     toDate: z.string().optional(),
     receiverId: z.string().uuid().optional(),
+    specialtyIds: z.string().optional(), // Comma-separated UUIDs for lab specialty filter
 })
 
 export type SampleListParams = z.infer<typeof SampleListParamsSchema>
