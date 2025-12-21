@@ -229,13 +229,17 @@ This project uses **self-hosted Supabase** running in Docker, NOT Supabase Cloud
    ```bash
    # Apply to local Docker
    Get-Content migration.sql | docker exec -i lims-postgres psql -U postgres -d postgres
-   
+
+   # ⚠️ CRITICAL: If migration adds/modifies RPC functions, restart PostgREST
+   # PostgREST caches the database schema and won't see new functions until restarted
+   docker compose restart rest
+
    # Run security tests
    docker exec lims-postgres psql -U postgres -d postgres -c "SELECT * FROM run_security_tests();"
-   
+
    # Verify with typecheck
    npm run typecheck
-   
+
    # Test application
    npm run dev
    ```
