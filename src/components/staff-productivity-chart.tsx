@@ -14,7 +14,7 @@
 
 'use client'
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { ChartContainer } from '@/components/chart-container'
 import { chartConfig, getChartColor, formatVietnameseNumber } from '@/lib/chart-theme'
 import type { StaffProductivityData } from '@/types'
@@ -31,7 +31,7 @@ interface CustomTooltipProps {
     name: string
     value: number
     dataKey: string
-    payload: StaffProductivityData
+    payload: StaffProductivityData & { modificationRate: number }
   }>
 }
 
@@ -43,13 +43,16 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
   return (
     <div style={chartConfig.tooltip.contentStyle}>
       <div style={chartConfig.tooltip.labelStyle}>
-        Nhà phân tích: {data.analystName}
+        KTV: {data.analystName}
       </div>
       <div style={{ ...chartConfig.tooltip.itemStyle, color: getChartColor('blue') }}>
-        Xét nghiệm hoàn thành: {formatVietnameseNumber(data.testsCompleted)}
+        Xét nghiệm hoàn thành: <span className="font-semibold">{formatVietnameseNumber(data.testsCompleted)}</span>
       </div>
       <div style={{ ...chartConfig.tooltip.itemStyle, color: getChartColor('purple') }}>
-        Kết quả đã sửa: {formatVietnameseNumber(data.resultsModified)}
+        Tỷ lệ sửa đổi: <span className="font-semibold">{data.modificationRate.toFixed(1)}%</span>
+      </div>
+      <div style={{ ...chartConfig.tooltip.itemStyle, color: 'hsl(var(--muted-foreground))', fontSize: '11px', marginTop: '4px' }}>
+        (Đã sửa {formatVietnameseNumber(data.resultsModified)} kết quả)
       </div>
     </div>
   )
@@ -58,14 +61,22 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
 export function StaffProductivityChart({
   data = [],
   isLoading = false,
-  height = 300,
+  height = 350,
 }: StaffProductivityChartProps) {
   const isEmpty = !isLoading && data.length === 0
 
+  // Enrich data with rate calculation
+  const chartData = data.map(item => ({
+    ...item,
+    modificationRate: item.testsCompleted > 0
+      ? (item.resultsModified / item.testsCompleted) * 100
+      : 0
+  }))
+
   return (
     <ChartContainer
-      title="Năng Suất Nhà Phân Tích"
-      subtitle="So sánh hiệu suất hoàn thành xét nghiệm (Chỉ dành cho Quản lý)"
+      title="Hiệu suất Kiểm nghiệm viên"
+      subtitle="So sánh hiệu suất hoàn thành xét nghiệm (Chỉ dành cho Lãnh đạo khoa XN)"
       isLoading={isLoading}
       isEmpty={isEmpty}
       emptyMessage="Chưa có dữ liệu năng suất"
@@ -73,30 +84,41 @@ export function StaffProductivityChart({
       skeletonVariant="bar"
     >
       <ResponsiveContainer width="100%" height={height} minHeight={height} minWidth={0}>
-        <BarChart
-          data={data}
-          margin={{ top: 10, right: 30, left: 0, bottom: 20 }}
+        <ComposedChart
+          data={chartData}
+          margin={{ top: 20, right: 20, left: 20, bottom: 20 }}
         >
-          <CartesianGrid {...chartConfig.grid} />
+          <defs>
+            <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={getChartColor('blue')} stopOpacity={0.8} />
+              <stop offset="95%" stopColor={getChartColor('blue')} stopOpacity={0.3} />
+            </linearGradient>
+          </defs>
+
+          <CartesianGrid {...chartConfig.grid} vertical={false} strokeDasharray="3 3" />
 
           <XAxis
             dataKey="analystName"
             {...chartConfig.axis}
-            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-            angle={-45}
-            textAnchor="end"
-            height={60}
+            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12, fontWeight: 500 }}
+            tickLine={false}
+            axisLine={false}
+            dy={10}
           />
 
           <YAxis
             yAxisId="left"
             {...chartConfig.axis}
             tick={{ fill: 'hsl(var(--muted-foreground))' }}
+            tickFormatter={(value) => formatVietnameseNumber(value)}
+            allowDecimals={false}
             label={{
-              value: 'Xét nghiệm',
+              value: 'Số lượng mẫu',
               angle: -90,
               position: 'insideLeft',
-              style: { textAnchor: 'middle', fill: 'hsl(var(--muted-foreground))' },
+              style: { textAnchor: 'middle', fill: 'hsl(var(--muted-foreground))', fontSize: 11 },
+              dy: 0,
+              dx: -10
             }}
           />
 
@@ -105,21 +127,27 @@ export function StaffProductivityChart({
             orientation="right"
             {...chartConfig.axis}
             tick={{ fill: 'hsl(var(--muted-foreground))' }}
+            tickFormatter={(value) => `${value}%`}
+            domain={[0, 'auto']}
             label={{
-              value: 'Kết quả sửa',
+              value: 'Tỷ lệ sửa đổi (%)',
               angle: 90,
               position: 'insideRight',
-              style: { textAnchor: 'middle', fill: 'hsl(var(--muted-foreground))' },
+              style: { textAnchor: 'middle', fill: 'hsl(var(--muted-foreground))', fontSize: 11 },
+              dy: 0,
+              dx: 10
             }}
           />
 
-          <Tooltip content={<CustomTooltip />} />
+          <Tooltip content={<CustomTooltip />} cursor={chartConfig.tooltip.cursor} />
 
           <Legend
-            {...chartConfig.legend}
+            verticalAlign="top"
+            height={36}
+            iconType="circle"
             formatter={(value) => {
-              if (value === 'testsCompleted') return 'Xét nghiệm hoàn thành'
-              if (value === 'resultsModified') return 'Kết quả đã sửa'
+              if (value === 'testsCompleted') return <span className="text-slate-600 dark:text-slate-300 font-medium text-sm">Xét nghiệm hoàn thành</span>
+              if (value === 'modificationRate') return <span className="text-slate-600 dark:text-slate-300 font-medium text-sm">Tỷ lệ sửa đổi (%)</span>
               return value
             }}
           />
@@ -127,19 +155,25 @@ export function StaffProductivityChart({
           <Bar
             yAxisId="left"
             dataKey="testsCompleted"
-            fill={getChartColor('blue')}
-            radius={[4, 4, 0, 0]}
-            maxBarSize={40}
+            name="testsCompleted"
+            fill="url(#barGradient)"
+            radius={[6, 6, 0, 0]}
+            maxBarSize={50}
+            animationDuration={1500}
           />
 
-          <Bar
+          <Line
             yAxisId="right"
-            dataKey="resultsModified"
-            fill={getChartColor('purple')}
-            radius={[4, 4, 0, 0]}
-            maxBarSize={40}
+            type="monotone"
+            dataKey="modificationRate"
+            name="modificationRate"
+            stroke={getChartColor('purple')}
+            strokeWidth={3}
+            dot={{ r: 4, fill: getChartColor('purple'), strokeWidth: 2, stroke: 'white' }}
+            activeDot={{ r: 6, strokeWidth: 0 }}
+            animationDuration={1500}
           />
-        </BarChart>
+        </ComposedChart>
       </ResponsiveContainer>
     </ChartContainer>
   )
