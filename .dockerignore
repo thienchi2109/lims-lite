@@ -16,3 +16,14 @@ tsconfig.tsbuildinfo
 .DS_Store
 *.log
 coverage
+
+# Claude Code / Beads directories
+.claude
+.beads
+
+# Additional ignores
+.turbo
+.vercel
+.idea
+*.lock
+!package-lock.json
