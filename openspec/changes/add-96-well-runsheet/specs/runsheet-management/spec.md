@@ -251,3 +251,149 @@ The system SHALL provide clear visual distinction between different well states 
   - Well type
   - Concentration (if standard)
   - Exclusion info (if excluded)
+
+---
+
+### Requirement: Result Entry on Plate Grid
+
+The system SHALL provide result value entry directly on the plate grid with an expandable detail panel, enabling a focused single-page experience for analysts during instrument runs.
+
+#### Scenario: Enter result value from plate grid
+- **GIVEN** a runsheet is in "running" status
+- **AND** an analyst clicks on an assigned well
+- **WHEN** the detail panel expands
+- **THEN** the system displays:
+  - Well position and sample ID
+  - Assay name and expected units
+  - Value input field with validation
+  - Notes field (optional)
+  - Save and Next Well buttons
+- **AND** the analyst can enter the result value
+- **AND** keyboard Enter saves and moves to next well
+
+#### Scenario: Navigate between wells during entry
+- **GIVEN** an analyst is entering results on the plate grid
+- **WHEN** the analyst presses Tab or clicks "Next Well"
+- **THEN** focus moves to the next assigned well (by row or column based on fill direction setting)
+- **AND** the detail panel updates to show the new well's information
+
+#### Scenario: View result status on plate grid
+- **GIVEN** a runsheet is in "running" status
+- **THEN** each well displays a visual indicator of result status:
+  - Pending (no value): outline only
+  - Entered (has value): filled with type color
+  - Submitted: filled with checkmark overlay
+  - Approved: filled with green border
+  - Rejected: filled with red border
+
+---
+
+### Requirement: Partial Plate Submission
+
+The system SHALL support submitting selected wells for review from the plate view, enabling flexibility when different samples complete at different times.
+
+#### Scenario: Submit selected wells for review
+- **GIVEN** an analyst is viewing a runsheet in "running" status
+- **AND** has selected one or more wells with status "entered"
+- **WHEN** the "Gửi duyệt" (Submit for Review) action is triggered
+- **THEN** the linked results' samples transition to "review" status
+- **AND** the wells display submission status indicator
+- **AND** submitted wells cannot be edited unless rejected
+
+#### Scenario: Identify submittable wells
+- **GIVEN** an analyst is viewing a running runsheet
+- **THEN** wells are visually distinguished by submission eligibility:
+  - Ready to submit: "entered" status, can be selected
+  - Not ready: "pending" status (no value entered)
+  - Already submitted: grayed out or badge indicator
+
+---
+
+### Requirement: Manager Plate Review
+
+The system SHALL provide managers with both sample-based and plate-based review views, enabling efficient routine approvals and detailed QC pattern analysis.
+
+#### Scenario: Switch to plate view for review
+- **GIVEN** a manager is on the approval queue page
+- **WHEN** the manager clicks "Xem theo khay" (View by Plate) toggle
+- **THEN** the system displays a list of runsheets with pending approvals
+- **AND** clicking a runsheet opens the plate grid in read-only review mode
+
+#### Scenario: Approve results from plate view
+- **GIVEN** a manager is viewing a runsheet in plate review mode
+- **AND** has selected one or more submitted wells
+- **WHEN** the "Phê duyệt" (Approve) action is triggered
+- **THEN** the selected results transition to "approved" status
+- **AND** the wells display approved status indicator (green border)
+
+#### Scenario: Reject results from plate view
+- **GIVEN** a manager is viewing a runsheet in plate review mode
+- **AND** has selected one or more submitted wells
+- **WHEN** the "Từ chối" (Reject) action is triggered
+- **THEN** the system prompts for rejection reason (required)
+- **AND** the selected results transition to "retest_required" status
+- **AND** the wells display rejected status indicator (red border)
+
+---
+
+### Requirement: Rejection and Retest Workflow
+
+The system SHALL maintain data immutability for rejected results and create linked retest records in compliance with 21 CFR Part 11 requirements.
+
+#### Scenario: Create retest for rejected result
+- **GIVEN** a result has status "retest_required"
+- **WHEN** an analyst initiates retest from the sample view or plate view
+- **THEN** the system creates a NEW result record with:
+  - `parent_result_id` linking to original rejected result
+  - `retest_reason` field (required)
+  - Same sample and assay as original
+  - Status "pending"
+- **AND** the new result can be assigned to any runsheet well
+
+#### Scenario: View rejection and retest chain
+- **GIVEN** a result has been rejected and retested
+- **WHEN** a user views the result details
+- **THEN** the system displays:
+  - Original result with rejection reason and timestamp
+  - Linked retest result(s) with retest reason
+  - Complete audit trail of status changes
+- **AND** original data values are preserved and unmodifiable
+
+---
+
+### Requirement: QC Control Integration with Westgard
+
+The system SHALL route QC control results from runsheet wells to the Westgard IQC system for longitudinal quality monitoring, while keeping blanks and standards plate-specific.
+
+#### Scenario: Assign QC control material to well
+- **GIVEN** an analyst is editing a runsheet
+- **AND** has selected a well and set type to "Mẫu QC" (Control)
+- **WHEN** the analyst selects a registered QC material from the dropdown
+- **THEN** the well is linked to the QC material (lot, level)
+- **AND** expected value is populated from QC definition
+
+#### Scenario: Enter QC control value
+- **GIVEN** a runsheet is in "running" status
+- **AND** a well is assigned as QC control with a registered material
+- **WHEN** the analyst enters the actual measured value
+- **THEN** the system:
+  - Stores value in `runsheet_wells`
+  - Creates a `qc_results` entry (feeds Westgard evaluation)
+  - Evaluates Westgard rules against historical data
+  - Displays pass/warning/reject status on well
+
+#### Scenario: QC control blocks plate on Westgard violation
+- **GIVEN** a QC control value violates Westgard reject rules (e.g., 1-3s, 2-2s)
+- **WHEN** the violation is detected
+- **THEN** the system:
+  - Marks the well as QC failed (red indicator)
+  - Displays the violated rule(s)
+  - Optionally blocks runsheet completion pending manager resolution
+  - Logs the violation for audit trail
+
+#### Scenario: Blank and standard wells remain plate-specific
+- **GIVEN** an analyst assigns blank or standard wells
+- **WHEN** values are entered for these wells
+- **THEN** the data is stored only in `runsheet_wells`
+- **AND** no `qc_results` entries are created
+- **AND** validation is plate-specific (blank < threshold, standard calibration)

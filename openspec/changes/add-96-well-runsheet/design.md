@@ -355,3 +355,232 @@ CONSTRAINT exclusion_requires_reason CHECK (
 - `idx_runsheets_status_created` - List by status, sorted by date
 - `idx_runsheet_wells_position_order` - Grid rendering order
 - `idx_runsheet_wells_non_empty` (partial) - Count non-empty wells
+
+---
+
+## Workflow Integration (Brainstorming Session 2025-12-22)
+
+### Design Decisions Summary
+
+| # | Topic | Decision | Rationale |
+|---|-------|----------|-----------|
+| 1 | Runsheet in workflow | Tool within `in_progress` phase | Not all tests need plates (colorimetric, volumetric, etc.) |
+| 2 | Result status | Runsheet tracks assignment via FK, result status unchanged | Clean separation: runsheet=physical location, result=data state |
+| 3 | Lifecycle triggers | `running` locks plate + transitions samples to `in_progress` | Mirrors physical reality of starting instrument run |
+| 4 | Result entry | Plate grid with expandable detail panel | Single-page focused experience |
+| 5 | Submission flow | Hybrid - submit selected wells from plate view | Supports partial plate submission |
+| 6 | Manager review | Both sample-based queue + plate view toggle | Routine review fast; QC pattern analysis when needed |
+| 7 | Rejection workflow | Immutable data; retest creates NEW result with `parent_result_id` | 21 CFR Part 11 compliance |
+| 8 | QC wells | Hybrid routing: blanks/standards → plate-only; controls → Westgard | Integrates with existing Westgard QC system |
+
+### Updated Sample Workflow Diagram
+
+```
+                                    ┌─────────────────────────────────────────┐
+                                    │         RUNSHEET LIFECYCLE              │
+                                    │  draft → running → completed (→ voided) │
+                                    └─────────────────────────────────────────┘
+                                                      │
+                                                      │ "running" triggers:
+                                                      │ • Lock well assignments
+                                                      │ • Samples → in_progress
+                                                      ▼
+┌──────────┐    ┌──────────┐    ┌─────────────┐    ┌────────┐    ┌───────────┐
+│ Received │───▶│ Assigned │───▶│ In Progress │───▶│ Review │───▶│ Completed │
+└──────────┘    └──────────┘    └─────────────┘    └────────┘    └───────────┘
+                     │                 ▲                ▲
+                     │                 │                │
+                     │    ┌────────────┴───┐            │
+                     │    │ Two entry paths│            │
+                     │    ├────────────────┤            │
+                     │    │ A) Runsheet    │────────────┤ Submit from
+                     │    │ B) Manual      │            │ plate view
+                     └───▶└────────────────┘            │ (partial OK)
+                                   │                    │
+                                   │    ┌───────────────┘
+                                   │    │ Manager review:
+                                   │    │ • Sample queue (default)
+                                   │    │ • Plate view (toggle)
+                                   ▼    ▼
+                          ┌─────────────────┐
+                          │ Rejection flow: │
+                          │ • Original data │
+                          │   immutable     │
+                          │ • Create retest │
+                          │   with linkage  │
+                          └─────────────────┘
+```
+
+### Decision 9: Runsheet as Optional Tool
+
+**Decision**: Runsheet is a tool within the `in_progress` phase, not a mandatory workflow step.
+
+**Rationale**:
+- Not all assays require plate-based execution (colorimetric, volumetric, qualification tests)
+- Analyst can enter results manually via existing results page (legacy mode)
+- Samples move to `in_progress` via EITHER path: runsheet OR manual entry
+- Maximum flexibility for mixed workflows
+
+**Two Entry Paths**:
+```
+Path A: Runsheet-based (plate assays)
+  Sample → Assigned → Add to Runsheet → Start Run → Enter on Plate → In Progress
+
+Path B: Manual (non-plate assays)
+  Sample → Assigned → Enter Result Manually → In Progress
+```
+
+### Decision 10: Runsheet Lifecycle Triggers
+
+**Decision**: When runsheet transitions to `running`:
+1. Lock all well assignments (no further changes)
+2. Transition all linked samples with status `assigned` to `in_progress`
+
+**Rationale**:
+- Mirrors physical reality: starting the instrument means samples are now being analyzed
+- Automates status bookkeeping
+- Prevents accidental well changes during instrument run
+
+**Implementation**:
+```sql
+-- RPC function: start_runsheet_run(runsheet_id)
+UPDATE runsheets SET status = 'running', started_at = NOW() WHERE id = $1;
+
+UPDATE samples SET status = 'in_progress'
+WHERE id IN (
+    SELECT DISTINCT r.sample_id
+    FROM runsheet_wells rw
+    JOIN results r ON r.id = rw.result_id
+    WHERE rw.runsheet_id = $1
+)
+AND status = 'assigned';
+```
+
+### Decision 11: Result Entry on Plate Grid
+
+**Decision**: Primary result entry happens on the plate grid with an expandable detail panel.
+
+**Rationale**:
+- Single-page experience keeps analyst focused on plate context
+- Click well → side panel shows full result form (value, notes, flags)
+- Existing results page remains for sample-centric view and review
+
+**UI Flow**:
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ Plate Grid                              │ Detail Panel              │
+│ ┌─────────────────────────────────────┐ │ ┌───────────────────────┐ │
+│ │ 1   2   3   4   5   6   7   8  ...  │ │ │ Well: A3              │ │
+│ │ A  [●] [●] [◉] [ ] [ ] [ ] [ ] ...  │ │ │ Sample: MAU-001       │ │
+│ │ B  [ ] [ ] [ ] [ ] [ ] [ ] [ ] ...  │ │ │ Assay: Glucose        │ │
+│ │ ...                                 │ │ │ ───────────────────── │ │
+│ └─────────────────────────────────────┘ │ │ Value: [_________]    │ │
+│                                         │ │ Units: mg/dL          │ │
+│ [●] = assigned  [◉] = selected          │ │ Notes: [__________]   │ │
+│                                         │ │ [Save] [Next Well]    │ │
+│                                         │ └───────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Decision 12: Partial Plate Submission
+
+**Decision**: Support submitting selected wells from plate view (hybrid submission).
+
+**Rationale**:
+- Real-world plates often have some samples ready before others
+- Analyst can select wells → "Submit Selected for Review"
+- Plate grid shows submission status per well (visual indicator)
+- Maximum flexibility for partial completion scenarios
+
+**Well Submission States**:
+```typescript
+interface WellSubmissionState {
+  resultStatus: 'pending' | 'entered' | 'submitted' | 'approved' | 'rejected'
+  canSubmit: boolean  // true if 'entered' and not already submitted
+}
+```
+
+### Decision 13: Manager Review Views
+
+**Decision**: Managers have access to both sample-based approval queue (default) and plate-based review view (toggle).
+
+**Rationale**:
+- Routine review uses fast queue view (existing approval-queue-table)
+- QC investigation uses plate view to spot patterns (edge effects, drift)
+- Manager chooses based on situation
+
+**Plate Review Features**:
+- Read-only plate grid showing result values
+- Color coding by approval status
+- "Approve All" / "Reject Selected" batch actions
+- Visual highlighting of outliers
+
+### Decision 14: Rejection and Retest Workflow
+
+**Decision**: Original data is immutable. Rejected results stay with status `retest_required`. Retest creates NEW result record with `parent_result_id` linkage.
+
+**Rationale**:
+- 21 CFR Part 11 compliance: original data never modified
+- Full audit trail of rejection reason and retest values
+- Clear linkage between original and retest results
+
+**Schema Addition**:
+```sql
+-- Add to results table
+ALTER TABLE results ADD COLUMN parent_result_id UUID REFERENCES results(id);
+ALTER TABLE results ADD COLUMN retest_reason TEXT;
+
+-- New status value
+-- results.status: 'pending' | 'entered' | 'retest_required' | 'approved' | 'rejected'
+```
+
+**Retest Flow**:
+```
+Original Result (status: 'retest_required')
+    ↓ rejection_reason: "Out of spec - verify"
+    ↓
+Retest Result (parent_result_id → original)
+    ↓ retest_reason: "Re-analyzed per SOP-123"
+    ↓ status: 'entered' → 'approved'
+```
+
+### Decision 15: QC Well Routing
+
+**Decision**: Hybrid routing for QC wells:
+- **Blanks** → `runsheet_wells` only (plate contamination check)
+- **Standards** → `runsheet_wells` only (calibration curve for this plate)
+- **Controls** (QC materials) → `runsheet_wells` + `qc_results` (feeds Westgard)
+
+**Rationale**:
+- Blanks/standards are plate-specific, not tracked longitudinally
+- Controls using registered QC materials should feed into Westgard IQC system
+- Integrates with existing Westgard QC design (`openspec/changes/add-westgard-qc`)
+
+**Schema Integration**:
+```sql
+-- runsheet_wells additions for QC
+ALTER TABLE runsheet_wells ADD COLUMN qc_material_id UUID REFERENCES qc_materials(id);
+ALTER TABLE runsheet_wells ADD COLUMN expected_value NUMERIC;
+ALTER TABLE runsheet_wells ADD COLUMN actual_value NUMERIC;
+ALTER TABLE runsheet_wells ADD COLUMN qc_passed BOOLEAN;
+
+-- When control well has qc_material_id, also create qc_results entry
+-- Trigger: on INSERT/UPDATE of runsheet_wells WHERE well_type = 'control' AND qc_material_id IS NOT NULL
+```
+
+**QC Routing Logic**:
+```
+Well Type = 'blank'
+  → Store in runsheet_wells (expected_value = 0, check actual < threshold)
+  → No Westgard tracking
+
+Well Type = 'standard'
+  → Store in runsheet_wells (expected_value = concentration)
+  → Build calibration curve for plate
+  → No Westgard tracking
+
+Well Type = 'control' + qc_material_id
+  → Store in runsheet_wells
+  → ALSO create qc_results entry (feeds Westgard evaluation)
+  → Westgard rules applied, may block plate
+```
