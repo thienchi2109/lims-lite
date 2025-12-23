@@ -106,15 +106,17 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                     <SampleStatusBadge status={sample.status} />
-                    <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => setEditDialogOpen(true)}
-                        title="Chỉnh sửa thông tin"
-                        className="h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50"
-                    >
-                        <Pencil className="h-4 w-4" />
-                    </Button>
+                    {['received', 'assigned'].includes(sample.status) && (
+                        <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => setEditDialogOpen(true)}
+                            title="Chỉnh sửa thông tin"
+                            className="h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50"
+                        >
+                            <Pencil className="h-4 w-4" />
+                        </Button>
+                    )}
                 </div>
             </div>
 
