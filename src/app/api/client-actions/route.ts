@@ -51,6 +51,7 @@ import {
     searchAuditLogs,
     globalSearch,
 } from '@/app/actions/search'
+import { generateCoA, regenerateCoA } from '@/app/actions/coa'
 import { isIsoDateString } from '@/lib/iso-date'
 import type { ClientActionName, ClientActionRequest } from '@/lib/client-actions/types'
 
@@ -283,6 +284,19 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
             return { error: 'Từ khóa tìm kiếm là bắt buộc' }
         }
         return globalSearch(payload.query, payload.maxResults)
+    },
+    // CoA generation actions (Phase: CoA Template Enrichment)
+    generateCoA: async (payload) => {
+        if (!payload?.sampleId) {
+            return { error: 'Sample ID là bắt buộc' }
+        }
+        return generateCoA(payload.sampleId, payload.manualInputs)
+    },
+    regenerateCoA: async (payload) => {
+        if (!payload?.sampleId) {
+            return { error: 'Sample ID là bắt buộc' }
+        }
+        return regenerateCoA(payload.sampleId, payload.manualInputs)
     },
 }
 

@@ -596,14 +596,14 @@ export const ActiveSignatureSchema = z.object({
     signature_path: z.string(),
     signature_hash: z.string(),
     mime_type: z.enum(['image/png', 'image/jpeg']),
-    uploaded_at: z.string(), // PostgreSQL timestamptz - accept any string format
+    uploaded_at: z.coerce.date(), // Coerce PostgreSQL timestamptz to Date object
 })
 
 export type ActiveSignature = z.infer<typeof ActiveSignatureSchema>
 
 export const SignatureHistoryItemSchema = z.object({
     id: z.string().uuid(),
-    uploaded_at: z.string(), // PostgreSQL timestamptz - accept any string format
+    uploaded_at: z.coerce.date(), // Coerce PostgreSQL timestamptz to Date object
     is_active: z.boolean(),
     file_size: z.number().int(),
     mime_type: z.enum(['image/png', 'image/jpeg']),
@@ -714,6 +714,61 @@ export const CoAAccessLogWithClientSchema = CoAAccessLogSchema.extend({
 })
 
 export type CoAAccessLogWithClient = z.infer<typeof CoAAccessLogWithClientSchema>
+
+// ============================================================================
+// COA MANUAL INPUTS (Phase: CoA Template Enrichment)
+// ============================================================================
+
+// Manual inputs required for CoA generation
+export const CoAManualInputsSchema = z.object({
+    referrer: z.string()
+        .min(1, 'Bác sĩ chỉ định là bắt buộc')
+        .max(200, 'Tên bác sĩ chỉ định tối đa 200 ký tự'),
+    sampleQuality: z.enum(['Tốt', 'Đạt', 'Không đạt'], {
+        message: 'Chất lượng mẫu không hợp lệ'
+    }),
+})
+
+export type CoAManualInputs = z.infer<typeof CoAManualInputsSchema>
+
+// Extended SampleData interface with client demographic fields (for CoA rendering)
+export const SampleDataSchema = z.object({
+    id: z.string().uuid(),
+    sample_id_display: z.string(),
+    approved_by: z.string().uuid().nullable(),
+    approved_at: z.string().nullable(),
+    client_name: z.string().optional(),
+    sample_type: z.string().optional(),
+    received_date: z.string().optional(),
+    // Client demographic fields for CoA
+    client_dob: z.string().nullable().optional(),
+    client_gender: Gender.nullable().optional(),
+    client_address: z.string().nullable().optional(),
+    client_health_insurance_num: z.string().nullable().optional(),
+})
+
+export type SampleData = z.infer<typeof SampleDataSchema>
+
+// Extended CoAData interface with testing date and manual inputs
+export const CoADataSchema = z.object({
+    sample: SampleDataSchema,
+    results: z.array(z.object({
+        assay_name: z.string(),
+        value: z.string().nullable(),
+        unit: z.string().nullable(),
+        normal_range: z.string().nullable(),
+        method_name: z.string().nullable(),
+        lab_specialty_name: z.string().nullable(),
+    })),
+    approverName: z.string(),
+    approverSignature: z.string().nullable(),
+    signatureId: z.string().uuid().nullable(),
+    approvalDate: z.string(),
+    testingDate: z.string().nullable().optional(), // Date sample first moved to in_progress
+    manualInputs: CoAManualInputsSchema.optional(), // Referrer and sample quality
+})
+
+export type CoAData = z.infer<typeof CoADataSchema>
 
 // ============================================================================
 // SEARCH SCHEMAS

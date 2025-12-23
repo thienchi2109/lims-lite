@@ -14,6 +14,7 @@ import type {
     RejectSample,
     DiscardSample,
     CreateClient,
+    CoAManualInputs,
 } from '@/types'
 import type { ClientActionName } from '@/lib/client-actions/types'
 
@@ -363,3 +364,31 @@ export function searchAuditLogsClient(query: string, maxResults?: number) {
 export function globalSearchClient(query: string, maxResults?: number) {
     return callClientAction('globalSearch', { query, maxResults })
 }
+
+// ============================================================================
+// COA GENERATION (Phase: CoA Template Enrichment)
+// ============================================================================
+
+/**
+ * Generate Certificate of Analysis for approved sample
+ * Manager-only feature
+ *
+ * @param sampleId - UUID of the approved sample
+ * @param manualInputs - Optional manual inputs (referrer, sample quality)
+ */
+export function generateCoAClient(sampleId: string, manualInputs?: CoAManualInputs) {
+    return callClientAction('generateCoA', { sampleId, manualInputs })
+}
+
+/**
+ * Regenerate existing Certificate of Analysis
+ * Used when CoA generation failed or needs updating
+ * Manager-only feature
+ *
+ * @param sampleId - UUID of the approved sample
+ * @param manualInputs - Optional manual inputs (referrer, sample quality)
+ */
+export function regenerateCoAClient(sampleId: string, manualInputs?: CoAManualInputs) {
+    return callClientAction('regenerateCoA', { sampleId, manualInputs })
+}
+

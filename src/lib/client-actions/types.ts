@@ -39,6 +39,8 @@ export type ClientActionName =
     | 'searchResults'
     | 'searchAuditLogs'
     | 'globalSearch'
+    | 'generateCoA'
+    | 'regenerateCoA'
 
 export interface ClientActionRequest {
     action: ClientActionName

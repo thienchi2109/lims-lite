@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createHash } from 'crypto'
 import { getActiveSignature, downloadSignature } from './signatures'
+import type { SampleData, CoAData, CoAManualInputs } from '@/types'
 
 /**
  * Certificate of Analysis (CoA) Generation
@@ -28,16 +29,6 @@ type GenerateCoAResult =
     | { success: true; coaId: string; filePath: string }
     | { success: false; error: string }
 
-interface SampleData {
-    id: string
-    sample_id_display: string
-    approved_by: string | null
-    approved_at: string | null
-    client_name?: string
-    sample_type?: string
-    received_date?: string
-}
-
 interface TestResult {
     assay_name: string
     value: string | null
@@ -45,15 +36,6 @@ interface TestResult {
     normal_range: string | null
     method_name: string | null
     lab_specialty_name: string | null
-}
-
-interface CoAData {
-    sample: SampleData
-    results: TestResult[]
-    approverName: string
-    approverSignature: string | null // base64 data URI (optional - null shows placeholder)
-    signatureId: string | null
-    approvalDate: string
 }
 
 // ============================================================================
@@ -66,7 +48,7 @@ interface CoAData {
 async function fetchSampleWithApprover(sampleId: string): Promise<SampleData | null> {
     const supabase = await createClient()
 
-    // Fetch sample with client info
+    // Fetch sample with client info including demographic fields
     const { data: sample, error: sampleError } = await supabase
         .from('samples')
         .select(`
@@ -76,7 +58,11 @@ async function fetchSampleWithApprover(sampleId: string): Promise<SampleData | n
             received_at,
             status,
             clients!inner (
-                name
+                name,
+                date_of_birth,
+                gender,
+                address,
+                health_insurance_num
             )
         `)
         .eq('id', sampleId)
@@ -111,8 +97,57 @@ async function fetchSampleWithApprover(sampleId: string): Promise<SampleData | n
         approved_at: approvedResult.approved_at,
         client_name: (sample.clients as any)?.name,
         sample_type: sample.type,
-        received_date: sample.received_at
+        received_date: sample.received_at,
+        // Client demographic fields for CoA template
+        client_dob: (sample.clients as any)?.date_of_birth || null,
+        client_gender: (sample.clients as any)?.gender || null,
+        client_address: (sample.clients as any)?.address || null,
+        client_health_insurance_num: (sample.clients as any)?.health_insurance_num || null,
     }
+}
+
+/**
+ * Fetch testing date from audit logs
+ * Returns the date when sample first moved to 'in_progress' status
+ * Falls back to received_at if no audit log exists
+ */
+async function fetchTestingDate(sampleId: string): Promise<string | null> {
+    const supabase = await createClient()
+
+    // Query audit_logs for first transition to in_progress
+    const { data: auditLog, error } = await supabase
+        .from('audit_logs')
+        .select('changed_at')
+        .eq('table_name', 'samples')
+        .eq('record_id', sampleId)
+        .eq('operation', 'UPDATE')
+        .filter('new_values->>status', 'eq', 'in_progress')
+        .order('changed_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+
+    if (error) {
+        console.error('Fetch testing date error:', error)
+        return null
+    }
+
+    if (auditLog) {
+        return auditLog.changed_at
+    }
+
+    // Fallback: use received_at from samples table
+    const { data: sample, error: sampleError } = await supabase
+        .from('samples')
+        .select('received_at')
+        .eq('id', sampleId)
+        .single()
+
+    if (sampleError || !sample) {
+        console.error('Fetch sample for testing date fallback error:', sampleError)
+        return null
+    }
+
+    return sample.received_at
 }
 
 /**
@@ -474,8 +509,48 @@ function renderCoATemplate(coaData: CoAData): string {
                 <tr>
                     <td class="info-label">Ngày nhận mẫu:</td>
                     <td class="info-value">${coaData.sample.received_date ? new Date(coaData.sample.received_date).toLocaleDateString('vi-VN') : 'N/A'}</td>
+                    <td class="info-label">Ngày xét nghiệm:</td>
+                    <td class="info-value">${coaData.testingDate ? new Date(coaData.testingDate).toLocaleDateString('vi-VN') : 'N/A'}</td>
+                </tr>
+                <tr>
                     <td class="info-label">Ngày phê duyệt:</td>
                     <td class="info-value">${dateStr}</td>
+                    <td class="info-label">Bác sĩ chỉ định:</td>
+                    <td class="info-value">${coaData.manualInputs?.referrer || 'N/A'}</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- ADMINISTRATIVE INFORMATION -->
+        <div style="margin-bottom: 20px;">
+            <h3 style="font-size: 14px; font-weight: bold; margin-bottom: 10px; text-transform: uppercase; color: #333;">Thông tin hành chính</h3>
+            <table>
+                <tr>
+                    <td class="info-label">Ngày sinh:</td>
+                    <td class="info-value">${coaData.sample.client_dob ? new Date(coaData.sample.client_dob).toLocaleDateString('vi-VN') : 'N/A'}</td>
+                    <td class="info-label">Giới tính:</td>
+                    <td class="info-value">${coaData.sample.client_gender || 'N/A'}</td>
+                </tr>
+                <tr>
+                    <td class="info-label">Địa chỉ:</td>
+                    <td class="info-value" colspan="3">${coaData.sample.client_address || 'N/A'}</td>
+                </tr>
+                <tr>
+                    <td class="info-label">Số BHYT:</td>
+                    <td class="info-value" colspan="3">${coaData.sample.client_health_insurance_num || 'N/A'}</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- SAMPLE INFORMATION -->
+        <div style="margin-bottom: 20px;">
+            <h3 style="font-size: 14px; font-weight: bold; margin-bottom: 10px; text-transform: uppercase; color: #333;">Thông tin mẫu</h3>
+            <table>
+                <tr>
+                    <td class="info-label">Chất lượng mẫu:</td>
+                    <td class="info-value">${coaData.manualInputs?.sampleQuality || 'N/A'}</td>
+                    <td class="info-label">Loại mẫu:</td>
+                    <td class="info-value">${coaData.sample.sample_type || 'N/A'}</td>
                 </tr>
             </table>
         </div>
@@ -621,9 +696,24 @@ function generateHtmlHash(html: string): string {
  * - File hash verifies integrity of entire document
  * - Satisfies 21 CFR Part 11 §11.70 (signature/record linking)
  */
-export async function generateCoA(sampleId: string): Promise<GenerateCoAResult> {
+export async function generateCoA(
+    sampleId: string,
+    manualInputs?: CoAManualInputs
+): Promise<GenerateCoAResult> {
     try {
         const supabase = await createClient()
+
+        // Validate manual inputs if provided
+        if (manualInputs) {
+            const { CoAManualInputsSchema } = await import('@/types')
+            const validationResult = CoAManualInputsSchema.safeParse(manualInputs)
+            if (!validationResult.success) {
+                return {
+                    success: false,
+                    error: 'Thông tin nhập không hợp lệ: ' + validationResult.error.issues[0].message
+                }
+            }
+        }
 
         // Only managers can generate CoA
         const {
@@ -708,6 +798,9 @@ export async function generateCoA(sampleId: string): Promise<GenerateCoAResult> 
         // Step 7: Fetch test results
         const results = await fetchTestResults(sampleId)
 
+        // Step 7.5: Fetch testing date from audit logs
+        const testingDate = await fetchTestingDate(sampleId)
+
         // Step 8: Generate HTML with embedded signature and test results
         const coaData: CoAData = {
             sample,
@@ -715,7 +808,9 @@ export async function generateCoA(sampleId: string): Promise<GenerateCoAResult> 
             approverName: approverData.full_name,
             approverSignature: signatureDataUri,
             signatureId: signatureId,
-            approvalDate: sample.approved_at ? new Date(sample.approved_at).toLocaleDateString('vi-VN') : 'N/A'
+            approvalDate: sample.approved_at ? new Date(sample.approved_at).toLocaleDateString('vi-VN') : 'N/A',
+            testingDate: testingDate,
+            manualInputs: manualInputs,
         }
 
         const html = renderCoATemplate(coaData)
@@ -837,9 +932,24 @@ export async function generateCoA(sampleId: string): Promise<GenerateCoAResult> 
  * - Template was updated and needs regeneration
  * - CoA already exists and needs to be updated
  */
-export async function regenerateCoA(sampleId: string): Promise<GenerateCoAResult> {
+export async function regenerateCoA(
+    sampleId: string,
+    manualInputs?: CoAManualInputs
+): Promise<GenerateCoAResult> {
     try {
         const supabase = await createClient()
+
+        // Validate manual inputs if provided
+        if (manualInputs) {
+            const { CoAManualInputsSchema } = await import('@/types')
+            const validationResult = CoAManualInputsSchema.safeParse(manualInputs)
+            if (!validationResult.success) {
+                return {
+                    success: false,
+                    error: 'Thông tin nhập không hợp lệ: ' + validationResult.error.issues[0].message
+                }
+            }
+        }
 
         // Check if CoA exists
         const version = 1 // TODO Phase 4: Implement versioning logic
@@ -878,7 +988,7 @@ export async function regenerateCoA(sampleId: string): Promise<GenerateCoAResult
         }
 
         // Now call generateCoA which will update the existing record
-        const result = await generateCoA(sampleId)
+        const result = await generateCoA(sampleId, manualInputs)
 
         // If regeneration failed and we had a previously ready CoA, restore it
         if (!result.success && previousState && existingCoa) {
