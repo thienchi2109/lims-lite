@@ -307,9 +307,7 @@ export function generatePrintTemplate(sample: SampleForPrint, results: ResultWit
                 </tr>
                 <tr>
                     <td class="info-label">Địa chỉ:</td>
-                    <td class="info-value" colspan="3">${address || '....................................................................................'}</td>
-                    <td class="info-label">Điện thoại:</td>
-                    <td class="info-value">${phone || '............'}</td>
+                    <td class="info-value" colspan="5">${address || '..........................................................................................................................................'}</td>
                 </tr>
                  <tr>
                     <td class="info-label">Bác sĩ CĐ:</td>
