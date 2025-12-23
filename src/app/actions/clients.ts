@@ -44,6 +44,7 @@ export async function getClient(id: string) {
 /**
  * Upsert client by (name, date_of_birth)
  * Uses UNIQUE constraint to find existing or create new
+ * Also checks for phone number conflicts to prevent duplicates
  */
 export async function upsertClient(data: CreateClient) {
     try {
@@ -57,6 +58,29 @@ export async function upsertClient(data: CreateClient) {
 
         // Validate input
         const validatedData = CreateClientSchema.parse(data)
+
+        // Check if phone number already belongs to a different client
+        if (validatedData.phone && validatedData.phone !== '0000000000') {
+            const { data: existingByPhone } = await supabase
+                .from('clients')
+                .select('id, name, date_of_birth')
+                .eq('phone', validatedData.phone)
+                .single()
+
+            if (existingByPhone) {
+                // Check if it's a different person (different name or DOB)
+                const isSamePerson =
+                    existingByPhone.name.toLowerCase() === validatedData.name.toLowerCase() &&
+                    existingByPhone.date_of_birth === validatedData.date_of_birth
+
+                if (!isSamePerson) {
+                    return {
+                        error: `Số điện thoại ${validatedData.phone} đã được sử dụng bởi khách hàng "${existingByPhone.name}". Vui lòng sử dụng số điện thoại khác hoặc chọn khách hàng hiện có.`,
+                        existingClient: existingByPhone,
+                    }
+                }
+            }
+        }
 
         // Attempt INSERT, if conflict on (name, DOB) then UPDATE
         const { data: client, error } = await supabase
@@ -82,6 +106,10 @@ export async function upsertClient(data: CreateClient) {
 
         if (error) {
             console.error('Error upserting client:', error)
+            // Handle unique constraint violation on phone
+            if (error.code === '23505' && error.message.includes('phone')) {
+                return { error: 'Số điện thoại này đã được sử dụng bởi khách hàng khác' }
+            }
             return { error: error.message }
         }
 
@@ -92,6 +120,46 @@ export async function upsertClient(data: CreateClient) {
     } catch (error) {
         console.error('Error in upsertClient:', error)
         return { error: error instanceof Error ? error.message : 'Failed to save client' }
+    }
+}
+
+/**
+ * Find client by phone number
+ * Returns existing client if phone already exists (for duplicate prevention)
+ */
+export async function findClientByPhone(phone: string) {
+    try {
+        const supabase = await createSupabaseClient()
+
+        const trimmedPhone = phone.trim()
+        if (!trimmedPhone || trimmedPhone.length < 10) {
+            return { data: null }
+        }
+
+        // Skip placeholder phones
+        if (trimmedPhone === '0000000000') {
+            return { data: null }
+        }
+
+        const { data: client, error } = await supabase
+            .from('clients')
+            .select('*')
+            .eq('phone', trimmedPhone)
+            .single()
+
+        if (error) {
+            if (error.code === 'PGRST116') {
+                // No rows found - not an error, just return null
+                return { data: null }
+            }
+            console.error('Error finding client by phone:', error)
+            return { error: error.message }
+        }
+
+        return { data: client as Client }
+    } catch (error) {
+        console.error('Error in findClientByPhone:', error)
+        return { error: error instanceof Error ? error.message : 'Failed to find client' }
     }
 }
 
