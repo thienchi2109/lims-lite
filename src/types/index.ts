@@ -858,102 +858,102 @@ export type GlobalSearchResult = z.infer<typeof GlobalSearchResultSchema>
 
 // Date range for filtering reports
 export const DateRangeSchema = z.object({
-  start: z.string().datetime(),
-  end: z.string().datetime(),
+    start: z.string().datetime(),
+    end: z.string().datetime(),
 })
 
 export type DateRange = z.infer<typeof DateRangeSchema>
 
 // KPI Metrics for dashboard cards
 export const KPIMetricsSchema = z.object({
-  avgTAT: z.object({
-    value: z.number(),
-    unit: z.enum(['hours', 'days']),
-    trend: z.number(), // Percentage change vs previous period
-    previousValue: z.number(),
-  }),
-  wipCount: z.object({
-    value: z.number(),
-    breakdown: z.array(z.object({
-      status: z.string(),
-      count: z.number(),
-    })),
-  }),
-  pendingApprovals: z.object({
-    count: z.number(),
-    avgWaitHours: z.number(),
-    overdueCount: z.number(),
-    isAlert: z.boolean(), // True if >20 samples OR avg wait >24h
-  }),
-  onTimeRate: z.object({
-    value: z.number(), // Percentage
-    trend: z.number(),
-    color: z.enum(['green', 'yellow', 'red']),
-  }),
-  errorRate: z.object({
-    value: z.number(), // Percentage
-    totalModifications: z.number(),
-    totalResults: z.number(),
-    trend: z.number(),
-  }),
+    avgTAT: z.object({
+        value: z.number(),
+        unit: z.enum(['hours', 'days']),
+        trend: z.number(), // Percentage change vs previous period
+        previousValue: z.number(),
+    }),
+    wipCount: z.object({
+        value: z.number(),
+        breakdown: z.array(z.object({
+            status: z.string(),
+            count: z.number(),
+        })),
+    }),
+    pendingApprovals: z.object({
+        count: z.number(),
+        avgWaitHours: z.number(),
+        overdueCount: z.number(),
+        isAlert: z.boolean(), // True if >20 samples OR avg wait >24h
+    }),
+    onTimeRate: z.object({
+        value: z.number(), // Percentage
+        trend: z.number(),
+        color: z.enum(['green', 'yellow', 'red']),
+    }),
+    errorRate: z.object({
+        value: z.number(), // Percentage
+        totalModifications: z.number(),
+        totalResults: z.number(),
+        trend: z.number(),
+    }),
 })
 
 export type KPIMetrics = z.infer<typeof KPIMetricsSchema>
 
 // TAT Trend Data for line chart
 export const TATTrendDataSchema = z.object({
-  date: z.string(), // ISO date string
-  avgTATHours: z.number(),
-  sampleCount: z.number(),
+    date: z.string(), // ISO date string
+    avgTATHours: z.number(),
+    sampleCount: z.number(),
 })
 
 export type TATTrendData = z.infer<typeof TATTrendDataSchema>
 
 // Sample Accession Trend Data for combined bar + line chart
 export const SampleAccessionTrendDataSchema = z.object({
-  period: z.string(), // "2024-01-15" (daily), "2024-01" (monthly), "2024" (yearly)
-  sampleCount: z.number(), // Samples received in this period
-  cumulativeCount: z.number(), // Running total up to this period
+    period: z.string(), // "2024-01-15" (daily), "2024-01" (monthly), "2024" (yearly)
+    sampleCount: z.number(), // Samples received in this period
+    cumulativeCount: z.number(), // Running total up to this period
 })
 
 export type SampleAccessionTrendData = z.infer<typeof SampleAccessionTrendDataSchema>
 
 // Sample Status Distribution for bar chart
 export const SampleStatusDataSchema = z.object({
-  status: z.string(),
-  count: z.number(),
+    status: z.string(),
+    count: z.number(),
 })
 
 export type SampleStatusData = z.infer<typeof SampleStatusDataSchema>
 
 // CoA Statistics for donut chart
 export const CoAStatisticsSchema = z.object({
-  segment: z.string(), // 'Generated', 'Pending CoA', 'Not Approved'
-  count: z.number(),
-  percentage: z.number(),
+    segment: z.string(), // 'Generated', 'Pending CoA', 'Not Approved'
+    count: z.number(),
+    percentage: z.number(),
 })
 
 export type CoAStatistics = z.infer<typeof CoAStatisticsSchema>
 
 // Staff Productivity Data (Manager-only)
 export const StaffProductivityDataSchema = z.object({
-  analystId: z.string().uuid(),
-  analystName: z.string(),
-  testsCompleted: z.number(),
-  resultsModified: z.number(),
+    analystId: z.string().uuid(),
+    analystName: z.string(),
+    testsCompleted: z.number(),
+    resultsModified: z.number(),
 })
 
 export type StaffProductivityData = z.infer<typeof StaffProductivityDataSchema>
 
 // Recent Sample for table display
 export const RecentSampleSchema = z.object({
-  id: z.string().uuid(),
-  sampleId: z.string(),
-  clientName: z.string(),
-  receivedAt: z.string().datetime(),
-  completedAt: z.string().datetime().nullable(),
-  status: SampleStatus,
-  tatHours: z.number().nullable(),
+    id: z.string().uuid(),
+    sampleId: z.string(),
+    clientName: z.string(),
+    receivedAt: z.string().datetime(),
+    completedAt: z.string().datetime().nullable(),
+    status: SampleStatus,
+    tatHours: z.number().nullable(),
 })
 
 export type RecentSample = z.infer<typeof RecentSampleSchema>
