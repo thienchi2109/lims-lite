@@ -200,6 +200,17 @@ function renderCoATemplate(coaData: CoAData): string {
 
 
 
+    // Format date for footer "Cần Thơ, ngày... tháng... năm..."
+    let footerDateStr = dateStr;
+    try {
+        if (dateStr && dateStr.includes('/')) {
+            const [day, month, year] = dateStr.split('/');
+            footerDateStr = `ngày ${day} tháng ${month} năm ${year}`;
+        }
+    } catch (e) {
+        console.error('Error formatting date:', e);
+    }
+
     return `
 <!DOCTYPE html>
 <html lang="vi">
@@ -389,7 +400,7 @@ function renderCoATemplate(coaData: CoAData): string {
         }
 
         .footer-sign-area {
-            height: 100px;
+            height: 120px;
             margin-top: 10px;
             display: flex;
             align-items: center;
@@ -397,8 +408,8 @@ function renderCoATemplate(coaData: CoAData): string {
         }
 
         .signature-image {
-            max-width: 200px;
-            max-height: 80px;
+            max-width: 250px;
+            max-height: 100px;
             display: block;
             margin: 0 auto;
         }
@@ -543,7 +554,7 @@ function renderCoATemplate(coaData: CoAData): string {
                 <div style="font-weight: bold;">KTV. .................................</div>
             </div>
             <div class="footer-col">
-                <div style="font-style: italic; margin-bottom: 5px;">Cần Thơ, ${dateStr}</div>
+                <div style="font-style: italic; margin-bottom: 5px;">Cần Thơ, ${footerDateStr}</div>
                 <div class="footer-title">LÃNH ĐẠO KHOA XÉT NGHIỆM</div>
                 <div class="footer-sign-area">
                     ${coaData.approverSignature ? `<img src="${coaData.approverSignature}" alt="Chữ ký" class="signature-image" />` : ''}
