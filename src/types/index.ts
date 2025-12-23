@@ -596,14 +596,14 @@ export const ActiveSignatureSchema = z.object({
     signature_path: z.string(),
     signature_hash: z.string(),
     mime_type: z.enum(['image/png', 'image/jpeg']),
-    uploaded_at: z.string().datetime(),
+    uploaded_at: z.string(), // PostgreSQL timestamptz - accept any string format
 })
 
 export type ActiveSignature = z.infer<typeof ActiveSignatureSchema>
 
 export const SignatureHistoryItemSchema = z.object({
     id: z.string().uuid(),
-    uploaded_at: z.string().datetime(),
+    uploaded_at: z.string(), // PostgreSQL timestamptz - accept any string format
     is_active: z.boolean(),
     file_size: z.number().int(),
     mime_type: z.enum(['image/png', 'image/jpeg']),
