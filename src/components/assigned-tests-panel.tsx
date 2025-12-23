@@ -23,7 +23,6 @@ import {
     Printer,
     AlertCircle,
     FileText,
-    Download,
 } from 'lucide-react'
 import {
     Dialog,
@@ -369,7 +368,7 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
                         In Phiếu chỉ định
                     </Button>
 
-                    {/* CoA Generation/Download Button - Only for completed samples */}
+                    {/* CoA Generation/View Button - Only for completed samples */}
                     {sampleStatus === 'completed' && (
                         <>
                             {!coaStatus || coaStatus === 'failed' ? (
@@ -388,10 +387,10 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
                                     variant="outline"
                                     size="sm"
                                     className="gap-2 border-blue-200 bg-white text-blue-600 hover:bg-blue-50"
-                                    onClick={() => toast.info('Chức năng tải xuống đang được phát triển')}
+                                    onClick={() => window.open(`/api/coa/view?sample_id=${sampleId}`, '_blank')}
                                 >
-                                    <Download className="h-4 w-4" />
-                                    Tải CoA
+                                    <FileText className="h-4 w-4" />
+                                    Xem phiếu KQ
                                 </Button>
                             )}
                         </>
