@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { getCoAAccessLogs } from '@/app/actions/coa'
+import { getCoAAccessLogs } from '@/app/actions/coa-access-logs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { CheckCircle2, XCircle, Clock, Monitor } from 'lucide-react'
