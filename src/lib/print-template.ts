@@ -53,6 +53,11 @@ export function generatePrintTemplate(sample: SampleForPrint, results: ResultWit
     displayResults.push(...testsByCategory[cat]);
   });
 
+  /* Logic for Portal URL */
+  const origin = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL || '');
+  const portalUrl = `${origin}/coa/access`;
+  const portalQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(portalUrl)}&margin=0`;
+
   return `
     <!DOCTYPE html>
     <html lang="vi">
@@ -64,16 +69,17 @@ export function generatePrintTemplate(sample: SampleForPrint, results: ResultWit
         
         body { 
           font-family: 'Times New Roman', serif; 
-          font-size: 10px; 
+          font-size: 13px; 
           color: #111;
-          line-height: 1.2;
+          line-height: 1.3;
           background: #fff;
           margin: 0;
-          padding: 5px;
+          padding: 0;
         }
 
         .container {
-          max-width: 148mm;
+          width: 100%;
+          max-width: 100%;
           margin: 0 auto;
           background: white;
         }
@@ -83,9 +89,9 @@ export function generatePrintTemplate(sample: SampleForPrint, results: ResultWit
           display: flex;
           align-items: flex-start;
           justify-content: space-between;
-          margin-bottom: 5px;
-          border-bottom: 1px solid #000;
-          padding-bottom: 5px;
+          margin-bottom: 15px;
+          border-bottom: 2px solid #000;
+          padding-bottom: 10px;
         }
         
         .header-left {
@@ -94,56 +100,56 @@ export function generatePrintTemplate(sample: SampleForPrint, results: ResultWit
           justify-content: center;
           align-items: center;
         }
-        .logo { width: 55px; height: auto; display: block; } 
+        .logo { width: 80px; height: auto; display: block; } 
         
         .header-center {
           flex: 1;
           text-align: center;
-          padding: 0 5px;
+          padding: 0 10px;
           display: flex;
           flex-direction: column;
           justify-content: center;
         }
-        .org-parent { font-size: 10px; font-weight: normal; margin: 0; text-transform: uppercase; }
-        .org-name { font-size: 12px; font-weight: bold; margin: 2px 0 0 0; text-transform: uppercase; color: #000; }
-        .org-address { font-size: 9px; margin-top: 2px; font-style: italic; }
-        .form-name { font-size: 16px; font-weight: bold; margin-top: 5px; text-transform: uppercase; color: #0056b3; }
+        .org-parent { font-size: 13px; font-weight: normal; margin: 0; text-transform: uppercase; }
+        .org-name { font-size: 15px; font-weight: bold; margin: 4px 0 0 0; text-transform: uppercase; color: #000; }
+        .org-address { font-size: 12px; margin-top: 4px; font-style: italic; }
+        .form-name { font-size: 22px; font-weight: bold; margin-top: 10px; text-transform: uppercase; color: #0056b3; }
 
         .header-right {
-          flex: 0 0 20%;
+          flex: 0 0 15%;
           text-align: center;
           display: flex;
           flex-direction: column;
           align-items: center;
         }
-        .qr-img { width: 50px; height: 50px; margin-bottom: 2px; }
-        .sample-id-box { font-family: monospace; font-size: 10px; font-weight: bold; border: 1px solid #ccc; padding: 1px 4px; border-radius: 4px; background: #f8fafc; }
+        .qr-img { width: 70px; height: 70px; margin-bottom: 5px; }
+        .sample-id-box { font-family: monospace; font-size: 12px; font-weight: bold; border: 1px solid #ccc; padding: 2px 6px; border-radius: 4px; background: #f8fafc; }
 
         /* SECTIONS & TABLES */
-        .section-box { margin-bottom: 5px; }
+        .section-box { margin-bottom: 15px; }
         .section-title { 
-          font-size: 11px; 
+          font-size: 14px; 
           font-weight: 700; 
           text-transform: uppercase; 
-          margin-bottom: 2px;
+          margin-bottom: 5px;
           color: #0056b3;
           border-bottom: 1px dotted #ccc;
-          padding-bottom: 1px;
+          padding-bottom: 2px;
         }
 
-        /* Info Table Style - Compact 6-column grid */
-        .info-table { width: 100%; border-collapse: collapse; margin-bottom: 0; font-size: 10px; }
+        /* Info Table Style */
+        .info-table { width: 100%; border-collapse: collapse; margin-bottom: 0; font-size: 13px; }
         .info-table td {
             border: 1px solid #ccc;
-            padding: 2px 4px;
+            padding: 6px 8px;
             vertical-align: middle;
-            height: 18px; /* Force compact height */
         }
         .info-label {
             font-weight: bold;
             color: #333;
             background-color: #f9fafb;
             white-space: nowrap;
+            width: 1%; /* Shrink to fit content */
         }
         .info-value {
             font-weight: 500;
@@ -155,23 +161,23 @@ export function generatePrintTemplate(sample: SampleForPrint, results: ResultWit
         .test-table { 
             width: 100%; 
             border-collapse: collapse; 
-            margin-top: 2px; 
-            font-size: 10px; 
+            margin-top: 5px; 
+            font-size: 13px; 
             border: 1px solid #000;
         }
         .test-table th { 
           border: 1px solid #000; 
-          padding: 3px 4px; 
+          padding: 8px; 
           background-color: #f1f5f9; 
           color: #000;
           font-weight: bold; 
           text-transform: uppercase;
           text-align: left;
-          font-size: 9px;
+          font-size: 12px;
         }
         .test-table td { 
             border: 1px solid #000; 
-            padding: 3px 4px; 
+            padding: 6px 8px; 
             vertical-align: middle; 
             color: #000;
         }
@@ -179,41 +185,80 @@ export function generatePrintTemplate(sample: SampleForPrint, results: ResultWit
           background-color: #f0f9ff; 
           font-weight: bold; 
           text-align: left; 
-          padding-left: 8px;
+          padding-left: 12px;
           color: #dc2626;
           text-transform: uppercase;
-          font-size: 10px;
+          font-size: 13px;
         }
         .center-text { text-align: center; }
         .checkbox-cell {
-            font-size: 12px;
+            font-size: 16px;
             color: #000;
             line-height: 1;
             text-align: center;
+        }
+
+        /* PORTAL GUIDE BOX */
+        .portal-guide-box {
+            margin-top: 25px;
+            border: 2px dashed #0056b3;
+            border-radius: 8px;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background-color: #f8fafc;
+            page-break-inside: avoid;
+        }
+        .portal-qr img {
+            width: 80px;
+            height: 80px;
+            display: block;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .portal-text {
+            flex: 1;
+        }
+        .portal-title {
+            font-weight: 700;
+            color: #0056b3;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            font-size: 13px;
+        }
+        .portal-guide-box ul {
+            margin: 0;
+            padding-left: 20px;
+            font-size: 12px;
+            color: #333;
+        }
+        .portal-guide-box li {
+            margin-bottom: 2px;
         }
 
         /* FOOTER */
         .footer {
           display: flex;
           justify-content: space-between;
-          margin-top: 10px;
+          margin-top: 20px;
           page-break-inside: avoid;
         }
-        .footer-col { text-align: center; width: 45%; }
-        .footer-title { font-weight: bold; text-transform: uppercase; margin-top: 2px; font-size: 10px; }
-        .footer-sign-area { height: 40px; margin-top: 5px; } /* Reduced height */
+        .footer-col { text-align: center; width: 40%; }
+        .footer-title { font-weight: bold; text-transform: uppercase; margin-top: 5px; font-size: 13px; }
+        .footer-sign-area { height: 80px; margin-top: 10px; }
         .footer-info {
-            margin-top: 10px;
+            margin-top: 20px;
             border-top: 1px solid #ccc;
-            padding-top: 2px;
-            font-size: 8px;
+            padding-top: 5px;
+            font-size: 11px;
             display: flex;
             justify-content: space-between;
             color: #666;
         }
         
         @media print {
-          @page { margin: 5mm; size: A5 portrait; }
+          @page { margin: 15mm; size: A4 portrait; }
           body { -webkit-print-color-adjust: exact; }
           .header-center { flex: 1; }
         }
@@ -239,7 +284,7 @@ export function generatePrintTemplate(sample: SampleForPrint, results: ResultWit
           </div>
         </div>
 
-        <!-- I. INFO TABLE (Patient & Clinical) - Compact 4 rows -->
+        <!-- I. INFO TABLE (Patient & Clinical) -->
         <div class="section-box">
           <div class="section-title">I. Thông Tin Hành Chính</div>
           <table class="info-table">
@@ -254,7 +299,7 @@ export function generatePrintTemplate(sample: SampleForPrint, results: ResultWit
             <tbody>
                 <tr>
                     <td class="info-label">Họ và tên:</td>
-                    <td class="info-value uppercase" style="font-weight: 800; font-size: 11px;">${clientName}</td>
+                    <td class="info-value uppercase" style="font-weight: 800; font-size: 14px;">${clientName}</td>
                     <td class="info-label">Năm sinh:</td>
                     <td class="info-value">${birthYear || '............'}</td>
                     <td class="info-label">Giới tính:</td>
@@ -280,7 +325,7 @@ export function generatePrintTemplate(sample: SampleForPrint, results: ResultWit
           </table>
         </div>
 
-        <!-- II. SAMPLE INFO - Compact 2 rows -->
+        <!-- II. SAMPLE INFO -->
         <div class="section-box">
             <div class="section-title">II. Thông Tin Mẫu</div>
             <table class="info-table">
@@ -296,13 +341,13 @@ export function generatePrintTemplate(sample: SampleForPrint, results: ResultWit
                     <tr>
                         <td class="info-label">Loại mẫu:</td>
                         <td class="info-value">${sampleType || '....................'}</td>
-                        <td class="info-label">T.Gian lấy:</td>
+                        <td class="info-label">Thời gian lấy:</td>
                         <td class="info-value">..../..../....... ...:</td>
                         <td class="info-label">Người lấy:</td>
                         <td class="info-value">................</td>
                     </tr>
                     <tr>
-                         <td class="info-label">T.Gian nhận:</td>
+                         <td class="info-label">Thời gian nhận:</td>
                         <td class="info-value">${sample.received_at ? new Date(sample.received_at).toLocaleDateString('vi-VN') + ' ' + new Date(sample.received_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '..../..../....... ...:'}</td>
                         <td class="info-label">Người nhận:</td>
                         <td class="info-value" colspan="3">${sample.received_by_name || '...................................................'}</td>
@@ -341,7 +386,7 @@ export function generatePrintTemplate(sample: SampleForPrint, results: ResultWit
               `).join('')}
               
               ${results.length === 0 ? `
-                <tr><td colspan="5" style="text-align:center; padding: 15px; color: #64748b; font-style: italic;">Chưa có chỉ định nào</td></tr>
+                <tr><td colspan="5" style="text-align:center; padding: 20px; color: #64748b; font-style: italic; font-size: 13px;">Chưa có chỉ định nào</td></tr>
               ` : ''}
             </tbody>
           </table>
@@ -350,17 +395,32 @@ export function generatePrintTemplate(sample: SampleForPrint, results: ResultWit
         <!-- FOOTER -->
         <div class="footer">
           <div class="footer-col">
-            <div style="font-style: italic; font-size: 9px; margin-bottom: 2px;">Ngày ..... tháng ..... năm .....</div>
+            <div style="font-style: italic; font-size: 12px; margin-bottom: 5px;">Ngày ..... tháng ..... năm .....</div>
             <div class="footer-title">KHÁCH HÀNG YÊU CẦU</div>
             <div class="footer-sign-area"></div>
-            <div style="font-size: 9px;">(Ký và ghi rõ họ tên)</div>
+            <div style="font-size: 12px;">(Ký và ghi rõ họ tên)</div>
           </div>
           <div class="footer-col">
-            <div style="font-style: italic; font-size: 9px; margin-bottom: 2px;">Cần Thơ, ngày ${dateStr.split('/')[0]} tháng ${dateStr.split('/')[1]} năm ${dateStr.split('/')[2]}</div>
+            <div style="font-style: italic; font-size: 12px; margin-bottom: 5px;">Cần Thơ, ngày ${dateStr.split('/')[0]} tháng ${dateStr.split('/')[1]} năm ${dateStr.split('/')[2]}</div>
             <div class="footer-title">Bác Sĩ Chỉ Định</div>
             <div class="footer-sign-area"></div>
-            <div style="font-weight: bold; font-size: 10px;">(Ký và ghi rõ họ tên)</div>
+            <div style="font-weight: bold; font-size: 12px;">(Ký và ghi rõ họ tên)</div>
           </div>
+        </div>
+
+        <!-- PORTAL ACCESS GUIDE -->
+        <div class="portal-guide-box">
+             <div class="portal-qr">
+                <img src="${portalQrUrl}" alt="Portal QR" />
+             </div>
+             <div class="portal-text">
+                <div class="portal-title">TRA CỨU KẾT QUẢ TRỰC TUYẾN</div>
+                <ul>
+                    <li>Quét mã QR bằng Camera điện thoại</li>
+                    <li>Nhập số điện thoại đã đăng ký để xem và tải kết quả</li>
+                    <li>Hoặc truy cập: <span style="font-family: monospace; font-size: 11px;">${portalUrl}</span></li>
+                </ul>
+             </div>
         </div>
 
         <div class="footer-info">
