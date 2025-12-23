@@ -387,3 +387,34 @@ export async function regenerateCoA(
         return { success: false, error: 'Đã xảy ra lỗi khi tạo lại CoA' }
     }
 }
+
+/**
+ * Get CoA status for a sample
+ * Returns the current CoA report status if one exists
+ */
+export async function getCoAStatus(
+    sampleId: string
+): Promise<{ status: import('@/types').CoAReportStatus | null; error?: string }> {
+    try {
+        const supabase = await createClient()
+
+        const { data, error } = await supabase
+            .from('coa_reports')
+            .select('status')
+            .eq('sample_id', sampleId)
+            .is('deleted_at', null)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+        if (error) {
+            console.error('Error fetching CoA status:', error)
+            return { status: null, error: error.message }
+        }
+
+        return { status: data?.status || null }
+    } catch (error) {
+        console.error('Error in getCoAStatus:', error)
+        return { status: null, error: 'Failed to fetch CoA status' }
+    }
+}

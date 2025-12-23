@@ -48,7 +48,7 @@ import { CoAStatusBadge } from '@/components/coa-status-badge'
 import { toast } from 'sonner'
 import { TestAssignmentModule } from '@/components/test-assignment-module'
 import { generatePrintTemplate } from '@/lib/print-template'
-import { regenerateCoA } from '@/app/actions/coa'
+import { regenerateCoA, getCoAStatus } from '@/app/actions/coa'
 import type { CoAReportStatus } from '@/types'
 
 interface AssignedTestsPanelProps {
@@ -105,6 +105,19 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
     useEffect(() => {
         fetchTests()
     }, [fetchTests])
+
+    // Fetch CoA status when sample is completed
+    useEffect(() => {
+        async function fetchCoA() {
+            if (sampleStatus === 'completed') {
+                const result = await getCoAStatus(sampleId)
+                if (result.status) {
+                    setCoaStatus(result.status)
+                }
+            }
+        }
+        fetchCoA()
+    }, [sampleId, sampleStatus])
 
     // Handle CoA generation
     const handleGenerateCoA = async () => {

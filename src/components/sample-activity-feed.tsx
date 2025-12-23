@@ -12,7 +12,8 @@ import {
     RefreshCw,
     Activity,
     Loader2,
-    AlertCircle
+    AlertCircle,
+    FileText,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -41,6 +42,7 @@ export function SampleActivityFeed({ sampleId }: SampleActivityFeedProps) {
             const supabase = createClient()
 
             // Fetch audit logs for this sample and its related results
+            // Use JSONB 'contains' operator (cs) for filtering on JSONB fields
             const { data, error } = await supabase
                 .from('audit_logs')
                 .select(`
@@ -53,7 +55,7 @@ export function SampleActivityFeed({ sampleId }: SampleActivityFeedProps) {
                     changed_at,
                     user:users!audit_logs_changed_by_fkey(full_name)
                 `)
-                .or(`record_id.eq.${sampleId},new_values->>sample_id.eq.${sampleId},old_values->>sample_id.eq.${sampleId}`)
+                .or(`record_id.eq.${sampleId},new_values.cs.{"sample_id":"${sampleId}"},old_values.cs.{"sample_id":"${sampleId}"}`)
                 .order('changed_at', { ascending: false })
                 .limit(50)
 
@@ -223,6 +225,47 @@ function getActivityDisplay(activity: AuditLog): {
                 icon: FileEdit,
                 color: 'bg-slate-100 text-slate-600',
                 message: 'Cập nhật thông tin mẫu',
+            }
+        }
+    }
+
+    if (table_name === 'coa_reports') {
+        if (operation === 'INSERT') {
+            return {
+                icon: FileText,
+                color: 'bg-emerald-100 text-emerald-600',
+                message: 'Tạo CoA mới',
+            }
+        }
+        if (operation === 'UPDATE') {
+            // Check status changes
+            if (old_values?.status !== new_values?.status) {
+                if (new_values?.status === 'ready') {
+                    return {
+                        icon: CheckCircle,
+                        color: 'bg-green-100 text-green-600',
+                        message: 'CoA đã sẵn sàng',
+                    }
+                }
+                if (new_values?.status === 'failed') {
+                    return {
+                        icon: XCircle,
+                        color: 'bg-red-100 text-red-600',
+                        message: 'Tạo CoA thất bại',
+                    }
+                }
+            }
+            return {
+                icon: RefreshCw,
+                color: 'bg-blue-100 text-blue-600',
+                message: 'Cập nhật CoA',
+            }
+        }
+        if (operation === 'DELETE') {
+            return {
+                icon: XCircle,
+                color: 'bg-red-100 text-red-600',
+                message: 'Xóa CoA',
             }
         }
     }
