@@ -18,7 +18,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getActiveSignature, downloadSignature } from './signatures'
-import type { CoAData, CoAManualInputs } from '@/types'
+import type { CoAData, CoAManualInputs, UserRole } from '@/types'
 
 // Import extracted modules
 import {
@@ -27,6 +27,7 @@ import {
     fetchTestResults,
     verifySignatureHash,
     generateHtmlHash,
+    validateSampleForCoAGeneration,
     type GenerateCoAResult,
 } from '@/lib/coa/helpers'
 import { renderCoATemplate } from '@/lib/coa/template'
@@ -38,29 +39,37 @@ import { renderCoATemplate } from '@/lib/coa/template'
 /**
  * Generate Certificate of Analysis (CoA) for approved sample
  *
+ * Authorization:
+ * - Analysts: Can generate CoA only when sample.status='completed' AND all results are 'approved'
+ * - Managers: Can generate CoA when sample.status='review' or 'completed' AND at least one result is 'approved'
+ *
  * Workflow:
- * 1. Fetch sample data with approver information
- * 2. Fetch approver's active signature
- * 3. Download signature file from storage
- * 4. Verify signature integrity (hash check)
- * 5. Convert signature to base64 data URI
- * 6. Get approver name
- * 7. Fetch approved test results
- * 8. Generate HTML with embedded signature and test results
- * 9. Upload HTML to coa-reports storage bucket
- * 10. Insert coa_reports record with signature_id linkage
+ * 1. Validate user role (analyst or manager)
+ * 2. Role-specific validation (sample status and results approval)
+ * 3. Fetch sample data with approver information
+ * 4. Fetch approver's active signature
+ * 5. Download signature file from storage
+ * 6. Verify signature integrity (hash check)
+ * 7. Convert signature to base64 data URI
+ * 8. Get approver name
+ * 9. Fetch approved test results
+ * 10. Generate HTML with embedded signature and test results
+ * 11. Upload HTML to coa-reports storage bucket
+ * 12. Insert coa_reports record with signature_id linkage
  *
  * Requirements:
- * - Sample must be approved (status = 'approved' or 'completed')
- * - Approver must have an active signature uploaded
- * - Signature file must pass integrity verification
- * - At least one approved test result exists
+ * - User must be analyst or manager
+ * - Analyst: sample.status='completed' AND all results 'approved'
+ * - Manager: sample.status='review' or 'completed' AND at least one result 'approved'
+ * - Approver must have an active signature uploaded (or placeholder used)
+ * - Signature file must pass integrity verification (if using real signature)
  *
  * Compliance:
  * - Signature embedded in immutable HTML file
  * - signature_id creates permanent link to signature version
  * - File hash verifies integrity of entire document
  * - Satisfies 21 CFR Part 11 §11.70 (signature/record linking)
+ * - Audit trail captures generator identity (user_id in coa_reports)
  */
 export async function generateCoA(
     sampleId: string,
@@ -81,7 +90,7 @@ export async function generateCoA(
             }
         }
 
-        // Only managers can generate CoA
+        // Authorization: Analysts and managers can generate CoA
         const {
             data: { user },
             error: authError,
@@ -97,8 +106,19 @@ export async function generateCoA(
             .eq('id', user.id)
             .single()
 
-        if (roleError || !userData || userData.role !== 'manager') {
-            return { success: false, error: 'Chỉ Quản lý mới có thể tạo CoA' }
+        if (roleError || !userData) {
+            return { success: false, error: 'Không tìm thấy thông tin người dùng' }
+        }
+
+        const userRole = userData.role as UserRole
+        if (userRole !== 'analyst' && userRole !== 'manager') {
+            return { success: false, error: 'Chỉ Nhân viên phân tích và Quản lý mới có thể tạo CoA' }
+        }
+
+        // Role-specific validation for sample status and results
+        const validationResult = await validateSampleForCoAGeneration(sampleId, userRole)
+        if (!validationResult.valid) {
+            return { success: false, error: validationResult.error || 'Lỗi xác thực mẫu' }
         }
 
         // Step 1: Fetch sample data
@@ -292,6 +312,10 @@ export async function generateCoA(
 /**
  * Regenerate CoA (for failed generations or updating existing CoAs)
  *
+ * Authorization: Manager-only
+ * Analysts are NOT allowed to regenerate CoAs - this preserves the integrity
+ * of existing CoAs and maintains separation of duties.
+ *
  * This function can be called when:
  * - Previous CoA generation failed
  * - Manager wants to regenerate with updated signature
@@ -304,6 +328,26 @@ export async function regenerateCoA(
 ): Promise<GenerateCoAResult> {
     try {
         const supabase = await createClient()
+
+        // Authorization: Only managers can regenerate CoA
+        const {
+            data: { user },
+            error: authError,
+        } = await supabase.auth.getUser()
+
+        if (authError || !user) {
+            return { success: false, error: 'Unauthorized' }
+        }
+
+        const { data: userData, error: roleError } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+        if (roleError || !userData || userData.role !== 'manager') {
+            return { success: false, error: 'Chỉ Quản lý mới có thể tạo lại CoA' }
+        }
 
         // Validate manual inputs if provided
         if (manualInputs) {

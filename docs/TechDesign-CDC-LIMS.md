@@ -165,10 +165,39 @@ Using @react-pdf/renderer to generate PDFs on the client side (or server).
 
 **Structure:**
 
-* **Header:** Lab Logo, Address, Report ID.  
-* **Sample Info:** Client Name, Date Received, Sample ID.  
-* **Results Table:** Assay Name, Method, Result, Units, Specifications (Pass/Fail).  
+* **Header:** Lab Logo, Address, Report ID.
+* **Sample Info:** Client Name, Date Received, Sample ID.
+* **Results Table:** Assay Name, Method, Result, Units, Specifications (Pass/Fail).
 * **Footer:** "Approved By: \[Manager Name\] on \[Date\]". Electronic Signature disclaimer.
+
+### **3.3 CoA Generation Authorization**
+
+CoA generation follows role-specific authorization rules to maintain 21 CFR Part 11 compliance while improving workflow efficiency.
+
+**Authorization Rules:**
+
+| Role | Sample Status | Results Requirement | Action |
+|------|---------------|---------------------|--------|
+| **Analyst** | `completed` only | ALL results must be `approved` | Generate CoA |
+| **Manager** | `review` or `completed` | At least ONE result `approved` | Generate CoA |
+| **Manager** | Any (with existing CoA) | N/A | Regenerate CoA |
+
+**Server Actions:**
+
+* **generateCoA(sampleId, manualInputs)**: Both analysts and managers can call. Validation helper `validateSampleForCoAGeneration()` enforces role-specific rules.
+* **regenerateCoA(sampleId, manualInputs)**: Manager-only. Updates existing CoA record.
+
+**RLS Policies (coa_reports table):**
+
+* **INSERT**: Analysts and managers can insert new CoA records
+* **SELECT**: Analysts and managers can read CoA records
+* **UPDATE**: Managers only (enforces regeneration restriction at database level)
+
+**Compliance Notes:**
+
+* Signature in CoA links to the **approver** (manager who approved results), not the generator
+* Audit logs capture generator identity via `auth.uid()` in INSERT trigger
+* Separation of duties: Analysts perform work, managers approve and can regenerate
 
 ## **4\. API & Server Actions**
 

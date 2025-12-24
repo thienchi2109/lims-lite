@@ -7,7 +7,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createHash } from 'crypto'
-import type { SampleData } from '@/types'
+import type { SampleData, UserRole } from '@/types'
 
 // ============================================================================
 // TYPES
@@ -25,6 +25,103 @@ export interface TestResult {
 export type GenerateCoAResult =
     | { success: true; coaId: string; filePath: string }
     | { success: false; error: string }
+
+export type ValidationResult = {
+    valid: boolean
+    error?: string
+}
+
+// ============================================================================
+// VALIDATION FUNCTIONS
+// ============================================================================
+
+/**
+ * Validate sample is eligible for CoA generation based on user role
+ *
+ * Role-specific validation rules:
+ * - Analyst: sample.status must be 'completed' AND all results must be 'approved'
+ * - Manager: sample.status can be 'review' or 'completed', needs at least one 'approved' result
+ *
+ * @param sampleId - The sample ID to validate
+ * @param userRole - The role of the user attempting generation
+ * @returns ValidationResult with valid flag and Vietnamese error message if invalid
+ */
+export async function validateSampleForCoAGeneration(
+    sampleId: string,
+    userRole: UserRole
+): Promise<ValidationResult> {
+    const supabase = await createClient()
+
+    // 1. Fetch sample with status
+    const { data: sample, error: sampleError } = await supabase
+        .from('samples')
+        .select('id, status')
+        .eq('id', sampleId)
+        .is('deleted_at', null)
+        .single()
+
+    if (sampleError || !sample) {
+        return { valid: false, error: 'Không tìm thấy thông tin mẫu' }
+    }
+
+    // 2. Role-specific status validation
+    if (userRole === 'analyst') {
+        // Analysts can only generate CoA for completed samples
+        if (sample.status !== 'completed') {
+            return {
+                valid: false,
+                error: 'Chỉ có thể tạo CoA cho mẫu đã hoàn thành (completed)'
+            }
+        }
+    } else {
+        // Managers can generate for review or completed samples
+        if (sample.status !== 'review' && sample.status !== 'completed') {
+            return {
+                valid: false,
+                error: 'Chỉ có thể tạo CoA cho mẫu ở trạng thái xem xét hoặc hoàn thành'
+            }
+        }
+    }
+
+    // 3. Fetch all results for sample
+    const { data: results, error: resultsError } = await supabase
+        .from('results')
+        .select('id, status')
+        .eq('sample_id', sampleId)
+        .is('deleted_at', null)
+
+    if (resultsError) {
+        return { valid: false, error: 'Lỗi khi kiểm tra kết quả xét nghiệm' }
+    }
+
+    if (!results || results.length === 0) {
+        return { valid: false, error: 'Không có kết quả xét nghiệm cho mẫu này' }
+    }
+
+    // 4. Role-specific results approval validation
+    const approvedResults = results.filter(r => r.status === 'approved')
+    const unapprovedCount = results.length - approvedResults.length
+
+    if (userRole === 'analyst') {
+        // Analysts require ALL results to be approved
+        if (unapprovedCount > 0) {
+            return {
+                valid: false,
+                error: `Không thể tạo CoA: ${unapprovedCount} kết quả chưa được phê duyệt`
+            }
+        }
+    } else {
+        // Managers require at least one approved result
+        if (approvedResults.length === 0) {
+            return {
+                valid: false,
+                error: 'Cần ít nhất một kết quả đã được phê duyệt để tạo CoA'
+            }
+        }
+    }
+
+    return { valid: true }
+}
 
 // ============================================================================
 // DATA FETCHING FUNCTIONS
