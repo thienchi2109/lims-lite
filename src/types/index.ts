@@ -957,3 +957,14 @@ export const RecentSampleSchema = z.object({
 })
 
 export type RecentSample = z.infer<typeof RecentSampleSchema>
+
+// Specialty Sample Statistics for grouped bar chart
+export const SpecialtySampleDataSchema = z.object({
+    specialtyCode: z.string(),      // 'HEM', 'BIO', etc.
+    specialtyName: z.string(),      // 'Huyết học', 'Sinh hóa'
+    status: SampleStatus,
+    sampleCount: z.number(),
+    testCount: z.number(),
+})
+
+export type SpecialtySampleData = z.infer<typeof SpecialtySampleDataSchema>

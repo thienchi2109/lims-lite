@@ -8,20 +8,33 @@ import {
   getCoAStatistics,
   getStaffProductivity,
   getSampleAccessionTrend,
+  getSpecialtySampleStats,
 } from '@/app/actions/reports'
 import { format, startOfMonth, isValid, parseISO } from 'date-fns'
-import type { DateRange } from '@/types'
+import type { DateRange, SampleStatus } from '@/types'
 import { z } from 'zod'
+
+// All sample statuses for default selection
+const ALL_STATUSES: SampleStatus[] = [
+  'received',
+  'assigned',
+  'in_progress',
+  'review',
+  'completed',
+  'discarded',
+]
 
 // Zod schema for URL parameter validation
 const SearchParamsSchema = z.object({
   fromDate: z.string().optional(),
   toDate: z.string().optional(),
+  statuses: z.string().optional(),
 })
 
 interface SearchParams {
   fromDate?: string | string[]
   toDate?: string | string[]
+  statuses?: string | string[]
 }
 
 export default async function ManagerReportsPage(props: {
@@ -55,11 +68,13 @@ export default async function ManagerReportsPage(props: {
   // Coerce array params to single strings
   const rawFromDate = Array.isArray(searchParams.fromDate) ? searchParams.fromDate[0] : searchParams.fromDate
   const rawToDate = Array.isArray(searchParams.toDate) ? searchParams.toDate[0] : searchParams.toDate
+  const rawStatuses = Array.isArray(searchParams.statuses) ? searchParams.statuses[0] : searchParams.statuses
 
   // Validate and sanitize URL parameters
   const validatedParams = SearchParamsSchema.safeParse({
     fromDate: rawFromDate,
     toDate: rawToDate,
+    statuses: rawStatuses,
   })
 
   // Default date values
@@ -103,6 +118,20 @@ export default async function ManagerReportsPage(props: {
     end: toDate + 'T23:59:59Z', // End of day in UTC
   }
 
+  // Parse selected statuses from URL (default: all statuses)
+  let selectedStatuses: SampleStatus[] = ALL_STATUSES
+  if (validatedParams.success && validatedParams.data.statuses) {
+    const statusList = validatedParams.data.statuses.split(',').filter(Boolean)
+    // Filter to only valid statuses
+    selectedStatuses = statusList.filter((s): s is SampleStatus =>
+      ALL_STATUSES.includes(s as SampleStatus)
+    )
+    // If no valid statuses after parsing, default to all
+    if (selectedStatuses.length === 0) {
+      selectedStatuses = ALL_STATUSES
+    }
+  }
+
   // Fetch all data in parallel for performance
   const [
     kpiMetricsResult,
@@ -111,6 +140,7 @@ export default async function ManagerReportsPage(props: {
     coaStatisticsResult,
     staffProductivityResult,
     accessionTrendResult,
+    specialtySampleResult,
   ] = await Promise.all([
     getKPIMetrics(dateRange),
     getTATTrendData(dateRange),
@@ -118,6 +148,7 @@ export default async function ManagerReportsPage(props: {
     getCoAStatistics(dateRange),
     getStaffProductivity(dateRange),
     getSampleAccessionTrend(dateRange),
+    getSpecialtySampleStats(dateRange, selectedStatuses),
   ])
 
   // Error handling for data fetches
@@ -139,6 +170,7 @@ export default async function ManagerReportsPage(props: {
   const coaStatistics = coaStatisticsResult
   const staffProductivity = staffProductivityResult
   const accessionTrendData = accessionTrendResult
+  const specialtySampleData = specialtySampleResult
 
   return (
     <ReportsLayout
@@ -152,6 +184,8 @@ export default async function ManagerReportsPage(props: {
       accessionTrendData={accessionTrendData}
       coaStatistics={coaStatistics}
       staffProductivity={staffProductivity}
+      specialtySampleData={specialtySampleData}
+      selectedStatuses={selectedStatuses}
     />
   )
 }

@@ -7,8 +7,9 @@ import { SampleStatusChart } from '@/components/sample-status-chart'
 import { SampleAccessionTrendChart } from '@/components/sample-accession-trend-chart'
 import { CoAStatisticsChart } from '@/components/coa-statistics-chart'
 import { StaffProductivityChart } from '@/components/staff-productivity-chart'
+import { SpecialtySampleChart } from '@/components/specialty-sample-chart'
 import { DashboardHeader } from '@/components/dashboard-header'
-import type { SampleStatus, TATTrendData, SampleAccessionTrendData, SampleStatusData, CoAStatistics, StaffProductivityData, KPIMetrics, UserRole } from '@/types'
+import type { SampleStatus, TATTrendData, SampleAccessionTrendData, SampleStatusData, CoAStatistics, StaffProductivityData, KPIMetrics, UserRole, SpecialtySampleData } from '@/types'
 import { Activity, ClipboardCheck, AlertCircle, TrendingUp, AlertTriangle, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
@@ -36,6 +37,8 @@ interface ReportsLayoutProps {
   accessionTrendData: SampleAccessionTrendData[]
   coaStatistics: CoAStatistics[]
   staffProductivity?: StaffProductivityData[]
+  specialtySampleData?: SpecialtySampleData[]
+  selectedStatuses?: SampleStatus[]
 }
 
 export function ReportsLayout({
@@ -49,6 +52,8 @@ export function ReportsLayout({
   accessionTrendData,
   coaStatistics,
   staffProductivity,
+  specialtySampleData,
+  selectedStatuses,
 }: ReportsLayoutProps) {
   // Role-specific subtitle
   const subtitle = role === 'manager'
@@ -193,7 +198,17 @@ export function ReportsLayout({
             <SampleAccessionTrendChart data={accessionTrendData} />
           </div>
 
-          {/* Row 3: Staff Productivity (manager only, full width 2 cols) */}
+          {/* Row 3: Specialty Sample Chart (full width) */}
+          {specialtySampleData && selectedStatuses && (
+            <div className="lg:col-span-3" aria-label="Thống kê mẫu theo nhóm kỹ thuật">
+              <SpecialtySampleChart
+                data={specialtySampleData}
+                selectedStatuses={selectedStatuses}
+              />
+            </div>
+          )}
+
+          {/* Row 4: Staff Productivity (manager only, full width) */}
           {role === 'manager' && staffProductivity && (
             <div className="lg:col-span-3" aria-label="Năng suất nhân viên">
               <StaffProductivityChart data={staffProductivity} />

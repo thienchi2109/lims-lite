@@ -10,6 +10,8 @@ import type {
   CoAStatistics,
   StaffProductivityData,
   RecentSample,
+  SpecialtySampleData,
+  SampleStatus,
 } from '@/types'
 import { DateRangeSchema } from '@/types'
 import { z } from 'zod'
@@ -274,6 +276,54 @@ export async function getStaffProductivity(
     )
   } catch (error) {
     console.error('Error fetching staff productivity:', error)
+    throw error
+  }
+}
+
+/**
+ * Fetches sample statistics grouped by lab specialty and status
+ * Used by the "Thống kê Mẫu theo Nhóm Kỹ Thuật" chart on Reports page
+ */
+export async function getSpecialtySampleStats(
+  dateRange: DateRange,
+  statuses: SampleStatus[]
+): Promise<SpecialtySampleData[]> {
+  try {
+    // Validate date range
+    const validated = DateRangeSchema.parse(dateRange)
+
+    // If no statuses provided, return empty array (no data to show)
+    if (!statuses || statuses.length === 0) {
+      return []
+    }
+
+    const supabase = await createClient()
+
+    const { data, error } = await supabase.rpc('get_specialty_sample_stats', {
+      p_from_date: validated.start,
+      p_to_date: validated.end,
+      p_statuses: statuses,
+    })
+
+    if (error) throw error
+
+    return (
+      data?.map((item: {
+        specialty_code: string
+        specialty_name: string
+        status: string
+        sample_count: number | bigint
+        test_count: number | bigint
+      }) => ({
+        specialtyCode: item.specialty_code,
+        specialtyName: item.specialty_name,
+        status: item.status as SampleStatus,
+        sampleCount: Number(item.sample_count),
+        testCount: Number(item.test_count),
+      })) || []
+    )
+  } catch (error) {
+    console.error('Error fetching specialty sample stats:', error)
     throw error
   }
 }
