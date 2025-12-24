@@ -553,7 +553,7 @@ export async function getSamplesForApproval() {
                 pending_count: pendingCount,
                 entered_count: enteredCount,
                 approved_count: approvedCount,
-                coa_status: sample.coa_reports?.[0]?.status || null,
+                coa_reports: sample.coa_reports || null,
             }
         })
 
@@ -686,7 +686,7 @@ export async function getSamplesWithTab(tab: 'review' | 'completed') {
                 pending_count: pendingCount,
                 entered_count: enteredCount,
                 approved_count: approvedCount,
-                coa_status: sample.coa_reports?.[0]?.status || null,
+                coa_reports: sample.coa_reports || null,
             }
         })
 
