@@ -17,133 +17,83 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 
 <!-- OPENSPEC:END -->
 
-## Project Orientation (see `CLAUDE.md`)
+## Project Orientation
 
-- `CLAUDE.md` is the primary brief: Next.js 16 + React 19, self-hosted Supabase/PostgreSQL; goal is a 21 CFR Part 11 compliant LIMS MVP.
-- Compliance first: prefer soft delete/void over hard delete; all mutations must be auditable and respect RLS.
-- Database work only via SQL migrations in `supabase/migrations`; include RLS policies/triggers and apply through Docker (not the Supabase dashboard).
-- All UI text is Vietnamese; use `docs/vietnamese_dictionary.md` and keep validation/type safety with Zod schemas and strict TypeScript.
-- Build incrementally: validate inputs in Server Actions, lean on existing patterns/components listed in `CLAUDE.md`.
-- Client-side components must call `src/lib/api-client.ts` (which hits `/api/client-actions` and `/api/auth/logout`) for data fetching/mutations; do not import `src/app/actions/*` directly into client code.
+See `CLAUDE.md` for:
+- Stack: Next.js 16 + React 19, self-hosted Supabase/PostgreSQL
+- Goal: 21 CFR Part 11 compliant LIMS MVP
+- Compliance: soft delete/void only, all mutations auditable, respect RLS
+- Database: SQL migrations in `supabase/migrations/`, apply via Docker
+- Localization: All UI in Vietnamese (see `docs/vietnamese_dictionary.md`)
+- Validation: Zod schemas, strict TypeScript
+- Client-side: Use `src/lib/api-client.ts` for mutations (not direct imports from `src/app/actions/*`)
 
 ## Database Migration Security (CRITICAL)
 
-**MANDATORY:** When creating or modifying database migrations that affect RLS policies, you MUST follow the Database Migration Security Checklist.
+**MANDATORY:** Follow security checklist for RLS policy migrations.
 
-### Quick Security Rules:
-1. **Always `DROP POLICY IF EXISTS` before `CREATE POLICY`** - Prevents duplicate policies
-2. **Always include role checks** - Use `get_user_role() IN ('analyst', 'manager')` in policies
-3. **Always document security impact** - Add `-- Security Impact: [None/Low/Medium/High]` to migration files
-4. **Always run security tests after migration** - `docker exec lims-postgres psql -U postgres -d postgres -c "SELECT * FROM run_security_tests();"`
-5. **Never use Supabase Studio for schema changes** - Only use versioned migration files
+### Quick Rules
+1. `DROP POLICY IF EXISTS` before `CREATE POLICY`
+2. Include role checks: `get_user_role() IN ('analyst', 'manager')`
+3. Document security impact in migration files
+4. Run `run_security_tests()` after every migration
+5. Never use Supabase Studio for schema changes
 
-### Migration Template:
-```sql
--- Migration XXX: Description
--- Security Impact: [None / Low / Medium / High]
--- Changes: [What policies are being added/removed/modified]
+**Full checklist:** `docs/MIGRATION_SECURITY_CHECKLIST.md`
 
-SET search_path TO public;
-
--- Drop old policy (if replacing)
-DROP POLICY IF EXISTS "old_policy_name" ON public.table_name;
-
--- Create new policy with role check
-CREATE POLICY "new_policy_name"
-ON public.table_name FOR operation
-WITH CHECK (
-    get_user_role() IN ('analyst', 'manager')  -- ✅ MANDATORY for INSERT/UPDATE/DELETE
-    AND other_conditions
-);
-
--- Document the policy
-COMMENT ON POLICY "new_policy_name" ON public.table_name 
-IS 'Description of what this policy allows and why';
-```
-
-### Post-Migration Checklist:
+### Post-Migration Commands
 ```bash
-# 1. Apply migration
+# Apply migration
 Get-Content supabase\migrations\XXX_name.sql | docker exec -i lims-postgres psql -U postgres -d postgres
 
-# 2. Run security tests (MANDATORY)
+# Run security tests (MANDATORY)
 docker exec lims-postgres psql -U postgres -d postgres -c "SELECT * FROM run_security_tests();"
 
-# 3. Verify policy state
+# Verify policy state
 docker exec lims-postgres psql -U postgres -d postgres -c "SELECT polname FROM pg_policy WHERE polrelid = 'public.TABLE_NAME'::regclass;"
 
-# 4. Test application
+# Test application
 npm run typecheck
 npm run dev
 ```
 
-**See `CLAUDE.md` Database Migration Security Checklist section for full details and examples.**
-
-**Reference:** Full checklist in `MIGRATION_SECURITY_CHECKLIST.md`
-
 ## Superpowers Skills
 
-- Superpowers are installed; run `~/.codex/superpowers/.codex/superpowers-codex bootstrap` at session start to list available skills.
-- Before starting a task, check for applicable skills (especially `using-superpowers`, `brainstorming`, `test-driven-development`, `systematic-debugging`) and load them with `~/.codex/superpowers/.codex/superpowers-codex use-skill <skill>`.
-- Follow skill checklists with `update_plan` todos when required; do not skip mandatory workflows (brainstorm before coding, evidence before completion).
-- Personal skills live in `~/.codex/skills`; superpowers skills live in `~/.codex/superpowers/skills`.
+- Run `~/.codex/superpowers/.codex/superpowers-codex bootstrap` at session start
+- Check for applicable skills before starting tasks
+- Load with `~/.codex/superpowers/.codex/superpowers-codex use-skill <skill>`
+- Follow skill checklists; don't skip mandatory workflows
 
-## Git Workflow and Commit Messages
+## Git Workflow
 
 ### Conventional Commits
 
-This project follows **Conventional Commits** specification for commit messages. Writing clear, standardized commit messages is a critical skill that answers two essential questions: **What did you do?** and **Why?**
+Format: `<type>: <subject>`
 
-### Commit Message Format
-
-The basic syntax is: `<type>: <subject>`
-
-**Type:** Describes the category of change. Use these main types:
-
-- **feat**: Add a new feature
-- **fix**: Fix a bug
-- **docs**: Update documentation
-- **refactor**: Refactor code (optimize, restructure) without adding features or fixing bugs
-- **style**: Format code (whitespace, semicolons, indentation, etc.)
-- **test**: Add or update tests
-- **chore**: Update build tasks, package manager configs, etc.
+**Types:**
+- **feat**: New feature
+- **fix**: Bug fix
+- **docs**: Documentation only
+- **refactor**: Code restructure (no feature/fix)
+- **style**: Formatting only
+- **test**: Add/update tests
+- **chore**: Build/config changes
 - **perf**: Performance improvements
 
-**Subject:** A brief description (under 100 characters) of what you did. Write in imperative mood, present tense (as if giving a command).
-
-### Examples
-
-✅ **Good commit messages:**
+**Examples:**
 ```
-fix: Correct login logic for admin user
 feat: Add Google login button to homepage
-docs: Update API documentation for user endpoints
-refactor: Optimize database query performance in practitioners list
-style: Fix indentation in auth components
-test: Add unit tests for credit calculation
+fix: Correct login logic for admin user
+refactor: Optimize database query in practitioners list
 ```
 
-❌ **Bad commit messages:**
-```
-Fixed stuff
-WIP
-Updated files
-changes
-asdfgh
-```
+**Best Practices:**
+- Imperative mood: "Add feature" not "Added feature"
+- Under 100 characters
+- No period at end
+- Reference issues: `fix: Resolve login error (#123)`
 
-### Commit Message Best Practices
-
-1. **Be specific:** Describe what changed, not just where
-2. **Use imperative mood:** "Add feature" not "Added feature" or "Adds feature"
-3. **Keep subject line short:** Under 100 characters
-4. **Don't end with period:** No punctuation at the end of subject line
-5. **Reference issues when relevant:** `fix: Resolve login error (#123)`
-
-### Extended Format (Optional)
-
-For more complex changes, you can use the extended format with body and footer:
-
+### Extended Format
 ```
 <type>: <subject>
 
@@ -152,110 +102,62 @@ For more complex changes, you can use the extended format with body and footer:
 <footer>
 ```
 
-**Example:**
-```
-feat: Add bulk practitioner import functionality
+## File Structure Expectations
 
-Implement Excel file upload and validation for importing multiple
-practitioners at once. Includes error handling and progress tracking.
+- Files: 250-350 lines maximum, single responsibility
+- Filenames: Descriptive, match content exactly
+- Headers: First 5-10 lines explain purpose (multi-item files only)
 
-Closes #45
-```
+## Code Quality Standards
 
-### When to Use Each Type
+- Self-documenting: names explain intent
+- Clear variables: `userAuthenticatedAt` not `uat`
+- Action-based functions: `calculateTaxForOrder()` not `calcTax()`
+- Semantic directories: group by feature/domain, max 3-4 levels
 
-- **feat** - Adding any new functionality users can see or use
-- **fix** - Fixing broken functionality that wasn't working as intended
-- **docs** - ONLY documentation changes (README, guides, comments)
-- **refactor** - Code changes that neither fix bugs nor add features (performance, readability)
-- **style** - Code formatting only (no logic changes)
-- **test** - Adding missing tests or correcting existing tests
-- **chore** - Tooling changes (dependencies, configs, build scripts)
+## Working Approach
 
-### Git Operations Reference
+- Navigate first: Understand structure before reading code
+- Read purposefully: Only open relevant files
+- Trust the structure: Filename and location tell you what's inside
+- Small focused changes: Maintain 250-350 line limit
+- Keep it clean: Don't break existing conventions
 
-When creating commits in this project:
+## Quality Check
 
-1. **Always use Conventional Commits format**
-2. **Verify changes before committing:** `git status` and `git diff`
-3. **Stage relevant files:** `git add <files>`
-4. **Create commit with proper format:** `git commit -m "type: subject"`
-5. **Review commit history for context:** `git log --oneline`
-
-See the [Development Workflow](#development-workflow) section for detailed git operations and the full commit creation process.
-
-### File Structure Expectations
-
-1. Files: 250-350 lines maximum, single responsibility
-2. Filenames: Descriptive and match content exactly
-
-3. Single class/function: OrderService.ts, calculateTax.py
-4. Multiple items: update_inventory_on_order_placed.go
-
-
-Headers: First 5-10 lines explain purpose for multi-item files only
-
-### Code Quality Standards
-
-Self-documenting: names explain intent completely
-Clear variable names: userAuthenticatedAt not uat
-Action-based functions: calculateTaxForOrder() not calcTax()
-Semantic directories: group by feature/domain, max 3-4 levels deep
-
-### Working Approach
-
-Navigate first: Understand structure before reading code
-Read purposefully: Only open files relevant to current task
-Trust the structure: Filename and location tell you what's inside
-Small focused changes: Maintain the 250-350 line limit
-Keep it clean: Don't break existing conventions
-
-### When Making Changes
-
-Maintain single-responsibility principle
-Keep filenames accurate to content
-Split files that exceed 350 lines
-Update file headers if purpose changes
-Follow existing naming patterns
-
-### Token Optimization
-
-Don't read entire files unnecessarily
-Use grep to find specific patterns
-Check file headers before reading full content
-Navigate using directory structure, not memory
-
-### Quality Check
-Before completing tasks, ensure:
-
-1. Files remain under 350 lines
+Before completing tasks:
+1. Files under 350 lines
 2. Filenames accurately describe content
-3. New code is self-documenting
+3. Code is self-documenting
 4. Directory structure stays logical
 5. Changes follow existing patterns
 
+## Token Optimization
+
+- Don't read entire files unnecessarily
+- Use grep to find specific patterns
+- Check file headers before reading full content
+- Navigate using directory structure, not memory
+
 ## Landing the Plane (Session Completion)
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+**MANDATORY:** Work is NOT complete until `git push` succeeds.
 
-**MANDATORY WORKFLOW:**
-
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
+1. File issues for remaining work
+2. Run quality gates (tests, linters, builds)
+3. Update issue status
+4. **PUSH TO REMOTE:**
    ```bash
    git pull --rebase
    bd sync
    git push
    git status  # MUST show "up to date with origin"
    ```
-5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
+5. Clean up stashes, prune branches
+6. Verify all changes committed AND pushed
+7. Hand off context for next session
 
-**CRITICAL RULES:**
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
+**CRITICAL:**
+- NEVER stop before pushing
 - NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
+- If push fails, resolve and retry
