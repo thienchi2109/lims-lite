@@ -15,14 +15,39 @@
 ## Behavioral Directives
 
 ### Beads Task Tracking (Windows)
+
+**Always use PowerShell for bd commands.**
+
 ```bash
-# Always use PowerShell for bd commands
-powershell -Command "bd ready"
-powershell -Command "bd show <id>"
+# View tasks
+powershell -Command "bd ready"                    # Show unblocked work
+powershell -Command "bd show <id>"                # Show issue details
+powershell -Command "bd list -l <label>"          # List by label
+powershell -Command "bd blocked"                  # Show blocked issues
+
+# Create tasks (use 'create', NOT 'add')
+powershell -Command "bd create 'Task title' -p 2 -l label1,label2 -t task"
+powershell -Command "bd create 'Task title' -d 'Description here' -p 1"
+# Priority: -p 0 (P0 highest) to -p 4 (P4 lowest), default P2
+# Types: -t bug|feature|task|epic|chore (default: task)
+
+# Add dependencies (positional args, NOT --blocks flag)
+powershell -Command "bd dep add <issue-id> <depends-on-id> -t blocks"
+# Example: bd dep add lims-lite-abc lims-lite-xyz -t blocks
+# Means: abc depends on xyz (xyz blocks abc)
+
+# Update tasks
 powershell -Command "bd update <id> --status in_progress"
 powershell -Command "bd close <id> --notes 'Implementation details'"
+
+# Sync with remote
 powershell -Command "bd sync"
 ```
+
+**Common mistakes to avoid:**
+- `bd add` → Use `bd create` instead
+- `bd dep add X --blocks Y` → Use `bd dep add X Y -t blocks` (positional args)
+- Missing `-t blocks` → Dependencies default to "blocks" type anyway
 
 ### Core Rules
 1. **Compliance First**: Soft delete/void only, all changes auditable, respect RLS
@@ -69,7 +94,7 @@ Self-hosted Supabase in Docker (NOT Supabase Cloud).
 ### Quick Reference
 ```bash
 # Apply migration (Windows)
-Get-Content supabase\migrations\XXX_name.sql | docker exec -i lims-postgres psql -U postgres -d postgres
+powershell -Command "Get-Content supabase\migrations\XXX_name.sql | docker exec -i lims-postgres psql -U postgres -d postgres"
 
 # Restart PostgREST after RPC function changes
 docker compose restart rest
