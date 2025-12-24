@@ -38,7 +38,8 @@ powershell -Command "bd dep add <issue-id> <depends-on-id> -t blocks"
 
 # Update tasks
 powershell -Command "bd update <id> --status in_progress"
-powershell -Command "bd close <id> --notes 'Implementation details'"
+powershell -Command "bd close <id> -r 'Implementation details'"
+# Can close multiple: bd close id1 id2 id3 -r 'Reason'
 
 # Sync with remote
 powershell -Command "bd sync"
@@ -47,6 +48,7 @@ powershell -Command "bd sync"
 **Common mistakes to avoid:**
 - `bd add` → Use `bd create` instead
 - `bd dep add X --blocks Y` → Use `bd dep add X Y -t blocks` (positional args)
+- `bd close <id> --notes` → Use `-r` for reason, not `--notes`
 - Missing `-t blocks` → Dependencies default to "blocks" type anyway
 
 ### Core Rules
