@@ -51,6 +51,40 @@ powershell -Command "bd sync"
 - `bd close <id> --notes` → Use `-r` for reason, not `--notes`
 - Missing `-t blocks` → Dependencies default to "blocks" type anyway
 
+### Windows Command Execution
+
+**CRITICAL:** When running commands on Windows, avoid mixing bash and Windows syntax.
+
+**File system operations:**
+```bash
+# ❌ WRONG - Windows cmd syntax in bash (will fail)
+if not exist "D:\path" mkdir "D:\path"
+
+# ✅ CORRECT - Use PowerShell explicitly
+powershell -Command "if (-not (Test-Path 'D:\path')) { New-Item -ItemType Directory -Path 'D:\path' }"
+
+# ✅ CORRECT - Use bash syntax
+[ ! -d "D:/path" ] && mkdir -p "D:/path"
+```
+
+**Directory creation:**
+```bash
+# ❌ WRONG
+if not exist "src\components\feature" mkdir "src\components\feature"
+
+# ✅ CORRECT (PowerShell)
+powershell -Command "if (-not (Test-Path 'src\components\feature')) { New-Item -ItemType Directory -Path 'src\components\feature' }"
+
+# ✅ CORRECT (bash-style, forward slashes)
+mkdir -p src/components/feature
+```
+
+**Key rules:**
+- Use `powershell -Command` for Windows-specific operations
+- Use forward slashes (`/`) in paths for bash compatibility
+- Never mix `if not exist`, `mkdir` (cmd) with bash syntax
+- Prefer `mkdir -p` (bash) over Windows `mkdir` when possible
+
 ### Core Rules
 1. **Compliance First**: Soft delete/void only, all changes auditable, respect RLS
 2. **Database via Migrations**: SQL files in `supabase/migrations/`, include RLS policies
