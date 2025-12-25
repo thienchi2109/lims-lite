@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createEdgeAdminClient } from '@/lib/supabase/edge-admin'
 import {
     SIGNATURE_VALIDATION,
     ActiveSignatureSchema,
@@ -197,10 +198,19 @@ export async function uploadManagerSignature(formData: FormData): Promise<Upload
  * Used for:
  * - Displaying signature in manager settings
  * - Fetching signature during CoA generation
+ *
+ * Options:
+ * - useServiceRole: Use service role client to bypass RLS (for CoA generation)
  */
-export async function getActiveSignature(userId?: string): Promise<GetActiveSignatureResult> {
+export async function getActiveSignature(
+    userId?: string,
+    options?: { useServiceRole?: boolean }
+): Promise<GetActiveSignatureResult> {
     try {
-        const supabase = await createClient()
+        // Use service role client when accessing other users' signatures (for CoA generation)
+        const supabase = options?.useServiceRole
+            ? createEdgeAdminClient()
+            : await createClient()
 
         // Get current user if userId not provided
         let targetUserId = userId
@@ -292,13 +302,22 @@ export async function getSignatureHistory(): Promise<GetSignatureHistoryResult> 
  * Download signature file (for preview or CoA generation)
  *
  * Returns base64 data URI for embedding in HTML
+ *
+ * Options:
+ * - useServiceRole: Use service role client to bypass storage RLS (for CoA generation)
  */
-export async function downloadSignature(signaturePath: string): Promise<
+export async function downloadSignature(
+    signaturePath: string,
+    options?: { useServiceRole?: boolean }
+): Promise<
     | { success: true; dataUri: string; mimeType: string }
     | { success: false; error: string }
 > {
     try {
-        const supabase = await createClient()
+        // Use service role client when accessing other users' signatures (for CoA generation)
+        const supabase = options?.useServiceRole
+            ? createEdgeAdminClient()
+            : await createClient()
 
         // Download file from storage
         const { data, error } = await supabase.storage

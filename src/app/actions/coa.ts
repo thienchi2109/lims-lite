@@ -17,6 +17,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
+import { createEdgeAdminClient } from '@/lib/supabase/edge-admin'
 import { getActiveSignature, downloadSignature } from './signatures'
 import type { CoAData, CoAManualInputs, UserRole } from '@/types'
 
@@ -134,18 +135,20 @@ export async function generateCoA(
         const approverId = sample.approved_by
 
         // Step 2: Fetch approver's active signature (OPTIONAL - use placeholder if not available)
+        // Use service role to bypass RLS - analysts need to access manager signatures for CoA
         let signatureDataUri: string | null = null
         let signatureId: string | null = null
 
-        const signatureResult = await getActiveSignature(approverId)
+        const signatureResult = await getActiveSignature(approverId, { useServiceRole: true })
         if (signatureResult.success) {
             const signature = signatureResult.signature
 
-            // Step 3: Download signature file from storage
-            const downloadResult = await downloadSignature(signature.signature_path)
+            // Step 3: Download signature file from storage using service role
+            const downloadResult = await downloadSignature(signature.signature_path, { useServiceRole: true })
             if (downloadResult.success) {
-                // Step 4: Verify signature integrity
-                const { data: signatureFileData, error: downloadError } = await supabase.storage
+                // Step 4: Verify signature integrity using service role client
+                const adminClient = createEdgeAdminClient()
+                const { data: signatureFileData, error: downloadError } = await adminClient.storage
                     .from('user-signatures')
                     .download(signature.signature_path)
 
