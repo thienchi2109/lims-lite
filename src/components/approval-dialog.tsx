@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { sampleKeys, resultKeys } from '@/types/query-keys'
 import { approveResultsClient, cancelApprovalClient } from '@/lib/api-client'
+import { getActiveSignature } from '@/app/actions/signatures'
 import {
     Dialog,
     DialogContent,
@@ -13,11 +14,12 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
-import { CheckCircle2, XCircle, Loader2 } from 'lucide-react'
+import { CheckCircle2, XCircle, Loader2, Info, AlertTriangle } from 'lucide-react'
 
 interface ApprovalDialogProps {
     sampleId: string
@@ -36,8 +38,33 @@ export function ApprovalDialog({
 }: ApprovalDialogProps) {
     const [note, setNote] = useState('')
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [hasSignature, setHasSignature] = useState<boolean | null>(null)
+    const [checkingSignature, setCheckingSignature] = useState(false)
     const router = useRouter()
     const queryClient = useQueryClient()
+
+    // Check for active signature when dialog opens in approve mode
+    useEffect(() => {
+        async function checkSignature() {
+            if (mode !== 'approve' || !open) {
+                setHasSignature(null)
+                return
+            }
+
+            setCheckingSignature(true)
+            try {
+                const result = await getActiveSignature()
+                setHasSignature(result.success)
+            } catch (error) {
+                console.error('Error checking signature:', error)
+                setHasSignature(false)
+            } finally {
+                setCheckingSignature(false)
+            }
+        }
+
+        checkSignature()
+    }, [open, mode])
 
     const handleSubmit = async () => {
         if (mode === 'cancel' && note.trim().length < 3) {
@@ -122,6 +149,27 @@ export function ApprovalDialog({
                 </DialogHeader>
 
                 <div className="space-y-4 py-4">
+                    {/* E-Signature Notice - Only show in approve mode */}
+                    {mode === 'approve' && hasSignature !== null && !checkingSignature && (
+                        <div className="space-y-2">
+                            {hasSignature ? (
+                                <Alert variant="info">
+                                    <Info className="h-4 w-4" />
+                                    <AlertDescription>
+                                        Sau khi duyệt mẫu này, chữ ký điện tử của bạn sẽ được ký trực tiếp vào Phiếu kết quả Xét nghiệm của mẫu này!
+                                    </AlertDescription>
+                                </Alert>
+                            ) : (
+                                <Alert variant="warning">
+                                    <AlertTriangle className="h-4 w-4" />
+                                    <AlertDescription>
+                                        Bạn chưa có chữ ký điện tử! Vui lòng tải lên chữ ký trước khi phê duyệt kết quả.
+                                    </AlertDescription>
+                                </Alert>
+                            )}
+                        </div>
+                    )}
+
                     <div className="space-y-2">
                         <Label htmlFor="note">
                             {mode === 'approve' ? 'Note (Optional)' : 'Reason (Required)'}
