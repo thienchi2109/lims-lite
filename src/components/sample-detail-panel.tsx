@@ -89,7 +89,7 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
     const displayedClientName = client?.name || sample.client_name || 'N/A'
 
     return (
-        <div className="h-full flex flex-col bg-white dark:bg-slate-950 border rounded-lg overflow-hidden shadow-sm">
+        <div id="tour-sample-detail" className="h-full flex flex-col bg-white dark:bg-slate-950 border rounded-lg overflow-hidden shadow-sm">
             <div className="px-4 py-2 border-b bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between sticky top-0 z-10">
                 <div className="flex items-center gap-3 overflow-hidden">
                     <div className="h-8 w-8 rounded-full bg-sky-50 dark:bg-sky-900/20 flex items-center justify-center text-sky-600 dark:text-sky-400 shrink-0">

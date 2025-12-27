@@ -7,11 +7,11 @@ import type { DriveStep } from 'driver.js'
  */
 export const resultsTourSteps: DriveStep[] = [
     {
-        element: '#tour-sample-info',
+        element: '#tour-sample-detail',
         popover: {
             title: 'Thông tin mẫu',
             description: 'Đây là thông tin mẫu đang xử lý: mã mẫu, khách hàng, loại mẫu và trạng thái hiện tại.',
-            side: 'bottom',
+            side: 'right',
             align: 'start',
         },
     },
