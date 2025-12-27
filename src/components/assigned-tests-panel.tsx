@@ -14,16 +14,7 @@ import {
 } from '@/components/ui/table'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import {
-    Loader2,
-    Plus,
-    FlaskConical,
-    CheckCircle,
-    Printer,
-    AlertCircle,
-    FileText,
-} from 'lucide-react'
+import { Loader2, AlertCircle } from 'lucide-react'
 import {
     Dialog,
     DialogContent,
@@ -32,24 +23,20 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
-import {
-    fetchSampleResultsClient,
-    saveBatchResultsClient,
-    submitSampleForReviewClient,
-} from '@/lib/api-client'
+import { fetchSampleResultsClient, submitSampleForReviewClient } from '@/lib/api-client'
 import { fetchSampleDetail } from '@/hooks/use-sample-detail'
-import { validateNumericValue, validateTextValue } from '@/lib/utils-lims'
 import { ResultWithAssay, SampleStatus, type LabSpecialty } from '@/types'
 import { ResultCellEditor } from '@/components/result-cell-editor'
 import { BatchSaveToolbar } from '@/components/batch-save-toolbar'
 import { ResultStatusBadge } from '@/components/result-status-badge'
-import { CoAStatusBadge } from '@/components/coa-status-badge'
+import { AssignedTestsToolbar } from '@/components/assigned-tests-toolbar'
 import { toast } from 'sonner'
 import { TestAssignmentModule } from '@/components/test-assignment-module'
 import { generatePrintTemplate } from '@/lib/print-template'
 import { regenerateCoA, getCoAStatus } from '@/app/actions/coa'
+import { useResultsEditor } from '@/hooks/use-results-editor'
+import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard'
 import type { CoAReportStatus } from '@/types'
-import { WalkthroughTrigger } from '@/components/walkthrough'
 
 interface AssignedTestsPanelProps {
     sampleId: string
@@ -60,36 +47,43 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
     const router = useRouter()
     const searchParams = useSearchParams()
     const queryClient = useQueryClient()
+
+    // Data fetching state
     const [results, setResults] = useState<ResultWithAssay[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-
-    // Inline editing state
-    const [resultValues, setResultValues] = useState<Record<string, string>>({})
-    const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
-    const [isSaving, setIsSaving] = useState(false)
     const [sampleStatus, setSampleStatus] = useState<SampleStatus | null>(null)
 
-    // Submit for review state
+    // Dialog state
     const [showSubmitDialog, setShowSubmitDialog] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
-
-    // Test assignment state
     const [showAssignmentDialog, setShowAssignmentDialog] = useState(false)
 
     // CoA state
     const [coaStatus, setCoaStatus] = useState<CoAReportStatus | null>(null)
     const [isGeneratingCoA, setIsGeneratingCoA] = useState(false)
 
+    const handleRefocus = useCallback(
+        (targetSampleId: string) => {
+            const params = new URLSearchParams(searchParams?.toString() ?? '')
+            params.set('sortBy', 'updated_at')
+            params.set('sortOrder', 'desc')
+            params.set('sampleId', targetSampleId)
+            params.set('page', '1')
+            router.push(`?${params.toString()}`)
+            queryClient.invalidateQueries({ queryKey: sampleKeys.all })
+        },
+        [searchParams, router, queryClient]
+    )
+
     const fetchTests = useCallback(async () => {
         try {
             setLoading(true)
-            const { data, error } = await fetchSampleResultsClient(sampleId)
-            if (error) {
-                setError(error)
+            const { data, error: fetchError } = await fetchSampleResultsClient(sampleId)
+            if (fetchError) {
+                setError(fetchError)
             } else if (data) {
                 setResults(data)
-                // Set sample status from the first result (all results belong to same sample)
                 if (data.length > 0 && data[0].sample_status) {
                     setSampleStatus(data[0].sample_status as SampleStatus)
                 }
@@ -101,6 +95,22 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
             setLoading(false)
         }
     }, [sampleId])
+
+    // Results editor hook
+    const editor = useResultsEditor({
+        results,
+        sampleId,
+        onSaveSuccess: () => {
+            fetchTests()
+            handleRefocus(sampleId)
+        },
+    })
+
+    // Unsaved changes guard (Ctrl+S and beforeunload)
+    useUnsavedChangesGuard({
+        hasUnsavedChanges: editor.pendingCount > 0,
+        onSave: editor.handleSave,
+    })
 
     useEffect(() => {
         fetchTests()
@@ -119,7 +129,6 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
         fetchCoA()
     }, [sampleId, sampleStatus])
 
-    // Handle CoA generation
     const handleGenerateCoA = async () => {
         setIsGeneratingCoA(true)
         try {
@@ -131,95 +140,18 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
                 toast.error(`Lỗi khi tạo CoA: ${result.error}`)
                 setCoaStatus('failed')
             }
-        } catch (error) {
+        } catch (err) {
             toast.error('Có lỗi không mong đợi khi tạo CoA')
-            console.error(error)
+            console.error(err)
         } finally {
             setIsGeneratingCoA(false)
         }
     }
 
-    // Determine if editing is allowed based on sample status
     const isEditable = useCallback(() => {
         if (!sampleStatus) return false
-        // Editable statuses: assigned, in_progress
-        // Review status is NOT editable for analysts (and generally locked until rejected)
         return ['assigned', 'in_progress'].includes(sampleStatus)
     }, [sampleStatus])
-
-    // Handle value changes from ResultCellEditor
-    const handleValueChange = useCallback(async (resultId: string, value: string) => {
-        setResultValues((prev) => ({
-            ...prev,
-            [resultId]: value,
-        }))
-
-        // Validate immediately
-        const result = results.find((r) => r.id === resultId)
-        if (result) {
-            const rules = result.validation_rules || {}
-            const error = await validateResultValue(value, rules)
-
-            setValidationErrors((prev) => {
-                const next = { ...prev }
-                if (error) {
-                    next[resultId] = error
-                } else {
-                    delete next[resultId]
-                }
-                return next
-            })
-        }
-    }, [results])
-
-    const handleSave = async () => {
-        if (Object.keys(validationErrors).length > 0) {
-            toast.error('Vui lòng sửa các lỗi trước khi lưu')
-            return
-        }
-
-        setIsSaving(true)
-        try {
-            const updates = Object.entries(resultValues).map(([id, value]) => ({
-                id,
-                value,
-            }))
-
-            const result = await saveBatchResultsClient({ results: updates })
-
-            if (result.error) {
-                toast.error(result.error)
-                if (result.validationErrors) {
-                    // Update validation errors from server
-                    const serverErrors: Record<string, string> = {}
-                    result.validationErrors.forEach((err: any) => {
-                        serverErrors[err.id] = err.error
-                    })
-                    setValidationErrors(serverErrors)
-                }
-            } else {
-                toast.success('Đã lưu kết quả thành công')
-                setResultValues({})
-                setValidationErrors({})
-                fetchTests() // Refresh data
-                queryClient.invalidateQueries({ queryKey: sampleKeys.detail(sampleId) }) // Refresh sample status
-
-                // Refresh sample list and move to top (sort by updated_at)
-                handleRefocus(sampleId)
-            }
-        } catch (error) {
-            toast.error('Có lỗi xảy ra khi lưu kết quả')
-            console.error(error)
-        } finally {
-            setIsSaving(false)
-        }
-    }
-
-    const handleDiscard = () => {
-        setResultValues({})
-        setValidationErrors({})
-        toast.info('Đã hủy các thay đổi')
-    }
 
     const handleSubmitForReview = async () => {
         setIsSubmitting(true)
@@ -230,16 +162,13 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
             } else {
                 toast.success('Đã gửi mẫu để duyệt')
                 setShowSubmitDialog(false)
-
-                // Invalidate queries to trigger refetch
-                queryClient.invalidateQueries({ queryKey: sampleKeys.all }) // Refresh sample list
-                queryClient.invalidateQueries({ queryKey: sampleKeys.detail(sampleId) }) // Force refresh detail panel
-
-                fetchTests() // Refresh to update status
+                queryClient.invalidateQueries({ queryKey: sampleKeys.all })
+                queryClient.invalidateQueries({ queryKey: sampleKeys.detail(sampleId) })
+                fetchTests()
             }
-        } catch (error) {
+        } catch (err) {
             toast.error('Có lỗi xảy ra khi gửi duyệt')
-            console.error(error)
+            console.error(err)
         } finally {
             setIsSubmitting(false)
         }
@@ -247,70 +176,21 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
 
     const handlePrint = async () => {
         try {
-            // Fetch full sample details
             const sampleData = await fetchSampleDetail(sampleId)
-
-            // Generate HTML
             const htmlContent = generatePrintTemplate(sampleData, results)
-
-            // Open print window
             const printWindow = window.open('', '_blank')
             if (printWindow) {
                 printWindow.document.write(htmlContent)
                 printWindow.document.close()
-                // Wait for resources to load then print
-                printWindow.onload = () => {
-                    printWindow.print()
-                }
+                printWindow.onload = () => printWindow.print()
             } else {
                 toast.error('Trình duyệt đã chặn cửa sổ in')
             }
-        } catch (error) {
-            console.error(error)
+        } catch (err) {
+            console.error(err)
             toast.error('Có lỗi xảy ra khi in')
         }
     }
-
-    const handleRefocus = (targetSampleId: string) => {
-        // Navigate to the samples page with updated_at sorting, focus on the sample, and reset to first page
-        const params = new URLSearchParams(searchParams?.toString() ?? '')
-        params.set('sortBy', 'updated_at')
-        params.set('sortOrder', 'desc')
-        params.set('sampleId', targetSampleId)
-        params.set('page', '1')
-        router.push(`?${params.toString()}`)
-
-        // Invalidate queries to trigger refetch with new cache
-        queryClient.invalidateQueries({ queryKey: sampleKeys.all })
-    }
-
-    // Keyboard shortcut for save
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                e.preventDefault()
-                if (Object.keys(resultValues).length > 0) {
-                    handleSave()
-                }
-            }
-        }
-
-        window.addEventListener('keydown', handleKeyDown)
-        return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [resultValues, validationErrors])
-
-    // Warn before leaving with unsaved changes
-    useEffect(() => {
-        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            if (Object.keys(resultValues).length > 0) {
-                e.preventDefault()
-                e.returnValue = ''
-            }
-        }
-
-        window.addEventListener('beforeunload', handleBeforeUnload)
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-    }, [resultValues])
 
     if (loading) {
         return (
@@ -332,96 +212,29 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
         )
     }
 
-    const pendingCount = Object.keys(resultValues).length
     const canEdit = isEditable()
-
-    // Check if all results have values to enable submit button
-    const allResultsEntered = results.length > 0 && results.every(r => {
-        // Use edited value if available, otherwise original value
-        const val = resultValues[r.id] !== undefined ? resultValues[r.id] : r.value
-        return val !== null && val !== ''
-    })
+    const allResultsEntered =
+        results.length > 0 &&
+        results.every((r) => {
+            const val = editor.resultValues[r.id] !== undefined ? editor.resultValues[r.id] : r.value
+            return val !== null && val !== ''
+        })
 
     return (
         <div className="relative flex h-full flex-col">
-            <div id="tour-sample-info" className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
-                <div className="flex items-center gap-2">
-                    <FlaskConical className="h-5 w-5 text-indigo-600" />
-                    <h3 className="font-semibold text-slate-700">Chỉ định xét nghiệm</h3>
-                    <Badge variant="secondary" className="ml-2 bg-slate-100 text-slate-600 hover:bg-slate-200">
-                        {results.length}
-                    </Badge>
-                    {/* CoA Status Badge - Show for completed samples */}
-                    {sampleStatus === 'completed' && (
-                        <CoAStatusBadge status={coaStatus} />
-                    )}
-                    <WalkthroughTrigger tourId="results" />
-                </div>
-                <div className="flex items-center gap-2">
-                    {/* Test Order Form Print Button - Available for all samples */}
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2 border-slate-200 bg-white text-slate-600 hover:border-indigo-200 hover:text-indigo-600"
-                        disabled={results.length === 0}
-                        onClick={handlePrint}
-                    >
-                        <Printer className="h-4 w-4" />
-                        In Phiếu chỉ định
-                    </Button>
-
-                    {/* CoA Generation/View Button - Only for completed samples */}
-                    {sampleStatus === 'completed' && (
-                        <>
-                            {!coaStatus || coaStatus === 'failed' ? (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="gap-2 border-emerald-200 bg-white text-emerald-600 hover:bg-emerald-50"
-                                    onClick={handleGenerateCoA}
-                                    disabled={isGeneratingCoA}
-                                >
-                                    <FileText className={`h-4 w-4 ${isGeneratingCoA ? 'animate-spin' : ''}`} />
-                                    {isGeneratingCoA ? 'Đang tạo...' : coaStatus === 'failed' ? 'Tạo lại CoA' : 'Tạo CoA'}
-                                </Button>
-                            ) : coaStatus === 'ready' && (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="gap-2 border-blue-200 bg-white text-blue-600 hover:bg-blue-50"
-                                    onClick={() => window.open(`/api/coa/view?sample_id=${sampleId}`, '_blank')}
-                                >
-                                    <FileText className="h-4 w-4" />
-                                    Xem phiếu KQ
-                                </Button>
-                            )}
-                        </>
-                    )}
-
-                    {/* Submit for Review Button */}
-                    {sampleStatus === 'in_progress' && allResultsEntered && (
-                        <Button
-                            id="tour-submit-review"
-                            size="sm"
-                            className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
-                            onClick={() => setShowSubmitDialog(true)}
-                            disabled={pendingCount > 0} // Disable if there are unsaved changes
-                        >
-                            <CheckCircle className="h-4 w-4" />
-                            Gửi duyệt
-                        </Button>
-                    )}
-
-                    <Button
-                        size="sm"
-                        className="gap-2 bg-indigo-600 hover:bg-indigo-700"
-                        onClick={() => setShowAssignmentDialog(true)}
-                    >
-                        <Plus className="h-4 w-4" />
-                        Chỉ định
-                    </Button>
-                </div>
-            </div>
+            <AssignedTestsToolbar
+                resultsCount={results.length}
+                sampleId={sampleId}
+                sampleStatus={sampleStatus}
+                coaStatus={coaStatus}
+                canSubmitForReview={allResultsEntered}
+                hasPendingChanges={editor.pendingCount > 0}
+                isGeneratingCoA={isGeneratingCoA}
+                onPrint={handlePrint}
+                onGenerateCoA={handleGenerateCoA}
+                onSubmitForReview={() => setShowSubmitDialog(true)}
+                onOpenAssignment={() => setShowAssignmentDialog(true)}
+            />
 
             <div className="flex-1 overflow-auto bg-slate-50/50 p-4">
                 <Card id="tour-results-table" className="border-slate-200 shadow-sm">
@@ -447,37 +260,27 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
                                 ) : (
                                     results.map((result) => (
                                         <TableRow key={result.id} className="group hover:bg-slate-50/50">
-                                            <TableCell className="font-medium text-slate-700">
-                                                {result.assay_name}
-                                            </TableCell>
-                                            <TableCell className="text-slate-600">
-                                                {result.method_name || '-'}
-                                            </TableCell>
+                                            <TableCell className="font-medium text-slate-700">{result.assay_name}</TableCell>
+                                            <TableCell className="text-slate-600">{result.method_name || '-'}</TableCell>
                                             <TableCell>
                                                 <ResultCellEditor
-                                                    value={resultValues[result.id] ?? result.value ?? ''}
-                                                    onChange={(val) => handleValueChange(result.id, val)}
+                                                    value={editor.getDisplayValue(result)}
+                                                    onChange={(val) => editor.handleValueChange(result.id, val)}
                                                     isEditable={canEdit && result.status !== 'approved'}
-                                                    validationError={validationErrors[result.id]}
-                                                    isPending={resultValues[result.id] !== undefined}
+                                                    validationError={editor.validationErrors[result.id]}
+                                                    isPending={editor.resultValues[result.id] !== undefined}
                                                 />
                                             </TableCell>
-                                            <TableCell className="text-slate-500">
-                                                {result.assay_units || '-'}
-                                            </TableCell>
+                                            <TableCell className="text-slate-500">{result.assay_units || '-'}</TableCell>
                                             <TableCell>
                                                 <ResultStatusBadge status={result.status} />
                                             </TableCell>
                                             <TableCell className="text-xs text-slate-500">
                                                 {result.entered_by_name ? (
                                                     <div className="flex flex-col">
-                                                        <span className="font-medium text-slate-700">
-                                                            {result.entered_by_name}
-                                                        </span>
+                                                        <span className="font-medium text-slate-700">{result.entered_by_name}</span>
                                                         <span className="text-[10px] text-slate-400">
-                                                            {result.entered_at
-                                                                ? new Date(result.entered_at).toLocaleDateString('vi-VN')
-                                                                : '-'}
+                                                            {result.entered_at ? new Date(result.entered_at).toLocaleDateString('vi-VN') : '-'}
                                                         </span>
                                                     </div>
                                                 ) : (
@@ -495,11 +298,11 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
 
             <div id="tour-batch-save">
                 <BatchSaveToolbar
-                    pendingCount={pendingCount}
-                    onSave={handleSave}
-                    onDiscard={handleDiscard}
-                    isSaving={isSaving}
-                    isVisible={pendingCount > 0}
+                    pendingCount={editor.pendingCount}
+                    onSave={editor.handleSave}
+                    onDiscard={editor.handleDiscard}
+                    isSaving={editor.isSaving}
+                    isVisible={editor.pendingCount > 0}
                 />
             </div>
 
@@ -508,7 +311,8 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
                     <DialogHeader>
                         <DialogTitle>Xác nhận gửi duyệt</DialogTitle>
                         <DialogDescription>
-                            Bạn có chắc chắn muốn gửi mẫu này để duyệt không? Trạng thái mẫu sẽ chuyển sang "Chờ duyệt" và bạn sẽ không thể chỉnh sửa kết quả cho đến khi quản lý phản hồi.
+                            Bạn có chắc chắn muốn gửi mẫu này để duyệt không? Trạng thái mẫu sẽ chuyển sang
+                            &quot;Chờ duyệt&quot; và bạn sẽ không thể chỉnh sửa kết quả cho đến khi quản lý phản hồi.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -530,18 +334,14 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
             </Dialog>
 
             <Dialog open={showAssignmentDialog} onOpenChange={setShowAssignmentDialog}>
-                <DialogContent className="max-w-[90vw] p-0 overflow-hidden border-none bg-transparent shadow-none sm:max-w-[1200px]">
+                <DialogContent className="max-w-[90vw] overflow-hidden border-none bg-transparent p-0 shadow-none sm:max-w-[1200px]">
                     <DialogTitle className="sr-only">Chỉ định xét nghiệm</DialogTitle>
-                    <DialogDescription className="sr-only">
-                        Chọn các xét nghiệm cần chỉ định cho mẫu này
-                    </DialogDescription>
+                    <DialogDescription className="sr-only">Chọn các xét nghiệm cần chỉ định cho mẫu này</DialogDescription>
                     <TestAssignmentModule
                         sampleId={sampleId}
                         sampleStatus={sampleStatus}
                         onClose={() => setShowAssignmentDialog(false)}
-                        onSuccess={() => {
-                            fetchTests()
-                        }}
+                        onSuccess={fetchTests}
                         onRefocus={handleRefocus}
                         specialties={specialties}
                     />
@@ -549,17 +349,4 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
             </Dialog>
         </div>
     )
-}
-
-async function validateResultValue(value: string, rules: Record<string, any>) {
-    const normalizedRules = rules || {}
-    if (
-        normalizedRules.type === 'numeric' ||
-        normalizedRules.min !== undefined ||
-        normalizedRules.max !== undefined
-    ) {
-        return validateNumericValue(value, normalizedRules)
-    }
-
-    return validateTextValue(value, normalizedRules)
 }
