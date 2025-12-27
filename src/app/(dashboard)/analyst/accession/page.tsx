@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { DashboardHeader } from '@/components/dashboard-header'
 import { getSpecialties } from '@/app/actions/assays'
+import { AccessionPageHeader } from './accession-page-header'
 
 export default async function AccessionPage() {
     const supabase = await createClient()
@@ -44,14 +45,7 @@ export default async function AccessionPage() {
                 </div>
 
                 <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 p-3">
-                    <div className="mb-3">
-                        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                            Tiếp nhận mẫu mới
-                        </h2>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
-                            Nhập thông tin mẫu hoặc quét mã QR để tiếp nhận
-                        </p>
-                    </div>
+                    <AccessionPageHeader />
 
                     <SampleAccessionForm specialties={specialties || []} />
                 </div>

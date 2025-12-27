@@ -49,6 +49,7 @@ import { TestAssignmentModule } from '@/components/test-assignment-module'
 import { generatePrintTemplate } from '@/lib/print-template'
 import { regenerateCoA, getCoAStatus } from '@/app/actions/coa'
 import type { CoAReportStatus } from '@/types'
+import { WalkthroughTrigger } from '@/components/walkthrough'
 
 interface AssignedTestsPanelProps {
     sampleId: string
@@ -354,6 +355,7 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
                     {sampleStatus === 'completed' && (
                         <CoAStatusBadge status={coaStatus} />
                     )}
+                    <WalkthroughTrigger tourId="results" />
                 </div>
                 <div className="flex items-center gap-2">
                     {/* Test Order Form Print Button - Available for all samples */}
