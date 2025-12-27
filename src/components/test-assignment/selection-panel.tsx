@@ -87,6 +87,7 @@ export function SelectionPanel({
             <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
                 {onSave && (
                     <Button
+                        id="tour-save-button"
                         onClick={onSave}
                         disabled={isSaving}
                         className="w-full"

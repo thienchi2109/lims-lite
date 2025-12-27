@@ -343,7 +343,7 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
 
     return (
         <div className="relative flex h-full flex-col">
-            <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
+            <div id="tour-sample-info" className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
                 <div className="flex items-center gap-2">
                     <FlaskConical className="h-5 w-5 text-indigo-600" />
                     <h3 className="font-semibold text-slate-700">Chỉ định xét nghiệm</h3>
@@ -399,6 +399,7 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
                     {/* Submit for Review Button */}
                     {sampleStatus === 'in_progress' && allResultsEntered && (
                         <Button
+                            id="tour-submit-review"
                             size="sm"
                             className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
                             onClick={() => setShowSubmitDialog(true)}
@@ -421,7 +422,7 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
             </div>
 
             <div className="flex-1 overflow-auto bg-slate-50/50 p-4">
-                <Card className="border-slate-200 shadow-sm">
+                <Card id="tour-results-table" className="border-slate-200 shadow-sm">
                     <CardContent className="p-0">
                         <Table>
                             <TableHeader className="bg-slate-50">
@@ -490,13 +491,15 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
                 </Card>
             </div>
 
-            <BatchSaveToolbar
-                pendingCount={pendingCount}
-                onSave={handleSave}
-                onDiscard={handleDiscard}
-                isSaving={isSaving}
-                isVisible={pendingCount > 0}
-            />
+            <div id="tour-batch-save">
+                <BatchSaveToolbar
+                    pendingCount={pendingCount}
+                    onSave={handleSave}
+                    onDiscard={handleDiscard}
+                    isSaving={isSaving}
+                    isVisible={pendingCount > 0}
+                />
+            </div>
 
             <Dialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
                 <DialogContent>

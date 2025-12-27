@@ -37,7 +37,7 @@ export function ApprovalActions({ sampleId, results }: ApprovalActionsProps) {
 
     return (
         <>
-            <Card>
+            <Card id="tour-approval-actions">
                 <CardHeader>
                     <CardTitle>Thao tác phê duyệt</CardTitle>
                     <CardDescription>
@@ -48,6 +48,7 @@ export function ApprovalActions({ sampleId, results }: ApprovalActionsProps) {
                     <div className="flex flex-wrap gap-3">
                         {hasEnteredResults && (
                             <Button
+                                id="tour-approve-button"
                                 onClick={() => setApproveDialogOpen(true)}
                                 className="gap-2"
                                 size="lg"
@@ -72,6 +73,7 @@ export function ApprovalActions({ sampleId, results }: ApprovalActionsProps) {
                         {isReview && (
                             <>
                                 <Button
+                                    id="tour-reject-button"
                                     onClick={() => setRejectDialogOpen(true)}
                                     variant="secondary"
                                     className="gap-2 border border-slate-200"
@@ -82,6 +84,7 @@ export function ApprovalActions({ sampleId, results }: ApprovalActionsProps) {
                                 </Button>
 
                                 <Button
+                                    id="tour-discard-button"
                                     onClick={() => setDiscardDialogOpen(true)}
                                     variant="outline"
                                     className="gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"

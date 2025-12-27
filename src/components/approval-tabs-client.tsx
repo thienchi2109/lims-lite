@@ -121,6 +121,7 @@ export function ApprovalTabsClient({
 
     return (
         <Tabs
+            id="tour-approval-tabs"
             value={tab}
             onValueChange={handleTabChange}
             className="flex-1 flex flex-col min-h-0"

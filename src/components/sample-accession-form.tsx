@@ -218,7 +218,7 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
     const contextContent = (
         <div className="space-y-6 lg:space-y-6">
             {/* QR Card (Mobile Only or Highlighted) */}
-            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-5">
+            <div id="tour-qr-scanner" className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-5">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm">
                         <QrCode className="text-blue-500" size={20} />
@@ -241,7 +241,7 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
                 <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-0 text-sm">Thông tin mẫu</h2>
 
                 {/* Client Selector (Styled as Input Group) */}
-                <div className="space-y-1">
+                <div id="tour-client-selector" className="space-y-1">
                     <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                         Khách hàng *
                     </Label>
@@ -264,7 +264,7 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
                 </div>
 
                 {/* Sample Type */}
-                <div className="space-y-1">
+                <div id="tour-sample-type" className="space-y-1">
                     <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                         Loại mẫu *
                     </Label>
@@ -275,7 +275,7 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
                 </div>
 
                 {/* Received Time */}
-                <div className="space-y-1">
+                <div id="tour-received-time" className="space-y-1">
                     <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                         Thời gian nhận
                     </Label>
@@ -315,8 +315,9 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
 
     return (
         <>
-            <form onSubmit={handleSubmit(onSubmit)} className="h-full">
-                <TestAssignmentGrid
+            <form onSubmit={handleSubmit(onSubmit)} className="h-full" id="tour-accession-form">
+                <div id="tour-test-assignment">
+                    <TestAssignmentGrid
                     selected={selectedTests}
                     onChange={setSelectedTests}
                     specialties={specialties}
@@ -327,6 +328,7 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
                         ? `Lưu & Chỉ định (${selectedTests.length})`
                         : "Lưu mẫu (Không chỉ định)"}
                 />
+                </div>
             </form>
 
             <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
