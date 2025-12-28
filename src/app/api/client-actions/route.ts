@@ -1,16 +1,20 @@
 import { NextResponse } from 'next/server'
 import {
-    assignTests,
     updateSample,
     createSample,
     accessionAndAssignTests,
-    getSampleTests,
     getSamples,
+} from '@/app/actions/samples'
+import {
+    assignTests,
+    getSampleTests,
+} from '@/app/actions/sample-tests'
+import {
     getSamplesForApprovalCount,
     submitSampleForReview,
     rejectSample,
     discardSample,
-} from '@/app/actions/samples'
+} from '@/app/actions/sample-approvals'
 import {
     getResultsBySample,
     saveBatchResults,

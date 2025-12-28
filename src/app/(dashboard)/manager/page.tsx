@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { FlaskConical, CheckCircle2, ClipboardList, User, QrCode, BarChart3 } from 'lucide-react'
 import { DashboardHeader } from '@/components/dashboard-header'
-import { getSamplesForApprovalCount } from '@/app/actions/samples'
+import { getSamplesForApprovalCount } from '@/app/actions/sample-approvals'
 
 export default async function ManagerDashboard() {
     const supabase = await createClient()

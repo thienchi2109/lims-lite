@@ -260,6 +260,29 @@ export async function createSample(formData: FormData) {
 }
 ```
 
+### Server Action with Role Check
+```typescript
+'use server'
+import { requireRole, isAuthError } from '@/lib/auth-helpers'
+import { createClient } from '@/lib/supabase/server'
+
+export async function managerOnlyAction(id: string) {
+  // 2 lines instead of 12 - validates session + role
+  const auth = await requireRole('manager')
+  if (isAuthError(auth)) return auth
+
+  const supabase = await createClient()
+  // auth.id and auth.role now available
+  // ... rest of action
+}
+```
+
+**Auth helpers** (`src/lib/auth-helpers.ts`):
+- `requireAuth()` - Any authenticated user
+- `requireRole('manager')` - Single role check
+- `requireRole(['analyst', 'manager'])` - Multiple roles
+- `isAuthError(result)` - Type guard for error handling
+
 ### Database Trigger
 ```sql
 CREATE TRIGGER audit_log_trigger

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getSamplesForApprovalCount, getSample, getSamplesWithTab } from '@/app/actions/samples'
+import { getSamplesForApprovalCount, getSamplesWithTab } from '@/app/actions/sample-approvals'
+import { getSample } from '@/app/actions/samples'
 import { getResultsBySample } from '@/app/actions/results'
 import { ApprovalQueueTable } from '@/components/approval-queue-table'
 import { ApprovalBottomRow } from '@/components/approval-bottom-row'

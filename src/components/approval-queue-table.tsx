@@ -33,8 +33,8 @@ interface ApprovalQueueSample {
     sample_id: string
     client_name: string | null
     status: SampleStatus
-    received_at: string
-    updated_at: string
+    received_at: string | null
+    updated_at: string | null
     received_by_name: string | null
     total_tests: number
     entered_count: number
