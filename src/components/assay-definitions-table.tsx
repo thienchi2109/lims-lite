@@ -30,25 +30,7 @@ import {
 } from '@/components/ui/select'
 import { SearchInput } from '@/components/ui/search-input'
 import { LabSpecialty } from '@/types'
-
-type AssayMethod = {
-    id: string
-    method_id: string
-    name: string
-    is_default: boolean
-    notes: string | null
-}
-
-type AssayDefinition = {
-    id: string
-    name: string
-    specialty_id?: string | null
-    units: string | null
-    validation_rules: Record<string, any>
-    created_at?: string
-    updated_at?: string
-    methods?: AssayMethod[]
-}
+import { AssayDefinition, AssayMethod } from './assay-definition-dialog/types'
 
 type Props = {
     assays: AssayDefinition[]
@@ -337,7 +319,7 @@ export function AssayDefinitionsTable({
                                                 <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
                                                     <AlertCircle className="h-3.5 w-3.5 text-blue-500" />
                                                     <span>
-                                                        {Object.keys(assay.validation_rules).length} quy tắc
+                                                        {Object.keys(assay.validation_rules || {}).length} quy tắc
                                                     </span>
                                                 </div>
                                             ) : (
