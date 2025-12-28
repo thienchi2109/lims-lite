@@ -130,17 +130,8 @@ export function SamplesPageClient({
                 <div className="shrink-0 flex flex-col gap-2">
                     <Suspense fallback={<div className="text-sm text-slate-500">Đang tải bộ lọc...</div>}>
                         <SampleFilters
-                            search={searchTerm}
-                            status={(status ?? 'all')}
-                            fromDate={fromDate}
-                            toDate={toDate}
-                            pageSize={Number(pageSize)}
-                            sortBy={sortBy}
-                            sortOrder={sortOrder as 'asc' | 'desc'}
-                            receiverId={receiverId}
                             receiverOptions={receiverOptions}
                             specialties={specialties}
-                            specialtyIds={specialtyIds}
                         />
                     </Suspense>
                 </div>
