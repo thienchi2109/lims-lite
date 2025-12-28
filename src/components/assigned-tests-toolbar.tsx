@@ -5,13 +5,21 @@ import { Badge } from '@/components/ui/badge'
 import { CoAStatusBadge } from '@/components/coa-status-badge'
 import { WalkthroughTrigger } from '@/components/walkthrough'
 import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip'
+import {
     FlaskConical,
     Plus,
     CheckCircle,
     Printer,
     FileText,
+    RefreshCw,
+    ExternalLink,
 } from 'lucide-react'
 import type { SampleStatus, CoAReportStatus } from '@/types'
+import { cn } from '@/lib/utils'
 
 interface AssignedTestsToolbarProps {
     resultsCount: number
@@ -43,70 +51,107 @@ export function AssignedTestsToolbar({
     return (
         <div
             id="tour-sample-info"
-            className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3"
+            className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200/60 bg-white/80 px-4 py-3 backdrop-blur-md supports-[backdrop-filter]:bg-white/60 dark:bg-slate-900/80 dark:border-slate-800/60 transition-all duration-200"
         >
-            <div className="flex items-center gap-2">
-                <FlaskConical className="h-5 w-5 text-indigo-600" />
-                <h3 className="font-semibold text-slate-700">Chỉ định xét nghiệm</h3>
-                <Badge
-                    variant="secondary"
-                    className="ml-2 bg-slate-100 text-slate-600 hover:bg-slate-200"
-                >
-                    {resultsCount}
-                </Badge>
-                {sampleStatus === 'completed' && <CoAStatusBadge status={coaStatus} />}
+            <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 ring-1 ring-indigo-500/10 dark:bg-indigo-900/20 dark:text-indigo-400">
+                    <FlaskConical className="h-4 w-4" />
+                </div>
+                <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-slate-800 dark:text-slate-200">
+                        Chỉ định xét nghiệm
+                    </h3>
+                    <Badge
+                        variant="secondary"
+                        className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-md border border-slate-200 bg-slate-100 px-1.5 text-[11px] font-medium text-slate-600 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400"
+                    >
+                        {resultsCount}
+                    </Badge>
+                </div>
+
+                {(sampleStatus === 'completed' || coaStatus) && (
+                    <div className="flex items-center gap-2 border-l border-slate-200 pl-3 dark:border-slate-700">
+                        {sampleStatus === 'completed' && <CoAStatusBadge status={coaStatus} />}
+                    </div>
+                )}
+
                 <WalkthroughTrigger
                     tourId={sampleStatus === 'completed' && coaStatus !== 'ready' ? 'coa' : 'results'}
                 />
             </div>
-            <div className="flex items-center gap-2">
+
+            <div className="flex items-center gap-1">
+                {/* Visual Separator */}
+                <div className="mx-1 h-5 w-px bg-slate-200 dark:bg-slate-800" />
+
                 {/* Test Order Form Print Button */}
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2 border-slate-200 bg-white text-slate-600 hover:border-indigo-200 hover:text-indigo-600"
-                    disabled={resultsCount === 0}
-                    onClick={onPrint}
-                >
-                    <Printer className="h-4 w-4" />
-                    In Phiếu chỉ định
-                </Button>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-slate-500 transition-transform hover:scale-105 hover:bg-slate-100 hover:text-indigo-600 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-indigo-400"
+                            disabled={resultsCount === 0}
+                            onClick={onPrint}
+                        >
+                            <Printer className="h-4 w-4" />
+                            <span className="sr-only">In Phiếu chỉ định</span>
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>In Phiếu chỉ định</TooltipContent>
+                </Tooltip>
 
                 {/* CoA Generation/View Button - Only for completed samples */}
                 {sampleStatus === 'completed' && (
                     <>
                         {!coaStatus || coaStatus === 'failed' ? (
-                            <Button
-                                id="tour-coa-generate"
-                                variant="outline"
-                                size="sm"
-                                className="gap-2 border-emerald-200 bg-white text-emerald-600 hover:bg-emerald-50"
-                                onClick={onGenerateCoA}
-                                disabled={isGeneratingCoA}
-                            >
-                                <FileText
-                                    className={`h-4 w-4 ${isGeneratingCoA ? 'animate-spin' : ''}`}
-                                />
-                                {isGeneratingCoA
-                                    ? 'Đang tạo...'
-                                    : coaStatus === 'failed'
-                                      ? 'Tạo lại CoA'
-                                      : 'Tạo CoA'}
-                            </Button>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        id="tour-coa-generate"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-emerald-600 transition-transform hover:scale-105 hover:bg-emerald-50 hover:text-emerald-700 dark:text-emerald-500 dark:hover:bg-emerald-900/20"
+                                        onClick={onGenerateCoA}
+                                        disabled={isGeneratingCoA}
+                                    >
+                                        {isGeneratingCoA ? (
+                                            <RefreshCw className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <FileText className="h-4 w-4" />
+                                        )}
+                                        <span className="sr-only">
+                                            {isGeneratingCoA
+                                                ? 'Đang tạo...'
+                                                : coaStatus === 'failed'
+                                                    ? 'Tạo lại CoA'
+                                                    : 'Tạo CoA'}
+                                        </span>
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    {coaStatus === 'failed' ? 'Tạo lại CoA' : 'Tạo chứng nhận (CoA)'}
+                                </TooltipContent>
+                            </Tooltip>
                         ) : (
                             coaStatus === 'ready' && (
-                                <Button
-                                    id="tour-coa-view"
-                                    variant="outline"
-                                    size="sm"
-                                    className="gap-2 border-blue-200 bg-white text-blue-600 hover:bg-blue-50"
-                                    onClick={() =>
-                                        window.open(`/api/coa/view?sample_id=${sampleId}`, '_blank')
-                                    }
-                                >
-                                    <FileText className="h-4 w-4" />
-                                    Xem phiếu KQ
-                                </Button>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            id="tour-coa-view"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-blue-600 transition-transform hover:scale-105 hover:bg-blue-50 hover:text-blue-700 dark:text-blue-500 dark:hover:bg-blue-900/20"
+                                            onClick={() =>
+                                                window.open(`/api/coa/view?sample_id=${sampleId}`, '_blank')
+                                            }
+                                        >
+                                            <ExternalLink className="h-4 w-4" />
+                                            <span className="sr-only">Xem phiếu KQ</span>
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Xem phiếu Kết quả (CoA)</TooltipContent>
+                                </Tooltip>
                             )
                         )}
                     </>
@@ -114,26 +159,40 @@ export function AssignedTestsToolbar({
 
                 {/* Submit for Review Button */}
                 {sampleStatus === 'in_progress' && canSubmitForReview && (
-                    <Button
-                        id="tour-submit-review"
-                        size="sm"
-                        className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
-                        onClick={onSubmitForReview}
-                        disabled={hasPendingChanges}
-                    >
-                        <CheckCircle className="h-4 w-4" />
-                        Gửi duyệt
-                    </Button>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                id="tour-submit-review"
+                                size="icon"
+                                className="h-8 w-8 bg-emerald-600 text-white shadow-sm transition-all hover:scale-105 hover:bg-emerald-700 hover:shadow-emerald-500/20"
+                                onClick={onSubmitForReview}
+                                disabled={hasPendingChanges}
+                            >
+                                <CheckCircle className="h-4 w-4" />
+                                <span className="sr-only">Gửi duyệt</span>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Gửi duyệt kết quả</TooltipContent>
+                    </Tooltip>
                 )}
 
-                <Button
-                    size="sm"
-                    className="gap-2 bg-indigo-600 hover:bg-indigo-700"
-                    onClick={onOpenAssignment}
-                >
-                    <Plus className="h-4 w-4" />
-                    Chỉ định
-                </Button>
+                {/* Add Test Button - Primary Gradient */}
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            size="icon"
+                            className={cn(
+                                "ml-1 h-8 w-8 text-white shadow-md transition-all hover:scale-105 hover:shadow-lg",
+                                "bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 shadow-indigo-500/20"
+                            )}
+                            onClick={onOpenAssignment}
+                        >
+                            <Plus className="h-4 w-4" />
+                            <span className="sr-only">Chỉ định</span>
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Chỉ định xét nghiệm</TooltipContent>
+                </Tooltip>
             </div>
         </div>
     )
