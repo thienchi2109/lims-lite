@@ -92,6 +92,7 @@ export function SampleFilters({
     const searchInputRef = useRef<HTMLInputElement | null>(null)
 
     const [isFilterOpen, setIsFilterOpen] = useState(false)
+    const popoverContentRef = useRef<HTMLDivElement | null>(null)
 
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -313,7 +314,7 @@ export function SampleFilters({
                                 )}
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[340px] p-0" align="end">
+                        <PopoverContent className="w-[340px] p-0" align="end" ref={popoverContentRef}>
                             <div className="flex flex-col h-[85vh] sm:h-auto overflow-hidden">
                                 <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
                                     <h4 className="font-semibold text-sm">Bộ lọc nâng cao</h4>
@@ -338,19 +339,25 @@ export function SampleFilters({
                                                 {sortedSpecialties.map((specialty) => {
                                                     const isSelected = selectedSpecialtyIds.includes(specialty.id)
                                                     return (
-                                                        <button
-                                                            key={specialty.id}
-                                                            type="button"
-                                                            onClick={() => toggleSpecialty(specialty.id)}
-                                                            className={cn(
-                                                                "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
-                                                                isSelected
-                                                                    ? "border-sky-500 bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300"
-                                                                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
-                                                            )}
-                                                        >
-                                                            {specialty.code}
-                                                        </button>
+                                                        <Tooltip key={specialty.id}>
+                                                            <TooltipTrigger asChild>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => toggleSpecialty(specialty.id)}
+                                                                    className={cn(
+                                                                        "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
+                                                                        isSelected
+                                                                            ? "border-sky-500 bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300"
+                                                                            : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
+                                                                    )}
+                                                                >
+                                                                    {specialty.code}
+                                                                </button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent container={popoverContentRef.current}>
+                                                                <p>{specialty.name}</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
                                                     )
                                                 })}
                                             </div>
