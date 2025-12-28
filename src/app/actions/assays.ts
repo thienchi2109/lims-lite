@@ -48,7 +48,6 @@ export async function getAssayDefinitions(params?: {
                 { count: 'exact' }
             )
             .is('deleted_at', null)
-            .is('deleted_at', null)
 
         // Apply Specialty Filter
         if (specialtyId && specialtyId !== 'all') {

@@ -20,13 +20,21 @@ export default async function UnifiedSamplesPage() {
         redirect('/login')
     }
 
-    // 2. Get user data and role
-    const { data: userData } = await supabase
-        .from('users')
-        .select('full_name, role')
-        .eq('id', user.id)
-        .single()
+    // 2. Fetch user data, receiver options, and specialties in parallel
+    const [userResult, receiverResult, specialtiesResult] = await Promise.all([
+        supabase
+            .from('users')
+            .select('full_name, role')
+            .eq('id', user.id)
+            .single(),
+        supabase
+            .from('users')
+            .select('id, full_name')
+            .order('full_name', { ascending: true }),
+        getSpecialties(),
+    ])
 
+    const userData = userResult.data
     const role = userData?.role
 
     // Verify role is valid
@@ -34,12 +42,7 @@ export default async function UnifiedSamplesPage() {
         redirect('/login')
     }
 
-    // 3. Fetch receiver options (for both analyst and manager roles)
-    const { data: receiverData, error: receiverError } = await supabase
-        .from('users')
-        .select('id, full_name')
-        .order('full_name', { ascending: true })
-
+    const { data: receiverData, error: receiverError } = receiverResult
     if (receiverError) {
         console.error('Error fetching receiver list:', receiverError)
     }
@@ -50,7 +53,7 @@ export default async function UnifiedSamplesPage() {
             name: receiver.full_name || '',
         })) || []
 
-    const { data: specialties } = await getSpecialties()
+    const specialties = specialtiesResult.data
 
     // 4. Build permissions object based on role
     const permissions = {
