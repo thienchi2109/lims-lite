@@ -27,16 +27,30 @@ import {
 import { Button } from '@/components/ui/button'
 import { SearchResultItem } from '@/components/search-result-item'
 import { useGlobalSearch } from '@/hooks/use-search'
+import { cn } from '@/lib/utils'
 import type { GlobalSearchResult } from '@/types'
 
 // Valid entity types
 type EntityType = 'sample' | 'client' | 'assay' | 'result'
 
-export function GlobalSearch() {
+interface GlobalSearchProps {
+    className?: string
+    skipShortcut?: boolean
+    variant?: 'auto' | 'compact' | 'full'
+}
+
+export function GlobalSearch({
+    className,
+    skipShortcut = false,
+    variant = 'auto'
+}: GlobalSearchProps) {
     const [open, setOpen] = useState(false)
     const [query, setQuery] = useState('')
     const [debouncedQuery, setDebouncedQuery] = useState('')
     const router = useRouter()
+
+    const isFull = variant === 'full'
+    const isCompact = variant === 'compact'
 
     // Debounce search query (300ms)
     useEffect(() => {
@@ -56,6 +70,8 @@ export function GlobalSearch() {
 
     // Register Cmd/Ctrl+K keyboard shortcut
     useEffect(() => {
+        if (skipShortcut) return
+
         const down = (e: KeyboardEvent) => {
             if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault()
@@ -65,7 +81,7 @@ export function GlobalSearch() {
 
         document.addEventListener('keydown', down)
         return () => document.removeEventListener('keydown', down)
-    }, [])
+    }, [skipShortcut])
 
     // Handle result selection
     const handleSelect = useCallback((result: GlobalSearchResult) => {
@@ -114,12 +130,29 @@ export function GlobalSearch() {
             {/* Visual Trigger Button */}
             <Button
                 variant="outline"
-                className="relative h-9 w-9 p-0 xl:h-10 xl:w-60 xl:justify-start xl:px-3 xl:py-2 text-muted-foreground"
+                className={cn(
+                    "relative text-muted-foreground",
+                    isFull ? "h-10 w-full justify-start px-3 py-2" :
+                        isCompact ? "h-9 w-9 p-0" :
+                            "h-9 w-9 p-0 xl:h-10 xl:w-60 xl:justify-start xl:px-3 xl:py-2",
+                    className
+                )}
                 onClick={() => setOpen(true)}
             >
-                <Search className="h-4 w-4 xl:mr-2" />
-                <span className="hidden xl:inline-flex">Tìm kiếm...</span>
-                <kbd className="pointer-events-none absolute right-1.5 top-2 hidden h-6 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 xl:flex">
+                <Search className={cn(
+                    "h-4 w-4",
+                    isFull ? "mr-2" : isCompact ? "" : "xl:mr-2"
+                )} />
+                <span className={cn(
+                    "inline-flex",
+                    isFull ? "" : isCompact ? "hidden" : "hidden xl:inline-flex"
+                )}>
+                    Tìm kiếm...
+                </span>
+                <kbd className={cn(
+                    "pointer-events-none absolute right-1.5 top-2 h-6 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100",
+                    isFull ? "flex" : isCompact ? "hidden" : "hidden xl:flex"
+                )}>
                     <span className="text-xs">⌘</span>K
                 </kbd>
             </Button>

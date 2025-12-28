@@ -43,7 +43,7 @@ export function DashboardNav({ user, className }: DashboardNavProps) {
 
     const links = role === 'manager'
         ? [
-            { href: '/manager', label: 'Dashboard', icon: LayoutDashboard },
+            { href: '/manager', label: 'Trang chủ', icon: LayoutDashboard },
             { href: '/manager/samples', label: 'Quản lý mẫu', icon: FlaskConical },
             { href: '/manager/approvals', label: 'Phê duyệt', icon: CheckCircle2 },
             { href: '/manager/assays', label: 'Chỉ tiêu', icon: ClipboardList },
@@ -53,7 +53,7 @@ export function DashboardNav({ user, className }: DashboardNavProps) {
         ]
         : role === 'analyst'
             ? [
-                { href: '/analyst', label: 'Dashboard', icon: LayoutDashboard },
+                { href: '/analyst', label: 'Trang chủ', icon: LayoutDashboard },
                 { href: '/analyst/accession', label: 'Tiếp nhận', icon: Plus },
                 { href: '/analyst/samples', label: 'Danh sách mẫu', icon: List },
                 { href: '/analyst/reports', label: 'Báo cáo', icon: BarChart3 },
