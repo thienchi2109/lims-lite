@@ -59,6 +59,14 @@ export const resultKeys = {
 }
 
 /**
+ * Query key factory for clients
+ */
+export const clientKeys = {
+    all: ['clients'] as const,
+    detail: (id: string | null) => ['client', id] as const,
+}
+
+/**
  * Query key factory for search queries
  *
  * Hierarchical structure:

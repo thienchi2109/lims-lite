@@ -1,10 +1,10 @@
 'use client'
 
-import type { Client, SampleWithUser } from '@/types'
+import type { SampleWithUser } from '@/types'
 import { formatDate } from '@/lib/utils-lims'
 // import { SampleStatusBadge } from '@/components/sample-status-badge' // Removed
 import { SampleLifecycleChevron } from '@/components/sample-lifecycle-stepper'
-import { getClientClient } from '@/lib/api-client'
+import { useClient } from '@/hooks/use-client'
 import {
     FileText,
     Calendar,
@@ -17,7 +17,7 @@ import {
     Loader2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { SampleEditDialog } from '@/components/sample-edit-dialog'
 import { SampleActivityFeed } from '@/components/sample-activity-feed'
 import { useQueryClient } from '@tanstack/react-query'
@@ -31,47 +31,14 @@ interface SampleDetailPanelProps {
 export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
     const [editDialogOpen, setEditDialogOpen] = useState(false)
     const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
-    const [client, setClient] = useState<Client | null>(null)
-    const [isClientLoading, setIsClientLoading] = useState(false)
-    const [clientLoadError, setClientLoadError] = useState<string | null>(null)
     const queryClient = useQueryClient()
 
-    useEffect(() => {
-        setClient(null)
-        setClientLoadError(null)
-
-        if (!sample?.client_id) return
-
-        let cancelled = false
-
-        const run = async () => {
-            setIsClientLoading(true)
-            try {
-                const result = await getClientClient(sample.client_id as string)
-                if (cancelled) return
-
-                if ('data' in result && result.data) {
-                    setClient(result.data as Client)
-                    return
-                }
-
-                setClientLoadError('Không thể tải thông tin khách hàng')
-            } catch (error) {
-                if (cancelled) return
-                setClientLoadError(
-                    error instanceof Error ? error.message : 'Không thể tải thông tin khách hàng'
-                )
-            } finally {
-                if (!cancelled) setIsClientLoading(false)
-            }
-        }
-
-        run()
-
-        return () => {
-            cancelled = true
-        }
-    }, [sample?.client_id])
+    // Fetch client data using TanStack Query
+    const {
+        data: client,
+        isLoading: isClientLoading,
+        error: clientError,
+    } = useClient({ clientId: sample?.client_id ?? null })
 
     if (!sample) {
         return (
@@ -207,9 +174,9 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
                                             </div>
                                         )}
 
-                                        {!isClientLoading && clientLoadError && (
+                                        {!isClientLoading && clientError && (
                                             <div className="text-xs text-red-600 dark:text-red-400">
-                                                {clientLoadError}
+                                                {clientError.message}
                                             </div>
                                         )}
 
