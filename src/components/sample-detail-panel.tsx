@@ -2,7 +2,8 @@
 
 import type { Client, SampleWithUser } from '@/types'
 import { formatDate } from '@/lib/utils-lims'
-import { SampleStatusBadge } from '@/components/sample-status-badge'
+// import { SampleStatusBadge } from '@/components/sample-status-badge' // Removed
+import { SampleLifecycleChevron } from '@/components/sample-lifecycle-stepper'
 import { getClientClient } from '@/lib/api-client'
 import {
     FileText,
@@ -105,7 +106,7 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
                     </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                    <SampleStatusBadge status={sample.status} />
+                    <SampleLifecycleChevron status={sample.status} />
                     {['received', 'assigned'].includes(sample.status) && (
                         <Button
                             variant="ghost"
