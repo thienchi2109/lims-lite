@@ -359,15 +359,26 @@ export async function unassignTests(data: AssignTests) {
 
 /**
  * Gets all available assay definitions with optional search
+ * Uses a single query with foreign key joins to avoid N+1 queries
  */
 export async function getAssayDefinitions(search?: string) {
     try {
         const supabase = await createClient()
 
-        // 1. Fetch assay definitions
+        // Single query with joins: assay_definitions -> assay_methods (default) -> methods
         let query = supabase
             .from('assay_definitions')
-            .select('*')
+            .select(`
+                *,
+                assay_methods!left (
+                    method_id,
+                    is_default,
+                    method:methods (
+                        id,
+                        name
+                    )
+                )
+            `)
             .is('deleted_at', null)
             .order('name')
 
@@ -386,46 +397,20 @@ export async function getAssayDefinitions(search?: string) {
             return { data: [] }
         }
 
-        // 2. Fetch default methods for these assays
-        const assayIds = assays.map(a => a.id)
-        const { data: defaultMethods, error: methodsError } = await supabase
-            .from('assay_methods')
-            .select(`
-                assay_id,
-                method_id
-            `)
-            .in('assay_id', assayIds)
-            .eq('is_default', true)
+        // Transform data to extract default method info
+        const transformedAssays = assays.map((assay) => {
+            // Find the default method from the joined assay_methods
+            const defaultMethodLink = assay.assay_methods?.find(
+                (am: { is_default: boolean }) => am.is_default
+            )
+            const methodDetail = defaultMethodLink?.method as { id: string; name: string } | null
 
-        if (methodsError) {
-            console.error('Error fetching default methods:', methodsError)
-        }
-
-        // 2.5 Fetch methods details
-        let methodsMap = new Map<string, any>()
-        if (defaultMethods && defaultMethods.length > 0) {
-            const methodIds = [...new Set(defaultMethods.map((am: any) => am.method_id))]
-            const { data: methodsData, error: methodsDataError } = await supabase
-                .from('methods')
-                .select('id, name')
-                .in('id', methodIds)
-
-            if (methodsDataError) {
-                console.error('Error fetching methods details:', methodsDataError)
-            } else if (methodsData) {
-                methodsData.forEach((m: any) => methodsMap.set(m.id, m))
-            }
-        }
-
-        // 3. Merge data
-        const transformedAssays = assays.map((assay: any) => {
-            const defaultMethod = defaultMethods?.find((am: any) => am.assay_id === assay.id)
-            const methodDetail = defaultMethod ? methodsMap.get(defaultMethod.method_id) : null
-
+            // Remove assay_methods from the response, add flattened fields
+            const { assay_methods, ...assayData } = assay
             return {
-                ...assay,
+                ...assayData,
                 method_name: methodDetail?.name || null,
-                default_method_id: defaultMethod?.method_id || null,
+                default_method_id: defaultMethodLink?.method_id || null,
             }
         })
 
