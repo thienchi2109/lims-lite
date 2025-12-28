@@ -5,7 +5,6 @@ import { useSampleDetail } from '@/hooks/use-sample-detail'
 import { SampleListTable } from '@/components/sample-list-table'
 import { SampleFilters } from '@/components/sample-filters'
 import { SampleBottomRow } from '@/components/sample-bottom-row'
-import { LabSpecialtyChips } from '@/components/lab-specialty-chips'
 import { type SampleStatus } from '@/types'
 import type { LabSpecialty } from '@/types'
 import { isValidUUID } from '@/lib/utils-lims'
@@ -140,14 +139,10 @@ export function SamplesPageClient({
                             sortOrder={sortOrder as 'asc' | 'desc'}
                             receiverId={receiverId}
                             receiverOptions={receiverOptions}
+                            specialties={specialties}
+                            specialtyIds={specialtyIds}
                         />
                     </Suspense>
-                    {specialties.length > 0 && (
-                        <LabSpecialtyChips
-                            specialties={specialties}
-                            selectedIds={specialtyIds}
-                        />
-                    )}
                 </div>
                 <div className="flex-1 min-h-0">
                     <SampleListTable
