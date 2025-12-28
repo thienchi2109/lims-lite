@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
-import { sampleKeys, resultKeys } from '@/types/query-keys'
+import { invalidateSampleQueries } from '@/types/query-keys'
 import { rejectSampleClient } from '@/lib/api-client'
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -38,9 +38,7 @@ export function RejectSampleDialog({ sampleId, open, onOpenChange }: RejectSampl
                 toast.success('Đã từ chối mẫu')
 
                 // Invalidate queries
-                queryClient.invalidateQueries({ queryKey: sampleKeys.all })
-                queryClient.invalidateQueries({ queryKey: sampleKeys.detail(sampleId) })
-                queryClient.invalidateQueries({ queryKey: resultKeys.bySample(sampleId) })
+                await invalidateSampleQueries(queryClient, sampleId)
 
                 router.refresh()
                 onOpenChange(false)

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
-import { sampleKeys, resultKeys } from '@/types/query-keys'
+import { invalidateSampleQueries } from '@/types/query-keys'
 import { discardSampleClient } from '@/lib/api-client'
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -48,9 +48,7 @@ export function DiscardSampleDialog({ sampleId, open, onOpenChange }: DiscardSam
                 router.push(`${pathname}?${params.toString()}`)
 
                 // Invalidate queries to trigger refetch
-                queryClient.invalidateQueries({ queryKey: sampleKeys.all }) // Refresh sample list
-                await queryClient.refetchQueries({ queryKey: sampleKeys.detail(sampleId) }) // Force refresh detail panel (bypasses staleTime)
-                queryClient.invalidateQueries({ queryKey: resultKeys.bySample(sampleId) })
+                await invalidateSampleQueries(queryClient, sampleId)
 
                 onOpenChange(false)
                 setReason('')

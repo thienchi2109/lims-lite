@@ -120,3 +120,53 @@ export const searchKeys = {
  * Type helper to extract query key from factory
  */
 export type QueryKey<T extends (...args: any[]) => readonly any[]> = ReturnType<T>
+
+/**
+ * Invalidation helper for sample-related operations.
+ *
+ * Consolidates multiple invalidations into a single atomic operation,
+ * reducing redundant network requests and preventing UI flicker.
+ *
+ * @example
+ * // Invalidate all sample-related queries for a specific sample
+ * await invalidateSampleQueries(queryClient, sampleId)
+ *
+ * // Invalidate only sample list and detail (no results)
+ * await invalidateSampleQueries(queryClient, sampleId, { includeResults: false })
+ */
+import type { QueryClient } from '@tanstack/react-query'
+
+interface InvalidateSampleQueriesOptions {
+    /** Include results queries in invalidation (default: true) */
+    includeResults?: boolean
+    /** Include sample tests queries in invalidation (default: false) */
+    includeTests?: boolean
+}
+
+export async function invalidateSampleQueries(
+    queryClient: QueryClient,
+    sampleId: string,
+    options: InvalidateSampleQueriesOptions = {}
+): Promise<void> {
+    const { includeResults = true, includeTests = false } = options
+
+    await queryClient.invalidateQueries({
+        predicate: (query) => {
+            const key = query.queryKey
+
+            // Match samples list queries: ['samples', ...]
+            if (key[0] === 'samples') return true
+
+            // Match specific sample detail: ['sample', sampleId]
+            if (key[0] === 'sample' && key[1] === sampleId) return true
+
+            // Match results for this sample: ['results', sampleId]
+            if (includeResults && key[0] === 'results' && key[1] === sampleId) return true
+
+            // Match tests for this sample: ['sample-tests', sampleId]
+            if (includeTests && key[0] === 'sample-tests' && key[1] === sampleId) return true
+
+            return false
+        },
+    })
+}

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback, useTransition } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { sampleKeys } from '@/types/query-keys'
+import { sampleKeys, invalidateSampleQueries } from '@/types/query-keys'
 import {
     Search,
     FlaskConical,
@@ -216,8 +216,7 @@ export function TestAssignmentModule({ sampleId, sampleStatus, onClose, onSucces
             toast.success(message)
 
             // Invalidate all sample queries to trigger refetch
-            queryClient.invalidateQueries({ queryKey: sampleKeys.all })
-            queryClient.invalidateQueries({ queryKey: sampleKeys.detail(sampleId) })
+            await invalidateSampleQueries(queryClient, sampleId, { includeResults: false })
 
             onSuccess()
             onClose()

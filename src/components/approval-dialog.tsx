@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
-import { sampleKeys, resultKeys } from '@/types/query-keys'
+import { sampleKeys, resultKeys, invalidateSampleQueries } from '@/types/query-keys'
 import { approveResultsClient, cancelApprovalClient } from '@/lib/api-client'
 import { getActiveSignature } from '@/app/actions/signatures'
 import {
@@ -86,9 +86,7 @@ export function ApprovalDialog({
                     toast.error(result.error)
                 } else {
                     toast.success(`Approved ${result.approvedCount} results`)
-                    queryClient.invalidateQueries({ queryKey: sampleKeys.all })
-                    queryClient.invalidateQueries({ queryKey: resultKeys.bySample(sampleId) })
-                    queryClient.invalidateQueries({ queryKey: sampleKeys.detail(sampleId) })
+                    await invalidateSampleQueries(queryClient, sampleId)
                     onOpenChange(false)
                     setNote('')
 
@@ -106,9 +104,7 @@ export function ApprovalDialog({
                     toast.error(result.error)
                 } else {
                     toast.success(`Canceled approval for ${result.canceledCount} results`)
-                    queryClient.invalidateQueries({ queryKey: sampleKeys.all })
-                    queryClient.invalidateQueries({ queryKey: resultKeys.bySample(sampleId) })
-                    queryClient.invalidateQueries({ queryKey: sampleKeys.detail(sampleId) })
+                    await invalidateSampleQueries(queryClient, sampleId)
                     onOpenChange(false)
                     setNote('')
 
