@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { SampleStatus, ResultStatus } from './core'
+import { SampleStatus, ResultStatus, SampleType } from './core'
 
 // ============================================================================
 // SEARCH SCHEMAS
@@ -19,7 +19,7 @@ export const SearchSampleResultSchema = z.object({
     id: z.string().uuid(),
     sample_id: z.string(),
     client_name: z.string(),
-    type: z.string(),
+    type: SampleType,
     status: SampleStatus,
     received_at: z.string().datetime(),
     rank: z.number(),
