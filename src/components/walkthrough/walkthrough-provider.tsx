@@ -11,6 +11,7 @@ import { getTourStatus, markTourCompleted } from '@/app/actions/walkthrough'
 import { accessionTourSteps } from './tours/accession-tour'
 import { resultsTourSteps } from './tours/results-tour'
 import { approvalTourSteps } from './tours/approval-tour'
+import { coaTourSteps } from './tours/coa-tour'
 
 interface WalkthroughProviderProps {
     children: ReactNode
@@ -60,6 +61,8 @@ export function WalkthroughProvider({ children, userId }: WalkthroughProviderPro
                 return resultsTourSteps
             case 'approval':
                 return approvalTourSteps
+            case 'coa':
+                return coaTourSteps
             default:
                 return []
         }

@@ -55,7 +55,9 @@ export function AssignedTestsToolbar({
                     {resultsCount}
                 </Badge>
                 {sampleStatus === 'completed' && <CoAStatusBadge status={coaStatus} />}
-                <WalkthroughTrigger tourId="results" />
+                <WalkthroughTrigger
+                    tourId={sampleStatus === 'completed' && coaStatus !== 'ready' ? 'coa' : 'results'}
+                />
             </div>
             <div className="flex items-center gap-2">
                 {/* Test Order Form Print Button */}
@@ -75,6 +77,7 @@ export function AssignedTestsToolbar({
                     <>
                         {!coaStatus || coaStatus === 'failed' ? (
                             <Button
+                                id="tour-coa-generate"
                                 variant="outline"
                                 size="sm"
                                 className="gap-2 border-emerald-200 bg-white text-emerald-600 hover:bg-emerald-50"
@@ -93,6 +96,7 @@ export function AssignedTestsToolbar({
                         ) : (
                             coaStatus === 'ready' && (
                                 <Button
+                                    id="tour-coa-view"
                                     variant="outline"
                                     size="sm"
                                     className="gap-2 border-blue-200 bg-white text-blue-600 hover:bg-blue-50"
