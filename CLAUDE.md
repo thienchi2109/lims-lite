@@ -63,9 +63,14 @@ docker compose up -d # Start Supabase       | docker compose logs -f
 ```bash
 # Apply migration
 powershell -Command "Get-Content supabase\migrations\XXX_name.sql | docker exec -i lims-postgres psql -U postgres -d postgres"
-docker compose restart rest  # After RPC changes
 docker exec lims-postgres psql -U postgres -d postgres -c "SELECT * FROM run_security_tests();"
 ```
+
+**IMPORTANT - After RPC/Function Changes:**
+```bash
+docker compose restart rest  # Refresh PostgREST schema cache
+```
+Without this, you'll get "Could not find the function in the schema cache" errors.
 
 **Security:** Always `DROP POLICY IF EXISTS` before `CREATE POLICY`, include role checks, run `run_security_tests()` after migrations. See `docs/MIGRATION_SECURITY_CHECKLIST.md`.
 
