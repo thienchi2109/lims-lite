@@ -92,6 +92,80 @@ mkdir -p src/components/feature
 4. **Vietnamese Localization**: All UI in Vietnamese (see `docs/vietnamese_dictionary.md`)
 5. **Type Safety**: Zod schemas, strict TypeScript, no `any` types
 
+## CRITICAL: Tool Priority Rules
+
+### 🔍 Code Search: ALWAYS use warp-grep
+warp-grep is 4x faster and semantically understands code.
+
+**Use warp-grep for:**
+- Finding implementations
+- Understanding code flows
+- Debugging issues
+- Exploring codebase
+- ANY code-related search
+
+**Syntax:** Semantic queries, not keywords
+- ✅ "Where is user authentication handled?"
+- ❌ "Find 'auth'" (too literal)
+
+### ✏️ File Editing: ALWAYS use edit_file
+edit_file is 60x faster and more accurate (98% vs 86%).
+
+**Use edit_file for:**
+- ALL modifications to existing files
+- Works with partial snippets
+- Use `// ... existing code ...` markers
+
+**Never use:**
+- ❌ write_file for edits
+- ❌ str_replace (outdated)
+
+## Workflow Pattern
+
+Every code task follows:
+1. **Search** with warp-grep → Understand context
+2. **Edit** with edit_file → Make changes
+3. **Verify** → Confirm changes work
+
+## Tool Decision Matrix
+
+| Task | Tool | Why |
+|------|------|-----|
+| Find code | warp-grep | Semantic, fast |
+| Edit code | edit_file | Precise, efficient |
+| Create file | write_file | Only for new files |
+| Find config | search_files | OK for non-code |
+
+## Examples
+
+### Adding a Feature
+```
+1. warp-grep: "Where are API routes defined?"
+2. edit_file: Add new route using the pattern
+3. warp-grep: "How are routes tested?"
+4. edit_file: Add test for new route
+```
+
+### Debugging
+```
+1. warp-grep: "Where does 'User not found' error occur?"
+2. warp-grep: "How is user lookup implemented?"
+3. edit_file: Fix the lookup logic
+4. edit_file: Add error logging
+```
+
+## Anti-Patterns
+
+❌ Using grep when warp-grep is available
+❌ Using write_file to edit existing files
+❌ Using str_replace at all
+❌ Keyword search when semantic search is better
+
+✅ Always warp-grep first to understand
+✅ Always edit_file for modifications
+✅ Use lazy edits with context markers
+✅ Ask semantic questions to warp-grep
+
 ## Development Commands
 
 ```bash
