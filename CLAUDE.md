@@ -17,11 +17,24 @@
 
 | Task | Tool | Notes |
 |------|------|-------|
-| Find code | warp-grep | Semantic queries: "Where is auth handled?" |
-| Edit code | edit_file | Use `// ... existing code ...` markers |
+| Find code | warpgrep | `mcp__filesystem-with-morph__warpgrep_codebase_search` - semantic queries |
+| Edit code | edit_file | `mcp__filesystem-with-morph__edit_file` - use `// ... existing code ...` |
 | Create file | write_file | Only for new files |
+| Library docs | Context7 | `mcp__context7__resolve-library-id` → `mcp__context7__query-docs` |
 
-**Workflow:** warp-grep → edit_file → verify
+**MCP Tools - USE PROACTIVELY:**
+
+1. **Morph (warpgrep)** - For ANY code search:
+   - Use BEFORE grep/glob for semantic queries like "Where is auth handled?"
+   - Faster and smarter than manual file searching
+
+2. **Context7** - For ANY library/framework questions:
+   - Code generation with external libraries (Supabase, React, Zod, etc.)
+   - Setup or configuration steps
+   - API documentation lookup
+   - Always: `resolve-library-id` first → then `query-docs`
+
+**Workflow:** warpgrep → edit_file → verify
 
 ## Beads Task Tracking (Windows PowerShell)
 
@@ -117,7 +130,6 @@ src/
 - **Files:** 250-350 lines max, single responsibility
 - **Names:** Self-documenting (`userAuthenticatedAt` not `uat`)
 - **Functions:** Action-based (`calculateTaxForOrder()` not `calcTax()`)
-NOTE: Always use context7 when I need code generation, setup or configuration steps, or library/API documentation. This means you should automatically use the Context7 MCP tools to resolve library id and get library docs without me having to explicitly ask.
 
 ## Code Generation
 
