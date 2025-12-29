@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getAssayDefinitions } from '@/app/actions/assays'
+import { getAssayDefinitions } from '@/app/actions/assay-queries'
 import { fetchSamples } from '@/lib/data/samples'
 
 export async function GET(request: Request) {

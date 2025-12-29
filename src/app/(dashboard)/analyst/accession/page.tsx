@@ -5,7 +5,7 @@ import { SampleAccessionForm } from '@/components/sample-accession-form'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { DashboardHeader } from '@/components/dashboard-header'
-import { getSpecialties } from '@/app/actions/assays'
+import { getSpecialties } from '@/app/actions/assay-lookups'
 import { AccessionPageHeader } from './accession-page-header'
 
 export default async function AccessionPage() {

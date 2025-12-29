@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { DashboardHeader } from '@/components/dashboard-header'
 import { SamplesPageClient } from '@/components/samples-page-client'
 import { Suspense } from 'react'
-import { getSpecialties } from '@/app/actions/assays'
+import { getSpecialties } from '@/app/actions/assay-lookups'
 
 // This page relies on cookies/session via Supabase, so force dynamic rendering
 export const dynamic = 'force-dynamic'

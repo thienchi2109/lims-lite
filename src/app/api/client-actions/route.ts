@@ -21,13 +21,13 @@ import {
     approveResults,
     cancelApproval,
 } from '@/app/actions/results'
+import { getAssayDefinitions as fetchAssayDefinitions } from '@/app/actions/assay-queries'
+import { getMethods } from '@/app/actions/assay-lookups'
 import {
-    getAssayDefinitions as fetchAssayDefinitions,
-    getMethods,
     createAssayDefinition,
     updateAssayDefinition,
     deleteAssayDefinition,
-} from '@/app/actions/assays'
+} from '@/app/actions/assay-mutations'
 import {
     addMethodToAssay,
     setDefaultMethod,
