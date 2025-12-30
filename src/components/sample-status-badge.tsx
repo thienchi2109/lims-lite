@@ -1,7 +1,10 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
+import { motion } from 'motion/react'
 import { Badge } from '@/components/ui/badge'
 import { type SampleStatus } from '@/types'
+import { statusBadgePulse } from '@/lib/motion'
 
 interface SampleStatusBadgeProps {
     status: SampleStatus
@@ -48,13 +51,24 @@ const statusConfig: Record<
 
 export function SampleStatusBadge({ status }: SampleStatusBadgeProps) {
     const config = statusConfig[status]
+    const prevStatusRef = useRef<SampleStatus>(status)
+    const hasChanged = prevStatusRef.current !== status
+
+    useEffect(() => {
+        prevStatusRef.current = status
+    }, [status])
 
     return (
-        <Badge
-            variant="outline"
-            className={`capitalize rounded-full px-2.5 py-0.5 text-[11px] font-medium shadow-sm ${config.className}`}
+        <motion.div
+            animate={hasChanged ? statusBadgePulse : undefined}
+            style={{ display: 'inline-flex' }}
         >
-            {config.label}
-        </Badge>
+            <Badge
+                variant="outline"
+                className={`capitalize rounded-full px-2.5 py-0.5 text-[11px] font-medium shadow-sm transition-colors duration-250 ${config.className}`}
+            >
+                {config.label}
+            </Badge>
+        </motion.div>
     )
 }

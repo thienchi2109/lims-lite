@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
+import { motion } from 'motion/react'
 import {
     useReactTable,
     getCoreRowModel,
@@ -18,6 +19,34 @@ import { ChevronLeft, ChevronRight, Eye, Pencil, ArrowUpDown, ArrowUp, ArrowDown
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { sampleKeys } from '@/types/query-keys'
+import { rowHighlight } from '@/lib/motion'
+
+/**
+ * Hook to track which rows have been updated since last render
+ * Compares updated_at timestamps to detect changes
+ */
+function useUpdatedRows(samples: SampleWithUser[], isInitialMount: boolean) {
+    const prevTimestamps = useRef<Map<string, string>>(new Map())
+    const updatedIds = new Set<string>()
+
+    // Only check for updates after initial mount (not on first load or pagination)
+    if (!isInitialMount) {
+        samples.forEach(sample => {
+            const prev = prevTimestamps.current.get(sample.id)
+            if (prev && prev !== sample.updated_at) {
+                updatedIds.add(sample.id)
+            }
+        })
+    }
+
+    useEffect(() => {
+        const newMap = new Map<string, string>()
+        samples.forEach(s => newMap.set(s.id, s.updated_at))
+        prevTimestamps.current = newMap
+    }, [samples])
+
+    return updatedIds
+}
 
 interface SampleListTableProps {
     samples: SampleWithUser[]
@@ -55,10 +84,19 @@ export function SampleListTable({
     const [discardDialogOpen, setDiscardDialogOpen] = useState(false)
     const [selectedSampleForDiscard, setSelectedSampleForDiscard] = useState<string | null>(null)
 
+    // Track if this is the initial mount to prevent animation on first load
+    const isInitialMountRef = useRef(true)
+    useEffect(() => {
+        isInitialMountRef.current = false
+    }, [])
+
     const router = useRouter()
     const searchParams = useSearchParams()
     const pathname = usePathname()
     const queryClient = useQueryClient()
+
+    // Track updated rows for highlight animation
+    const updatedRows = useUpdatedRows(samples, isInitialMountRef.current)
 
     // Keep local state in sync with server data on navigation
     useEffect(() => {
@@ -330,14 +368,17 @@ export function SampleListTable({
                         <TableBody>
                             {table.getRowModel().rows.map((row) => {
                                 const isSelected = row.original.id === selectedSampleId
+                                const isUpdated = updatedRows.has(row.original.id)
                                 return (
-                                    <TableRow
+                                    <motion.tr
                                         key={row.id}
-                                        onClick={(event) => handleRowClick(row.original, event)}
-                                        className={`cursor-pointer transition-colors border-slate-100 dark:border-slate-800 ${isSelected
+                                        onClick={(event) => handleRowClick(row.original, event as unknown as React.MouseEvent<HTMLTableRowElement>)}
+                                        className={`cursor-pointer transition-colors border-b border-slate-100 dark:border-slate-800 ${isSelected
                                             ? 'bg-sky-50 dark:bg-sky-900/20 hover:bg-sky-100 dark:hover:bg-sky-900/30'
                                             : 'hover:bg-slate-50/80 dark:hover:bg-slate-900/50'
                                             }`}
+                                        initial={false}
+                                        animate={isUpdated ? rowHighlight : undefined}
                                     >
                                         {row.getVisibleCells().map((cell) => (
                                             <TableCell key={cell.id} className="py-2">
@@ -347,7 +388,7 @@ export function SampleListTable({
                                                 )}
                                             </TableCell>
                                         ))}
-                                    </TableRow>
+                                    </motion.tr>
                                 )
                             })}
                         </TableBody>

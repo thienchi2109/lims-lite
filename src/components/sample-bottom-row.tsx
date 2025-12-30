@@ -1,8 +1,11 @@
 'use client'
 
+import { useRef } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { SampleWithUser, type LabSpecialty } from '@/types'
 import { SampleDetailPanel } from '@/components/sample-detail-panel'
 import { AssignedTestsPanel } from '@/components/assigned-tests-panel'
+import { durations, fadeInScale } from '@/lib/motion'
 
 interface SampleBottomRowProps {
     sample: SampleWithUser | null
@@ -17,6 +20,15 @@ interface SampleBottomRowProps {
 }
 
 export function SampleBottomRow({ sample, isLoadingSample = false, permissions, specialties = [] }: SampleBottomRowProps) {
+    // Track if panels have been shown (for progressive disclosure)
+    const hasShownPanelsRef = useRef(false)
+
+    // Mark panels as shown when first sample is selected
+    if (sample && !hasShownPanelsRef.current) {
+        hasShownPanelsRef.current = true
+    }
+
+    // Loading state
     if (isLoadingSample) {
         return (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
@@ -30,11 +42,12 @@ export function SampleBottomRow({ sample, isLoadingSample = false, permissions, 
         )
     }
 
-    if (!sample) {
+    // First visit - no sample ever selected, show placeholder
+    if (!hasShownPanelsRef.current && !sample) {
         return (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
-                <div className="h-full min-h-0">
-                    <SampleDetailPanel sample={null} />
+                <div className="h-full min-h-0 flex items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-slate-400">
+                    Chọn một mẫu để xem chi tiết
                 </div>
                 <div className="h-full min-h-0 flex items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-slate-400">
                     Chọn một mẫu để xem chi tiết và chỉ định xét nghiệm
@@ -43,14 +56,56 @@ export function SampleBottomRow({ sample, isLoadingSample = false, permissions, 
         )
     }
 
+    // Panels have been shown - animate content transitions
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
-            <div className="h-full min-h-0">
-                <SampleDetailPanel sample={sample} />
-            </div>
-            <div className="h-full min-h-0">
-                <AssignedTestsPanel sampleId={sample.id} specialties={specialties} />
-            </div>
+            {/* Left Panel - Sample Details */}
+            <motion.div
+                className="h-full min-h-0"
+                initial={fadeInScale.initial}
+                animate={fadeInScale.animate}
+                transition={{ duration: durations.normal }}
+            >
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={sample?.id ?? 'empty'}
+                        className="h-full"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: durations.fast }}
+                    >
+                        <SampleDetailPanel sample={sample} />
+                    </motion.div>
+                </AnimatePresence>
+            </motion.div>
+
+            {/* Right Panel - Assigned Tests (staggered by 50ms) */}
+            <motion.div
+                className="h-full min-h-0"
+                initial={fadeInScale.initial}
+                animate={fadeInScale.animate}
+                transition={{ duration: durations.normal, delay: 0.05 }}
+            >
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={sample?.id ?? 'empty-tests'}
+                        className="h-full"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: durations.fast }}
+                    >
+                        {sample ? (
+                            <AssignedTestsPanel sampleId={sample.id} specialties={specialties} />
+                        ) : (
+                            <div className="h-full flex items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-slate-400">
+                                Chọn một mẫu để xem chi tiết và chỉ định xét nghiệm
+                            </div>
+                        )}
+                    </motion.div>
+                </AnimatePresence>
+            </motion.div>
         </div>
     )
 }

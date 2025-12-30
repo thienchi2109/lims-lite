@@ -1,14 +1,24 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
+import { motion } from 'motion/react'
 import { ResultStatus } from '@/types'
 import { Badge } from '@/components/ui/badge'
 import { Clock, Edit, CheckCircle } from 'lucide-react'
+import { statusBadgePulse } from '@/lib/motion'
 
 interface ResultStatusBadgeProps {
     status: ResultStatus
 }
 
 export function ResultStatusBadge({ status }: ResultStatusBadgeProps) {
+    const prevStatusRef = useRef<ResultStatus>(status)
+    const hasChanged = prevStatusRef.current !== status
+
+    useEffect(() => {
+        prevStatusRef.current = status
+    }, [status])
+
     const variants: Record<
         ResultStatus,
         {
@@ -40,9 +50,14 @@ export function ResultStatusBadge({ status }: ResultStatusBadgeProps) {
     const variant = variants[status]
 
     return (
-        <Badge variant="outline" className={`${variant.className} gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors`}>
-            {variant.icon}
-            <span>{variant.label}</span>
-        </Badge>
+        <motion.div
+            animate={hasChanged ? statusBadgePulse : undefined}
+            style={{ display: 'inline-flex' }}
+        >
+            <Badge variant="outline" className={`${variant.className} gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors duration-250`}>
+                {variant.icon}
+                <span>{variant.label}</span>
+            </Badge>
+        </motion.div>
     )
 }
