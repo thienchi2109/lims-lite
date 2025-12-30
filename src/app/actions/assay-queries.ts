@@ -43,8 +43,8 @@ export async function getAssayDefinitions(params?: GetAssayDefinitionsParams) {
 
         const { data, error } = await supabase.rpc('get_assay_definitions', {
             p_search: params?.search || null,
-            p_method_id: params?.methodId || null,
-            p_specialty_id: params?.specialtyId || null,
+            p_method_id: params?.methodId && params.methodId !== 'all' ? params.methodId : null,
+            p_specialty_id: params?.specialtyId && params.specialtyId !== 'all' ? params.specialtyId : null,
             p_page: page,
             p_page_size: pageSize,
         })
