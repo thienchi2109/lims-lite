@@ -27,6 +27,7 @@
 1. **Morph (warpgrep)** - For ANY code search:
    - Use BEFORE grep/glob for semantic queries like "Where is auth handled?"
    - Faster and smarter than manual file searching
+  **Workflow:** warpgrep → edit_file → verify
 
 2. **Context7** - For ANY library/framework questions:
    - Code generation with external libraries (Supabase, React, Zod, etc.)
@@ -34,7 +35,57 @@
    - API documentation lookup
    - Always: `resolve-library-id` first → then `query-docs`
 
-**Workflow:** warpgrep → edit_file → verify
+      NOTE: Always use context7 when I need code generation, setup or configuration steps, or library/API documentation. This means you should automatically use the Context7 MCP tools to resolve library id and get library docs without me having to explicitly ask.
+
+3. **GitLab Knowledge Graph (GKG)** 
+This project is indexed with **GitLab Knowledge Graph MCP**. You have access to the following tools:
+
+    #### When to Use GKG:
+
+    **✅ ALWAYS use GKG for:**
+    - Finding where functions/classes are defined
+    - Understanding code structure and relationships
+    - Discovering what calls/uses a specific function
+    - Mapping dependencies between modules
+    - Finding all implementations of an interface/class
+    - Impact analysis ("what breaks if I change X?")
+    - Locating test files for specific code
+
+    **❌ DON'T use GKG for:**
+    - Understanding business logic flow (use code reading instead)
+    - Finding configuration values (just read config files)
+    - Simple grep tasks (e.g., "find string 'TODO'")
+    - When user explicitly asks to read specific files
+
+    #### Available GKG Tools:
+
+    1. **`list_projects`**
+      - Lists all indexed projects in knowledge graph
+      - Use when: User asks "what projects do you have access to?"
+
+    2. **`search_codebase_definitions`**
+      - Search for functions, classes, methods, types, interfaces
+      - Parameters: `query` (string), `project_name` (optional)
+      - Example: Find all controller classes, locate UserService, find calculatePrice function
+      - **Use this FIRST** when user asks about specific code elements
+
+    3. **`get_references`**
+      - Find all places where a definition is used/called
+      - Parameters: `uri` (from search results), `project_name`
+      - Example: "What calls this function?", "Where is this class used?"
+      - **Critical for impact analysis**
+
+    4. **`get_definition`**
+      - Get full details of a specific definition
+      - Parameters: `uri` (from search results), `project_name`
+      - Returns: Code location, signature, documentation
+      - Use when: Need exact implementation details
+
+    5. **`reindex_project`**
+      - Refresh knowledge graph after code changes
+      - Only use if: User reports stale/missing results
+      - Note: Requires GKG server restart
+
 
 ## Beads Task Tracking (Windows PowerShell)
 
