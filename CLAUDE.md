@@ -13,6 +13,29 @@
 3. **Vietnamese Localization**: All UI in Vietnamese (see `docs/vietnamese_dictionary.md`)
 4. **Type Safety**: Zod schemas, strict TypeScript, no `any` types
 
+## Context Engineering (Priority Skill)
+
+**Invoke `context-engineering` skill** when:
+- Designing or debugging agent systems
+- Context limits constrain task performance
+- Optimizing for cost/latency in LLM workflows
+- Building multi-agent coordination
+- Implementing memory or retrieval systems
+- Evaluating agent performance
+
+**Core Strategy:** Curate smallest high-signal token set. Quality > quantity.
+
+| Trigger | Action |
+|---------|--------|
+| Token usage >70% | Trigger compaction/summarization |
+| Complex multi-step task | Use sub-agents for context isolation |
+| Cross-session work | Use episodic memory for persistence |
+| Parallel work possible | Partition across agents, not role-play |
+
+**Four-Bucket Approach:** Write (save externally) → Select (retrieve relevant) → Compress (summarize) → Isolate (sub-agents)
+
+**References:** `.claude/skills/context-engineering/references/` for fundamentals, degradation, optimization, compression, memory, multi-agent patterns, evaluation, tool design.
+
 ## Tool Priority (CRITICAL)
 
 | Task | Tool | Notes |
