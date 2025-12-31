@@ -15,21 +15,24 @@ Medical laboratories require Internal Quality Control (IQC) to detect errors bef
 - Must respect existing RLS policy architecture
 - Must integrate with existing audit logging
 - Must not impact existing sample/result workflows (additive only)
+- **No `runs` table exists** - use session-based linking instead
+- **Use `assay_definitions`** table (not `tests` which doesn't exist)
 
 **Stakeholders:**
 - Laboratory analysts (daily QC entry)
-- Laboratory managers (QC oversight, limit approval)
+- Laboratory managers (QC oversight, limit approval, mode configuration)
 - Quality assurance auditors (compliance verification)
 
 ## Goals / Non-Goals
 
 **Goals:**
 1. Implement complete Westgard Multirule evaluation (1-2s, 1-3s, 2-2s, R-4s, 4-1s, 10-x)
-2. Auto-block patient results during "Out of Control" status
+2. Auto-block patient result **approval** during "Out of Control" status
 3. Provide Levey-Jennings visualization with color-coded violations
 4. Calculate Six Sigma metrics for automated rule selection
 5. Full 21 CFR Part 11 compliance (audit trail + electronic signatures)
 6. Vietnamese-localized terminology throughout UI
+7. **Flexible QC modes** - Manager-configurable per assay (daily/batch/shift/none)
 
 **Non-Goals:**
 - External QC (EQA/proficiency testing) - future phase
@@ -37,6 +40,7 @@ Medical laboratories require Internal Quality Control (IQC) to detect errors bef
 - Multi-site peer group comparisons - future phase
 - Automatic QC scheduling/reminders - future phase
 - Custom rule creation beyond standard Westgard - out of scope
+- **Instrument tracking** - deferred to post-MVP
 
 ## Decisions
 
@@ -72,24 +76,70 @@ BEFORE INSERT OR UPDATE ON qc_results
 FOR EACH ROW EXECUTE FUNCTION calculate_z_score();
 ```
 
-### Decision 3: Patient Result Blocking via Run Status
+### Decision 3: Session-Based QC Linking (UPDATED)
 
-**What:** When QC violates reject rules, set `run.qc_status = 'blocked'` to prevent result release.
+**What:** QC results are linked to patient results via `qc_sessions` table, not a `runs` table (which doesn't exist).
 
 **Why:**
-- **Compliance:** ISO 15189 requires blocking unreliable results
-- **Traceability:** Clear link between QC failure and blocked results
-- **Workflow integration:** Existing result approval checks `run.qc_status`
+- **Schema compatibility:** lims-lite has no `runs` table
+- **Flexibility:** Sessions support multiple QC modes (daily, batch, shift)
+- **Traceability:** Clear link between QC status and blocked results
+- **Manager control:** Each assay can have different QC mode
 
 **Schema:**
 ```sql
-ALTER TABLE runs ADD COLUMN qc_status TEXT DEFAULT 'pending';
--- 'pending', 'pass', 'blocked', 'resolved'
+-- New table for QC sessions
+CREATE TABLE qc_sessions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  assay_id UUID REFERENCES assay_definitions(id) NOT NULL,
+  session_mode TEXT DEFAULT 'daily' CHECK (session_mode IN ('daily', 'batch', 'shift')),
+  started_at TIMESTAMPTZ DEFAULT NOW(),
+  ended_at TIMESTAMPTZ,
+  qc_status TEXT DEFAULT 'pending' CHECK (qc_status IN ('pending', 'pass', 'warning', 'blocked', 'resolved')),
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Link patient results to QC sessions
+ALTER TABLE results ADD COLUMN qc_session_id UUID REFERENCES qc_sessions(id);
 ```
 
-### Decision 4: RLS Policies Mirror Existing RBAC Pattern
+**QC Modes (Manager-Configurable per Assay):**
+| Mode | Description | Blocking Scope |
+|------|-------------|----------------|
+| `daily` | QC once per day | All results for that assay that day |
+| `batch` | QC per batch of samples | Only results in that batch |
+| `shift` | QC per work shift | Results within that shift |
+| `none` | No Westgard QC | Audit only, no blocking |
 
-**What:** Analysts can INSERT/SELECT QC data, only Managers can UPDATE `qc_definitions`.
+### Decision 4: Block at Approval Time (Not Entry)
+
+**What:** When QC fails, patient results can still be **entered** but cannot be **approved** until QC is resolved.
+
+**Why:**
+- **Less disruptive:** Analysts can continue entering results while QC issues are resolved
+- **Practical workflow:** Lab work doesn't stop completely during QC troubleshooting
+- **Manager gating:** Final quality gate is at approval, not entry
+
+**Implementation:**
+```typescript
+// In approveResults Server Action
+async function approveResults(data: ApproveResults) {
+  // Check QC session status for each result
+  const blockedResults = await checkQCSessionStatus(data.resultIds);
+  if (blockedResults.length > 0) {
+    return {
+      error: 'Không thể phê duyệt. QC đang mất kiểm soát. Vui lòng giải quyết vi phạm QC trước.',
+      blockedResults
+    };
+  }
+  // ... proceed with approval
+}
+```
+
+### Decision 5: RLS Policies Mirror Existing RBAC Pattern
+
+**What:** Analysts can INSERT/SELECT QC data, only Managers can UPDATE `qc_definitions` and resolve violations.
 
 **Why:**
 - **Consistency:** Matches existing RLS architecture in lims-lite
@@ -107,9 +157,19 @@ WITH CHECK (get_user_role() IN ('analyst', 'manager'));
 CREATE POLICY "Managers can modify QC definitions"
 ON qc_definitions FOR UPDATE
 USING (get_user_role() = 'manager');
+
+-- Managers only: Resolve violations
+CREATE POLICY "Managers can resolve violations"
+ON qc_violations FOR UPDATE
+USING (get_user_role() = 'manager');
+
+-- Managers only: Configure QC sessions
+CREATE POLICY "Managers can manage QC sessions"
+ON qc_sessions FOR ALL
+USING (get_user_role() = 'manager');
 ```
 
-### Decision 5: Recharts for Levey-Jennings Visualization
+### Decision 6: Recharts for Levey-Jennings Visualization
 
 **What:** Use Recharts library for Levey-Jennings charts instead of custom Canvas/SVG.
 
@@ -130,7 +190,7 @@ USING (get_user_role() = 'manager');
 npm install recharts
 ```
 
-### Decision 6: Vietnamese Terminology in vietnamese_dictionary.md
+### Decision 7: Vietnamese Terminology in vietnamese_dictionary.md
 
 **What:** All QC terms translated and stored in `docs/vietnamese_dictionary.md` for consistency.
 
@@ -142,13 +202,14 @@ npm install recharts
 **Example:**
 ```markdown
 | English | Vietnamese |
-|---------|-----------|
+|---------|------------|
 | Quality Control | Kiểm soát chất lượng |
 | Control Limits | Giới hạn kiểm soát |
 | Out of Control | Ngoài giới hạn kiểm soát |
+| QC Session | Phiên QC |
 ```
 
-### Decision 7: 20-Point Collection Enforced in Application, Not Database
+### Decision 8: 20-Point Collection Enforced in Application, Not Database
 
 **What:** Wizard guides users through 20-point collection, but database allows activation with fewer points (with warnings).
 
@@ -162,58 +223,119 @@ npm install recharts
 - Warning if < 20 points or < 10 days
 - Manager must acknowledge warning to approve
 
+### Decision 9: No Instrument Tracking for MVP
+
+**What:** QC applies per-assay only, not per-instrument. Instrument tracking deferred to post-MVP.
+
+**Why:**
+- **YAGNI:** Simplifies initial implementation
+- **Schema stability:** Avoids modifying `results` table beyond `qc_session_id`
+- **Future-ready:** Can add `instrument_id` to `qc_sessions` later
+
+**Future Enhancement:**
+```sql
+-- Post-MVP: Add instrument tracking
+ALTER TABLE qc_sessions ADD COLUMN instrument_id TEXT;
+ALTER TABLE results ADD COLUMN instrument_id TEXT;
+```
+
 ## Architecture
 
-### Data Flow
+### Data Flow (UPDATED)
 
 ```
-1. Analyst enters QC value
+1. Manager creates/starts QC session for assay (e.g., Glucose, mode: daily)
    ↓
-2. Server Action: enterQCResult()
+2. Analyst enters QC values for Level 1 and Level 2
    ↓
 3. Database: INSERT into qc_results (trigger calculates Z-score)
    ↓
 4. Server Action: evaluateWestgardRules(result, history)
    ↓
-5a. PASS → Update run.qc_status = 'pass'
-5b. WARNING → Create qc_violations (status: 'warning')
-5c. REJECT → Create qc_violations + blockPatientResults(runId)
+5a. PASS → Update qc_sessions.qc_status = 'pass'
+5b. WARNING → Create qc_violations (status: 'warning'), session stays 'pass'
+5c. REJECT → Create qc_violations + Update qc_sessions.qc_status = 'blocked'
    ↓
 6. Return result to UI with violation details
    ↓
 7. If REJECT: Show violation-resolution-dialog
+   ↓
+8. Analysts enter patient results (results.qc_session_id = active session)
+   ↓
+9. Manager tries to approve results:
+   - If session.qc_status = 'pass' → Approval ALLOWED
+   - If session.qc_status = 'blocked' → Approval BLOCKED with error
+   ↓
+10. To unblock: Manager resolves violation (corrective action) + new QC passes
+    ↓
+11. session.qc_status = 'resolved' → Approval now allowed
 ```
 
-### Database Schema
+### Database Schema (UPDATED)
 
 ```
-qc_materials (Materials inventory)
-  ├── id, material_name, lot_number, level, expiration_date
-  └── created_by → users.id
+qc_materials (Materials inventory - lot tracking)
+  ├── id UUID PRIMARY KEY
+  ├── material_name TEXT NOT NULL
+  ├── lot_number TEXT NOT NULL UNIQUE
+  ├── level TEXT CHECK (level IN ('Low', 'Normal', 'High'))
+  ├── expiration_date DATE
+  ├── deleted_at TIMESTAMPTZ (soft delete)
+  ├── created_by UUID → users.id
+  └── created_at TIMESTAMPTZ
 
-qc_definitions (Control limits per test/instrument)
-  ├── id, test_id → tests.id, instrument_id
-  ├── material_id → qc_materials.id
-  ├── mean, sd, active_date
-  └── created_by → users.id
+qc_definitions (Control limits per assay/level)
+  ├── id UUID PRIMARY KEY
+  ├── assay_id UUID → assay_definitions.id (UPDATED: was test_id)
+  ├── material_id UUID → qc_materials.id
+  ├── mean NUMERIC NOT NULL
+  ├── sd NUMERIC NOT NULL
+  ├── is_active BOOLEAN DEFAULT true
+  ├── active_date DATE
+  ├── created_by UUID → users.id
+  └── created_at TIMESTAMPTZ
+
+qc_sessions (NEW - links QC to patient results)
+  ├── id UUID PRIMARY KEY
+  ├── assay_id UUID → assay_definitions.id
+  ├── session_mode TEXT DEFAULT 'daily' ('daily', 'batch', 'shift')
+  ├── started_at TIMESTAMPTZ DEFAULT NOW()
+  ├── ended_at TIMESTAMPTZ
+  ├── qc_status TEXT DEFAULT 'pending' ('pending', 'pass', 'warning', 'blocked', 'resolved')
+  ├── created_by UUID → users.id
+  └── created_at TIMESTAMPTZ
 
 qc_results (Daily measurements)
-  ├── id, definition_id → qc_definitions.id
-  ├── run_id, value, z_score (auto-calculated)
-  ├── measured_at, measured_by → users.id
-  └── status ('pass', 'warning', 'reject')
+  ├── id UUID PRIMARY KEY
+  ├── definition_id UUID → qc_definitions.id
+  ├── session_id UUID → qc_sessions.id (UPDATED: was run_id)
+  ├── value NUMERIC NOT NULL
+  ├── z_score NUMERIC (auto-calculated via trigger)
+  ├── measured_at TIMESTAMPTZ DEFAULT NOW()
+  ├── measured_by UUID → users.id
+  ├── status TEXT DEFAULT 'pending' ('pass', 'warning', 'reject')
+  └── created_at TIMESTAMPTZ
 
 qc_violations (Rule violations)
-  ├── id, result_id → qc_results.id
-  ├── rule_violated ('1-3s', '2-2s', etc.)
-  ├── status ('warning', 'reject')
-  ├── corrective_action (required for 'reject')
-  └── resolved_by → users.id
+  ├── id UUID PRIMARY KEY
+  ├── result_id UUID → qc_results.id
+  ├── rule_violated TEXT NOT NULL ('1-2s', '1-3s', '2-2s', 'R-4s', '4-1s', '10-x')
+  ├── status TEXT NOT NULL ('warning', 'reject')
+  ├── corrective_action TEXT (required for resolution)
+  ├── resolved_at TIMESTAMPTZ
+  ├── resolved_by UUID → users.id
+  └── created_at TIMESTAMPTZ
 
 qc_tea_standards (Total Allowable Error config)
-  ├── test_id → tests.id
-  ├── tea_percentage, source ('CLIA', 'Ricos', etc.)
-  └── created_by → users.id
+  ├── id UUID PRIMARY KEY
+  ├── assay_id UUID → assay_definitions.id (UPDATED: was test_id)
+  ├── tea_percentage NUMERIC NOT NULL
+  ├── source TEXT ('CLIA', 'Ricos', 'Lab-specific')
+  ├── created_by UUID → users.id
+  └── created_at TIMESTAMPTZ
+
+results (MODIFIED - add session link)
+  └── + qc_session_id UUID → qc_sessions.id (nullable)
 ```
 
 ### Component Architecture
@@ -221,10 +343,12 @@ qc_tea_standards (Total Allowable Error config)
 ```
 src/components/qc/
 ├── qc-entry-form.tsx          # Daily QC entry (Analyst)
+├── qc-session-manager.tsx     # Start/end QC sessions (Manager)
 ├── levey-jennings-chart.tsx   # Recharts visualization
 ├── violation-resolution-dialog.tsx  # Corrective action (Manager)
 ├── control-limits-wizard.tsx  # 20-point establishment
-└── lot-changeover-dialog.tsx  # Crossover protocol
+├── lot-changeover-dialog.tsx  # Crossover protocol
+└── qc-status-indicator.tsx    # Shows session status in result approval
 
 src/lib/qc/
 ├── westgard-rules.ts  # Rule evaluation engine
@@ -232,7 +356,7 @@ src/lib/qc/
 └── qc-utils.ts        # Helper functions
 
 src/app/actions/
-└── qc.ts  # Server Actions (enterQCResult, resolveViolation, etc.)
+└── qc.ts  # Server Actions (enterQCResult, resolveViolation, startSession, etc.)
 ```
 
 ## Risks / Trade-offs
@@ -269,7 +393,7 @@ src/app/actions/
 - With 100 tests: 73,000 rows/year (manageable)
 
 ### Risk 4: False Positives from Overly Strict Rules
-**Risk:** Westgard rules may reject valid runs, delaying patient result release.
+**Risk:** Westgard rules may reject valid sessions, delaying patient result approval.
 
 **Mitigation:**
 - Use Six Sigma metrics to auto-select appropriate rules
@@ -277,33 +401,43 @@ src/app/actions/
 - Low-sigma tests (<4) use full Multirules
 - Manager override capability (with audit trail justification)
 
+### Risk 5: Session Management Complexity
+**Risk:** Users may be confused by when to start/end QC sessions.
+
+**Mitigation:**
+- Auto-create daily sessions at first QC entry of the day
+- Clear UI indicators showing active session status
+- Training documentation with workflow examples
+- Session history visible in Manager dashboard
+
 ## Migration Plan
 
-### Phase 1: Database Setup (Week 1)
+### Phase 1: Database Setup
 1. Create migration file `supabase/migrations/XXX_add_westgard_qc.sql`
 2. Apply to development database
 3. Seed with sample QC materials (Bio-Rad Level 1/2)
 4. Run security tests to verify RLS policies
 
-### Phase 2: Core Logic (Week 2)
+### Phase 2: Core Logic
 1. Implement westgard-rules.ts and sigma-metrics.ts
 2. Write unit tests (target 90%+ coverage)
 3. Implement Server Actions with Zod validation
 4. Test rule evaluation with historical data
 
-### Phase 3: UI Components (Week 3-4)
+### Phase 3: UI Components
 1. Build qc-entry-form.tsx and levey-jennings-chart.tsx
 2. Build control-limits-wizard.tsx
 3. Build violation-resolution-dialog.tsx
-4. Integrate Vietnamese translations
+4. Build qc-session-manager.tsx
+5. Integrate Vietnamese translations
 
-### Phase 4: Integration & Testing (Week 5)
+### Phase 4: Integration & Testing
 1. Create Analyst and Manager pages
-2. Integrate with existing result approval workflow
+2. Integrate with existing result approval workflow (blocking check)
 3. E2E testing of complete QC workflows
 4. Security testing of RLS policies
 
-### Phase 5: Documentation & Training (Week 6)
+### Phase 5: Documentation & Training
 1. Write SOPs in Vietnamese
 2. Create training materials
 3. Conduct user training sessions
@@ -311,18 +445,23 @@ src/app/actions/
 
 ### Rollback Plan
 If critical issues arise post-deployment:
-1. **Soft rollback:** Disable QC checks in result approval workflow (feature flag)
+1. **Soft rollback:** Remove QC check from approval workflow (feature flag)
 2. **Data rollback:** QC tables are isolated, can be dropped without affecting core LIMS
 3. **Hard rollback:** Restore database backup from pre-migration state
 
 **Rollback SQL:**
 ```sql
 -- Emergency disable (soft rollback)
-ALTER TABLE runs ALTER COLUMN qc_status SET DEFAULT 'pass';
+-- Set all sessions to 'pass' to unblock approvals
+UPDATE qc_sessions SET qc_status = 'pass' WHERE qc_status = 'blocked';
+
+-- Remove session link from results
+ALTER TABLE results DROP COLUMN qc_session_id;
 
 -- Full rollback (hard rollback)
 DROP TABLE qc_violations CASCADE;
 DROP TABLE qc_results CASCADE;
+DROP TABLE qc_sessions CASCADE;
 DROP TABLE qc_definitions CASCADE;
 DROP TABLE qc_materials CASCADE;
 DROP TABLE qc_tea_standards CASCADE;
@@ -332,14 +471,17 @@ DROP TABLE qc_tea_standards CASCADE;
 
 ### Query Optimization
 - **Indexes:** (definition_id, measured_at) for historical queries
+- **Indexes:** (session_id, status) on qc_results for session status checks
+- **Indexes:** (assay_id, qc_status) on qc_sessions for approval blocking check
 - **Materialized views:** Consider for Six Sigma dashboard (refresh daily)
 - **Pagination:** Levey-Jennings chart loads last 90 days by default
-- **Caching:** TanStack Query caches QC status per test (5-minute TTL)
+- **Caching:** TanStack Query caches QC status per session (5-minute TTL)
 
 ### Expected Load
 - **Writes:** ~100 QC entries/day (low volume)
 - **Reads:** Levey-Jennings chart queries ~1000 rows (fast with indexes)
 - **Rule evaluation:** Executes on INSERT (sub-100ms with proper indexing)
+- **Approval check:** Single query per approval (sub-10ms with index)
 
 ## Security Considerations
 
@@ -347,7 +489,9 @@ DROP TABLE qc_tea_standards CASCADE;
 Must verify:
 - ✅ Analysts cannot UPDATE qc_definitions
 - ✅ Analysts cannot DELETE qc_results
+- ✅ Analysts cannot UPDATE qc_sessions
 - ✅ Only Managers can resolve violations
+- ✅ Only Managers can start/end QC sessions
 - ✅ Electronic signature captured for Manager approvals
 
 **Test Commands:**
@@ -356,19 +500,20 @@ Must verify:
 SET ROLE authenticated;
 SET request.jwt.claims TO '{"sub": "analyst-uuid", "role": "analyst"}';
 UPDATE qc_definitions SET mean = 100 WHERE id = 'test-id';  -- Should FAIL
+UPDATE qc_sessions SET qc_status = 'pass' WHERE id = 'session-id';  -- Should FAIL
 ```
 
 ### Audit Trail Requirements (21 CFR Part 11)
 Every mutation must log:
 - `who`: user_id from auth.uid()
-- `what`: Action (insert_qc_result, resolve_violation, approve_limits)
+- `what`: Action (insert_qc_result, resolve_violation, approve_limits, start_session)
 - `when`: TIMESTAMPTZ DEFAULT NOW()
 - `why`: Reason (for corrective actions and limit changes)
 
 **Implementation:**
-Use existing `audit_logs` table infrastructure with `record_type = 'qc_result'`.
+Use existing `audit_logs` table infrastructure with `record_type = 'qc_result'`, `'qc_session'`, `'qc_violation'`.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Q:** Should we support custom Westgard rule combinations beyond the standard 6 rules?
    **A:** No - stick to standard rules for simplicity. Advanced users can request via feature request.
@@ -385,9 +530,26 @@ Use existing `audit_logs` table infrastructure with `record_type = 'qc_result'`.
 5. **Q:** Should we support multiple QC materials per test (e.g., Level 1, Level 2, Level 3)?
    **A:** Yes - `qc_materials.level` field supports 'Low', 'Normal', 'High'. Each gets separate `qc_definitions` entry.
 
+6. **Q:** How should QC link to patient results without a `runs` table?
+   **A:** Use `qc_sessions` table. Patient results link via `results.qc_session_id`. Session-based approach supports flexible QC modes.
+
+7. **Q:** Should we track instruments?
+   **A:** Not in MVP. QC applies per-assay only. Add instrument tracking post-MVP if needed.
+
+8. **Q:** When should patient results be blocked - at entry or approval?
+   **A:** At approval time. Analysts can enter results; managers cannot approve until QC passes.
+
+9. **Q:** Should QC mode be fixed or configurable?
+   **A:** Manager-configurable per assay. Supports daily, batch, shift, or none modes.
+
 ---
 
 **Decision Authority:** This design requires approval from:
 - Project Lead (architecture decisions)
 - Laboratory Manager (workflow validation)
 - QA/Compliance Officer (21 CFR Part 11 compliance verification)
+
+---
+
+**Last Updated:** 2025-12-31
+**Validated With:** User brainstorming session - confirmed session-based linking, flexible modes, block at approval, full multi-level with lot tracking.
