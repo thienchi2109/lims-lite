@@ -5,6 +5,8 @@ const nextConfig: NextConfig = {
   // Disable React Compiler for now due to invalid sourcemap noise in dev on Windows
   reactCompiler: false,
   experimental: {
+    // Enable View Transitions API for smooth page transitions
+    viewTransition: true,
     // Disable server source maps to avoid noisy invalid sourcemap warnings on Windows/dev
     serverSourceMaps: false,
     serverActions: {
