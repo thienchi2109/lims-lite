@@ -13,3 +13,6 @@ export * from './workflow'
 
 // Analytics types: search, reports, dashboard
 export * from './analytics'
+
+// QC types: Westgard rules, sessions, materials, definitions
+export * from './qc'
