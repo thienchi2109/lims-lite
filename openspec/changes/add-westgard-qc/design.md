@@ -145,7 +145,7 @@ npm install recharts
 |---------|-----------|
 | Quality Control | Kiểm soát chất lượng |
 | Control Limits | Giới hạn kiểm soát |
-| Out of Control | Mất kiểm soát |
+| Out of Control | Ngoài giới hạn kiểm soát |
 ```
 
 ### Decision 7: 20-Point Collection Enforced in Application, Not Database
