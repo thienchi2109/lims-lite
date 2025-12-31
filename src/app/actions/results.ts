@@ -305,6 +305,27 @@ export async function approveResults(data: ApproveResults) {
             return { error: 'All results must belong to the same sample' }
         }
 
+        // QC Session Check: Block approval if QC is blocked
+        // NULL qc_session_id = pre-QC era, allowed to approve
+        const { data: qcCheck } = await supabase.rpc('check_qc_approval_status', {
+            p_result_ids: validatedData.resultIds
+        })
+
+        if (qcCheck && Array.isArray(qcCheck)) {
+            const blockedResults = qcCheck.filter((r: any) => !r.can_approve)
+            if (blockedResults.length > 0) {
+                const reasons = blockedResults
+                    .map((r: any) => r.blocking_reason)
+                    .filter(Boolean)
+                    .join('; ')
+                return {
+                    error: `Không thể phê duyệt: QC bị chặn. ${reasons || 'Giải quyết vi phạm QC trước.'}`,
+                    qc_blocked: true,
+                    blocked_count: blockedResults.length
+                }
+            }
+        }
+
         // Perform batch approval
         const updateData: any = {
             status: 'approved',

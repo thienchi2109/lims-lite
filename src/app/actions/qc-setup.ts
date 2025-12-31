@@ -269,3 +269,80 @@ export async function getQCDefinitions(assayId?: string) {
         return { error: error instanceof Error ? error.message : 'Không thể tải giới hạn kiểm soát' }
     }
 }
+
+// ============================================================================
+// LOT CHANGEOVER
+// ============================================================================
+
+/**
+ * Gets data for lot changeover protocol
+ * Returns current and new lot info with crossover data points
+ * Manager only
+ */
+export async function getLotChangeoverData(materialId: string, newLotNumber?: string) {
+    try {
+        const auth = await requireRole('manager')
+        if (isAuthError(auth)) return auth
+
+        const supabase = await createClient()
+
+        // Get current material info
+        const { data: currentMaterial, error: materialError } = await supabase
+            .from('qc_materials')
+            .select('*')
+            .eq('id', materialId)
+            .single()
+
+        if (materialError || !currentMaterial) {
+            return { error: 'Không tìm thấy vật liệu QC' }
+        }
+
+        // Get active definitions using this material
+        const { data: definitions } = await supabase
+            .from('qc_definitions')
+            .select(`
+                *,
+                assay:assay_definitions(id, name, units)
+            `)
+            .eq('material_id', materialId)
+            .eq('is_active', true)
+
+        // Get recent QC results for crossover comparison (last 20 points)
+        const { data: recentResults } = await supabase
+            .from('qc_results')
+            .select(`
+                id, value, z_score, measured_at,
+                definition:qc_definitions!inner(id, mean, sd, material_id)
+            `)
+            .eq('definition.material_id', materialId)
+            .order('measured_at', { ascending: false })
+            .limit(20)
+
+        // Calculate statistics from recent results
+        const values = recentResults?.map(r => r.value) || []
+        const stats = values.length > 0 ? {
+            count: values.length,
+            mean: values.reduce((a, b) => a + b, 0) / values.length,
+            sd: Math.sqrt(
+                values.reduce((sum, v) => sum + Math.pow(v - (values.reduce((a, b) => a + b, 0) / values.length), 2), 0)
+                / (values.length - 1)
+            ),
+        } : null
+
+        return {
+            data: {
+                currentMaterial,
+                definitions: definitions || [],
+                recentResults: recentResults || [],
+                statistics: stats,
+                crossoverRequirements: {
+                    minDataPoints: 10,
+                    recommendation: 'Chạy song song 2 lô trong 10 điểm dữ liệu. So sánh mean mới với mean cũ.'
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error in getLotChangeoverData:', error)
+        return { error: error instanceof Error ? error.message : 'Không thể tải dữ liệu chuyển lô' }
+    }
+}
