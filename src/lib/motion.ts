@@ -116,6 +116,8 @@ export const dialogContent = {
 
 /**
  * Page transition (simple crossfade)
+ * @deprecated Use View Transitions API instead (enabled in next.config.ts).
+ * This was used with PageTransition component which caused infinite render loops.
  */
 export const pageTransition = {
   initial: { opacity: 0 },
