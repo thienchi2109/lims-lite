@@ -13,28 +13,80 @@
 3. **Vietnamese Localization**: All UI in Vietnamese (see `docs/vietnamese_dictionary.md`)
 4. **Type Safety**: Zod schemas, strict TypeScript, no `any` types
 
-## Context Engineering (Priority Skill)
+## ⚠️ ENFORCEMENT CHECKLIST (Read Before Every Action)
 
-**Invoke `context-engineering` skill** when:
-- Designing or debugging agent systems
-- Context limits constrain task performance
-- Optimizing for cost/latency in LLM workflows
-- Building multi-agent coordination
-- Implementing memory or retrieval systems
-- Evaluating agent performance
+**BEFORE searching code, ASK:** Am I about to use `grep`, `Grep`, or `Glob`?
+→ **STOP.** Use `mcp__filesystem-with-morph__warpgrep_codebase_search` instead.
 
-**Core Strategy:** Curate smallest high-signal token set. Quality > quantity.
+**BEFORE editing code, ASK:** Am I about to use the `Edit` tool?
+→ **STOP.** Use `mcp__filesystem-with-morph__edit_file` with `// ... existing code ...` placeholders.
 
-| Trigger | Action |
-|---------|--------|
-| Token usage >70% | Trigger compaction/summarization |
-| Complex multi-step task | Use sub-agents for context isolation |
-| Cross-session work | Use episodic memory for persistence |
-| Parallel work possible | Partition across agents, not role-play |
+**BEFORE generating code with a library, ASK:** Does this involve Supabase, React, Zod, TanStack, Recharts, or any external package?
+→ **STOP.** Use Context7: `resolve-library-id` → `query-docs` FIRST.
 
-**Four-Bucket Approach:** Write (save externally) → Select (retrieve relevant) → Compress (summarize) → Isolate (sub-agents)
+**BEFORE looking for a function/class definition, ASK:** Do I need to find where something is defined or what calls it?
+→ **STOP.** Use GKG: `mcp__gkg__search_codebase_definitions` or `mcp__gkg__get_references`.
 
-**References:** `.claude/skills/context-engineering/references/` for fundamentals, degradation, optimization, compression, memory, multi-agent patterns, evaluation, tool design.
+**AFTER editing a file, CHECK:** Is the file now >350 lines?
+→ **STOP.** Refactor immediately - extract to separate files.
+
+**BEFORE any task, ASK:** Could ANY skill apply (even 1% chance)?
+→ **STOP.** Invoke the skill FIRST before doing anything else.
+
+| ❌ NEVER | ✅ ALWAYS |
+|----------|-----------|
+| `grep`, `Grep`, `rg` for code search | `warpgrep` MCP tool |
+| `Edit` tool for file changes | `edit_file` MCP tool |
+| Generate library code from memory | Context7 lookup first |
+| Manual search for definitions | GKG `search_codebase_definitions` |
+| Create files >350 lines | Split into focused modules |
+| Skip skills that might apply | Invoke skill, then decide |
+| Use `cat`, `head`, `tail` | Use `Read` tool |
+
+## 🧠 CONTEXT ENGINEERING (MANDATORY SKILL - NON-NEGOTIABLE)
+
+> **This is NOT optional.** Context engineering determines whether tasks succeed or fail at scale.
+> **Invoke `Skill` tool with `context-engineering`** AT THE START of any session involving complex work.
+
+### ❌ STOP Signs - You MUST Invoke Context Engineering Skill When:
+
+| Situation | Why It Matters |
+|-----------|----------------|
+| Task has 5+ steps | Context will degrade without isolation |
+| Conversation is getting long | Token budget exhaustion causes failures |
+| You're about to spawn sub-agents | Need partitioning strategy |
+| Cross-session work (user returns) | Must recover context via episodic memory |
+| Debugging takes multiple attempts | Context pollution obscures root cause |
+| Building anything with LLMs/agents | This IS context engineering |
+
+### Automatic Triggers (No Judgment Required)
+
+| Trigger | Immediate Action |
+|---------|------------------|
+| Token usage >50% estimated | `Skill: context-engineering` → apply compression |
+| Starting multi-file refactor | Spawn isolated sub-agents per file group |
+| User says "continue from yesterday" | Search episodic memory FIRST |
+| Task involves prompt design | Context engineering principles apply |
+| Performance/cost concerns raised | Optimization patterns needed |
+
+### Core Principles (Internalize These)
+
+1. **Quality > Quantity**: Smallest high-signal token set wins
+2. **Four Buckets**: Write (externalize) → Select (retrieve) → Compress (summarize) → Isolate (sub-agents)
+3. **Degradation is Silent**: Context issues don't throw errors - they cause subtle failures
+4. **Sub-agents are Cheap**: Use them liberally for context isolation
+
+### Reference Materials
+
+Read `.claude/skills/context-engineering/references/` for:
+- `fundamentals.md` - Core concepts
+- `degradation.md` - Warning signs
+- `optimization.md` - Token efficiency
+- `compression.md` - Summarization techniques
+- `memory.md` - Episodic memory patterns
+- `multi-agent.md` - Partitioning strategies
+- `evaluation.md` - Measuring effectiveness
+- `tool-design.md` - Tool call optimization
 
 ## Tool Priority (CRITICAL)
 
