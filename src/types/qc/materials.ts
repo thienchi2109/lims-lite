@@ -43,3 +43,24 @@ export const UpdateQCMaterialSchema = z.object({
 })
 
 export type UpdateQCMaterial = z.infer<typeof UpdateQCMaterialSchema>
+
+// ============================================================================
+// LOT CHANGEOVER - Transfer control limits to new lot
+// ============================================================================
+
+export const CompleteLotChangeoverSchema = z.object({
+    /** Current material ID being replaced */
+    old_material_id: z.string().uuid('ID vật liệu cũ không hợp lệ'),
+    /** New material to transfer limits to */
+    new_material: CreateQCMaterialSchema,
+    /** New mean calculated from crossover data */
+    new_mean: z.number().positive('Mean mới phải lớn hơn 0'),
+    /** CV% transferred from old lot (SD calculated from CV * new_mean) */
+    transfer_cv_percent: z.number().positive('CV% phải lớn hơn 0'),
+    /** Number of crossover data points collected */
+    crossover_data_points: z.number().int().min(10, 'Cần ít nhất 10 điểm dữ liệu chéo'),
+    /** Optional notes about the changeover */
+    notes: z.string().max(2000).optional(),
+})
+
+export type CompleteLotChangeover = z.infer<typeof CompleteLotChangeoverSchema>
