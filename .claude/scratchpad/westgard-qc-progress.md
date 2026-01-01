@@ -1,40 +1,46 @@
-# Westgard QC - Phase 10 Complete
+# Westgard QC - Phase 14 Implementation Progress
 
-## Done (Phases 1-10)
+## Completed (Phases 1-14.1, 14.4)
 - DB: 6 tables, triggers, RLS
-- Types: src/types/qc/
+- Types: src/types/qc/ (all schemas)
 - Rules: src/lib/qc/westgard-rules.ts
 - Sigma: src/lib/qc/sigma-metrics.ts
 - Actions: src/app/actions/qc-*.ts
-- Phase 7: qc-entry-form.tsx (339 lines)
-- Phase 8: qc-session-manager.tsx → split into 5 files
-- Phase 9: levey-jennings-chart.tsx (362 lines)
-- **Phase 10: violation-resolution-dialog.tsx (270 lines)**
-  - Violation details display (rule, z-score, value, assay)
-  - RULE_GUIDANCE per Westgard rule (causes + corrective actions)
-  - Accordion for troubleshooting guidance
-  - Corrective action textarea with 10-char min validation
-  - Connected to resolveViolation server action
-  - Vietnamese labels throughout
+- UI Components (7-13): All complete
+- **Phase 14.1**: page.tsx, loading.tsx, qc-entry-page-client.tsx, qc-assay-card.tsx ✓
+- **Phase 14.4**: IQC button in assigned-tests-toolbar.tsx ✓
 
-## Components Created
+## Files Created (2026-01-01)
 ```
+src/app/(dashboard)/analyst/qc-entry/
+├── page.tsx        # Server: auth, specialties, qc_definitions join
+└── loading.tsx     # Skeleton
+
 src/components/qc/
-├── qc-entry-form.tsx           # Phase 7 - QC data entry
-├── qc-session-types.ts         # Phase 8 - Shared types
-├── start-session-dialog.tsx    # Phase 8 - Start session
-├── end-session-dialog.tsx      # Phase 8 - End session
-├── session-history-table.tsx   # Phase 8 - History table
-├── qc-session-manager.tsx      # Phase 8 - Main manager
-├── levey-jennings-chart.tsx    # Phase 9 - L-J chart
-└── violation-resolution-dialog.tsx  # Phase 10 - Violation resolution
+├── qc-entry-page-client.tsx  # Tabs by specialty, empty state
+└── qc-assay-card.tsx         # Status badge, limits, L-J placeholder, dialog
 ```
 
-## Next: Phase 11+ (Future)
-- control-limits-wizard.tsx - 20-point establishment
-- lot-changeover-dialog.tsx - Crossover protocol
-- qc-status-indicator.tsx - Status in result approval
-- Manager/Analyst pages integration
+## File Modified
+- `src/components/assigned-tests-toolbar.tsx` → IQC button (Activity icon, tooltip)
 
-## Beads
-- lims-lite-kcau: Create violation-resolution-dialog.tsx (P1, DONE)
+## Remaining Phase 14
+- 14.2/14.3: Already implemented in client components
+- 14.5: Mini L-J chart in cards (placeholder exists)
+- 14.6: Vietnamese labels (done)
+
+## Ready Beads
+| ID | Priority | Description |
+|----|----------|-------------|
+| lims-lite-v8op | P2 | Phase 15: Manager QC page |
+| lims-lite-fxno | P1 | Westgard rule unit tests |
+| lims-lite-n8hv | P1 | Approval blocking tests |
+
+## Phase 15 Tasks (lims-lite-v8op)
+15.1-15.9: Manager quality-control page with materials table, session manager, wizards, violations, L-J chart, Six Sigma dashboard
+
+## Phase 16: Result Approval Integration
+Blocked by Phase 15. Tasks: approveResults() check, QC indicator in approval dialog, NULL handling
+
+MY NOTES - DO NOT DELETE/UPDATE/EDIT:
+- Remove the redudant '/analyst/results/[sampleId]' page after all tasks of add-westgard-qc have done 100%.

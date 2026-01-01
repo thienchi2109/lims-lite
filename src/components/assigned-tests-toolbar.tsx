@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { CoAStatusBadge } from '@/components/coa-status-badge'
@@ -17,6 +18,7 @@ import {
     FileText,
     RefreshCw,
     ExternalLink,
+    Activity,
 } from 'lucide-react'
 import type { SampleStatus, CoAReportStatus } from '@/types'
 import { cn } from '@/lib/utils'
@@ -99,6 +101,24 @@ export function AssignedTestsToolbar({
                         </Button>
                     </TooltipTrigger>
                     <TooltipContent>In Phiếu chỉ định</TooltipContent>
+                </Tooltip>
+
+                {/* IQC Button - Internal Quality Control */}
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 gap-1.5 text-slate-500 transition-transform hover:scale-105 hover:bg-amber-50 hover:text-amber-600 dark:text-slate-400 dark:hover:bg-amber-900/20 dark:hover:text-amber-400"
+                            asChild
+                        >
+                            <Link href="/analyst/qc-entry">
+                                <Activity className="h-4 w-4" />
+                                <span className="hidden sm:inline text-xs font-medium">IQC</span>
+                            </Link>
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Kiểm soát chất lượng nội bộ</TooltipContent>
                 </Tooltip>
 
                 {/* CoA Generation/View Button - Only for completed samples */}
