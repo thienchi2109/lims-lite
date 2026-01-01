@@ -7,7 +7,14 @@ import { DashboardHeader } from '@/components/dashboard-header'
 import { ArrowLeft } from 'lucide-react'
 import { QualityControlPageClient } from '@/components/qc/quality-control-page-client'
 
-export default async function QualityControlPage() {
+export default async function QualityControlPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ qc_days?: string }>
+}) {
+    const { qc_days = '90' } = await searchParams
+    const days = qc_days === 'all' ? null : parseInt(qc_days, 10)
+    
     const supabase = await createClient()
 
     // Auth check
@@ -111,19 +118,21 @@ export default async function QualityControlPage() {
         .is('deleted_at', null)
         .order('name', { ascending: true })
 
-    // Fetch QC results for analytics (last 90 days per active definition)
+    // Fetch QC results for analytics (based on qc_days param)
     const activeDefinitionIds = (definitions || [])
         .filter((d) => d.is_active)
         .map((d) => d.id)
 
-    const ninetyDaysAgo = new Date()
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+    // Calculate cutoff date based on qc_days param
+    const cutoffDate = days
+        ? new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+        : null
 
     const { data: qcResultsData } = await supabase
         .from('qc_results')
         .select('id, definition_id, value, z_score, status, measured_at, rule_violated')
         .in('definition_id', activeDefinitionIds.length > 0 ? activeDefinitionIds : [''])
-        .gte('measured_at', ninetyDaysAgo.toISOString())
+        .gte('measured_at', cutoffDate ? cutoffDate.toISOString() : '1970-01-01T00:00:00Z')
         .order('measured_at', { ascending: true })
 
     // Group QC results by definition_id
@@ -279,6 +288,7 @@ export default async function QualityControlPage() {
                     assays={assays || []}
                     analyticsDefinitions={analyticsDefinitions}
                     qcResults={qcResultsByDefinition}
+                    qcDays={qc_days}
                 />
             </main>
         </div>

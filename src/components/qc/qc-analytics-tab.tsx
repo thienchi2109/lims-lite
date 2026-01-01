@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { BarChart3, LineChart } from 'lucide-react'
+import { useInfiniteQuery } from '@tanstack/react-query'
+import { BarChart3, LineChart, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import {
     Select,
@@ -13,6 +15,8 @@ import {
 } from '@/components/ui/select'
 import { LeveyJenningsChart } from './levey-jennings-chart'
 import { SigmaDashboard } from './sigma-dashboard'
+import { QCDateRangeSelector } from './qc-date-range-selector'
+import { fetchOlderQCResults } from '@/app/actions/qc-analytics'
 import type { QCResultStatus } from '@/types/qc'
 
 // ============================================================================
@@ -46,13 +50,14 @@ export interface QCDefinitionForAnalytics {
 export interface QCAnalyticsTabProps {
     definitions: QCDefinitionForAnalytics[]
     qcResults: Record<string, QCResultDataPoint[]> // definitionId -> results
+    qcDays: string
 }
 
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
-export function QCAnalyticsTab({ definitions, qcResults }: QCAnalyticsTabProps) {
+export function QCAnalyticsTab({ definitions, qcResults, qcDays }: QCAnalyticsTabProps) {
     const [selectedDefinitionId, setSelectedDefinitionId] = useState<string>(
         definitions[0]?.id ?? ''
     )
@@ -62,15 +67,55 @@ export function QCAnalyticsTab({ definitions, qcResults }: QCAnalyticsTabProps) 
         return definitions.find(d => d.id === selectedDefinitionId)
     }, [definitions, selectedDefinitionId])
 
-    // Get results for selected definition
-    const selectedResults = useMemo(() => {
+    // Get initial results for selected definition (from server-side fetch)
+    const initialResults = useMemo(() => {
         if (!selectedDefinitionId) return []
         return qcResults[selectedDefinitionId] ?? []
     }, [qcResults, selectedDefinitionId])
 
+    // Get oldest result's measured_at as initial cursor for "load older"
+    const oldestResultDate = useMemo(() => {
+        if (initialResults.length === 0) return null
+        // Results are ordered ascending, so first item is oldest
+        return initialResults[0].measured_at
+    }, [initialResults])
+
+    // useInfiniteQuery for loading older data
+    const {
+        data: olderData,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+    } = useInfiniteQuery({
+        queryKey: ['qc-results-older', selectedDefinitionId, qcDays],
+        queryFn: async ({ pageParam }) => {
+            const result = await fetchOlderQCResults({
+                definitionId: selectedDefinitionId,
+                cursor: pageParam,
+                limit: 50,
+            })
+            if ('error' in result) {
+                throw new Error(result.error)
+            }
+            return result
+        },
+        initialPageParam: oldestResultDate ?? '',
+        getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.nextCursor : undefined,
+        enabled: !!selectedDefinitionId && !!oldestResultDate,
+        maxPages: 5, // Memory limit - max 5 pages of older data
+    })
+
+    // Combine initial results with loaded older results
+    const allResults = useMemo(() => {
+        // Older results come in reverse chronological order, so we need to reverse them
+        const olderResults = olderData?.pages.flatMap(p => p.data).reverse() ?? []
+        // Combine: older (reversed to ascending) + initial (already ascending)
+        return [...olderResults, ...initialResults]
+    }, [initialResults, olderData])
+
     // Transform results for Levey-Jennings chart
     const chartDataPoints = useMemo(() => {
-        return selectedResults.map(r => ({
+        return allResults.map(r => ({
             id: r.id,
             value: r.value,
             zScore: r.z_score,
@@ -78,14 +123,14 @@ export function QCAnalyticsTab({ definitions, qcResults }: QCAnalyticsTabProps) 
             measuredAt: r.measured_at,
             ruleViolated: r.rule_violated,
         }))
-    }, [selectedResults])
+    }, [allResults])
 
-    // Calculate lab mean from actual results (for Sigma calculation)
+    // Calculate lab mean from all results (for Sigma calculation)
     const labMean = useMemo(() => {
-        if (selectedResults.length === 0) return null
-        const sum = selectedResults.reduce((acc, r) => acc + r.value, 0)
-        return sum / selectedResults.length
-    }, [selectedResults])
+        if (allResults.length === 0) return null
+        const sum = allResults.reduce((acc, r) => acc + r.value, 0)
+        return sum / allResults.length
+    }, [allResults])
 
     if (definitions.length === 0) {
         return (
@@ -121,23 +166,29 @@ export function QCAnalyticsTab({ definitions, qcResults }: QCAnalyticsTabProps) 
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex items-center gap-4">
-                        <Label className="shrink-0">Chọn xét nghiệm:</Label>
-                        <Select
-                            value={selectedDefinitionId}
-                            onValueChange={setSelectedDefinitionId}
-                        >
-                            <SelectTrigger className="w-full max-w-md">
-                                <SelectValue placeholder="Chọn xét nghiệm..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {definitions.map((def) => (
-                                    <SelectItem key={def.id} value={def.id}>
-                                        {def.assay_name} - {def.material_name} ({def.material_level})
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                    <div className="flex flex-wrap items-center gap-4">
+                        <div className="flex items-center gap-2">
+                            <Label className="shrink-0">Chọn xét nghiệm:</Label>
+                            <Select
+                                value={selectedDefinitionId}
+                                onValueChange={setSelectedDefinitionId}
+                            >
+                                <SelectTrigger className="w-full max-w-md">
+                                    <SelectValue placeholder="Chọn xét nghiệm..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {definitions.map((def) => (
+                                        <SelectItem key={def.id} value={def.id}>
+                                            {def.assay_name} - {def.material_name} ({def.material_level})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Label className="shrink-0">Khoảng thời gian:</Label>
+                            <QCDateRangeSelector currentValue={qcDays} />
+                        </div>
                     </div>
                 </CardContent>
             </Card>
@@ -155,6 +206,26 @@ export function QCAnalyticsTab({ definitions, qcResults }: QCAnalyticsTabProps) 
                         dataPoints={chartDataPoints}
                         height={400}
                     />
+
+                    {/* Load More Button */}
+                    {hasNextPage && allResults.length > 0 && (
+                        <div className="flex justify-center">
+                            <Button
+                                variant="outline"
+                                onClick={() => fetchNextPage()}
+                                disabled={isFetchingNextPage}
+                            >
+                                {isFetchingNextPage ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Đang tải...
+                                    </>
+                                ) : (
+                                    'Tải thêm dữ liệu cũ hơn'
+                                )}
+                            </Button>
+                        </div>
+                    )}
 
                     {/* Sigma Dashboard */}
                     {selectedDefinition.tea_percent && labMean !== null && (
@@ -181,7 +252,7 @@ export function QCAnalyticsTab({ definitions, qcResults }: QCAnalyticsTabProps) 
                     )}
 
                     {/* No Results Warning */}
-                    {selectedResults.length === 0 && (
+                    {allResults.length === 0 && (
                         <Card className="border-blue-200 bg-blue-50">
                             <CardContent className="py-4">
                                 <p className="text-sm text-blue-700">

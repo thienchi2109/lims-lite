@@ -62,6 +62,7 @@ interface QualityControlPageClientProps {
     assays: Assay[]
     analyticsDefinitions: QCDefinitionForAnalytics[]
     qcResults: Record<string, QCResultDataPoint[]>
+    qcDays: string
 }
 
 // ============================================================================
@@ -77,6 +78,7 @@ export function QualityControlPageClient({
     assays,
     analyticsDefinitions,
     qcResults,
+    qcDays,
 }: QualityControlPageClientProps) {
     const [activeTab, setActiveTab] = useState('overview')
     const [showEstablishLimits, setShowEstablishLimits] = useState(false)
@@ -321,6 +323,7 @@ export function QualityControlPageClient({
                     <QCAnalyticsTab
                         definitions={analyticsDefinitions}
                         qcResults={qcResults}
+                        qcDays={qcDays}
                     />
                 </TabsContent>
             </Tabs>
