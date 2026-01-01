@@ -553,3 +553,221 @@ Use existing `audit_logs` table infrastructure with `record_type = 'qc_result'`,
 
 **Last Updated:** 2025-12-31
 **Validated With:** User brainstorming session - confirmed session-based linking, flexible modes, block at approval, full multi-level with lot tracking.
+
+---
+
+## Phase 14: Analyst QC Entry Page Design
+
+### Design Decisions (Brainstormed 2026-01-01)
+
+#### Decision 14.1: Standalone Page with Navigation Link
+
+**What:** QC Entry page is standalone at `/analyst/qc-entry`, accessible via navigation button in `AssignedTestsPanel` header.
+
+**Why:**
+- QC is typically done at start of day/shift before patient samples
+- Keeps patient result entry and QC entry workflows separate
+- Navigation button provides convenience without coupling workflows
+
+**Implementation:**
+- Add "IQC" button with `Activity` icon in `AssignedTestsPanel` header
+- Tooltip: "Kiểm soát chất lượng nội bộ"
+- Links to `/analyst/qc-entry`
+
+```tsx
+// In assigned-tests-panel.tsx header
+<Button variant="ghost" size="sm" asChild>
+  <Link href="/analyst/qc-entry">
+    <Activity className="h-4 w-4 mr-1" />
+    IQC
+  </Link>
+</Button>
+```
+
+#### Decision 14.2: Tabbed Layout by Lab Specialty
+
+**What:** QC Entry page uses tabs organized by lab specialty (Hóa sinh, Huyết học, Vi sinh, etc.)
+
+**Why:**
+- With 172 assays, flat list is overwhelming
+- Labs naturally organize work by specialty
+- Matches existing specialty grouping in test assignment
+
+**Layout:**
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│  Kiểm soát chất lượng nội bộ (IQC)                      [Refresh]     │
+├────────────────────────────────────────────────────────────────────────┤
+│  [Hóa sinh] [Huyết học] [Vi sinh] [Miễn dịch] [Nước tiểu]             │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                        │
+│  ┌─────────────────────────────────────────────────────────────────┐  │
+│  │ Glucose                              Trạng thái: ✓ Đạt          │  │
+│  │ ┌─────────────────────────────────────────────────────────────┐ │  │
+│  │ │ [Mini L-J Chart - 30 days]                                  │ │  │
+│  │ └─────────────────────────────────────────────────────────────┘ │  │
+│  │ Level 1 (Low): [____] mg/dL    Level 2 (Normal): [____] mg/dL  │  │
+│  │                                                    [Nhập QC]    │  │
+│  └─────────────────────────────────────────────────────────────────┘  │
+│                                                                        │
+│  ┌─────────────────────────────────────────────────────────────────┐  │
+│  │ Cholesterol                          Trạng thái: ⚠ Cảnh báo    │  │
+│  │ ...                                                             │  │
+│  └─────────────────────────────────────────────────────────────────┘  │
+│                                                                        │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Decision 14.3: Show All Specialty Tabs (Disabled if No QC)
+
+**What:** Display all specialty tabs, but disable/gray out tabs that have no QC-configured assays.
+
+**Why:**
+- User sees full structure of what's possible
+- Clear indication of which specialties need QC setup
+- Avoids confusion from dynamically appearing/disappearing tabs
+
+**Tab States:**
+| State | Appearance | Click Behavior |
+|-------|------------|----------------|
+| Has active QC definitions | Normal tab | Switches to tab content |
+| No QC definitions | Grayed + "(0)" badge | Shows empty state with setup link |
+
+#### Decision 14.4: Assay Filtering by Active QC Definitions
+
+**What:** Only assays with at least one active `qc_definition` appear in the QC Entry page.
+
+**Why:**
+- QC entry requires control limits (mean, SD) to be established
+- Prevents confusion from showing assays that can't accept QC values
+- Manager must set up QC via control-limits-wizard first
+
+**Query:**
+```sql
+SELECT DISTINCT a.id, a.name, a.specialty_id,
+       d.id as definition_id, d.mean, d.sd,
+       m.name as material_name, m.level, m.lot_number,
+       s.id as session_id, s.qc_status
+FROM assay_definitions a
+JOIN qc_definitions d ON d.assay_id = a.id AND d.is_active = true
+JOIN qc_materials m ON d.material_id = m.id AND m.deleted_at IS NULL
+LEFT JOIN qc_sessions s ON s.assay_id = a.id AND s.ended_at IS NULL
+WHERE a.deleted_at IS NULL
+ORDER BY a.name;
+```
+
+#### Decision 14.5: Empty State with Manager Link
+
+**What:** When a specialty tab has no QC-configured assays, show empty state with link to Manager QC setup.
+
+**Empty State Message:**
+```
+Chưa có xét nghiệm nào trong nhóm này được cấu hình QC.
+Vui lòng liên hệ Quản lý phòng lab để thiết lập giới hạn kiểm soát.
+```
+
+### Data Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                    WORKFLOW 1: PATIENT SAMPLE RESULTS                           │
+│                         (Existing - via Samples Page)                           │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  /analyst/accession  →  /samples  →  AssignedTestsPanel  →  /manager/approvals │
+│                              │              │                                   │
+│                              │              └─── [IQC] button ──────────────┐  │
+│                              ▼                                               │  │
+│                    ┌─────────────────────┐                                  │  │
+│                    │ ResultCellEditor    │ ◄── Analyst enters patient vals  │  │
+│                    └─────────────────────┘                                  │  │
+│                              │                                               │  │
+│                              ▼                                               │  │
+│                    results.qc_session_id ───────────────────────────────┐   │  │
+│                    (auto-linked to active QC session)                   │   │  │
+│                                                                         │   │  │
+└─────────────────────────────────────────────────────────────────────────┼───┼──┘
+                                                                          │   │
+┌─────────────────────────────────────────────────────────────────────────┼───┼──┐
+│                    WORKFLOW 2: QC CONTROL RESULTS                       │   │  │
+│                         (New - Phase 14 QC Entry Page)                  │   │  │
+├─────────────────────────────────────────────────────────────────────────┼───┼──┤
+│                                                                         │   │  │
+│  /analyst/qc-entry  ◄───────────────────────────────────────────────────┘   │  │
+│         │                                                                    │  │
+│         │  ┌─────────────────────────────────────────────────────────┐      │  │
+│         │  │ Tabs: [Hóa sinh] [Huyết học] [Vi sinh] ...              │      │  │
+│         │  │       (grayed if no QC definitions)                      │      │  │
+│         │  ├─────────────────────────────────────────────────────────┤      │  │
+│         │  │ Per Assay Card:                                         │      │  │
+│         │  │  • Assay name + current session status                  │      │  │
+│         │  │  • Mini Levey-Jennings chart (30 days)                  │      │  │
+│         │  │  • QC Entry Form (value per level)                      │      │  │
+│         │  │  • Real-time Z-score + Westgard evaluation              │      │  │
+│         │  └─────────────────────────────────────────────────────────┘      │  │
+│         │                           │                                        │  │
+│         ▼                           ▼                                        │  │
+│  ┌─────────────┐           ┌────────────────┐                               │  │
+│  │ qc_sessions │◄──────────│   qc_results   │                               │  │
+│  │ (per assay) │           │ (value, z_score)                               │  │
+│  │ qc_status:  │◄──────────┤                │                               │  │
+│  │ pass/warn/  │  updates  └────────────────┘                               │  │
+│  │ blocked     │                                                            │  │
+│  └──────┬──────┘                                                            │  │
+│         │                                                                    │  │
+│         └────────────────────────────────────────────────────────────────────┘  │
+│                                                                                 │
+│                              BLOCKING LINK (Phase 16)                          │
+│                                    │                                            │
+│                                    ▼                                            │
+│         ┌─────────────────────────────────────────────────────────┐            │
+│         │  When Manager approves patient results:                 │            │
+│         │  • Check results.qc_session_id                          │            │
+│         │  • If NULL → pre-QC era, ALLOW                          │            │
+│         │  • If session.qc_status = 'blocked' → BLOCK             │            │
+│         │  • If session.qc_status = pass/warning/resolved → OK    │            │
+│         └─────────────────────────────────────────────────────────┘            │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Component Structure (Phase 14)
+
+```
+src/app/(dashboard)/analyst/qc-entry/
+├── page.tsx                    # Main page with tabs
+└── loading.tsx                 # Loading skeleton
+
+src/components/qc/
+├── qc-entry-page-client.tsx    # Client component with tab state
+├── qc-assay-card.tsx           # Per-assay card with chart + form
+├── qc-specialty-tab.tsx        # Tab content for a specialty
+└── (existing components)
+    ├── qc-entry-form.tsx       # Reuse existing form component
+    └── levey-jennings-chart.tsx # Reuse existing chart (mini mode)
+```
+
+### Navigation Integration
+
+**File to modify:** `src/components/assigned-tests-panel.tsx`
+
+**Change:** Add IQC button in header toolbar
+
+```tsx
+// Header section of AssignedTestsPanel
+<div className="flex items-center gap-2">
+  {/* Existing buttons */}
+  <Button variant="ghost" size="sm" asChild>
+    <Link href="/analyst/qc-entry">
+      <Activity className="h-4 w-4 mr-1" />
+      <span className="hidden sm:inline">IQC</span>
+    </Link>
+  </Button>
+</div>
+```
+
+**Tooltip:** `title="Kiểm soát chất lượng nội bộ"`
+
+---
+
+**Last Updated:** 2026-01-01
+**Validated With:** Brainstorming session - confirmed standalone page, tabbed by specialty, IQC navigation button.
