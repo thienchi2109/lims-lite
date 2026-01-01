@@ -6,6 +6,7 @@ import {
     AlertTriangle,
     BarChart3,
     Beaker,
+    LineChart,
     ListChecks,
     Plus,
     RefreshCw,
@@ -30,6 +31,7 @@ import { QCSessionManager } from './qc-session-manager'
 import { ControlLimitsWizard } from './control-limits-wizard'
 import { LotChangeoverDialog } from './lot-changeover-dialog'
 import { ViolationResolutionDialog } from './violation-resolution-dialog'
+import { QCAnalyticsTab, type QCDefinitionForAnalytics, type QCResultDataPoint } from './qc-analytics-tab'
 
 // ============================================================================
 // TYPES
@@ -58,6 +60,8 @@ interface QualityControlPageClientProps {
     activeSessions: ActiveSession[]
     pendingViolations: PendingViolation[]
     assays: Assay[]
+    analyticsDefinitions: QCDefinitionForAnalytics[]
+    qcResults: Record<string, QCResultDataPoint[]>
 }
 
 // ============================================================================
@@ -71,6 +75,8 @@ export function QualityControlPageClient({
     activeSessions,
     pendingViolations,
     assays,
+    analyticsDefinitions,
+    qcResults,
 }: QualityControlPageClientProps) {
     const [activeTab, setActiveTab] = useState('overview')
     const [showEstablishLimits, setShowEstablishLimits] = useState(false)
@@ -172,7 +178,7 @@ export function QualityControlPageClient({
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-flex">
+                <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-flex">
                     <TabsTrigger value="overview" className="gap-2">
                         <BarChart3 className="h-4 w-4 hidden sm:inline" />
                         Tổng quan
@@ -197,6 +203,10 @@ export function QualityControlPageClient({
                                 {stats.pendingViolations}
                             </Badge>
                         )}
+                    </TabsTrigger>
+                    <TabsTrigger value="analytics" className="gap-2">
+                        <LineChart className="h-4 w-4 hidden sm:inline" />
+                        Phân tích
                     </TabsTrigger>
                 </TabsList>
 
@@ -305,6 +315,13 @@ export function QualityControlPageClient({
                             <QCViolationsTabWithDialogs violations={pendingViolations} />
                         </CardContent>
                     </Card>
+                </TabsContent>
+
+                <TabsContent value="analytics">
+                    <QCAnalyticsTab
+                        definitions={analyticsDefinitions}
+                        qcResults={qcResults}
+                    />
                 </TabsContent>
             </Tabs>
 

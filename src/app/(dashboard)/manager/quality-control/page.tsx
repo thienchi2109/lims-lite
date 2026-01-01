@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import type { QCResultStatus } from '@/types/qc'
 import { Button } from '@/components/ui/button'
 import { DashboardHeader } from '@/components/dashboard-header'
 import { ArrowLeft } from 'lucide-react'
@@ -52,6 +53,18 @@ export default async function QualityControlPage() {
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
 
+    // Fetch TEa standards for sigma calculation
+    const { data: teaStandards } = await supabase
+        .from('qc_tea_standards')
+        .select('assay_id, tea_percent')
+        .is('deleted_at', null)
+
+    // Create TEa lookup map
+    const teaMap = new Map<string, number>()
+    teaStandards?.forEach((tea) => {
+        teaMap.set(tea.assay_id, tea.tea_percent)
+    })
+
     // Fetch active sessions
     const { data: activeSessions } = await supabase
         .from('qc_sessions')
@@ -98,6 +111,45 @@ export default async function QualityControlPage() {
         .is('deleted_at', null)
         .order('name', { ascending: true })
 
+    // Fetch QC results for analytics (last 90 days per active definition)
+    const activeDefinitionIds = (definitions || [])
+        .filter((d) => d.is_active)
+        .map((d) => d.id)
+
+    const ninetyDaysAgo = new Date()
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+
+    const { data: qcResultsData } = await supabase
+        .from('qc_results')
+        .select('id, definition_id, value, z_score, status, measured_at, rule_violated')
+        .in('definition_id', activeDefinitionIds.length > 0 ? activeDefinitionIds : [''])
+        .gte('measured_at', ninetyDaysAgo.toISOString())
+        .order('measured_at', { ascending: true })
+
+    // Group QC results by definition_id
+    const qcResultsByDefinition: Record<string, Array<{
+        id: string
+        value: number
+        z_score: number | null
+        status: QCResultStatus
+        measured_at: string
+        rule_violated: string | null
+    }>> = {}
+
+    qcResultsData?.forEach((r) => {
+        if (!qcResultsByDefinition[r.definition_id]) {
+            qcResultsByDefinition[r.definition_id] = []
+        }
+        qcResultsByDefinition[r.definition_id].push({
+            id: r.id,
+            value: r.value,
+            z_score: r.z_score,
+            status: r.status as QCResultStatus,
+            measured_at: r.measured_at,
+            rule_violated: r.rule_violated,
+        })
+    })
+
     // Transform data for client component
     const transformedDefinitions = (definitions || []).map((def) => {
         const rawAssay = def.assay as any
@@ -122,6 +174,32 @@ export default async function QualityControlPage() {
             material_level: material?.level || '',
         }
     })
+
+    // Transform definitions for analytics (with TEa)
+    const analyticsDefinitions = (definitions || [])
+        .filter((d) => d.is_active)
+        .map((def) => {
+            const rawAssay = def.assay as any
+            const rawMaterial = def.material as any
+            const assay = Array.isArray(rawAssay) ? rawAssay[0] : rawAssay
+            const material = Array.isArray(rawMaterial) ? rawMaterial[0] : rawMaterial
+            const assayId = assay?.id || ''
+
+            return {
+                id: def.id,
+                mean: def.mean,
+                sd: def.sd,
+                cv_percent: def.cv_percent,
+                assay_id: assayId,
+                assay_name: assay?.name || '',
+                assay_units: assay?.units || null,
+                material_id: material?.id || '',
+                material_name: material?.name || '',
+                material_level: material?.level || '',
+                material_lot: material?.lot_number || '',
+                tea_percent: teaMap.get(assayId) ?? null,
+            }
+        })
 
     const transformedSessions = (activeSessions || []).map((session) => {
         const rawAssay = session.assay as any
@@ -199,6 +277,8 @@ export default async function QualityControlPage() {
                     activeSessions={transformedSessions}
                     pendingViolations={transformedViolations}
                     assays={assays || []}
+                    analyticsDefinitions={analyticsDefinitions}
+                    qcResults={qcResultsByDefinition}
                 />
             </main>
         </div>
