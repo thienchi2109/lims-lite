@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useQueryClient } from '@tanstack/react-query'
 import { sampleKeys, resultKeys, invalidateSampleQueries } from '@/types/query-keys'
 import { approveResultsClient, cancelApprovalClient } from '@/lib/api-client'
 import { getActiveSignature } from '@/app/actions/signatures'
+import { checkQCSessionStatus } from '@/app/actions/qc-violations'
 import {
     Dialog,
     DialogContent,
@@ -19,7 +21,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
-import { CheckCircle2, XCircle, Loader2, Info, AlertTriangle } from 'lucide-react'
+import { CheckCircle2, XCircle, Loader2, Info, AlertTriangle, ShieldAlert, ShieldCheck, ExternalLink } from 'lucide-react'
 
 interface ApprovalDialogProps {
     sampleId: string
@@ -40,6 +42,13 @@ export function ApprovalDialog({
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [hasSignature, setHasSignature] = useState<boolean | null>(null)
     const [checkingSignature, setCheckingSignature] = useState(false)
+    // QC status state
+    const [qcStatus, setQcStatus] = useState<{
+        can_approve: boolean
+        blocked_reason: string | null
+        blocked_count: number
+    } | null>(null)
+    const [checkingQC, setCheckingQC] = useState(false)
     const router = useRouter()
     const queryClient = useQueryClient()
 
@@ -65,6 +74,34 @@ export function ApprovalDialog({
 
         checkSignature()
     }, [open, mode])
+
+    // Check QC session status when dialog opens in approve mode
+    useEffect(() => {
+        async function checkQC() {
+            if (mode !== 'approve' || !open || resultIds.length === 0) {
+                setQcStatus(null)
+                return
+            }
+
+            setCheckingQC(true)
+            try {
+                const result = await checkQCSessionStatus(resultIds)
+                if ('error' in result) {
+                    console.error('Error checking QC status:', result.error)
+                    setQcStatus(null)
+                } else {
+                    setQcStatus(result)
+                }
+            } catch (error) {
+                console.error('Error checking QC status:', error)
+                setQcStatus(null)
+            } finally {
+                setCheckingQC(false)
+            }
+        }
+
+        checkQC()
+    }, [open, mode, resultIds])
 
     const handleSubmit = async () => {
         if (mode === 'cancel' && note.trim().length < 3) {
@@ -145,6 +182,42 @@ export function ApprovalDialog({
                 </DialogHeader>
 
                 <div className="space-y-4 py-4">
+                    {/* QC Session Status Indicator - Only show in approve mode */}
+                    {mode === 'approve' && (
+                        <div className="space-y-2">
+                            {checkingQC ? (
+                                <Alert>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <AlertDescription>
+                                        Đang kiểm tra trạng thái QC...
+                                    </AlertDescription>
+                                </Alert>
+                            ) : qcStatus && !qcStatus.can_approve ? (
+                                <Alert variant="destructive">
+                                    <ShieldAlert className="h-4 w-4" />
+                                    <AlertDescription className="flex flex-col gap-2">
+                                        <span>{qcStatus.blocked_reason}</span>
+                                        <Link
+                                            href="/manager/quality-control?tab=violations"
+                                            className="inline-flex items-center gap-1 text-sm font-medium underline underline-offset-4 hover:no-underline"
+                                            onClick={() => onOpenChange(false)}
+                                        >
+                                            Giải quyết vi phạm QC
+                                            <ExternalLink className="h-3 w-3" />
+                                        </Link>
+                                    </AlertDescription>
+                                </Alert>
+                            ) : qcStatus && qcStatus.can_approve ? (
+                                <Alert className="border-green-200 bg-green-50 text-green-800">
+                                    <ShieldCheck className="h-4 w-4" />
+                                    <AlertDescription>
+                                        QC đã vượt qua. Có thể phê duyệt kết quả.
+                                    </AlertDescription>
+                                </Alert>
+                            ) : null}
+                        </div>
+                    )}
+
                     {/* E-Signature Notice - Only show in approve mode */}
                     {mode === 'approve' && hasSignature !== null && !checkingSignature && (
                         <div className="space-y-2">
@@ -200,11 +273,15 @@ export function ApprovalDialog({
                         onClick={() => onOpenChange(false)}
                         disabled={isSubmitting}
                     >
-                        Cancel
+                        Hủy
                     </Button>
                     <Button
                         onClick={handleSubmit}
-                        disabled={isSubmitting || (mode === 'cancel' && note.trim().length < 3)}
+                        disabled={
+                            isSubmitting ||
+                            (mode === 'cancel' && note.trim().length < 3) ||
+                            (mode === 'approve' && qcStatus !== null && !qcStatus.can_approve)
+                        }
                         variant={mode === 'approve' ? 'default' : 'destructive'}
                     >
                         {isSubmitting ? (
