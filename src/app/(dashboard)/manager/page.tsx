@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { FlaskConical, CheckCircle2, ClipboardList, User, QrCode, BarChart3 } from 'lucide-react'
+import { FlaskConical, CheckCircle2, ClipboardList, User, QrCode, BarChart3, ShieldCheck } from 'lucide-react'
 import { DashboardHeader } from '@/components/dashboard-header'
 import { getSamplesForApprovalCount } from '@/app/actions/sample-approvals'
 
@@ -84,6 +84,14 @@ export default async function ManagerDashboard() {
             href: "/manager/qr-code",
             color: "from-cyan-500 to-sky-600",
             iconColor: "text-cyan-50"
+        },
+        {
+            title: "Kiểm soát chất lượng kết quả xét nghiệm (IQC)",
+            description: "Quản lý IQC, Westgard rules và phân tích Sigma",
+            icon: ShieldCheck,
+            href: "/manager/quality-control",
+            color: "from-amber-500 to-orange-600",
+            iconColor: "text-amber-50"
         }
     ]
 
