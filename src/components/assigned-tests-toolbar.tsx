@@ -107,9 +107,11 @@ export function AssignedTestsToolbar({
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <Button
-                            variant="ghost"
                             size="sm"
-                            className="h-8 gap-1.5 text-slate-500 transition-transform hover:scale-105 hover:bg-amber-50 hover:text-amber-600 dark:text-slate-400 dark:hover:bg-amber-900/20 dark:hover:text-amber-400"
+                            className={cn(
+                                "h-8 gap-1.5 text-white shadow-md transition-all hover:scale-105 hover:shadow-lg",
+                                "bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 shadow-amber-500/20"
+                            )}
                             asChild
                         >
                             <Link href="/analyst/qc-entry">
