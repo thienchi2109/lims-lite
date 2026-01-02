@@ -17,6 +17,14 @@ export interface QCResultForAnalytics {
     rule_violated: string | null
 }
 
+/** Minimal data point for mini L-J chart */
+export interface MiniChartDataPoint {
+    id: string
+    value: number
+    status: QCResultStatus
+    measuredAt: string
+}
+
 export interface FetchOlderQCResultsResponse {
     data: QCResultForAnalytics[]
     hasMore: boolean

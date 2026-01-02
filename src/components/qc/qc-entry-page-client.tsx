@@ -13,6 +13,7 @@ import {
     TabsTrigger,
 } from '@/components/ui/tabs'
 import { QCAssayCard } from './qc-assay-card'
+import type { MiniChartDataPoint } from '@/app/actions/qc-analytics'
 
 // ============================================================================
 // TYPES
@@ -43,6 +44,7 @@ interface QCEntryPageClientProps {
     user: { full_name: string; role: string }
     specialties: SpecialtyWithQC[]
     assays: AssayWithQC[]
+    qcResultsByDefinition: Record<string, MiniChartDataPoint[]>
 }
 
 // ============================================================================
@@ -53,6 +55,7 @@ export function QCEntryPageClient({
     user,
     specialties,
     assays,
+    qcResultsByDefinition,
 }: QCEntryPageClientProps) {
     // Default to first specialty with QC definitions, or first specialty
     const firstWithQC = specialties.find(s => s.qc_count > 0)
@@ -144,6 +147,7 @@ export function QCEntryPageClient({
                                         <QCAssayCard
                                             key={assay.definition_id}
                                             assay={assay}
+                                            qcDataPoints={qcResultsByDefinition[assay.definition_id] || []}
                                         />
                                     ))}
                                 </div>

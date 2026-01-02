@@ -25,7 +25,9 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog'
 import { QCEntryForm } from './qc-entry-form'
+import { MiniLeveyJenningsChart } from './mini-levey-jennings-chart'
 import type { QCStatus } from '@/types/qc'
+import type { MiniChartDataPoint } from '@/app/actions/qc-analytics'
 
 // ============================================================================
 // TYPES
@@ -48,6 +50,7 @@ interface AssayWithQC {
 
 interface QCAssayCardProps {
     assay: AssayWithQC
+    qcDataPoints: MiniChartDataPoint[]
 }
 
 // ============================================================================
@@ -90,7 +93,7 @@ const STATUS_CONFIG: Record<string, {
 // COMPONENT
 // ============================================================================
 
-export function QCAssayCard({ assay }: QCAssayCardProps) {
+export function QCAssayCard({ assay, qcDataPoints }: QCAssayCardProps) {
     const [isDialogOpen, setIsDialogOpen] = useState(false)
 
     // Get status configuration
@@ -171,10 +174,13 @@ export function QCAssayCard({ assay }: QCAssayCardProps) {
                     </div>
                 </div>
 
-                {/* Mini L-J Chart placeholder - Phase 14.5 */}
-                <div className="h-24 rounded-md border border-dashed flex items-center justify-center text-muted-foreground text-xs">
-                    Biểu đồ L-J (30 ngày gần đây)
-                </div>
+                {/* Mini L-J Chart */}
+                <MiniLeveyJenningsChart
+                    mean={assay.mean}
+                    sd={assay.sd}
+                    dataPoints={qcDataPoints}
+                    height={96}
+                />
 
                 {/* Entry Button */}
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

@@ -2,6 +2,7 @@ import { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { QCEntryPageClient } from '@/components/qc/qc-entry-page-client'
+import type { MiniChartDataPoint } from '@/app/actions/qc-analytics'
 
 export const metadata: Metadata = {
     title: 'Kiểm soát chất lượng nội bộ - CDC LIMS',
@@ -89,6 +90,38 @@ export default async function QCEntryPage() {
         .select('id, assay_id, qc_status')
         .is('ended_at', null)
 
+    // Fetch QC results for mini charts (last 30 days, max 15 per definition)
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+    const definitionIds = (assaysWithQC || []).map(d => d.id)
+    const { data: recentQCResults } = definitionIds.length > 0
+        ? await supabase
+            .from('qc_results')
+            .select('id, definition_id, value, status, measured_at')
+            .in('definition_id', definitionIds)
+            .gte('measured_at', thirtyDaysAgo.toISOString())
+            .order('measured_at', { ascending: true })
+        : { data: [] }
+
+    // Group QC results by definition_id
+    const qcResultsByDefinition: Record<string, MiniChartDataPoint[]> = {}
+    for (const result of recentQCResults || []) {
+        const defId = result.definition_id
+        if (!qcResultsByDefinition[defId]) {
+            qcResultsByDefinition[defId] = []
+        }
+        // Keep max 15 points per definition
+        if (qcResultsByDefinition[defId].length < 15) {
+            qcResultsByDefinition[defId].push({
+                id: result.id,
+                value: result.value,
+                status: result.status,
+                measuredAt: result.measured_at,
+            })
+        }
+    }
+
     // Build specialty data with QC counts
     const specialtyMap = new Map<string, SpecialtyWithQC>()
 
@@ -152,6 +185,7 @@ export default async function QCEntryPage() {
                 user={userData}
                 specialties={specialtiesWithCounts}
                 assays={assayList}
+                qcResultsByDefinition={qcResultsByDefinition}
             />
         </div>
     )
