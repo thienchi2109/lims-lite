@@ -124,6 +124,7 @@ export async function saveBatchResults(data: SaveBatchResults) {
                 id,
                 status,
                 sample_id,
+                assay_id,
                 sample:samples!results_sample_id_fkey(id, status),
                 assay:assay_definitions!results_assay_id_fkey(
                     validation_rules
@@ -182,15 +183,52 @@ export async function saveBatchResults(data: SaveBatchResults) {
             return { error: 'Validation failed', validationErrors }
         }
 
-        // Perform batch update in transaction
+        // Fetch active QC sessions for all assays in this batch
+        const uniqueAssayIds = [...new Set(existingResults.map((r: any) => r.assay_id))]
+        const qcSessionMap: Record<string, string | null> = {}
+
+        if (uniqueAssayIds.length > 0) {
+            const { data: qcSessions } = await supabase.rpc('get_active_qc_sessions_batch', {
+                p_assay_ids: uniqueAssayIds,
+            })
+
+            // If batch RPC doesn't exist, fall back to individual calls
+            if (!qcSessions) {
+                // Fallback: Query qc_sessions directly
+                const { data: activeSessions } = await supabase
+                    .from('qc_sessions')
+                    .select('id, assay_id')
+                    .in('assay_id', uniqueAssayIds)
+                    .is('ended_at', null)
+                    .order('started_at', { ascending: false })
+
+                // Map assay_id -> session_id (first match per assay)
+                const seenAssays = new Set<string>()
+                for (const session of activeSessions || []) {
+                    if (!seenAssays.has(session.assay_id)) {
+                        seenAssays.add(session.assay_id)
+                        qcSessionMap[session.assay_id] = session.id
+                    }
+                }
+            } else {
+                // Use batch RPC result
+                for (const row of qcSessions) {
+                    qcSessionMap[row.assay_id] = row.session_id
+                }
+            }
+        }
+
+        // Perform batch update with qc_session_id linking
         const updates = validatedData.results.map((resultInput) => {
             const existing = existingResults.find((r: any) => r.id === resultInput.id)
+            const assayId = existing?.assay_id as string
             return {
                 id: resultInput.id,
                 value: resultInput.value,
                 status: existing?.status === 'pending' ? 'entered' : existing?.status,
                 entered_by: user.id,
                 entered_at: new Date().toISOString(),
+                qc_session_id: qcSessionMap[assayId] ?? null,
             }
         })
 
