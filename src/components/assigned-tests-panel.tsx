@@ -36,6 +36,8 @@ import { generatePrintTemplate } from '@/lib/print-template'
 import { regenerateCoA, getCoAStatus } from '@/app/actions/coa'
 import { useResultsEditor } from '@/hooks/use-results-editor'
 import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard'
+import { QCRowIndicator } from '@/components/qc/qc-row-indicator'
+import { getQCStatusForAssays, type AssayQCStatus } from '@/app/actions/qc-status'
 import type { CoAReportStatus } from '@/types'
 
 interface AssignedTestsPanelProps {
@@ -62,6 +64,9 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
     // CoA state
     const [coaStatus, setCoaStatus] = useState<CoAReportStatus | null>(null)
     const [isGeneratingCoA, setIsGeneratingCoA] = useState(false)
+
+    // QC status state
+    const [qcStatuses, setQcStatuses] = useState<Record<string, AssayQCStatus>>({})
 
     const handleRefocus = useCallback(
         (targetSampleId: string) => {
@@ -128,6 +133,21 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
         }
         fetchCoA()
     }, [sampleId, sampleStatus])
+
+    // Fetch QC status for all assays when results change
+    useEffect(() => {
+        async function fetchQCStatus() {
+            if (results.length === 0) return
+            const assayIds = [...new Set(results.map(r => r.assay_id))]
+            const qcResult = await getQCStatusForAssays(assayIds)
+            if ('error' in qcResult) {
+                console.error('Failed to fetch QC status:', qcResult.error)
+                return
+            }
+            setQcStatuses(qcResult)
+        }
+        fetchQCStatus()
+    }, [results])
 
     const handleGenerateCoA = async () => {
         setIsGeneratingCoA(true)
@@ -257,37 +277,51 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    results.map((result) => (
-                                        <TableRow key={result.id} className="group hover:bg-slate-50/50">
-                                            <TableCell className="font-medium text-slate-700">{result.assay_name}</TableCell>
-                                            <TableCell className="text-slate-600">{result.method_name || '-'}</TableCell>
-                                            <TableCell>
-                                                <ResultCellEditor
-                                                    value={editor.getDisplayValue(result)}
-                                                    onChange={(val) => editor.handleValueChange(result.id, val)}
-                                                    isEditable={canEdit && result.status !== 'approved'}
-                                                    validationError={editor.validationErrors[result.id]}
-                                                    isPending={editor.resultValues[result.id] !== undefined}
-                                                />
-                                            </TableCell>
-                                            <TableCell className="text-slate-500">{result.assay_units || '-'}</TableCell>
-                                            <TableCell>
-                                                <ResultStatusBadge status={result.status} />
-                                            </TableCell>
-                                            <TableCell className="text-xs text-slate-500">
-                                                {result.entered_by_name ? (
-                                                    <div className="flex flex-col">
-                                                        <span className="font-medium text-slate-700">{result.entered_by_name}</span>
-                                                        <span className="text-[10px] text-slate-400">
-                                                            {result.entered_at ? new Date(result.entered_at).toLocaleDateString('vi-VN') : '-'}
-                                                        </span>
+                                    results.map((result) => {
+                                        const qcStatus = qcStatuses[result.assay_id]
+                                        return (
+                                            <TableRow key={result.id} className="group hover:bg-slate-50/50">
+                                                <TableCell className="font-medium text-slate-700">
+                                                    <div className="flex items-center gap-2">
+                                                        {qcStatus && (
+                                                            <QCRowIndicator
+                                                                status={qcStatus.status}
+                                                                message={qcStatus.message}
+                                                                lastQCAt={qcStatus.last_qc_at}
+                                                            />
+                                                        )}
+                                                        {result.assay_name}
                                                     </div>
-                                                ) : (
-                                                    '-'
-                                                )}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
+                                                </TableCell>
+                                                <TableCell className="text-slate-600">{result.method_name || '-'}</TableCell>
+                                                <TableCell>
+                                                    <ResultCellEditor
+                                                        value={editor.getDisplayValue(result)}
+                                                        onChange={(val) => editor.handleValueChange(result.id, val)}
+                                                        isEditable={canEdit && result.status !== 'approved'}
+                                                        validationError={editor.validationErrors[result.id]}
+                                                        isPending={editor.resultValues[result.id] !== undefined}
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="text-slate-500">{result.assay_units || '-'}</TableCell>
+                                                <TableCell>
+                                                    <ResultStatusBadge status={result.status} />
+                                                </TableCell>
+                                                <TableCell className="text-xs text-slate-500">
+                                                    {result.entered_by_name ? (
+                                                        <div className="flex flex-col">
+                                                            <span className="font-medium text-slate-700">{result.entered_by_name}</span>
+                                                            <span className="text-[10px] text-slate-400">
+                                                                {result.entered_at ? new Date(result.entered_at).toLocaleDateString('vi-VN') : '-'}
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        '-'
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        )
+                                    })
                                 )}
                             </TableBody>
                         </Table>
