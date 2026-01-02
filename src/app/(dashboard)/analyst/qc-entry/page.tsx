@@ -44,53 +44,58 @@ export default async function QCEntryPage() {
         redirect('/login')
     }
 
-    // Role check - analyst only
-    const { data: userData } = await supabase
-        .from('users')
-        .select('full_name, role')
-        .eq('id', user.id)
-        .single()
+    // Parallel fetch for independent queries (performance optimization)
+    const [
+        { data: userData },
+        { data: specialties },
+        { data: assaysWithQC },
+        { data: activeSessions },
+    ] = await Promise.all([
+        // User role check
+        supabase
+            .from('users')
+            .select('full_name, role')
+            .eq('id', user.id)
+            .single(),
+        // All specialties for tab headers
+        supabase
+            .from('specialties')
+            .select('id, name')
+            .order('name'),
+        // Assays with active QC definitions
+        supabase
+            .from('qc_definitions')
+            .select(`
+                id,
+                mean,
+                sd,
+                assay:assay_definitions!inner(
+                    id,
+                    name,
+                    units,
+                    specialty_id
+                ),
+                material:qc_materials!inner(
+                    name,
+                    level,
+                    lot_number
+                )
+            `)
+            .eq('is_active', true)
+            .is('deleted_at', null),
+        // Active QC sessions for all assays
+        supabase
+            .from('qc_sessions')
+            .select('id, assay_id, qc_status')
+            .is('ended_at', null),
+    ])
 
+    // Role check - analyst only (after parallel fetch completes)
     if (!userData || userData.role !== 'analyst') {
         redirect('/manager')
     }
 
-    // Fetch all specialties for tab headers
-    const { data: specialties } = await supabase
-        .from('specialties')
-        .select('id, name')
-        .order('name')
-
-    // Fetch assays with active QC definitions
-    // Key query: Only assays with active qc_definitions are shown
-    const { data: assaysWithQC } = await supabase
-        .from('qc_definitions')
-        .select(`
-            id,
-            mean,
-            sd,
-            assay:assay_definitions!inner(
-                id,
-                name,
-                units,
-                specialty_id
-            ),
-            material:qc_materials!inner(
-                name,
-                level,
-                lot_number
-            )
-        `)
-        .eq('is_active', true)
-        .is('deleted_at', null)
-
-    // Fetch active QC sessions for all assays
-    const { data: activeSessions } = await supabase
-        .from('qc_sessions')
-        .select('id, assay_id, qc_status')
-        .is('ended_at', null)
-
-    // Fetch QC results for mini charts (last 30 days, max 15 per definition)
+    // Sequential fetch - depends on assaysWithQC result
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 

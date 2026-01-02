@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { Activity, ArrowLeft, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -61,11 +61,17 @@ export function QCEntryPageClient({
     const firstWithQC = specialties.find(s => s.qc_count > 0)
     const [activeTab, setActiveTab] = useState(firstWithQC?.id || specialties[0]?.id || '')
 
-    // Filter assays for current specialty
-    const currentAssays = assays.filter(a => a.specialty_id === activeTab)
+    // Filter assays for current specialty (memoized to prevent recalculation)
+    const currentAssays = useMemo(
+        () => assays.filter(a => a.specialty_id === activeTab),
+        [assays, activeTab]
+    )
 
     // Check if any specialty has QC
-    const hasAnyQC = specialties.some(s => s.qc_count > 0)
+    const hasAnyQC = useMemo(
+        () => specialties.some(s => s.qc_count > 0),
+        [specialties]
+    )
 
     return (
         <>

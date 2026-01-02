@@ -40,11 +40,76 @@ interface DataPoint {
     measuredAt: string
 }
 
+interface ChartDataPoint extends DataPoint {
+    index: number
+    date: string
+}
+
 interface MiniLeveyJenningsChartProps {
     mean: number
     sd: number
     dataPoints: DataPoint[]
     height?: number
+}
+
+interface DotProps {
+    cx?: number
+    cy?: number
+    payload?: ChartDataPoint
+}
+
+interface TooltipProps {
+    active?: boolean
+    payload?: Array<{ payload: ChartDataPoint }>
+}
+
+// ============================================================================
+// HELPER COMPONENTS (outside main component to prevent re-creation)
+// ============================================================================
+
+/**
+ * Color-coded dot renderer based on QC status
+ * Defined outside component to maintain stable reference
+ */
+function renderDot({ cx, cy, payload }: DotProps) {
+    if (cx === undefined || cy === undefined || !payload) return null
+
+    const color = payload.status === 'reject'
+        ? COLORS.reject
+        : payload.status === 'warning'
+            ? COLORS.warning
+            : COLORS.pass
+
+    return (
+        <circle
+            cx={cx}
+            cy={cy}
+            r={3}
+            fill={color}
+            stroke="#fff"
+            strokeWidth={1}
+        />
+    )
+}
+
+/**
+ * Compact tooltip for mini chart
+ * Defined outside component to maintain stable reference
+ */
+function MiniTooltip({ active, payload }: TooltipProps) {
+    if (!active || !payload?.[0]) return null
+    const data = payload[0].payload
+    const statusLabel = data.status === 'reject' ? 'Vi phạm' : data.status === 'warning' ? 'Cảnh báo' : 'Đạt'
+
+    return (
+        <div className="rounded border bg-background px-2 py-1 text-xs shadow">
+            <div className="font-medium">{data.date}</div>
+            <div className="font-mono">{data.value.toFixed(2)}</div>
+            <div className={data.status === 'reject' ? 'text-red-600' : data.status === 'warning' ? 'text-yellow-600' : 'text-green-600'}>
+                {statusLabel}
+            </div>
+        </div>
+    )
 }
 
 // ============================================================================
@@ -80,46 +145,6 @@ export function MiniLeveyJenningsChart({
     const yDomain = useMemo(() => {
         return [mean - 4 * sd, mean + 4 * sd]
     }, [mean, sd])
-
-    // Color-coded dot renderer
-    const renderDot = (props: any) => {
-        const { cx, cy, payload } = props
-        if (cx === undefined || cy === undefined) return null
-
-        const color = payload.status === 'reject'
-            ? COLORS.reject
-            : payload.status === 'warning'
-                ? COLORS.warning
-                : COLORS.pass
-
-        return (
-            <circle
-                cx={cx}
-                cy={cy}
-                r={3}
-                fill={color}
-                stroke="#fff"
-                strokeWidth={1}
-            />
-        )
-    }
-
-    // Simple tooltip
-    const MiniTooltip = ({ active, payload }: any) => {
-        if (!active || !payload?.[0]) return null
-        const data = payload[0].payload
-        const statusLabel = data.status === 'reject' ? 'Vi phạm' : data.status === 'warning' ? 'Cảnh báo' : 'Đạt'
-
-        return (
-            <div className="rounded border bg-background px-2 py-1 text-xs shadow">
-                <div className="font-medium">{data.date}</div>
-                <div className="font-mono">{data.value.toFixed(2)}</div>
-                <div className={data.status === 'reject' ? 'text-red-600' : data.status === 'warning' ? 'text-yellow-600' : 'text-green-600'}>
-                    {statusLabel}
-                </div>
-            </div>
-        )
-    }
 
     // Empty state
     if (chartData.length === 0) {
