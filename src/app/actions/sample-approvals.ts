@@ -148,7 +148,6 @@ export async function submitSampleForReview(sampleId: string) {
         revalidatePath('/analyst/samples')
         revalidatePath('/manager/samples')
         revalidatePath('/samples')
-        revalidatePath('/analyst/results/[sampleId]', 'page')
 
         return { success: true }
     } catch (error) {
@@ -195,7 +194,6 @@ export async function rejectSample(data: RejectSample) {
         revalidatePath('/manager/approvals')
         revalidatePath('/manager/samples')
         revalidatePath('/samples')
-        revalidatePath(`/manager/results/${validatedData.sampleId}`)
 
         return { success: true }
     } catch (error) {
@@ -244,7 +242,6 @@ export async function discardSample(data: DiscardSample) {
         revalidatePath('/manager/approvals')
         revalidatePath('/manager/samples')
         revalidatePath('/samples')
-        revalidatePath(`/manager/results/${validatedData.sampleId}`)
 
         return { success: true }
     } catch (error) {

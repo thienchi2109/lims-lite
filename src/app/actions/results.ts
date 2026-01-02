@@ -273,8 +273,6 @@ export async function saveBatchResults(data: SaveBatchResults) {
         }
 
         // Revalidate paths
-        revalidatePath('/analyst/results/[sampleId]', 'page')
-        revalidatePath('/manager/results/[sampleId]', 'page')
         revalidatePath('/analyst/samples')
         revalidatePath('/manager/samples')
         revalidatePath('/samples')
@@ -346,7 +344,7 @@ export async function approveResults(data: ApproveResults) {
         // QC Session Check: Block approval if QC is blocked
         // NULL qc_session_id = pre-QC era, allowed to approve
         const { data: qcCheck } = await supabase.rpc('check_qc_approval_status', {
-            p_result_ids: validatedData.resultIds
+            p_result_ids: validatedData.resultIds,
         })
 
         if (qcCheck && Array.isArray(qcCheck)) {
@@ -359,7 +357,7 @@ export async function approveResults(data: ApproveResults) {
                 return {
                     error: `Không thể phê duyệt: QC bị chặn. ${reasons || 'Giải quyết vi phạm QC trước.'}`,
                     qc_blocked: true,
-                    blocked_count: blockedResults.length
+                    blocked_count: blockedResults.length,
                 }
             }
         }
