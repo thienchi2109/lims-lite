@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { CreateQCSessionSchema, type CreateQCSession } from '@/types/qc'
@@ -24,36 +24,71 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog'
-import { Loader2, Play } from 'lucide-react'
+import { Loader2, Play, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 
+interface AssayOption {
+    id: string
+    name: string
+}
+
 interface StartSessionDialogProps {
-    selectedAssayId: string
+    /** Pre-selected assay ID (optional - if not provided, user can select) */
+    selectedAssayId?: string
+    /** List of assays for selection (required if selectedAssayId is not provided) */
+    assays?: AssayOption[]
+    /** Callback when session is successfully started */
     onSuccess?: () => void
+    /** Custom trigger button */
+    trigger?: React.ReactNode
 }
 
 export function StartSessionDialog({
     selectedAssayId,
+    assays = [],
     onSuccess,
+    trigger,
 }: StartSessionDialogProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [chosenAssayId, setChosenAssayId] = useState(selectedAssayId || '')
 
     const form = useForm<CreateQCSession>({
         resolver: zodResolver(CreateQCSessionSchema),
         defaultValues: {
-            assay_id: selectedAssayId,
+            assay_id: selectedAssayId || '',
             session_mode: 'daily',
             notes: '',
         },
     })
 
+    // Update form when selectedAssayId changes
+    useEffect(() => {
+        if (selectedAssayId) {
+            setChosenAssayId(selectedAssayId)
+            form.setValue('assay_id', selectedAssayId)
+        }
+    }, [selectedAssayId, form])
+
+    // Update form when chosenAssayId changes
+    useEffect(() => {
+        if (chosenAssayId) {
+            form.setValue('assay_id', chosenAssayId)
+        }
+    }, [chosenAssayId, form])
+
     const handleSubmit = async (data: CreateQCSession) => {
+        const assayId = chosenAssayId || selectedAssayId
+        if (!assayId) {
+            toast.error('Vui lòng chọn xét nghiệm')
+            return
+        }
+
         setIsSubmitting(true)
         try {
             const result = await startQCSession({
                 ...data,
-                assay_id: selectedAssayId,
+                assay_id: assayId,
             })
 
             if ('error' in result) {
@@ -64,6 +99,7 @@ export function StartSessionDialog({
             toast.success('Đã bắt đầu phiên QC mới')
             setIsOpen(false)
             form.reset()
+            setChosenAssayId(selectedAssayId || '')
             onSuccess?.()
         } catch (error) {
             toast.error('Không thể bắt đầu phiên QC')
@@ -73,23 +109,54 @@ export function StartSessionDialog({
         }
     }
 
+    const showAssaySelect = !selectedAssayId && assays.length > 0
+
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-                <Button>
-                    <Play className="mr-2 h-4 w-4" />
-                    Bắt đầu phiên QC
-                </Button>
+                {trigger || (
+                    <Button>
+                        {showAssaySelect ? (
+                            <Plus className="mr-2 h-4 w-4" />
+                        ) : (
+                            <Play className="mr-2 h-4 w-4" />
+                        )}
+                        Bắt đầu phiên QC
+                    </Button>
+                )}
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Bắt đầu phiên QC mới</DialogTitle>
                     <DialogDescription>
-                        Chọn chế độ phiên và thêm ghi chú nếu cần.
+                        {showAssaySelect
+                            ? 'Chọn xét nghiệm, chế độ phiên và thêm ghi chú nếu cần.'
+                            : 'Chọn chế độ phiên và thêm ghi chú nếu cần.'}
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={form.handleSubmit(handleSubmit)}>
                     <div className="space-y-4 py-4">
+                        {showAssaySelect && (
+                            <div className="space-y-2">
+                                <Label htmlFor="assay_id">Xét nghiệm</Label>
+                                <Select
+                                    value={chosenAssayId}
+                                    onValueChange={setChosenAssayId}
+                                >
+                                    <SelectTrigger id="assay_id">
+                                        <SelectValue placeholder="Chọn xét nghiệm..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {assays.map((assay) => (
+                                            <SelectItem key={assay.id} value={assay.id}>
+                                                {assay.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+
                         <div className="space-y-2">
                             <Label htmlFor="session_mode">Chế độ phiên</Label>
                             <Select
@@ -131,7 +198,10 @@ export function StartSessionDialog({
                         >
                             Hủy
                         </Button>
-                        <Button type="submit" disabled={isSubmitting}>
+                        <Button
+                            type="submit"
+                            disabled={isSubmitting || (showAssaySelect && !chosenAssayId)}
+                        >
                             {isSubmitting ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

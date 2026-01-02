@@ -9,6 +9,7 @@ export * from './enums'
 export * from './materials'
 export * from './definitions'
 export * from './sessions'
+export * from './session-filters'
 export * from './results'
 export * from './violations'
 

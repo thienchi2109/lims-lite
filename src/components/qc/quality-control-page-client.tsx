@@ -27,7 +27,7 @@ import { QCOverviewTab, type ActiveSession, type PendingViolation } from './qc-o
 import { QCViolationsTab } from './qc-violations-tab'
 import { QCMaterialsTable, type QCMaterial } from './qc-materials-table'
 import { QCDefinitionsTable, type QCDefinitionWithDetails } from './qc-definitions-table'
-import { QCSessionManager } from './qc-session-manager'
+import { QCSessionsTable } from './qc-sessions-table'
 import { ControlLimitsWizard } from './control-limits-wizard'
 import { LotChangeoverDialog } from './lot-changeover-dialog'
 import { ViolationResolutionDialog } from './violation-resolution-dialog'
@@ -54,6 +54,11 @@ interface Stats {
     blockedSessions: number
 }
 
+interface Specialty {
+    id: string
+    name: string
+}
+
 interface QualityControlPageClientProps {
     stats: Stats
     materials: QCMaterial[]
@@ -61,6 +66,7 @@ interface QualityControlPageClientProps {
     activeSessions: ActiveSession[]
     pendingViolations: PendingViolation[]
     assays: Assay[]
+    specialties: Specialty[]
     analyticsDefinitions: QCDefinitionForAnalytics[]
     qcResults: Record<string, QCResultDataPoint[]>
     qcDays: string
@@ -77,18 +83,13 @@ export function QualityControlPageClient({
     activeSessions,
     pendingViolations,
     assays,
+    specialties,
     analyticsDefinitions,
     qcResults,
     qcDays,
 }: QualityControlPageClientProps) {
     const [activeTab, setActiveTab] = useState('overview')
     const [showEstablishLimits, setShowEstablishLimits] = useState(false)
-    const [selectedAssayId, setSelectedAssayId] = useState<string | undefined>()
-
-    // Get active session for selected assay
-    const activeSessionForAssay = selectedAssayId
-        ? activeSessions.find(s => s.assay_id === selectedAssayId)
-        : undefined
 
     // Transform materials for ControlLimitsWizard (needs MaterialOption format)
     const materialOptions = materials.map(m => ({
@@ -281,27 +282,13 @@ export function QualityControlPageClient({
                         <CardHeader>
                             <CardTitle>Quản lý phiên QC</CardTitle>
                             <CardDescription>
-                                Bắt đầu, kết thúc và giám sát các phiên QC
+                                Xem, lọc và quản lý tất cả các phiên QC
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <QCSessionManager
-                                assays={assays.map(a => ({
-                                    id: a.id,
-                                    name: a.name,
-                                }))}
-                                activeSession={activeSessionForAssay ? {
-                                    id: activeSessionForAssay.id,
-                                    assay_id: activeSessionForAssay.assay_id,
-                                    session_mode: activeSessionForAssay.session_mode,
-                                    qc_status: activeSessionForAssay.qc_status,
-                                    started_at: activeSessionForAssay.started_at,
-                                    started_by: '',
-                                    ended_at: null,
-                                    notes: null,
-                                } : undefined}
-                                selectedAssayId={selectedAssayId}
-                                onAssayChange={setSelectedAssayId}
+                            <QCSessionsTable
+                                specialties={specialties}
+                                assays={assays.map(a => ({ id: a.id, name: a.name }))}
                             />
                         </CardContent>
                     </Card>

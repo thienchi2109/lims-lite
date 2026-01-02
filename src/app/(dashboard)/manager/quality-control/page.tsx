@@ -36,6 +36,12 @@ export default async function QualityControlPage({
         redirect('/manager')
     }
 
+    // Fetch lab specialties for filters
+    const { data: specialties } = await supabase
+        .from('lab_specialties')
+        .select('id, name')
+        .order('name', { ascending: true })
+
     // Fetch QC Materials with counts
     const { data: materials } = await supabase
         .from('qc_materials')
@@ -286,6 +292,7 @@ export default async function QualityControlPage({
                     activeSessions={transformedSessions}
                     pendingViolations={transformedViolations}
                     assays={assays || []}
+                    specialties={specialties || []}
                     analyticsDefinitions={analyticsDefinitions}
                     qcResults={qcResultsByDefinition}
                     qcDays={qc_days}
