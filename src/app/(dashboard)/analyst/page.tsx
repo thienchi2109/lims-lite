@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Plus, List, BarChart3 } from 'lucide-react'
+import { Plus, List, BarChart3, ShieldCheck } from 'lucide-react'
 import { DashboardHeader } from '@/components/dashboard-header'
 
 export default async function AnalystDashboard() {
@@ -37,6 +37,14 @@ export default async function AnalystDashboard() {
             href: "/analyst/samples",
             color: "from-blue-500 to-indigo-600",
             iconColor: "text-blue-50"
+        },
+        {
+            title: "Nhập kết quả IQC",
+            description: "Nhập và theo dõi kết quả kiểm soát chất lượng nội bộ (IQC) hàng ngày.",
+            icon: ShieldCheck,
+            href: "/analyst/qc-entry",
+            color: "from-amber-500 to-orange-600",
+            iconColor: "text-amber-50"
         },
         {
             title: "Báo cáo",

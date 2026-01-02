@@ -16,7 +16,8 @@ import {
     Plus,
     List,
     QrCode,
-    BarChart3
+    BarChart3,
+    ShieldCheck
 } from 'lucide-react'
 import type { UserRole } from '@/types'
 
@@ -56,6 +57,7 @@ export function DashboardNav({ user, className }: DashboardNavProps) {
                 { href: '/analyst', label: 'Trang chủ', icon: LayoutDashboard },
                 { href: '/analyst/accession', label: 'Tiếp nhận', icon: Plus },
                 { href: '/analyst/samples', label: 'Danh sách mẫu', icon: List },
+                { href: '/analyst/qc-entry', label: 'Nhập IQC', icon: ShieldCheck },
                 { href: '/analyst/reports', label: 'Báo cáo', icon: BarChart3 },
             ]
             : []
