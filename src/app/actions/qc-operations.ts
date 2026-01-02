@@ -2,7 +2,7 @@
 
 /**
  * QC Sessions & Results - Daily QC operations
- * Functions: startQCSession, endQCSession, enterQCResult, getActiveSession
+ * Functions: startQCSession, endQCSession, enterQCResult, getActiveSession, getActiveQCSessionsForAssays
  */
 
 import { createClient } from '@/lib/supabase/server'
@@ -136,6 +136,50 @@ export async function getActiveSession(assayId: string) {
         console.error('Error in getActiveSession:', error)
         return { error: error instanceof Error ? error.message : 'Không thể tải phiên QC' }
     }
+}
+
+/**
+ * Gets active QC sessions for multiple assays (batch lookup)
+ * Returns a map of assay_id -> session_id for linking patient results
+ */
+export async function getActiveQCSessionsForAssays(
+    assayIds: string[]
+): Promise<Record<string, string | null>> {
+    const supabase = await createClient()
+    const qcSessionMap: Record<string, string | null> = {}
+
+    if (assayIds.length === 0) return qcSessionMap
+
+    // Try batch RPC first
+    const { data: qcSessions } = await supabase.rpc('get_active_qc_sessions_batch', {
+        p_assay_ids: assayIds,
+    })
+
+    if (qcSessions) {
+        // Use batch RPC result
+        for (const row of qcSessions) {
+            qcSessionMap[row.assay_id] = row.session_id
+        }
+    } else {
+        // Fallback: Query qc_sessions directly
+        const { data: activeSessions } = await supabase
+            .from('qc_sessions')
+            .select('id, assay_id')
+            .in('assay_id', assayIds)
+            .is('ended_at', null)
+            .order('started_at', { ascending: false })
+
+        // Map assay_id -> session_id (first match per assay)
+        const seenAssays = new Set<string>()
+        for (const session of activeSessions || []) {
+            if (!seenAssays.has(session.assay_id)) {
+                seenAssays.add(session.assay_id)
+                qcSessionMap[session.assay_id] = session.id
+            }
+        }
+    }
+
+    return qcSessionMap
 }
 
 // ============================================================================

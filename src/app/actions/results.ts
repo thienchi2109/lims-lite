@@ -11,7 +11,12 @@ import {
     CancelApprovalSchema,
     type CancelApproval,
 } from '@/types'
-import { validateNumericValue, validateTextValue } from '@/lib/utils-lims'
+import {
+    fetchResultsForValidation,
+    checkSampleEditability,
+    validateResultsBatch,
+} from './results-validation'
+import { getActiveQCSessionsForAssays } from './qc-operations'
 
 /**
  * Gets all results for a specific sample with assay details
@@ -82,28 +87,12 @@ export async function getResultsBySample(sampleId: string) {
 }
 
 /**
- * Validates a result value against its assay validation rules
- */
-export async function validateResultValue(
-    value: string,
-    rules: Record<string, any>
-): Promise<string | null> {
-    // Determine if numeric or text based on rules
-    if (rules.type === 'numeric' || rules.min !== undefined || rules.max !== undefined) {
-        return validateNumericValue(value, rules)
-    }
-
-    return validateTextValue(value, rules)
-}
-
-/**
  * Saves a batch of result values transactionally
  */
 export async function saveBatchResults(data: SaveBatchResults) {
     try {
         const supabase = await createClient()
 
-        // Get current user
         const {
             data: { user },
         } = await supabase.auth.getUser()
@@ -112,115 +101,40 @@ export async function saveBatchResults(data: SaveBatchResults) {
             return { error: 'Unauthorized' }
         }
 
-        // Validate input
         const validatedData = SaveBatchResultsSchema.parse(data)
-
-        // Fetch result records to validate permissions and get validation rules
         const resultIds = validatedData.results.map((r) => r.id)
-        const { data: existingResults, error: fetchError } = await supabase
-            .from('results')
-            .select(
-                `
-                id,
-                status,
-                sample_id,
-                assay_id,
-                sample:samples!results_sample_id_fkey(id, status),
-                assay:assay_definitions!results_assay_id_fkey(
-                    validation_rules
-                )
-            `
-            )
-            .in('id', resultIds)
 
-        if (fetchError) {
-            console.error('Error fetching results for validation:', fetchError)
-            return { error: fetchError.message }
+        // Fetch and validate results using extracted helper
+        const fetchResult = await fetchResultsForValidation(resultIds)
+        if ('error' in fetchResult) {
+            return { error: fetchResult.error }
+        }
+        const existingResults = fetchResult.data
+
+        // Check sample editability
+        const editError = checkSampleEditability(existingResults)
+        if (editError) {
+            return { error: editError }
         }
 
-        // Check sample status to prevent editing locked samples
-        const sampleData = existingResults[0]?.sample as any
-        const sampleStatus = Array.isArray(sampleData) ? sampleData[0]?.status : sampleData?.status
-        if (['review', 'completed', 'discarded'].includes(sampleStatus)) {
-            return { error: 'Cannot edit results for samples under review, discarded, or completed' }
-        }
-
-        // Validate each result value against its assay rules
-        const validationErrors: Array<{ id: string; error: string }> = []
-
-        for (const resultInput of validatedData.results) {
-            const existing = existingResults.find((r: any) => r.id === resultInput.id)
-            if (!existing) {
-                validationErrors.push({ id: resultInput.id, error: 'Result not found' })
-                continue
-            }
-
-            // Check if result is approved (analysts cannot edit)
-            const { data: userData } = await supabase
-                .from('users')
-                .select('role')
-                .eq('id', user.id)
-                .single()
-
-            if (userData?.role !== 'manager' && existing.status === 'approved') {
-                validationErrors.push({
-                    id: resultInput.id,
-                    error: 'Cannot edit approved results',
-                })
-                continue
-            }
-
-            // Validate value against assay rules
-            const assayData = existing.assay as any
-            const rules = assayData?.validation_rules || {}
-            const validationError = await validateResultValue(resultInput.value, rules)
-            if (validationError) {
-                validationErrors.push({ id: resultInput.id, error: validationError })
-            }
-        }
+        // Validate batch using extracted helper
+        const validationErrors = await validateResultsBatch(
+            validatedData.results,
+            existingResults,
+            user.id
+        )
 
         if (validationErrors.length > 0) {
             return { error: 'Validation failed', validationErrors }
         }
 
-        // Fetch active QC sessions for all assays in this batch
-        const uniqueAssayIds = [...new Set(existingResults.map((r: any) => r.assay_id))]
-        const qcSessionMap: Record<string, string | null> = {}
-
-        if (uniqueAssayIds.length > 0) {
-            const { data: qcSessions } = await supabase.rpc('get_active_qc_sessions_batch', {
-                p_assay_ids: uniqueAssayIds,
-            })
-
-            // If batch RPC doesn't exist, fall back to individual calls
-            if (!qcSessions) {
-                // Fallback: Query qc_sessions directly
-                const { data: activeSessions } = await supabase
-                    .from('qc_sessions')
-                    .select('id, assay_id')
-                    .in('assay_id', uniqueAssayIds)
-                    .is('ended_at', null)
-                    .order('started_at', { ascending: false })
-
-                // Map assay_id -> session_id (first match per assay)
-                const seenAssays = new Set<string>()
-                for (const session of activeSessions || []) {
-                    if (!seenAssays.has(session.assay_id)) {
-                        seenAssays.add(session.assay_id)
-                        qcSessionMap[session.assay_id] = session.id
-                    }
-                }
-            } else {
-                // Use batch RPC result
-                for (const row of qcSessions) {
-                    qcSessionMap[row.assay_id] = row.session_id
-                }
-            }
-        }
+        // Get active QC sessions using extracted helper
+        const uniqueAssayIds = [...new Set(existingResults.map((r) => r.assay_id))]
+        const qcSessionMap = await getActiveQCSessionsForAssays(uniqueAssayIds)
 
         // Perform batch update with qc_session_id linking
         const updates = validatedData.results.map((resultInput) => {
-            const existing = existingResults.find((r: any) => r.id === resultInput.id)
+            const existing = existingResults.find((r) => r.id === resultInput.id)
             const assayId = existing?.assay_id as string
             return {
                 id: resultInput.id,
@@ -239,7 +153,6 @@ export async function saveBatchResults(data: SaveBatchResults) {
 
         const updateResults = await Promise.all(updatePromises)
 
-        // Check for errors
         const errors = updateResults.filter((result) => result.error)
         if (errors.length > 0) {
             console.error('Error updating results:', errors)
@@ -251,9 +164,8 @@ export async function saveBatchResults(data: SaveBatchResults) {
 
         // Update sample status from 'assigned' to 'in_progress'
         try {
-            const sampleIds = [...new Set(existingResults.map((r: any) => r.sample_id))]
+            const sampleIds = [...new Set(existingResults.map((r) => r.sample_id))]
 
-            // Find samples that are currently 'assigned'
             const { data: samplesToUpdate } = await supabase
                 .from('samples')
                 .select('id, status')
@@ -268,11 +180,9 @@ export async function saveBatchResults(data: SaveBatchResults) {
                     .in('id', idsToUpdate)
             }
         } catch (statusError) {
-            // Non-blocking error
             console.error('Error updating sample status:', statusError)
         }
 
-        // Revalidate paths
         revalidatePath('/analyst/samples')
         revalidatePath('/manager/samples')
         revalidatePath('/samples')
@@ -289,13 +199,11 @@ export async function saveBatchResults(data: SaveBatchResults) {
 
 /**
  * Approves a batch of results (Manager only)
- * Phase 4: Approval workflow
  */
 export async function approveResults(data: ApproveResults) {
     try {
         const supabase = await createClient()
 
-        // Get current user
         const {
             data: { user },
         } = await supabase.auth.getUser()
@@ -315,7 +223,6 @@ export async function approveResults(data: ApproveResults) {
             return { error: 'Only managers can approve results' }
         }
 
-        // Validate input
         const validatedData = ApproveResultsSchema.parse(data)
 
         // Fetch results to verify they exist and have status='entered'
@@ -329,20 +236,17 @@ export async function approveResults(data: ApproveResults) {
             return { error: fetchError.message }
         }
 
-        // Validate all results are in 'entered' status
         const invalidResults = results.filter((r: any) => r.status !== 'entered')
         if (invalidResults.length > 0) {
             return { error: 'Can only approve results with status "entered"' }
         }
 
-        // Verify all results belong to the same sample
         const sampleIds = [...new Set(results.map((r: any) => r.sample_id))]
         if (sampleIds.length > 1) {
             return { error: 'All results must belong to the same sample' }
         }
 
         // QC Session Check: Block approval if QC is blocked
-        // NULL qc_session_id = pre-QC era, allowed to approve
         const { data: qcCheck } = await supabase.rpc('check_qc_approval_status', {
             p_result_ids: validatedData.resultIds,
         })
@@ -369,7 +273,6 @@ export async function approveResults(data: ApproveResults) {
             approved_at: new Date().toISOString(),
         }
 
-        // Add optional note if provided
         if (validatedData.note) {
             updateData.approval_note = validatedData.note
         }
@@ -400,7 +303,6 @@ export async function approveResults(data: ApproveResults) {
                 .eq('id', sampleIds[0])
         }
 
-        // Revalidate paths
         revalidatePath('/manager/approvals', 'page')
         revalidatePath('/manager/results/[sampleId]', 'page')
         revalidatePath('/manager/samples', 'page')
@@ -417,13 +319,11 @@ export async function approveResults(data: ApproveResults) {
 
 /**
  * Cancels/revokes approval of results (Manager only)
- * Phase 4: Approval workflow
  */
 export async function cancelApproval(data: CancelApproval) {
     try {
         const supabase = await createClient()
 
-        // Get current user
         const {
             data: { user },
         } = await supabase.auth.getUser()
@@ -443,7 +343,6 @@ export async function cancelApproval(data: CancelApproval) {
             return { error: 'Only managers can cancel approvals' }
         }
 
-        // Validate input
         const validatedData = CancelApprovalSchema.parse(data)
 
         // Fetch results to verify they exist and are approved
@@ -457,13 +356,11 @@ export async function cancelApproval(data: CancelApproval) {
             return { error: fetchError.message }
         }
 
-        // Validate all results are approved
         const invalidResults = results.filter((r: any) => r.status !== 'approved')
         if (invalidResults.length > 0) {
             return { error: 'Can only cancel approval for approved results' }
         }
 
-        // Verify all results belong to the same sample
         const sampleIds = [...new Set(results.map((r: any) => r.sample_id))]
         if (sampleIds.length > 1) {
             return { error: 'All results must belong to the same sample' }
@@ -493,7 +390,6 @@ export async function cancelApproval(data: CancelApproval) {
                 .eq('id', sampleIds[0])
         }
 
-        // Revalidate paths
         revalidatePath('/manager/approvals', 'page')
         revalidatePath('/manager/results/[sampleId]', 'page')
         revalidatePath('/manager/samples', 'page')
