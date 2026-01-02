@@ -12,6 +12,8 @@ import { accessionTourSteps } from './tours/accession-tour'
 import { resultsTourSteps } from './tours/results-tour'
 import { approvalTourSteps } from './tours/approval-tour'
 import { coaTourSteps } from './tours/coa-tour'
+import { iqcAnalystTourSteps } from './tours/iqc-analyst-tour'
+import { iqcManagerTourSteps } from './tours/iqc-manager-tour'
 
 interface WalkthroughProviderProps {
     children: ReactNode
@@ -63,6 +65,10 @@ export function WalkthroughProvider({ children, userId }: WalkthroughProviderPro
                 return approvalTourSteps
             case 'coa':
                 return coaTourSteps
+            case 'iqc-analyst':
+                return iqcAnalystTourSteps
+            case 'iqc-manager':
+                return iqcManagerTourSteps
             default:
                 return []
         }

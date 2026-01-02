@@ -12,7 +12,7 @@ export async function getTourStatus(userId: string): Promise<TourStatus> {
 
     const { data, error } = await supabase
         .from('users')
-        .select('tour_accession_completed_at, tour_results_completed_at, tour_approval_completed_at, tour_coa_completed_at')
+        .select('tour_accession_completed_at, tour_results_completed_at, tour_approval_completed_at, tour_coa_completed_at, tour_iqc_analyst_completed_at, tour_iqc_manager_completed_at')
         .eq('id', userId)
         .single()
 
@@ -23,6 +23,8 @@ export async function getTourStatus(userId: string): Promise<TourStatus> {
             results: null,
             approval: null,
             coa: null,
+            'iqc-analyst': null,
+            'iqc-manager': null,
         }
     }
 
@@ -31,6 +33,8 @@ export async function getTourStatus(userId: string): Promise<TourStatus> {
         results: data.tour_results_completed_at ? new Date(data.tour_results_completed_at) : null,
         approval: data.tour_approval_completed_at ? new Date(data.tour_approval_completed_at) : null,
         coa: data.tour_coa_completed_at ? new Date(data.tour_coa_completed_at) : null,
+        'iqc-analyst': data.tour_iqc_analyst_completed_at ? new Date(data.tour_iqc_analyst_completed_at) : null,
+        'iqc-manager': data.tour_iqc_manager_completed_at ? new Date(data.tour_iqc_manager_completed_at) : null,
     }
 }
 
@@ -46,6 +50,8 @@ export async function markTourCompleted(userId: string, tourId: TourId): Promise
         results: 'tour_results_completed_at',
         approval: 'tour_approval_completed_at',
         coa: 'tour_coa_completed_at',
+        'iqc-analyst': 'tour_iqc_analyst_completed_at',
+        'iqc-manager': 'tour_iqc_manager_completed_at',
     }
 
     const column = columnMap[tourId]

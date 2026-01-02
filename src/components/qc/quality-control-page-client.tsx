@@ -32,6 +32,7 @@ import { ControlLimitsWizard } from './control-limits-wizard'
 import { LotChangeoverDialog } from './lot-changeover-dialog'
 import { ViolationResolutionDialog } from './violation-resolution-dialog'
 import { QCAnalyticsTab, type QCDefinitionForAnalytics, type QCResultDataPoint } from './qc-analytics-tab'
+import { WalkthroughTrigger } from '@/components/walkthrough'
 
 // ============================================================================
 // TYPES
@@ -126,13 +127,14 @@ export function QualityControlPageClient({
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-start justify-between">
+            <div id="tour-iqc-mgr-header" className="flex items-start justify-between">
                 <div className="space-y-1">
                     <div className="flex items-center gap-3">
                         <Activity className="h-6 w-6 text-primary" />
                         <h1 className="text-2xl font-bold tracking-tight">
                             Quản lý Kiểm soát Chất lượng
                         </h1>
+                        <WalkthroughTrigger tourId="iqc-manager" />
                     </div>
                     <p className="text-muted-foreground">
                         Thiết lập và giám sát QC theo quy tắc Westgard
@@ -143,7 +145,7 @@ export function QualityControlPageClient({
                         <RefreshCw className="h-4 w-4 mr-2" />
                         Làm mới
                     </Button>
-                    <Button size="sm" onClick={() => setShowEstablishLimits(true)}>
+                    <Button id="tour-iqc-mgr-establish-limits" size="sm" onClick={() => setShowEstablishLimits(true)}>
                         <Plus className="h-4 w-4 mr-2" />
                         Thiết lập giới hạn
                     </Button>
@@ -155,7 +157,7 @@ export function QualityControlPageClient({
 
             {/* Violations Alert */}
             {stats.pendingViolations > 0 && (
-                <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
+                <Card id="tour-iqc-mgr-violations-alert" className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
                     <CardHeader className="pb-3">
                         <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
                             <AlertTriangle className="h-5 w-5" />
@@ -180,7 +182,7 @@ export function QualityControlPageClient({
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-flex">
+                <TabsList id="tour-iqc-mgr-tabs" className="grid w-full grid-cols-6 lg:w-auto lg:inline-flex">
                     <TabsTrigger value="overview" className="gap-2">
                         <BarChart3 className="h-4 w-4 hidden sm:inline" />
                         Tổng quan
@@ -193,7 +195,7 @@ export function QualityControlPageClient({
                         <Settings className="h-4 w-4 hidden sm:inline" />
                         Giới hạn
                     </TabsTrigger>
-                    <TabsTrigger value="sessions" className="gap-2">
+                    <TabsTrigger id="tour-iqc-mgr-sessions" value="sessions" className="gap-2">
                         <Activity className="h-4 w-4 hidden sm:inline" />
                         Phiên QC
                     </TabsTrigger>
@@ -370,6 +372,7 @@ function QCViolationsTabWithDialogs({ violations }: { violations: PendingViolati
         <div className="space-y-3">
             {violations.map((violation) => (
                 <div
+                    id="tour-iqc-mgr-resolve"
                     key={violation.id}
                     className="flex items-center justify-between p-4 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20"
                 >

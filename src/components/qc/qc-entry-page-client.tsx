@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Activity, ArrowLeft, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { WalkthroughTrigger } from '@/components/walkthrough'
 import {
     Tabs,
     TabsContent,
@@ -66,7 +67,7 @@ export function QCEntryPageClient({
     return (
         <>
             {/* Header */}
-            <div className="flex items-start justify-between">
+            <div id="tour-iqc-header" className="flex items-start justify-between">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2">
                         <Link href="/samples">
@@ -81,6 +82,7 @@ export function QCEntryPageClient({
                         <h1 className="text-2xl font-bold tracking-tight">
                             Kiểm soát chất lượng nội bộ (IQC)
                         </h1>
+                        <WalkthroughTrigger tourId="iqc-analyst" />
                     </div>
                     <p className="text-muted-foreground">
                         Kiểm nghiệm viên: <span className="text-foreground font-medium">{user.full_name}</span>
@@ -111,7 +113,7 @@ export function QCEntryPageClient({
             {/* Specialty Tabs */}
             {hasAnyQC && specialties.length > 0 && (
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <TabsList className="flex-wrap h-auto gap-1">
+                    <TabsList id="tour-iqc-specialty-tabs" className="flex-wrap h-auto gap-1">
                         {specialties.map(spec => (
                             <TabsTrigger
                                 key={spec.id}

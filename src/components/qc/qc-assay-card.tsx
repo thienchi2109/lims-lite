@@ -126,7 +126,7 @@ export function QCAssayCard({ assay }: QCAssayCardProps) {
     }
 
     return (
-        <Card className="flex flex-col">
+        <Card id="tour-iqc-assay-card" className="flex flex-col">
             <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-2">
                     <div className="space-y-1 min-w-0">
@@ -138,7 +138,7 @@ export function QCAssayCard({ assay }: QCAssayCardProps) {
                         </CardDescription>
                     </div>
                     {statusConfig && (
-                        <Badge className={`shrink-0 gap-1 ${statusConfig.className}`}>
+                        <Badge id="tour-iqc-status-badge" className={`shrink-0 gap-1 ${statusConfig.className}`}>
                             <StatusIcon className="h-3 w-3" />
                             {statusConfig.label}
                         </Badge>
@@ -179,7 +179,7 @@ export function QCAssayCard({ assay }: QCAssayCardProps) {
                 {/* Entry Button */}
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>
-                        <Button className="w-full gap-2" size="sm">
+                        <Button id="tour-iqc-entry-button" className="w-full gap-2" size="sm">
                             <Activity className="h-4 w-4" />
                             Nhập kết quả QC
                         </Button>

@@ -2,13 +2,15 @@
 
 import { useContext, createContext } from 'react'
 
-export type TourId = 'accession' | 'results' | 'approval' | 'coa'
+export type TourId = 'accession' | 'results' | 'approval' | 'coa' | 'iqc-analyst' | 'iqc-manager'
 
 export interface TourStatus {
     accession: Date | null
     results: Date | null
     approval: Date | null
     coa: Date | null
+    'iqc-analyst': Date | null
+    'iqc-manager': Date | null
 }
 
 export interface WalkthroughContextValue {

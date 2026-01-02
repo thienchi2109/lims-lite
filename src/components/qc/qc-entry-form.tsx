@@ -271,6 +271,7 @@ export function QCEntryForm({
                     {/* Real-time Evaluation Display */}
                     {evaluation && (
                         <Alert
+                            id="tour-iqc-westgard-feedback"
                             variant={evaluation.status === 'reject' ? 'destructive' : 'default'}
                             className={evaluation.status === 'warning' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950' : ''}
                         >
@@ -318,6 +319,7 @@ export function QCEntryForm({
 
                     {/* Submit Button */}
                     <Button
+                        id="tour-iqc-save-button"
                         type="submit"
                         className="w-full"
                         disabled={isSubmitting || !selectedDef}
