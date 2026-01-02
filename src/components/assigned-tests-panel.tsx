@@ -43,9 +43,10 @@ import type { CoAReportStatus } from '@/types'
 interface AssignedTestsPanelProps {
     sampleId: string
     specialties?: LabSpecialty[]
+    userRole?: 'analyst' | 'manager'
 }
 
-export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTestsPanelProps) {
+export function AssignedTestsPanel({ sampleId, specialties = [], userRole }: AssignedTestsPanelProps) {
     const router = useRouter()
     const searchParams = useSearchParams()
     const queryClient = useQueryClient()
@@ -253,6 +254,7 @@ export function AssignedTestsPanel({ sampleId, specialties = [] }: AssignedTests
                 onGenerateCoA={handleGenerateCoA}
                 onSubmitForReview={() => setShowSubmitDialog(true)}
                 onOpenAssignment={() => setShowAssignmentDialog(true)}
+                userRole={userRole}
             />
 
             <div className="flex-1 overflow-auto bg-slate-50/50 p-4">

@@ -17,9 +17,10 @@ interface SampleBottomRowProps {
         canEnterResults: boolean
     }
     specialties?: LabSpecialty[]
+    userRole?: 'analyst' | 'manager'
 }
 
-export function SampleBottomRow({ sample, isLoadingSample = false, permissions, specialties = [] }: SampleBottomRowProps) {
+export function SampleBottomRow({ sample, isLoadingSample = false, permissions, specialties = [], userRole }: SampleBottomRowProps) {
     // Track if panels have been shown (for progressive disclosure)
     const hasShownPanelsRef = useRef(false)
 
@@ -97,7 +98,7 @@ export function SampleBottomRow({ sample, isLoadingSample = false, permissions, 
                         transition={{ duration: durations.fast }}
                     >
                         {sample ? (
-                            <AssignedTestsPanel sampleId={sample.id} specialties={specialties} />
+                            <AssignedTestsPanel sampleId={sample.id} specialties={specialties} userRole={userRole} />
                         ) : (
                             <div className="h-full flex items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-slate-400">
                                 Chọn một mẫu để xem chi tiết và chỉ định xét nghiệm

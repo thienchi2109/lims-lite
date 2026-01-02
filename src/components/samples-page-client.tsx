@@ -158,6 +158,7 @@ export function SamplesPageClient({
                     isLoadingSample={isLoadingSample}
                     permissions={permissions}
                     specialties={specialties}
+                    userRole={role}
                 />
             </div>
         </main>

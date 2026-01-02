@@ -168,7 +168,7 @@ export default async function ManagerResultsPage({ params }: PageProps) {
             </div>
 
             {/* Results Grid */}
-            <AssignedTestsPanel sampleId={resolvedParams.sampleId} />
+            <AssignedTestsPanel sampleId={resolvedParams.sampleId} userRole="manager" />
 
             {/* Approval Actions */}
             <ApprovalActions sampleId={resolvedParams.sampleId} results={results} />

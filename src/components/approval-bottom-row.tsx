@@ -39,7 +39,7 @@ export function ApprovalBottomRow({ sample, results }: ApprovalBottomRowProps) {
                 <SampleDetailPanel sample={sample} />
             </div>
             <div className="h-full min-h-0 overflow-y-auto flex flex-col gap-4 pr-1">
-                <AssignedTestsPanel sampleId={sample.id} />
+                <AssignedTestsPanel sampleId={sample.id} userRole="manager" />
                 <ApprovalActions sampleId={sample.id} results={results} />
             </div>
         </div>

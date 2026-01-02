@@ -35,6 +35,7 @@ interface AssignedTestsToolbarProps {
     onGenerateCoA: () => void
     onSubmitForReview: () => void
     onOpenAssignment: () => void
+    userRole?: 'analyst' | 'manager'
 }
 
 export function AssignedTestsToolbar({
@@ -49,7 +50,11 @@ export function AssignedTestsToolbar({
     onGenerateCoA,
     onSubmitForReview,
     onOpenAssignment,
+    userRole,
 }: AssignedTestsToolbarProps) {
+    // Determine QC page link based on user role
+    const qcHref = userRole === 'manager' ? '/manager/quality-control' : '/analyst/qc-entry'
+    
     return (
         <div
             id="tour-sample-info"
@@ -114,7 +119,7 @@ export function AssignedTestsToolbar({
                             )}
                             asChild
                         >
-                            <Link href="/analyst/qc-entry">
+                            <Link href={qcHref}>
                                 <Activity className="h-4 w-4" />
                                 <span className="hidden sm:inline text-xs font-medium">IQC</span>
                             </Link>

@@ -98,7 +98,7 @@ export default async function AnalystResultsPage({ params }: PageProps) {
                 </Button>
             </div>
 
-            <AssignedTestsPanel sampleId={resolvedParams.sampleId} />
+            <AssignedTestsPanel sampleId={resolvedParams.sampleId} userRole="analyst" />
         </div>
     )
 }
