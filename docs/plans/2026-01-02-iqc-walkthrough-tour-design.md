@@ -156,9 +156,61 @@ export interface TourStatus {
 
 ---
 
+## WalkthroughTrigger Placement (Consistency)
+
+The "Hướng dẫn" button must follow existing patterns for consistency.
+
+### Existing Patterns
+
+| Page | Placement | Pattern |
+|------|-----------|---------|
+| Accession | Header right side, after title/description | `<WalkthroughTrigger tourId="accession" />` |
+| Approvals | Header left side, after back button | `<WalkthroughTrigger tourId="approval" />` |
+| Results | Toolbar, after status badges | `<WalkthroughTrigger tourId="results" />` |
+
+### IQC Placement
+
+**Analyst QC Entry (`qc-entry-page-client.tsx`):**
+- Location: Header area, right side of title row (matching accession pattern)
+- After: "Kiểm soát chất lượng nội bộ (IQC)" title
+- Code:
+```tsx
+<div className="flex items-center gap-3">
+    <Activity className="h-6 w-6 text-primary" />
+    <h1 className="text-2xl font-bold tracking-tight">
+        Kiểm soát chất lượng nội bộ (IQC)
+    </h1>
+    <WalkthroughTrigger tourId="iqc-analyst" />  {/* ADD HERE */}
+</div>
+```
+
+**Manager QC Dashboard (`quality-control-page-client.tsx`):**
+- Location: Header area, after title (before action buttons)
+- After: "Quản lý Kiểm soát Chất lượng" title
+- Code:
+```tsx
+<div className="flex items-center gap-3">
+    <Activity className="h-6 w-6 text-primary" />
+    <h1 className="text-2xl font-bold tracking-tight">
+        Quản lý Kiểm soát Chất lượng
+    </h1>
+    <WalkthroughTrigger tourId="iqc-manager" />  {/* ADD HERE */}
+</div>
+```
+
+### Button Behavior (from WalkthroughTrigger component)
+
+- Shows sky-blue "Hướng dẫn" button with HelpCircle icon
+- Pulses with `animate-pulse` if tour not yet completed
+- Auto-shows tooltip for 5 seconds on first visit
+- Tooltip says: "Bấm để xem hướng dẫn sử dụng trang này"
+
+---
+
 ## Notes
 
 - All files kept under 350 lines per project standards
 - Vietnamese localization applied to all tour content
 - Tours follow existing pattern from `accession-tour.ts`, `approval-tour.ts`
 - Manager tour focuses on daily workflow (Overview + key actions), not all 6 tabs
+- WalkthroughTrigger placement follows consistent header pattern
