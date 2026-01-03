@@ -1,23 +1,18 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { formatDistanceToNow, format } from 'date-fns'
-import { vi } from 'date-fns/locale'
 import {
     Activity,
-    AlertTriangle,
-    CheckCircle2,
     ChevronLeft,
     ChevronRight,
-    Clock,
     Filter,
     Loader2,
     Search,
-    XCircle,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -41,13 +36,11 @@ import {
     CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import { getQCSessionsPaginated } from '@/app/actions/qc-sessions'
-import {
-    type QCSessionFilters,
-    type QCSessionRow,
-    type QCSessionsResult,
-} from '@/types/qc'
-import { EndSessionDialog } from './end-session-dialog'
+import type { QCSessionFilters, QCSessionsResult } from '@/types/qc'
+import { SessionRow } from './session-row'
 import { StartSessionDialog } from './start-session-dialog'
+import { BulkStartSessionDialog } from './bulk-start-dialog'
+import { BulkEndSessionDialog } from './bulk-end-dialog'
 
 // ============================================================================
 // TYPES
@@ -62,29 +55,6 @@ interface QCSessionsTableProps {
     specialties: FilterOption[]
     assays: FilterOption[]
     initialData?: QCSessionsResult
-}
-
-// ============================================================================
-// STATUS CONFIG
-// ============================================================================
-
-const STATUS_CONFIG: Record<string, {
-    icon: typeof CheckCircle2
-    label: string
-    variant: 'default' | 'secondary' | 'destructive' | 'outline'
-    className?: string
-}> = {
-    pending: { icon: Clock, label: 'Chờ QC', variant: 'outline' },
-    pass: { icon: CheckCircle2, label: 'Đạt', variant: 'default', className: 'bg-green-600' },
-    warning: { icon: AlertTriangle, label: 'Cảnh báo', variant: 'secondary', className: 'bg-yellow-500 text-black' },
-    blocked: { icon: XCircle, label: 'Bị chặn', variant: 'destructive' },
-    resolved: { icon: CheckCircle2, label: 'Đã xử lý', variant: 'outline', className: 'border-green-600 text-green-600' },
-}
-
-const SESSION_MODE_LABELS: Record<string, string> = {
-    daily: 'Hàng ngày',
-    batch: 'Theo lô',
-    shift: 'Theo ca',
 }
 
 // ============================================================================
@@ -116,6 +86,20 @@ export function QCSessionsTable({
     const [loading, setLoading] = useState(!initialData)
     const [filtersOpen, setFiltersOpen] = useState(false)
     const [searchInput, setSearchInput] = useState(filters.search || '')
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+    // Get active sessions for selection
+    const activeSessions = useMemo(() =>
+        (data?.data || []).filter(s => !s.ended_at),
+        [data?.data]
+    )
+
+    const selectedSessions = useMemo(() =>
+        activeSessions
+            .filter(s => selectedIds.has(s.id))
+            .map(s => ({ id: s.id, assay_name: s.assay_name })),
+        [activeSessions, selectedIds]
+    )
 
     // Fetch data when filters change
     const fetchData = useCallback(async (newFilters: QCSessionFilters) => {
@@ -127,6 +111,7 @@ export function QCSessionsTable({
                 return
             }
             setData(result)
+            setSelectedIds(new Set()) // Clear selection on data change
         } finally {
             setLoading(false)
         }
@@ -152,7 +137,7 @@ export function QCSessionsTable({
         const newFilters = {
             ...filters,
             [key]: value === 'all' ? undefined : value,
-            page: key === 'page' ? value : 1, // Reset page when other filters change
+            page: key === 'page' ? value : 1,
         }
         setFilters(newFilters)
         updateURL(newFilters)
@@ -184,12 +169,32 @@ export function QCSessionsTable({
         fetchData(defaultFilters)
     }
 
+    const toggleSelectAll = () => {
+        if (selectedIds.size === activeSessions.length) {
+            setSelectedIds(new Set())
+        } else {
+            setSelectedIds(new Set(activeSessions.map(s => s.id)))
+        }
+    }
+
+    const toggleSelect = (id: string) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev)
+            if (next.has(id)) {
+                next.delete(id)
+            } else {
+                next.add(id)
+            }
+            return next
+        })
+    }
+
     const hasActiveFilters = filters.status || filters.session_mode || filters.assay_id ||
         filters.specialty_id || filters.active_only || filters.search
 
     return (
         <div className="space-y-4">
-            {/* Filters */}
+            {/* Toolbar */}
             <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
                 <div className="flex items-center justify-between gap-4">
                     <div className="flex-1 max-w-sm">
@@ -205,6 +210,10 @@ export function QCSessionsTable({
                     </div>
                     <div className="flex items-center gap-2">
                         <StartSessionDialog
+                            assays={assays}
+                            onSuccess={() => fetchData(filters)}
+                        />
+                        <BulkStartSessionDialog
                             assays={assays}
                             onSuccess={() => fetchData(filters)}
                         />
@@ -230,104 +239,92 @@ export function QCSessionsTable({
 
                 <CollapsibleContent className="mt-4">
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 border rounded-lg bg-muted/30">
-                        <div className="space-y-1.5">
-                            <Label className="text-xs">Trạng thái</Label>
-                            <Select
-                                value={filters.status || 'all'}
-                                onValueChange={(v) => handleFilterChange('status', v)}
-                            >
-                                <SelectTrigger className="h-9">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Tất cả</SelectItem>
-                                    <SelectItem value="pending">Chờ QC</SelectItem>
-                                    <SelectItem value="pass">Đạt</SelectItem>
-                                    <SelectItem value="warning">Cảnh báo</SelectItem>
-                                    <SelectItem value="blocked">Bị chặn</SelectItem>
-                                    <SelectItem value="resolved">Đã xử lý</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="space-y-1.5">
-                            <Label className="text-xs">Chế độ</Label>
-                            <Select
-                                value={filters.session_mode || 'all'}
-                                onValueChange={(v) => handleFilterChange('session_mode', v)}
-                            >
-                                <SelectTrigger className="h-9">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Tất cả</SelectItem>
-                                    <SelectItem value="daily">Hàng ngày</SelectItem>
-                                    <SelectItem value="batch">Theo lô</SelectItem>
-                                    <SelectItem value="shift">Theo ca</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="space-y-1.5">
-                            <Label className="text-xs">Chuyên khoa</Label>
-                            <Select
-                                value={filters.specialty_id || 'all'}
-                                onValueChange={(v) => handleFilterChange('specialty_id', v)}
-                            >
-                                <SelectTrigger className="h-9">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Tất cả</SelectItem>
-                                    {specialties.map((s) => (
-                                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="space-y-1.5">
-                            <Label className="text-xs">Xét nghiệm</Label>
-                            <Select
-                                value={filters.assay_id || 'all'}
-                                onValueChange={(v) => handleFilterChange('assay_id', v)}
-                            >
-                                <SelectTrigger className="h-9">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Tất cả</SelectItem>
-                                    {assays.map((a) => (
-                                        <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="space-y-1.5">
-                            <Label className="text-xs">Hoạt động</Label>
-                            <Select
-                                value={filters.active_only ? 'active' : 'all'}
-                                onValueChange={(v) => handleFilterChange('active_only', v === 'active')}
-                            >
-                                <SelectTrigger className="h-9">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Tất cả</SelectItem>
-                                    <SelectItem value="active">Đang hoạt động</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
+                        <FilterSelect
+                            label="Trạng thái"
+                            value={filters.status || 'all'}
+                            onChange={(v) => handleFilterChange('status', v)}
+                            options={[
+                                { value: 'all', label: 'Tất cả' },
+                                { value: 'pending', label: 'Chờ QC' },
+                                { value: 'pass', label: 'Đạt' },
+                                { value: 'warning', label: 'Cảnh báo' },
+                                { value: 'blocked', label: 'Bị chặn' },
+                                { value: 'resolved', label: 'Đã xử lý' },
+                            ]}
+                        />
+                        <FilterSelect
+                            label="Chế độ"
+                            value={filters.session_mode || 'all'}
+                            onChange={(v) => handleFilterChange('session_mode', v)}
+                            options={[
+                                { value: 'all', label: 'Tất cả' },
+                                { value: 'daily', label: 'Hàng ngày' },
+                                { value: 'batch', label: 'Theo lô' },
+                                { value: 'shift', label: 'Theo ca' },
+                            ]}
+                        />
+                        <FilterSelect
+                            label="Chuyên khoa"
+                            value={filters.specialty_id || 'all'}
+                            onChange={(v) => handleFilterChange('specialty_id', v)}
+                            options={[
+                                { value: 'all', label: 'Tất cả' },
+                                ...specialties.map(s => ({ value: s.id, label: s.name })),
+                            ]}
+                        />
+                        <FilterSelect
+                            label="Xét nghiệm"
+                            value={filters.assay_id || 'all'}
+                            onChange={(v) => handleFilterChange('assay_id', v)}
+                            options={[
+                                { value: 'all', label: 'Tất cả' },
+                                ...assays.map(a => ({ value: a.id, label: a.name })),
+                            ]}
+                        />
+                        <FilterSelect
+                            label="Hoạt động"
+                            value={filters.active_only ? 'active' : 'all'}
+                            onChange={(v) => handleFilterChange('active_only', v === 'active')}
+                            options={[
+                                { value: 'all', label: 'Tất cả' },
+                                { value: 'active', label: 'Đang hoạt động' },
+                            ]}
+                        />
                     </div>
                 </CollapsibleContent>
             </Collapsible>
+
+            {/* Bulk Actions */}
+            {selectedIds.size > 0 && (
+                <div className="flex items-center gap-4 p-3 border rounded-lg bg-muted/50">
+                    <span className="text-sm text-muted-foreground">
+                        Đã chọn {selectedIds.size} phiên
+                    </span>
+                    <BulkEndSessionDialog
+                        sessions={selectedSessions}
+                        onSuccess={() => fetchData(filters)}
+                        onClear={() => setSelectedIds(new Set())}
+                    />
+                    <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+                        Bỏ chọn
+                    </Button>
+                </div>
+            )}
 
             {/* Table */}
             <div className="rounded-md border">
                 <Table>
                     <TableHeader>
                         <TableRow>
+                            <TableHead className="w-10">
+                                {activeSessions.length > 0 && (
+                                    <Checkbox
+                                        checked={selectedIds.size === activeSessions.length && activeSessions.length > 0}
+                                        onCheckedChange={toggleSelectAll}
+                                        aria-label="Chọn tất cả phiên đang hoạt động"
+                                    />
+                                )}
+                            </TableHead>
                             <TableHead>Xét nghiệm</TableHead>
                             <TableHead>Chế độ</TableHead>
                             <TableHead>Trạng thái</TableHead>
@@ -341,14 +338,14 @@ export function QCSessionsTable({
                     <TableBody>
                         {loading ? (
                             <TableRow>
-                                <TableCell colSpan={8} className="h-32 text-center">
+                                <TableCell colSpan={9} className="h-32 text-center">
                                     <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
                                     <span className="text-muted-foreground">Đang tải...</span>
                                 </TableCell>
                             </TableRow>
                         ) : data?.data.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={8} className="h-32 text-center">
+                                <TableCell colSpan={9} className="h-32 text-center">
                                     <Activity className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                                     <span className="text-muted-foreground">Không có phiên QC nào</span>
                                 </TableCell>
@@ -358,6 +355,8 @@ export function QCSessionsTable({
                                 <SessionRow
                                     key={session.id}
                                     session={session}
+                                    isSelected={selectedIds.has(session.id)}
+                                    onToggleSelect={toggleSelect}
                                     onSessionEnded={() => fetchData(filters)}
                                 />
                             ))
@@ -400,79 +399,35 @@ export function QCSessionsTable({
 }
 
 // ============================================================================
-// SESSION ROW
+// FILTER SELECT - Extracted for cleaner code
 // ============================================================================
 
-function SessionRow({
-    session,
-    onSessionEnded,
+function FilterSelect({
+    label,
+    value,
+    onChange,
+    options,
 }: {
-    session: QCSessionRow
-    onSessionEnded: () => void
+    label: string
+    value: string
+    onChange: (value: string) => void
+    options: { value: string; label: string }[]
 }) {
-    const statusConfig = STATUS_CONFIG[session.qc_status] || STATUS_CONFIG.pending
-    const StatusIcon = statusConfig.icon
-    const isActive = !session.ended_at
-
     return (
-        <TableRow>
-            <TableCell>
-                <div>
-                    <div className="font-medium">{session.assay_name}</div>
-                    {session.specialty_name && (
-                        <div className="text-xs text-muted-foreground">{session.specialty_name}</div>
-                    )}
-                </div>
-            </TableCell>
-            <TableCell>
-                <Badge variant="outline">
-                    {SESSION_MODE_LABELS[session.session_mode] || session.session_mode}
-                </Badge>
-            </TableCell>
-            <TableCell>
-                <Badge variant={statusConfig.variant} className={`gap-1 ${statusConfig.className || ''}`}>
-                    <StatusIcon className="h-3 w-3" />
-                    {statusConfig.label}
-                </Badge>
-            </TableCell>
-            <TableCell>
-                <div className="text-sm">
-                    {format(new Date(session.started_at), 'dd/MM/yyyy HH:mm', { locale: vi })}
-                </div>
-                {session.started_by_name && (
-                    <div className="text-xs text-muted-foreground">{session.started_by_name}</div>
-                )}
-            </TableCell>
-            <TableCell>
-                {session.ended_at ? (
-                    <div className="text-sm">
-                        {format(new Date(session.ended_at), 'dd/MM/yyyy HH:mm', { locale: vi })}
-                    </div>
-                ) : (
-                    <Badge variant="outline" className="text-green-600 border-green-600">
-                        <Activity className="h-3 w-3 mr-1" />
-                        Đang hoạt động
-                    </Badge>
-                )}
-            </TableCell>
-            <TableCell className="text-center">
-                <span className="font-medium">{session.results_count}</span>
-            </TableCell>
-            <TableCell className="text-center">
-                {session.violations_count > 0 ? (
-                    <Badge variant="destructive">{session.violations_count}</Badge>
-                ) : (
-                    <span className="text-muted-foreground">0</span>
-                )}
-            </TableCell>
-            <TableCell className="text-right">
-                {isActive && (
-                    <EndSessionDialog
-                        sessionId={session.id}
-                        onSuccess={onSessionEnded}
-                    />
-                )}
-            </TableCell>
-        </TableRow>
+        <div className="space-y-1.5">
+            <Label className="text-xs">{label}</Label>
+            <Select value={value} onValueChange={onChange}>
+                <SelectTrigger className="h-9">
+                    <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                    {options.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </div>
     )
 }
