@@ -162,14 +162,60 @@ This project is indexed with **GitLab Knowledge Graph MCP**. You have access to 
       - Note: Requires GKG server restart
 
 
-## Beads Task Tracking (Windows PowerShell)
+## Beads Task Tracking + Beads Viewer (Windows PowerShell)
+
+### 🎯 Session Workflow (Start Every Session)
+
+```bash
+# 1. Get AI-optimized task recommendations
+powershell -Command "bv --robot-triage"           # Full triage with scores & recommendations
+
+# 2. Pick your next task
+powershell -Command "bv --robot-next"             # Single top pick with claim command
+
+# 3. Claim and start work
+powershell -Command "bd update <id> --status=in_progress"
+
+# 4. Close when done
+powershell -Command "bd close <id> -r 'Reason'"
+```
+
+### 📊 Beads Viewer Robot Commands (Use for AI Workflows)
+
+| Command | Purpose |
+|---------|---------|
+| `bv --robot-triage` | **Primary command** - Full triage with recommendations, blockers, quick wins |
+| `bv --robot-next` | Single top pick + claim command |
+| `bv --robot-plan` | Parallel execution tracks for sprints |
+| `bv --robot-insights` | Full graph metrics (PageRank, betweenness, bottlenecks) |
+| `bv --robot-label-health` | Per-label health scores |
+| `bv --robot-diff --diff-since HEAD~5` | Changes since git ref |
+| `bv --robot-graph --graph-format=mermaid` | Dependency graph export |
+
+**Scoping & Filtering:**
+```bash
+bv --robot-plan --label backend    # Scope to label's subgraph
+bv --robot-insights --as-of HEAD~30  # Historical point-in-time
+bv --recipe actionable --robot-plan  # Pre-filter: no blockers
+```
+
+### 🔧 Beads CLI Commands
 
 ```bash
 powershell -Command "bd ready"                    # Show unblocked work
 powershell -Command "bd create 'Title' -p 2 -l label -t task"  # Create (NOT 'add')
 powershell -Command "bd dep add <id> <depends-on> -t blocks"   # Dependencies
 powershell -Command "bd close <id> -r 'Reason'"   # Close with reason
+powershell -Command "bd show <id>"                # Show issue details
+powershell -Command "bd doctor"                   # Health check
 ```
+
+### 🧠 Graph Analysis Metrics (via `bv --robot-insights`)
+
+- **PageRank**: Identifies foundational blockers (recursive importance)
+- **Betweenness**: Reveals bottlenecks and bridges (shortest-path traffic)
+- **Critical Path**: Shows keystones with zero slack (longest chain)
+- **HITS**: Hub/Authority duality (distinguishes epics from infrastructure)
 
 ## Windows Commands
 
