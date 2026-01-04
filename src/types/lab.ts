@@ -198,6 +198,13 @@ export const SampleListParamsSchema = PaginationSchema.extend({
 
 export type SampleListParams = z.infer<typeof SampleListParamsSchema>
 
+export const QCEntryParamsSchema = PaginationSchema.extend({
+    specialty: z.string().uuid().optional(),
+    id: z.string().uuid().optional(),
+}).omit({ sortBy: true, sortOrder: true, search: true })
+
+export type QCEntryParams = z.infer<typeof QCEntryParamsSchema>
+
 export const SampleWithUserSchema = SampleSchema.extend({
     received_by_name: z.string().nullable(),
     rejected_by_name: z.string().nullable().optional(),

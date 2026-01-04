@@ -5,7 +5,7 @@
  * Following TanStack Query best practices with hierarchical key structure.
  */
 
-import type { SampleListParams } from './index'
+import type { SampleListParams, QCEntryParams } from './index'
 
 /**
  * Query key factory for samples-related queries
@@ -56,6 +56,15 @@ export const resultKeys = {
     all: ['results'] as const,
     bySample: (sampleId: string) => ['results', sampleId] as const,
     detail: (id: string) => ['result', id] as const,
+}
+
+/**
+ * Query key factory for QC entry
+ */
+export const qcEntryKeys = {
+    all: ['qc-entry'] as const,
+    list: (params: QCEntryParams) => ['qc-entry', params] as const,
+    detail: (id: string) => ['qc-detail', id] as const,
 }
 
 /**

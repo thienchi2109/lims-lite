@@ -39,7 +39,7 @@ export function SpecialtyFilter({
             : 'hover:bg-accent hover:text-accent-foreground'
         )}
       >
-        <Link href={baseUrl}>Tất cả</Link>
+        <Link href={`${baseUrl}?page=1`}>Tất cả</Link>
       </Badge>
 
       {/* Specialty pills */}
@@ -58,7 +58,7 @@ export function SpecialtyFilter({
                 : 'hover:bg-accent hover:text-accent-foreground'
             )}
           >
-            <Link href={`${baseUrl}?specialty=${specialty.id}`}>
+            <Link href={`${baseUrl}?specialty=${specialty.id}&page=1`}>
               {specialty.name} ({specialty.qc_count})
             </Link>
           </Badge>
