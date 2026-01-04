@@ -23,6 +23,14 @@ interface Props {
     searchParams: Promise<SearchParams>
 }
 
+interface QCDefinitionWithRelations {
+    id: string
+    mean: number
+    sd: number
+    assay: { id: string; name: string; units: string; specialty_id: string }
+    material: { name: string; level: string; lot_number: string; level_normalized: string }
+}
+
 export default async function QCEntryPage({ searchParams }: Props) {
     const supabase = await createClient()
     const params = await searchParams
@@ -38,10 +46,10 @@ export default async function QCEntryPage({ searchParams }: Props) {
 
     // Parallel fetch for independent queries
     const [
-        { data: userData },
-        { data: specialties },
-        { data: assaysWithQC },
-        { data: activeSessions },
+        { data: userData, error: userError },
+        { data: specialties, error: specialtiesError },
+        { data: assaysWithQC, error: assaysError },
+        { data: activeSessions, error: sessionsError },
     ] = await Promise.all([
         supabase.from('users').select('full_name, role').eq('id', user.id).single(),
         supabase.from('lab_specialties').select('id, name').order('name'),
@@ -52,11 +60,29 @@ export default async function QCEntryPage({ searchParams }: Props) {
                 mean,
                 sd,
                 assay:assay_definitions!inner(id, name, units, specialty_id),
-                material:qc_materials!inner(name, level, lot_number)
+                material:qc_materials!inner(name, level, level_normalized, lot_number)
             `)
             .eq('is_active', true),
         supabase.from('qc_sessions').select('id, assay_id, qc_status').is('ended_at', null),
     ])
+
+    // Error handling for database queries
+    if (userError) {
+        console.error('User fetch failed:', userError)
+        redirect('/error?message=Failed+to+load+user')
+    }
+    if (specialtiesError) {
+        console.error('Specialties fetch failed:', specialtiesError)
+        redirect('/error?message=Failed+to+load+specialties')
+    }
+    if (assaysError) {
+        console.error('Assays fetch failed:', assaysError)
+        redirect('/error?message=Failed+to+load+assays')
+    }
+    if (sessionsError) {
+        console.error('Sessions fetch failed:', sessionsError)
+        redirect('/error?message=Failed+to+load+sessions')
+    }
 
     if (!userData || userData.role !== 'analyst') {
         redirect('/manager')
@@ -101,19 +127,16 @@ export default async function QCEntryPage({ searchParams }: Props) {
     // Transform assays and count per specialty
     const assayList: AssayWithQC[] = []
     for (const def of assaysWithQC || []) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const rawAssay = def.assay as any
+        const rawAssay = def.assay as QCDefinitionWithRelations['assay'] | QCDefinitionWithRelations['assay'][]
         const assay = Array.isArray(rawAssay) ? rawAssay[0] : rawAssay
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const rawMaterial = def.material as any
+        const rawMaterial = def.material as QCDefinitionWithRelations['material'] | QCDefinitionWithRelations['material'][]
         const material = Array.isArray(rawMaterial) ? rawMaterial[0] : rawMaterial
 
         if (!assay || !material) continue
 
         const session = activeSessions?.find((s) => s.assay_id === assay.id)
 
-        // Transform material_level: "Level 1" -> "L1", "Level 2" -> "L2"
-        const level = material.level.includes('1') ? 'L1' : 'L2'
+        const level = material.level_normalized as 'L1' | 'L2'
 
         // Transform qc_status: null/pending/entered/approved
         const status = session?.qc_status === 'approved'
@@ -129,6 +152,7 @@ export default async function QCEntryPage({ searchParams }: Props) {
             status,
             mean: def.mean,
             sd: def.sd,
+            specialty_id: assay.specialty_id,
         })
 
         const spec = specialtyMap.get(assay.specialty_id)
@@ -141,13 +165,7 @@ export default async function QCEntryPage({ searchParams }: Props) {
 
     // Filter assays by selected specialty
     const filteredAssays = params.specialty
-        ? assayList.filter((a) => {
-              const def = assaysWithQC?.find((d) => d.id === a.id)
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const rawAssay = def?.assay as any
-              const assay = Array.isArray(rawAssay) ? rawAssay[0] : rawAssay
-              return assay?.specialty_id === params.specialty
-          })
+        ? assayList.filter((a) => a.specialty_id === params.specialty)
         : assayList
 
     // Build detail sheet data if ID is selected
@@ -159,7 +177,7 @@ export default async function QCEntryPage({ searchParams }: Props) {
         selectedAssay = assayList.find((a) => a.id === params.id)
         if (selectedAssay) {
             // Get full data points with timestamps for this definition
-            const results = await supabase
+            const { data: resultsData, error: resultsError } = await supabase
                 .from('qc_results')
                 .select('value, status, measured_at')
                 .eq('definition_id', params.id)
@@ -167,7 +185,12 @@ export default async function QCEntryPage({ searchParams }: Props) {
                 .order('measured_at', { ascending: false })
                 .limit(15)
 
-            qcDataPoints = (results.data || []).map((r) => ({
+            if (resultsError) {
+                console.error('QC results fetch failed:', resultsError)
+                redirect('/error?message=Failed+to+load+QC+results')
+            }
+
+            qcDataPoints = (resultsData || []).map((r) => ({
                 value: r.value,
                 status: r.status,
                 measuredAt: r.measured_at,

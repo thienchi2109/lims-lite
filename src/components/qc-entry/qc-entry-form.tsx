@@ -41,16 +41,10 @@ interface QCEntryFormProps {
 }
 
 // ============================================================================
-// PLACEHOLDER ACTION
+// SERVER ACTION
 // ============================================================================
 
-// TODO: Replace with actual server action import
-async function saveQCResult(data: { assayId: string; value: number; notes?: string }) {
-    // Simulate server delay
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    console.log('Saving QC result:', data)
-    return { success: true }
-}
+import { saveQCResult } from '@/app/actions/qc'
 
 // ============================================================================
 // COMPONENT
@@ -74,10 +68,15 @@ export function QCEntryForm({ assayId, onSuccess }: QCEntryFormProps) {
     const handleSubmit = async (data: QCEntryFormData) => {
         try {
             const result = await saveQCResult({
-                assayId,
+                definitionId: assayId,
                 value: data.value,
                 notes: data.notes,
             })
+
+            if ('error' in result) {
+                toast.error(result.error)
+                return
+            }
 
             if (result.success) {
                 toast.success('Lưu kết quả QC thành công')
@@ -109,7 +108,12 @@ export function QCEntryForm({ assayId, onSuccess }: QCEntryFormProps) {
                                     {...field}
                                     onChange={(e) => {
                                         const val = e.target.value
-                                        field.onChange(val === '' ? undefined : parseFloat(val))
+                                        if (val === '') {
+                                            field.onChange(undefined)
+                                        } else {
+                                            const parsed = parseFloat(val)
+                                            field.onChange(isNaN(parsed) ? undefined : parsed)
+                                        }
                                     }}
                                     value={field.value ?? ''}
                                 />

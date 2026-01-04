@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { QCSparkline, type MiniChartDataPoint } from './qc-sparkline'
+import { QC_STATUS_LABELS } from './qc-chart-constants'
 
 // ============================================================================
 // TYPES
@@ -14,6 +15,7 @@ export interface AssayWithQC {
   status: 'pending' | 'entered' | 'approved'
   mean: number
   sd: number
+  specialty_id: string
 }
 
 interface QCTableRowProps {
@@ -25,12 +27,6 @@ interface QCTableRowProps {
 // ============================================================================
 // CONSTANTS
 // ============================================================================
-
-const STATUS_LABELS: Record<AssayWithQC['status'], string> = {
-  pending: 'Chờ nhập',
-  entered: 'Đã nhập',
-  approved: 'Đã duyệt',
-}
 
 const STATUS_STYLES: Record<AssayWithQC['status'], string> = {
   pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -45,7 +41,9 @@ const STATUS_STYLES: Record<AssayWithQC['status'], string> = {
 export function QCTableRow({ assay, isSelected, qcDataPoints }: QCTableRowProps) {
   return (
     <Link
-      href={`/analyst/qc-entry?id=${assay.id}`}
+      href={`/analyst/qc-entry?id=${encodeURIComponent(assay.id)}`}
+      aria-label={`Xem chi tiết QC ${assay.name} ${assay.level}`}
+      aria-current={isSelected ? 'true' : undefined}
       className={cn(
         'grid grid-cols-[1fr_60px_90px_160px] items-center gap-4 px-4 py-3 border-b transition-colors',
         'hover:bg-muted/50',
@@ -65,7 +63,7 @@ export function QCTableRow({ assay, isSelected, qcDataPoints }: QCTableRowProps)
         variant="outline"
         className={cn('justify-self-center', STATUS_STYLES[assay.status])}
       >
-        {STATUS_LABELS[assay.status]}
+        {QC_STATUS_LABELS[assay.status]}
       </Badge>
 
       {/* Sparkline */}

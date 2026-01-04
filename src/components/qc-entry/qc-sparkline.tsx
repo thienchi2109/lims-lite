@@ -8,6 +8,7 @@ import {
     ReferenceLine,
     ResponsiveContainer,
 } from 'recharts'
+import { QC_CHART_COLORS } from './qc-chart-constants'
 
 // ============================================================================
 // TYPES
@@ -34,14 +35,7 @@ interface DotProps {
 // CONSTANTS
 // ============================================================================
 
-const COLORS = {
-    pass: '#22c55e',
-    warning: '#eab308',
-    reject: '#ef4444',
-    mean: '#22c55e',
-    sd2: '#eab308',
-    line: '#94a3b8',
-}
+const LINE_COLOR = '#94a3b8' // Keep local as it's specific to this chart
 
 // ============================================================================
 // HELPER
@@ -51,10 +45,10 @@ function renderDot({ cx, cy, payload }: DotProps) {
     if (cx === undefined || cy === undefined || !payload) return null
 
     const color = payload.status === 'reject'
-        ? COLORS.reject
+        ? QC_CHART_COLORS.reject
         : payload.status === 'warning'
-            ? COLORS.warning
-            : COLORS.pass
+            ? QC_CHART_COLORS.warning
+            : QC_CHART_COLORS.pass
 
     return <circle cx={cx} cy={cy} r={2} fill={color} />
 }
@@ -79,13 +73,13 @@ export function QCSparkline({ dataPoints, mean, sd }: QCSparklineProps) {
             <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
                     <YAxis domain={yDomain} hide />
-                    <ReferenceLine y={mean + 2 * sd} stroke={COLORS.sd2} strokeDasharray="2 2" strokeWidth={0.5} />
-                    <ReferenceLine y={mean - 2 * sd} stroke={COLORS.sd2} strokeDasharray="2 2" strokeWidth={0.5} />
-                    <ReferenceLine y={mean} stroke={COLORS.mean} strokeWidth={0.5} />
+                    <ReferenceLine y={mean + 2 * sd} stroke={QC_CHART_COLORS.sd2} strokeDasharray="2 2" strokeWidth={0.5} />
+                    <ReferenceLine y={mean - 2 * sd} stroke={QC_CHART_COLORS.sd2} strokeDasharray="2 2" strokeWidth={0.5} />
+                    <ReferenceLine y={mean} stroke={QC_CHART_COLORS.mean} strokeWidth={0.5} />
                     <Line
                         type="linear"
                         dataKey="value"
-                        stroke={COLORS.line}
+                        stroke={LINE_COLOR}
                         strokeWidth={1}
                         dot={renderDot}
                         isAnimationActive={false}

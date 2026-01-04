@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import { QC_RESULT_STATUS_LABELS } from './qc-chart-constants'
 
 // ============================================================================
 // TYPES
@@ -17,12 +18,6 @@ interface QCRecentHistoryProps {
 // ============================================================================
 // CONSTANTS
 // ============================================================================
-
-const STATUS_LABELS: Record<QCHistoryEntry['status'], string> = {
-  pass: 'Đạt',
-  warning: 'Cảnh báo',
-  reject: 'Loại',
-}
 
 const STATUS_STYLES: Record<QCHistoryEntry['status'], string> = {
   pass: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
@@ -64,7 +59,7 @@ export function QCRecentHistory({ entries }: QCRecentHistoryProps) {
                   STATUS_STYLES[entry.status]
                 )}
               >
-                {STATUS_LABELS[entry.status]}
+                {QC_RESULT_STATUS_LABELS[entry.status]}
               </span>
             </li>
           ))}

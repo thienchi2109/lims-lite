@@ -51,7 +51,7 @@ export function QCDetailSheet({
   return (
     <aside
       className="
-        fixed right-0 top-0 h-full w-[400px] z-50
+        fixed right-0 top-0 h-full w-full sm:w-[400px] md:w-[450px] z-50
         bg-background border-l shadow-xl
         transform translate-x-0 transition-transform duration-300 ease-out
       "
