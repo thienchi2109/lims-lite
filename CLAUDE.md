@@ -333,6 +333,36 @@ Without this, you'll get "Could not find the function in the schema cache" error
 
 **Security:** Always `DROP POLICY IF EXISTS` before `CREATE POLICY`, include role checks, run `run_security_tests()` after migrations. See `docs/MIGRATION_SECURITY_CHECKLIST.md`.
 
+# DATABASE QUERY RULES (MUST FOLLOW)
+
+## Token Optimization Requirements
+
+### 1. SELECT Queries - MANDATORY
+- ❌ NEVER use `SELECT *` in any query
+- ✅ ALWAYS specify exact columns needed: `SELECT column1, column2 FROM table`
+- ✅ Add LIMIT for test queries: `SELECT columns FROM table LIMIT 10`
+- Reason: Every returned field consumes tokens in context window
+
+### 2. Query Result Handling
+- For results > 50 rows: Summarize key insights, don't include full dataset in response
+- For large datasets: Save to file and provide reference pointer
+- Always count rows returned and report: "Query returned N rows"
+
+### 3. Column Selection Priority
+- Only SELECT columns that directly answer the user's question
+- Exclude: timestamps, IDs, metadata unless specifically requested
+- Example: For "get user names" → `SELECT name FROM users` NOT `SELECT * FROM users`
+
+### 4. Development Phase Practices
+- Even with small test data, practice selective queries
+- Use LIMIT during testing to prevent unnecessary token usage
+- Monitor and log token consumption per query
+
+## Why This Matters
+- Database results consume tokens proportionally to data returned
+- `SELECT *` with 1000 rows × 200 tokens/row = 200K tokens wasted
+- Selective queries can reduce token usage by 70-90%
+
 ## Project Structure
 
 ```
