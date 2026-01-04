@@ -65,11 +65,11 @@ export function QCSparkline({ dataPoints, mean, sd }: QCSparklineProps) {
     const yDomain = useMemo(() => [mean - 3 * sd, mean + 3 * sd], [mean, sd])
 
     if (chartData.length === 0) {
-        return <div className="h-6 w-[140px] bg-muted/30 rounded" />
+        return <div className="h-6 w-full bg-muted/30 rounded" />
     }
 
     return (
-        <div className="h-6 w-[140px]">
+        <div className="h-6 w-full">
             <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
                     <YAxis domain={yDomain} hide />

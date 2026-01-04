@@ -50,7 +50,7 @@ export function QCAssayTable({
   return (
     <div className="flex flex-col" role="table" aria-label="Bảng xét nghiệm QC">
       {/* Header row */}
-      <div className="grid grid-cols-[minmax(220px,1fr)_80px_110px_180px] items-center gap-4 px-4 py-2 border-b bg-muted/50 text-sm font-medium text-muted-foreground" role="row">
+      <div className="grid grid-cols-[minmax(200px,3fr)_80px_120px_minmax(150px,2fr)] items-center gap-4 px-4 py-2 border-b bg-muted/50 text-sm font-medium text-muted-foreground" role="row">
         <span role="columnheader">Xét nghiệm</span>
         <span className="text-center" role="columnheader">Mức</span>
         <span className="text-center" role="columnheader">Trạng thái</span>

@@ -104,7 +104,7 @@ export function QCEntryForm({ assayId, onSuccess }: QCEntryFormProps) {
                                     type="number"
                                     step="any"
                                     placeholder="Nhập giá trị..."
-                                    className="font-mono text-lg"
+                                    className="text-lg"
                                     {...field}
                                     onChange={(e) => {
                                         const val = e.target.value

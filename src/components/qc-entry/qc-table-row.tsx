@@ -51,7 +51,7 @@ export function QCTableRow({ assay, isSelected, qcDataPoints, activeSpecialty }:
       aria-label={`Xem chi tiết QC ${assay.name} ${assay.level}`}
       aria-current={isSelected ? 'true' : undefined}
       className={cn(
-        'grid grid-cols-[minmax(220px,1fr)_80px_110px_180px] items-center gap-4 px-4 py-3 border-b transition-colors',
+        'grid grid-cols-[minmax(200px,3fr)_80px_120px_minmax(150px,2fr)] items-center gap-4 px-4 py-3 border-b transition-colors',
         'hover:bg-muted/50',
         isSelected && 'bg-accent'
       )}
