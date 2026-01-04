@@ -215,6 +215,7 @@ export default async function QCEntryPage({ searchParams }: Props) {
                 assays={filteredAssays}
                 selectedId={params.id || null}
                 qcResultsByDefinition={qcResultsByDefinition}
+                activeSpecialty={params.specialty || null}
             />
             {params.id && selectedAssay && (
                 <QCDetailSheet

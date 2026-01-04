@@ -22,6 +22,7 @@ interface QCTableRowProps {
   assay: AssayWithQC
   isSelected: boolean
   qcDataPoints: MiniChartDataPoint[]
+  activeSpecialty?: string | null
 }
 
 // ============================================================================
@@ -38,14 +39,19 @@ const STATUS_STYLES: Record<AssayWithQC['status'], string> = {
 // COMPONENT
 // ============================================================================
 
-export function QCTableRow({ assay, isSelected, qcDataPoints }: QCTableRowProps) {
+export function QCTableRow({ assay, isSelected, qcDataPoints, activeSpecialty }: QCTableRowProps) {
+  // Preserve specialty filter in URL
+  const href = activeSpecialty
+    ? `/analyst/qc-entry?specialty=${encodeURIComponent(activeSpecialty)}&id=${encodeURIComponent(assay.id)}`
+    : `/analyst/qc-entry?id=${encodeURIComponent(assay.id)}`
+
   return (
     <Link
-      href={`/analyst/qc-entry?id=${encodeURIComponent(assay.id)}`}
+      href={href}
       aria-label={`Xem chi tiết QC ${assay.name} ${assay.level}`}
       aria-current={isSelected ? 'true' : undefined}
       className={cn(
-        'grid grid-cols-[1fr_60px_90px_160px] items-center gap-4 px-4 py-3 border-b transition-colors',
+        'grid grid-cols-[minmax(220px,1fr)_80px_110px_180px] items-center gap-4 px-4 py-3 border-b transition-colors',
         'hover:bg-muted/50',
         isSelected && 'bg-accent'
       )}
