@@ -75,6 +75,15 @@ export const SignatureFileValidationSchema = z.object({
 
 export type SignatureFileValidation = z.infer<typeof SignatureFileValidationSchema>
 
+/**
+ * Schema for client-side signature upload validation.
+ *
+ * NOTE: Uses browser-only `File` type intentionally. This schema is designed
+ * exclusively for client-side form validation in React components. Do not use
+ * in Server Actions or API routes where `File` is not available.
+ *
+ * For server-side file metadata validation, use `SignatureFileValidationSchema` instead.
+ */
 export const UploadSignatureSchema = z.object({
     file: z.instanceof(File)
         .refine(f => f.size <= SIGNATURE_VALIDATION.maxFileSize, 'Kích thước file tối đa 500KB')
