@@ -53,3 +53,15 @@ __pycache__/
 # Exception: migrations should be version controlled
 !supabase/migrations/*.sql
 nul
+
+# bv (beads viewer) local config and caches
+.bv/
+
+# Claude Code local files
+.claude/settings.local.json
+.claude/context-save-*.md
+.claude/hookify.*.local.md
+.claude/skills/notebooklm
+
+# Documentation references (local/temporary)
+docs/references/
