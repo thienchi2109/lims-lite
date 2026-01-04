@@ -43,6 +43,80 @@
 | Skip skills that might apply | Invoke skill, then decide |
 | Use `cat`, `head`, `tail` | Use `Read` tool |
 
+## 🐛 DEBUGGING & PROBLEM-SOLVING (AUTO-INVOKE SKILLS)
+
+> **These skills are NOT optional when triggers are detected.**
+> Invoke the appropriate skill BEFORE attempting any fix or solution.
+
+### Skill Invocation Table
+
+| Skill | Invoke Command | When to Auto-Use |
+|-------|----------------|------------------|
+| **systematic-debugging** | `Skill: superpowers:systematic-debugging` | Bug, error, test failure, unexpected behavior |
+| **beads-triage** | `Skill: beads-triage` | Session start, task selection, after completing work |
+| **planning-pipeline** | `Skill: planning-pipeline` | After brainstorming, before implementation |
+| **test-driven-development** | `Skill: superpowers:test-driven-development` | Before implementing fix, need failing test |
+| **verification-before-completion** | `Skill: superpowers:verification-before-completion` | Before claiming "done" or "fixed" |
+
+### 🔴 STOP Signs - You MUST Invoke Debugging Skill When:
+
+| Trigger Keywords | Immediate Action |
+|------------------|------------------|
+| "error", "failed", "broken", "doesn't work" | `Skill: superpowers:systematic-debugging` |
+| "bug", "crash", "exception", "unexpected" | `Skill: superpowers:systematic-debugging` |
+| Test failure output | `Skill: superpowers:systematic-debugging` |
+| Stack trace in message | `Skill: superpowers:systematic-debugging` |
+| "fix", "solve", "debug", "investigate" | `Skill: superpowers:systematic-debugging` |
+| "stuck", "can't figure out", "tried everything" | `Skill: problem-solving:when-stuck` |
+| "where does X come from", "trace" | Use root-cause-tracing technique |
+| Previous fix didn't work | `Skill: superpowers:systematic-debugging` (restart Phase 1) |
+| 3+ fixes failed | STOP - Question architecture, discuss with user |
+
+### The Iron Law of Debugging
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST              ║
+║                                                               ║
+║  If you haven't completed Phase 1, you CANNOT propose fixes.  ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+### Four Phases (Must Complete In Order)
+
+| Phase | Key Activities | Success Criteria |
+|-------|----------------|------------------|
+| **1. Root Cause** | Read errors, reproduce, check changes, gather evidence | Understand WHAT and WHY |
+| **2. Pattern** | Find working examples, compare differences | Identify what's different |
+| **3. Hypothesis** | Form single theory, test minimally | Confirmed or new hypothesis |
+| **4. Implementation** | Create failing test, fix, verify | Bug resolved, tests pass |
+
+### Pre-Fix Checklist (Verify Before ANY Fix)
+
+```
+□ Have I read the full error message?
+□ Can I reproduce the issue?
+□ Do I understand WHERE it breaks?
+□ Do I understand WHY it breaks?
+□ Have I traced back to the root cause?
+□ Have I formed a single hypothesis?
+□ Am I proposing ONE change, not multiple?
+
+If any □ unchecked → Continue investigation
+If all ☑ checked → Propose fix
+```
+
+### Red Flags - STOP and Return to Phase 1
+
+If catching yourself thinking:
+- "Quick fix for now, investigate later"
+- "Just try changing X and see if it works"
+- "It's probably X, let me fix that"
+- "I don't fully understand but this might work"
+- "One more fix attempt" (when already tried 2+)
+
+**ALL of these mean: STOP. Return to Phase 1.**
+
 ## 🧠 CONTEXT ENGINEERING (MANDATORY SKILL - NON-NEGOTIABLE)
 
 > **This is NOT optional.** Context engineering determines whether tasks succeed or fail at scale.
