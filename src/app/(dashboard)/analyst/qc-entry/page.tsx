@@ -59,7 +59,7 @@ export default async function QCEntryPage() {
             .single(),
         // All specialties for tab headers
         supabase
-            .from('specialties')
+            .from('lab_specialties')
             .select('id, name')
             .order('name'),
         // Assays with active QC definitions
@@ -81,8 +81,7 @@ export default async function QCEntryPage() {
                     lot_number
                 )
             `)
-            .eq('is_active', true)
-            .is('deleted_at', null),
+            .eq('is_active', true),
         // Active QC sessions for all assays
         supabase
             .from('qc_sessions')

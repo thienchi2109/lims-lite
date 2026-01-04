@@ -88,7 +88,8 @@ export function QCEntryForm({
 }: QCEntryFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [evaluation, setEvaluation] = useState<WestgardEvaluation | null>(null)
-    const [selectedDef, setSelectedDef] = useState<QCDefinitionOption | null>(null)
+    const [selectedDefId, setSelectedDefId] = useState<string>('')
+    const [inputValue, setInputValue] = useState<string>('')
 
     const form = useForm<QCEntryFormData>({
         resolver: zodResolver(QCEntryFormSchema),
@@ -99,32 +100,41 @@ export function QCEntryForm({
         },
     })
 
-    const watchValue = form.watch('value')
-    const watchDefId = form.watch('definition_id')
+    // Memoize selected definition to prevent unnecessary recalculations
+    const selectedDef = useMemo(() => {
+        return definitions.find(d => d.id === selectedDefId) || null
+    }, [selectedDefId, definitions])
 
-    // Update selected definition when selection changes
-    useEffect(() => {
-        const def = definitions.find(d => d.id === watchDefId)
-        setSelectedDef(def || null)
-        setEvaluation(null) // Reset evaluation when definition changes
-    }, [watchDefId, definitions])
+    // Handle definition selection
+    const handleDefinitionChange = (defId: string) => {
+        setSelectedDefId(defId)
+        form.setValue('definition_id', defId)
+        setEvaluation(null)
+    }
 
-    // Real-time Z-score calculation and rule evaluation
-    useEffect(() => {
-        if (!selectedDef || watchValue === undefined || isNaN(watchValue)) {
+    // Handle value input change with real-time Westgard evaluation
+    const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const strValue = e.target.value
+        setInputValue(strValue)
+
+        const numValue = parseFloat(strValue)
+        if (!isNaN(numValue)) {
+            form.setValue('value', numValue)
+
+            // Real-time Westgard evaluation
+            if (selectedDef) {
+                const result = evaluateWestgardRules({
+                    value: numValue,
+                    mean: selectedDef.mean,
+                    sd: selectedDef.sd,
+                    history: historyZScores,
+                })
+                setEvaluation(result)
+            }
+        } else {
             setEvaluation(null)
-            return
         }
-
-        const result = evaluateWestgardRules({
-            value: watchValue,
-            mean: selectedDef.mean,
-            sd: selectedDef.sd,
-            history: historyZScores,
-        })
-
-        setEvaluation(result)
-    }, [watchValue, selectedDef, historyZScores])
+    }
 
     const handleSubmit = async (data: QCEntryFormData) => {
         setIsSubmitting(true)
@@ -155,6 +165,8 @@ export function QCEntryForm({
             }
 
             form.reset()
+            setSelectedDefId('')
+            setInputValue('')
             setEvaluation(null)
             onSuccess?.()
         } catch (error) {
@@ -207,8 +219,8 @@ export function QCEntryForm({
                     <div className="space-y-2">
                         <Label htmlFor="definition_id">Vật liệu QC / Mức</Label>
                         <Select
-                            value={watchDefId}
-                            onValueChange={(val) => form.setValue('definition_id', val)}
+                            value={selectedDefId || undefined}
+                            onValueChange={handleDefinitionChange}
                         >
                             <SelectTrigger id="definition_id">
                                 <SelectValue placeholder="Chọn vật liệu QC..." />
@@ -258,7 +270,8 @@ export function QCEntryForm({
                             type="number"
                             step="any"
                             placeholder="Nhập giá trị..."
-                            {...form.register('value')}
+                            value={inputValue}
+                            onChange={handleValueChange}
                             className="font-mono text-lg"
                         />
                         {form.formState.errors.value && (

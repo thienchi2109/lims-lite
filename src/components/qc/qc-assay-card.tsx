@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
     Activity,
     AlertTriangle,
@@ -101,15 +101,15 @@ export function QCAssayCard({ assay, qcDataPoints }: QCAssayCardProps) {
     const statusConfig = status ? STATUS_CONFIG[status] : null
     const StatusIcon = statusConfig?.icon || Clock
 
-    // Build definition option for form
-    const definitionOption = {
+    // Build definition option for form - memoized to prevent infinite re-renders
+    const definitions = useMemo(() => [{
         id: assay.definition_id,
         materialName: assay.material_name,
         level: assay.material_level,
         lotNumber: assay.lot_number,
         mean: assay.mean,
         sd: assay.sd,
-    }
+    }], [assay.definition_id, assay.material_name, assay.material_level, assay.lot_number, assay.mean, assay.sd])
 
     // Placeholder session for form (session management is Phase 15)
     const placeholderSession = assay.session_id ? {
@@ -197,7 +197,7 @@ export function QCAssayCard({ assay, qcDataPoints }: QCAssayCardProps) {
                         {placeholderSession ? (
                             <QCEntryForm
                                 session={placeholderSession}
-                                definitions={[definitionOption]}
+                                definitions={definitions}
                                 assayName={assay.name}
                                 assayUnits={assay.units}
                                 onSuccess={handleSuccess}
