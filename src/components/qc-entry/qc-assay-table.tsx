@@ -1,0 +1,69 @@
+import { QCTableRow, type AssayWithQC } from './qc-table-row'
+import type { MiniChartDataPoint } from './qc-sparkline'
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+interface QCAssayTableProps {
+  assays: AssayWithQC[]
+  selectedId: string | null
+  qcResultsByDefinition: Record<string, MiniChartDataPoint[]>
+}
+
+// ============================================================================
+// HELPER - Group assays by name (L1/L2 together)
+// ============================================================================
+
+function groupAssaysByName(assays: AssayWithQC[]): AssayWithQC[] {
+  // Sort by name first, then by level (L1 before L2)
+  return [...assays].sort((a, b) => {
+    const nameCompare = a.name.localeCompare(b.name)
+    if (nameCompare !== 0) return nameCompare
+    return a.level.localeCompare(b.level)
+  })
+}
+
+// ============================================================================
+// COMPONENT
+// ============================================================================
+
+export function QCAssayTable({
+  assays,
+  selectedId,
+  qcResultsByDefinition,
+}: QCAssayTableProps) {
+  // Empty state
+  if (assays.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-12 text-muted-foreground">
+        Không có xét nghiệm QC
+      </div>
+    )
+  }
+
+  // Group and sort assays so L1/L2 are adjacent
+  const groupedAssays = groupAssaysByName(assays)
+
+  return (
+    <div className="flex flex-col">
+      {/* Header row */}
+      <div className="grid grid-cols-[1fr_60px_90px_160px] items-center gap-4 px-4 py-2 border-b bg-muted/50 text-sm font-medium text-muted-foreground">
+        <span>Xét nghiệm</span>
+        <span className="text-center">Mức</span>
+        <span className="text-center">Trạng thái</span>
+        <span className="text-right">Xu hướng</span>
+      </div>
+
+      {/* Data rows */}
+      {groupedAssays.map((assay) => (
+        <QCTableRow
+          key={assay.id}
+          assay={assay}
+          isSelected={assay.id === selectedId}
+          qcDataPoints={qcResultsByDefinition[assay.id] || []}
+        />
+      ))}
+    </div>
+  )
+}
