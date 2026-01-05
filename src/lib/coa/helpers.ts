@@ -88,7 +88,6 @@ export async function validateSampleForCoAGeneration(
         .from('results')
         .select('id, status')
         .eq('sample_id', sampleId)
-        .is('deleted_at', null)
 
     if (resultsError) {
         return { valid: false, error: 'Lỗi khi kiểm tra kết quả xét nghiệm' }
