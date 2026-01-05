@@ -131,7 +131,7 @@ export function AssignedTestsToolbar({
                 {/* CoA Generation/View Button - Only for completed samples */}
                 {sampleStatus === 'completed' && (
                     <>
-                        {!coaStatus || coaStatus === 'failed' ? (
+                        {!coaStatus || coaStatus === 'failed' || coaStatus === 'pending' ? (
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <Button
@@ -150,14 +150,14 @@ export function AssignedTestsToolbar({
                                         <span className="sr-only">
                                             {isGeneratingCoA
                                                 ? 'Đang tạo...'
-                                                : coaStatus === 'failed'
+                                                : coaStatus === 'failed' || coaStatus === 'pending'
                                                     ? 'Tạo lại CoA'
                                                     : 'Tạo CoA'}
                                         </span>
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    {coaStatus === 'failed' ? 'Tạo lại CoA' : 'Tạo chứng nhận (CoA)'}
+                                    {coaStatus === 'failed' || coaStatus === 'pending' ? 'Tạo lại CoA' : 'Tạo chứng nhận (CoA)'}
                                 </TooltipContent>
                             </Tooltip>
                         ) : (
