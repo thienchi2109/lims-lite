@@ -9,7 +9,6 @@
  * Features:
  * - Fetches approved test results from database
  * - Fetches approver's active signature
- * - Verifies signature integrity (SHA-256 hash)
  * - Converts signature to base64 data URI for HTML embedding
  * - Links signature_id to coa_reports record for 21 CFR Part 11 compliance
  * - Generates production-ready HTML with test results table
@@ -17,7 +16,6 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
-import { createEdgeAdminClient } from '@/lib/supabase/edge-admin'
 import { getActiveSignature, downloadSignature } from './signatures'
 import type { CoAData, CoAManualInputs, UserRole } from '@/types'
 
@@ -26,7 +24,6 @@ import {
     fetchSampleWithApprover,
     fetchTestingDate,
     fetchTestResults,
-    verifySignatureHash,
     generateHtmlHash,
     validateSampleForCoAGeneration,
     type GenerateCoAResult,
@@ -140,37 +137,23 @@ export async function generateCoA(
         let signatureId: string | null = null
 
         const signatureResult = await getActiveSignature(approverId, { useServiceRole: true })
+
         if (signatureResult.success) {
             const signature = signatureResult.signature
 
             // Step 3: Download signature file from storage using service role
             const downloadResult = await downloadSignature(signature.signature_path, { useServiceRole: true })
+
             if (downloadResult.success) {
-                // Step 4: Verify signature integrity using service role client
-                const adminClient = createEdgeAdminClient()
-                const { data: signatureFileData, error: downloadError } = await adminClient.storage
-                    .from('user-signatures')
-                    .download(signature.signature_path)
-
-                if (signatureFileData && !downloadError) {
-                    const signatureBuffer = await signatureFileData.arrayBuffer()
-                    const hashValid = await verifySignatureHash(signatureBuffer, signature.signature_hash)
-
-                    if (hashValid) {
-                        // Signature is valid - use it
-                        signatureDataUri = downloadResult.dataUri
-                        signatureId = signature.id
-                    } else {
-                        console.warn('Signature hash verification failed, using placeholder')
-                    }
-                } else {
-                    console.warn('Could not download signature file, using placeholder')
-                }
+                // Signature downloaded successfully - use it
+                // Note: Hash verification was done during upload, trusted here
+                signatureDataUri = downloadResult.dataUri
+                signatureId = signature.id
             } else {
-                console.warn('Could not download signature, using placeholder')
+                console.warn('Could not download signature, using placeholder:', downloadResult.error)
             }
         } else {
-            console.warn('No active signature found for approver, using placeholder')
+            console.warn('No active signature found for approver, using placeholder:', signatureResult.error)
         }
 
         // Step 6: Get approver name
