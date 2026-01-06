@@ -59,6 +59,32 @@ export async function login(prevState: any, formData: FormData) {
         }
     }
 
+    // Prevent concurrent sessions: invalidate all OTHER sessions for this user
+    // SECURITY: This runs AFTER successful authentication to prevent DoS
+    try {
+        const adminClient = createAdminClient()
+
+        if (data.user.id) {
+            // Get the most recent session ID (the one just created by signInWithPassword)
+            const { data: sessionId, error: sessionError } = await adminClient.rpc(
+                'get_latest_session_id',
+                { p_user_id: data.user.id }
+            )
+
+            if (!sessionError && sessionId) {
+                // Invalidate all OTHER sessions, keeping the current one
+                await adminClient.rpc('invalidate_other_user_sessions', {
+                    p_user_id: data.user.id,
+                    p_keep_session_id: sessionId
+                })
+            }
+        }
+    } catch (error) {
+        // Log error but don't block login
+        // If session invalidation fails, login still succeeds
+        console.error('Failed to invalidate other sessions:', error)
+    }
+
     // Get user role
     const { data: userData } = await supabase
         .from('users')
