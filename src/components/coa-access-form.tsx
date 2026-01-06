@@ -344,13 +344,30 @@ function SampleCard({ sample, onDownload }: SampleCardProps) {
                         </div>
                     </div>
                     <div>
-                        {sample.has_coa && (
+                        {sample.has_coa && sample.approved_at ? (
                             <>
-                                <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Mã hồ sơ</span>
-                                <div className="text-sm font-semibold text-slate-700 truncate" title={sample.id}>
-                                    #{sample.id.slice(0, 8)}
+                                <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Ngày trả kết quả</span>
+                                <div className="text-sm font-semibold text-slate-700">
+                                    {formatDate(sample.approved_at)}
                                 </div>
                             </>
+                        ) : (
+                            // Fallback or empty if no date yet
+                            sample.has_coa ? (
+                                <>
+                                    <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Trạng thái</span>
+                                    <div className="text-sm font-semibold text-slate-700">
+                                        Đang cập nhật
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Trạng thái</span>
+                                    <div className="text-sm font-semibold text-slate-700">
+                                        Đang phân tích
+                                    </div>
+                                </>
+                            )
                         )}
                     </div>
                 </div>
