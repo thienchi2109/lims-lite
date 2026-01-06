@@ -59,7 +59,13 @@ async function callClientAction<T = any>(action: ClientActionName, payload?: unk
         try {
             const errorBody = await response.json()
             if (errorBody?.error) {
-                errorMessage = errorBody.error
+                // Handle both string and object errors
+                if (typeof errorBody.error === 'string') {
+                    errorMessage = errorBody.error
+                } else if (typeof errorBody.error === 'object') {
+                    // Extract message from error object, or stringify
+                    errorMessage = errorBody.error.message || JSON.stringify(errorBody.error)
+                }
             }
         } catch {
             // ignore json parse error
@@ -69,15 +75,26 @@ async function callClientAction<T = any>(action: ClientActionName, payload?: unk
 
     const data = await response.json()
     if (data && typeof data === 'object' && 'error' in data && (data as any).error) {
-        // Double check if the error inside payload suggests auth failure
-        const errorMsg = String((data as any).error).toLowerCase()
-        if (errorMsg.includes('jws') || errorMsg.includes('signature') || errorMsg.includes('jwt')) {
+        // Extract error message, handling both string and object errors
+        const rawError = (data as any).error
+        let errorMsg: string
+        if (typeof rawError === 'string') {
+            errorMsg = rawError
+        } else if (typeof rawError === 'object') {
+            errorMsg = rawError.message || JSON.stringify(rawError)
+        } else {
+            errorMsg = String(rawError)
+        }
+
+        // Check if the error inside payload suggests auth failure
+        const lowerError = errorMsg.toLowerCase()
+        if (lowerError.includes('jws') || lowerError.includes('signature') || lowerError.includes('jwt')) {
             if (typeof window !== 'undefined') {
                 window.location.href = '/login?error=SessionExpired'
             }
             throw new Error('Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.')
         }
-        throw new Error(String((data as any).error))
+        throw new Error(errorMsg)
     }
 
     return data as T
