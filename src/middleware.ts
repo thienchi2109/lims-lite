@@ -114,6 +114,10 @@ export async function middleware(request: NextRequest) {
                     if (Number.isFinite(createdAtMs)) {
                         sessionCreatedAtMs = createdAtMs
                     }
+                } else if (!error && createdAt === null) {
+                    // Session was deleted (e.g., by concurrent login invalidation)
+                    // Force logout - session no longer exists in database
+                    return signOutAndExpire()
                 }
             } catch {
                 // ignore and fall back to auth.users.last_sign_in_at
