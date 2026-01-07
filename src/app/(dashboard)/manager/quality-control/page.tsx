@@ -45,9 +45,15 @@ export default async function QualityControlPage({
     // Fetch QC Materials with counts
     const { data: materials } = await supabase
         .from('qc_materials')
-        .select('id, name, manufacturer, lot_number, level, expiry_date, created_at')
+        .select('id, name, manufacturer, lot_number, level, expiration_date, created_at')
         .is('deleted_at', null)
         .order('name', { ascending: true })
+
+    // Transform materials to map DB field to UI field
+    const transformedMaterials = (materials || []).map(m => ({
+        ...m,
+        expiry_date: m.expiration_date, // Map DB field to expected UI field
+    }))
 
     // Fetch QC Definitions with assay and material details
     const { data: definitions } = await supabase
@@ -287,7 +293,7 @@ export default async function QualityControlPage({
 
                 <QualityControlPageClient
                     stats={stats}
-                    materials={materials || []}
+                    materials={transformedMaterials}
                     definitions={transformedDefinitions}
                     activeSessions={transformedSessions}
                     pendingViolations={transformedViolations}
