@@ -48,7 +48,9 @@ __pycache__/
 *.sql
 *.dump
 *.backup
+*.tar.gz
 /backups/
+/lims-backup-*/
 
 # Exception: migrations should be version controlled
 !supabase/migrations/*.sql
