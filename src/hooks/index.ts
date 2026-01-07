@@ -11,5 +11,8 @@ export { useSampleDetail } from './use-sample-detail'
 export { useSampleTests } from './use-sample-tests'
 export { useAssignTests } from './use-assign-tests'
 
+// Approval queue
+export { useApprovalCount } from './use-approval-count'
+
 // UI utilities
 export { useFaviconBadge } from './use-favicon-badge'

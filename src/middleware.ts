@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { getSessionTimeboxSeconds } from '@/lib/auth-session-timebox'
 import { decodeJwtPayload } from '@/lib/jwt'
 import { createEdgeAdminClient } from '@/lib/supabase/edge-admin'
+import { SUPABASE_COOKIE_NAME } from '@/lib/supabase/constants'
 
 export async function middleware(request: NextRequest) {
     let supabaseResponse = NextResponse.next({
@@ -17,6 +18,9 @@ export async function middleware(request: NextRequest) {
         supabaseUrl,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
+            cookieOptions: {
+                name: SUPABASE_COOKIE_NAME,
+            },
             cookies: {
                 getAll() {
                     return request.cookies.getAll()
@@ -114,6 +118,10 @@ export async function middleware(request: NextRequest) {
                     if (Number.isFinite(createdAtMs)) {
                         sessionCreatedAtMs = createdAtMs
                     }
+                } else if (!error && createdAt === null) {
+                    // Session was deleted (e.g., by concurrent login invalidation)
+                    // Force logout - session no longer exists in database
+                    return signOutAndExpire()
                 }
             } catch {
                 // ignore and fall back to auth.users.last_sign_in_at

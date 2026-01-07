@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { CoAAuthRequestSchema, type CoAAuthResponse, type CoASampleInfo } from '@/types'
 import {
     normalizePhoneVN,
@@ -45,7 +45,8 @@ function getClientIP(request: NextRequest): string {
  */
 export async function POST(request: NextRequest) {
     try {
-        const supabase = await createClient()
+        // Use admin client to bypass RLS - this is a public endpoint for unauthenticated clients
+        const supabase = createAdminClient()
         const clientIP = getClientIP(request)
 
         // Step 1: Check rate limit

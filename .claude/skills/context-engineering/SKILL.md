@@ -153,3 +153,37 @@ Elite context engineering specialist mastering dynamic context management, intel
 
 - [context_analyzer.py](./scripts/context_analyzer.py) - Context health analysis, degradation detection
 - [compression_evaluator.py](./scripts/compression_evaluator.py) - Compression quality evaluation
+
+## Skill Integrations
+
+### Subagent-Driven Development (SDD)
+
+The `superpowers:subagent-driven-development` skill is a production implementation of context engineering principles:
+
+| Four-Bucket | SDD Implementation |
+|-------------|-------------------|
+| **Write** | Extract tasks to TodoWrite, plan file |
+| **Select** | Controller curates context per subagent |
+| **Compress** | Prior work summaries between tasks |
+| **Isolate** | Fresh subagent per task |
+
+**When to use SDD:**
+- Executing implementation plans
+- 3+ independent tasks
+- Quality gates needed (two-stage review)
+
+**When to use context-aware-sdd:**
+- 5+ tasks or large specs
+- Token budget concerns
+- Need degradation detection
+
+See: [Multi-Agent Patterns](./references/multi-agent-patterns.md#implementation-example-subagent-driven-development)
+
+### Related Skills
+
+| Skill | Context Engineering Use |
+|-------|------------------------|
+| `superpowers:subagent-driven-development` | Multi-agent pattern with isolation |
+| `context-aware-sdd` | SDD + explicit context checkpoints |
+| `superpowers:writing-plans` | Creates plans for SDD execution |
+| `episodic-memory:search-conversations` | Cross-session context recovery |

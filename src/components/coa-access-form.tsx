@@ -1,23 +1,15 @@
-/**
- * CoA Access Form Component
- *
- * Phase 6: Frontend - Public Portal
- *
- * Form for clients to authenticate using phone number only (simplified auth)
- * Displays list of approved samples with download links on success
- */
-
 'use client'
 
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2, FileText, CheckCircle, XCircle, AlertCircle, LogOut, Phone } from 'lucide-react'
+import { Loader2, FileText, CheckCircle, XCircle, AlertCircle, LogOut, Phone, Download, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import type { CoAAuthResponse, CoASampleInfo } from '@/types'
 
 // ============================================================================
@@ -122,51 +114,59 @@ export function CoAAccessForm() {
 
     if (authResponse && authResponse.success) {
         return (
-            <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xl shadow-slate-200/50 ring-1 ring-slate-100 flex flex-col animate-in fade-in zoom-in-95 duration-300">
                 {/* Header */}
-                <div className="bg-gradient-to-r from-cyan-600 to-blue-600 px-6 py-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h2 className="text-lg font-semibold text-white">
-                                Xin chào, {authResponse.client_name}
+                <div className="bg-slate-50/50 px-6 py-5 border-b border-slate-100 shrink-0 flex items-center justify-between">
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm">
+                                {(authResponse.client_name || 'K').charAt(0).toUpperCase()}
+                            </div>
+                            <h2 className="text-base font-bold text-slate-800">
+                                {authResponse.client_name || 'Khách hàng'}
                             </h2>
-                            <p className="text-sm text-cyan-50">
-                                Danh sách mẫu xét nghiệm của bạn
-                            </p>
                         </div>
-                        <Button
-                            onClick={handleLogout}
-                            variant="outline"
-                            size="sm"
-                            className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"
-                        >
-                            <LogOut className="mr-2 h-4 w-4" />
-                            Đăng xuất
-                        </Button>
+                        <p className="text-xs text-slate-500 pl-10">
+                            Tìm thấy <strong className="text-blue-600">{authResponse.samples?.length || 0}</strong> mẫu xét nghiệm
+                        </p>
                     </div>
+                    <Button
+                        onClick={handleLogout}
+                        variant="ghost"
+                        size="sm"
+                        className="text-slate-500 hover:text-red-600 hover:bg-red-50 h-9 px-3 rounded-full"
+                    >
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Thoát
+                    </Button>
                 </div>
 
-                {/* Samples List */}
-                <div className="p-6">
-                    {authResponse.samples && authResponse.samples.length > 0 ? (
-                        <div className="space-y-3">
-                            {authResponse.samples.map((sample: CoASampleInfo) => (
-                                <SampleCard
-                                    key={sample.id}
-                                    sample={sample}
-                                    onDownload={handleDownload}
-                                />
-                            ))}
-                        </div>
-                    ) : (
-                        <Alert className="border-cyan-200 bg-cyan-50">
-                            <AlertCircle className="h-4 w-4 text-cyan-600" />
-                            <AlertDescription className="text-cyan-900">
-                                Chưa có mẫu xét nghiệm nào hoàn thành.
-                            </AlertDescription>
-                        </Alert>
-                    )}
-                </div>
+                {/* Samples List - Scrollable */}
+                <ScrollArea className="h-[450px] w-full bg-slate-50/30">
+                    <div className="p-6">
+                        {authResponse.samples && authResponse.samples.length > 0 ? (
+                            <div className="space-y-4">
+                                {authResponse.samples.map((sample: CoASampleInfo) => (
+                                    <SampleCard
+                                        key={sample.id}
+                                        sample={sample}
+                                        onDownload={handleDownload}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                                <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                                    <Search className="w-8 h-8 text-slate-400" />
+                                </div>
+                                <h3 className="text-slate-900 font-medium mb-1">Không tìm thấy kết quả</h3>
+                                <p className="text-slate-500 text-sm max-w-xs mx-auto">
+                                    Hiện chưa có kết quả xét nghiệm nào hoàn thành cho số điện thoại này.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </ScrollArea>
             </div>
         )
     }
@@ -176,84 +176,92 @@ export function CoAAccessForm() {
     // ========================================================================
 
     return (
-        <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xl shadow-slate-200/50 ring-1 ring-slate-100">
             {/* Form Header */}
-            <div className="bg-gradient-to-r from-cyan-600 to-blue-600 px-6 py-5">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
-                        <Phone className="w-5 h-5 text-white" />
+            <div className="bg-slate-50/50 px-6 py-6 border-b border-slate-100">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                        <Phone className="w-6 h-6 text-white" />
                     </div>
-                    <div>
-                        <h2 className="text-lg font-semibold text-white">
+                    <div className="text-left">
+                        <h2 className="text-xl font-bold text-slate-900">
                             Đăng Nhập
                         </h2>
-                        <p className="text-sm text-cyan-50">
-                            Nhập số điện thoại để truy cập
+                        <p className="text-sm text-slate-500 font-medium">
+                            Nhập số điện thoại để tra cứu
                         </p>
                     </div>
                 </div>
             </div>
 
             {/* Form Body */}
-            <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5">
+            <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
                 {/* Error Alert */}
                 {error && (
-                    <Alert variant="destructive" className="bg-red-50 border-red-200">
+                    <Alert variant="destructive" className="bg-red-50 border-red-200 animate-in fade-in slide-in-from-top-2">
                         <XCircle className="h-4 w-4 text-red-600" />
-                        <AlertDescription className="text-red-900">{error}</AlertDescription>
+                        <AlertDescription className="text-red-900 font-medium">{error}</AlertDescription>
                     </Alert>
                 )}
 
                 {/* Phone Number Field */}
-                <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-slate-900 font-medium">
-                        Số điện thoại <span className="text-red-500">*</span>
+                <div className="space-y-2.5 text-left">
+                    <Label htmlFor="phone" className="text-slate-700 font-semibold text-sm ml-1">
+                        Số điện thoại đăng ký <span className="text-red-500">*</span>
                     </Label>
-                    <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="0987654321 hoặc +84987654321"
-                        {...register('phone')}
-                        disabled={isLoading}
-                        className={`h-11 ${errors.phone ? 'border-red-500 focus-visible:ring-red-500' : 'border-slate-300 focus-visible:ring-cyan-500'}`}
-                    />
-                    {errors.phone && (
-                        <p className="text-sm text-red-600 flex items-center gap-1">
+                    <div className="relative">
+                        <Input
+                            id="phone"
+                            type="tel"
+                            placeholder="Ví dụ: 0987654321"
+                            {...register('phone')}
+                            disabled={isLoading}
+                            className={`h-12 pl-4 text-lg tracking-wide transition-all duration-200 ${errors.phone
+                                ? 'border-red-300 focus-visible:ring-red-200 bg-red-50/30'
+                                : 'border-slate-200 hover:border-blue-300 focus-visible:ring-blue-100 focus-visible:border-blue-500'
+                                }`}
+                        />
+                        {/* Icon indicator inside input could go here if needed */}
+                    </div>
+                    {errors.phone ? (
+                        <p className="text-sm text-red-600 flex items-center gap-1.5 font-medium ml-1 animate-in slide-in-from-left-1">
                             <XCircle className="w-3.5 h-3.5" />
                             {errors.phone.message}
                         </p>
+                    ) : (
+                        <p className="text-xs text-slate-500 ml-1">
+                            Nhập chính xác số điện thoại bạn đã cung cấp khi gửi mẫu.
+                        </p>
                     )}
-                    <p className="text-xs text-slate-500">
-                        Sử dụng số điện thoại bạn đã cung cấp khi gửi mẫu
-                    </p>
                 </div>
 
                 {/* Submit Button */}
                 <Button
                     type="submit"
-                    className="w-full h-11 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-medium shadow-sm"
+                    className="w-full h-12 text-base bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-bold shadow-lg shadow-blue-500/25 rounded-lg transition-all active:scale-[0.98]"
                     disabled={isLoading}
                 >
                     {isLoading ? (
                         <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                             Đang xử lý...
                         </>
                     ) : (
                         <>
-                            <Phone className="mr-2 h-4 w-4" />
-                            Truy cập kết quả
+                            <Search className="mr-2 h-5 w-5" />
+                            Tra Cứu Ngay
                         </>
                     )}
                 </Button>
-
-                {/* Help Text */}
-                <div className="pt-2 text-center">
-                    <p className="text-xs text-slate-500">
-                        Bằng cách đăng nhập, bạn đồng ý với việc xử lý dữ liệu cá nhân theo quy định
-                    </p>
-                </div>
             </form>
+
+            {/* Security Footer */}
+            <div className="py-4 bg-slate-50 border-t border-slate-100 text-center">
+                <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400 font-medium">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                    Được bảo mật bởi CDC LIMS
+                </div>
+            </div>
         </div>
     )
 }
@@ -275,62 +283,111 @@ function SampleCard({ sample, onDownload }: SampleCardProps) {
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
         }).format(date)
     }
 
     return (
-        <div className="border border-slate-200 rounded-lg p-4 hover:border-cyan-300 hover:shadow-md transition-all cursor-pointer">
-            <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                    {/* Sample ID */}
-                    <div className="flex items-center gap-2 mb-3">
-                        <h3 className="font-semibold text-slate-900 text-lg">
-                            {sample.sample_id_display}
-                        </h3>
-                        {sample.has_coa ? (
-                            <div className="flex items-center gap-1 px-2 py-0.5 bg-green-50 border border-green-200 rounded-full">
-                                <CheckCircle className="h-3.5 w-3.5 text-green-600" />
-                                <span className="text-xs font-medium text-green-700">Sẵn sàng</span>
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-1 px-2 py-0.5 bg-amber-50 border border-amber-200 rounded-full">
-                                <AlertCircle className="h-3.5 w-3.5 text-amber-600" />
-                                <span className="text-xs font-medium text-amber-700">Chưa sẵn sàng</span>
-                            </div>
-                        )}
+        <div className="group relative bg-white border border-slate-200 rounded-xl p-5 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-100/50 transition-all duration-300 cursor-default">
+
+            {/* Status Indicator Bar */}
+            <div className={`absolute left-0 top-4 bottom-4 w-1 rounded-r-full transition-colors ${sample.has_coa ? 'bg-green-500' : 'bg-amber-400'}`} />
+
+            <div className="flex flex-col gap-4 pl-3">
+                {/* Header Row */}
+                <div className="flex items-start justify-between gap-3">
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-bold text-slate-900 text-lg tracking-tight">
+                                {sample.sample_id_display}
+                            </h3>
+                            {sample.has_coa ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-50 text-green-700 text-[10px] font-bold uppercase border border-green-200">
+                                    <CheckCircle className="w-3 h-3" /> Hoàn thành
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold uppercase border border-amber-200">
+                                    <Loader2 className="w-3 h-3 animate-spin" /> Đang xử lý
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-sm text-slate-600 font-medium">
+                            {sample.sample_type || 'Mẫu xét nghiệm'}
+                        </p>
                     </div>
 
-                    {/* Sample Details */}
-                    <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                        <div>
-                            <dt className="text-slate-500 mb-0.5">Loại mẫu:</dt>
-                            <dd className="font-medium text-slate-900">
-                                {sample.sample_type || 'N/A'}
-                            </dd>
-                        </div>
-                        <div>
-                            <dt className="text-slate-500 mb-0.5">Ngày nhận:</dt>
-                            <dd className="font-medium text-slate-900">
-                                {formatDate(sample.received_date)}
-                            </dd>
-                        </div>
-                    </dl>
+                    {/* Action Button for Desktop (hidden on mobile, shown in separate row) */}
+                    <div className="hidden sm:block">
+                        {sample.has_coa && (
+                            <Button
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    onDownload(sample.id, sample.sample_id_display)
+                                }}
+                                size="sm"
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm hover:shadow-blue-200 transition-all"
+                            >
+                                <Download className="mr-2 h-4 w-4" />
+                                Tải Kết Quả
+                            </Button>
+                        )}
+                    </div>
                 </div>
 
-                {/* Download Button */}
-                <div className="flex-shrink-0">
+                {/* Details Grid */}
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 pt-2 border-t border-slate-100">
+                    <div>
+                        <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Ngày nhận mẫu</span>
+                        <div className="text-sm font-semibold text-slate-700">
+                            {formatDate(sample.received_date)}
+                        </div>
+                    </div>
+                    <div>
+                        {sample.has_coa && sample.approved_at ? (
+                            <>
+                                <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Ngày trả kết quả</span>
+                                <div className="text-sm font-semibold text-slate-700">
+                                    {formatDate(sample.approved_at)}
+                                </div>
+                            </>
+                        ) : (
+                            // Fallback or empty if no date yet
+                            sample.has_coa ? (
+                                <>
+                                    <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Trạng thái</span>
+                                    <div className="text-sm font-semibold text-slate-700">
+                                        Đang cập nhật
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Trạng thái</span>
+                                    <div className="text-sm font-semibold text-slate-700">
+                                        Đang phân tích
+                                    </div>
+                                </>
+                            )
+                        )}
+                    </div>
+                </div>
+
+                {/* Mobile Action Button */}
+                <div className="sm:hidden mt-2">
                     {sample.has_coa ? (
                         <Button
-                            onClick={() => onDownload(sample.id, sample.sample_id_display)}
-                            size="sm"
-                            className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white shadow-sm"
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                onDownload(sample.id, sample.sample_id_display)
+                            }}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                         >
-                            <FileText className="mr-2 h-4 w-4" />
-                            Xem KQ
+                            <Download className="mr-2 h-4 w-4" />
+                            Tải Kết Quả
                         </Button>
                     ) : (
-                        <div className="text-xs text-center text-amber-700 bg-amber-50 px-3 py-2 rounded-md border border-amber-200">
-                            Giấy chứng nhận<br />chưa sẵn sàng
+                        <div className="w-full text-center text-xs text-amber-600 font-medium bg-amber-50 py-2 rounded border border-amber-100">
+                            Kết quả đang được xử lý
                         </div>
                     )}
                 </div>

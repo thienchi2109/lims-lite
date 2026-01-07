@@ -317,6 +317,37 @@ docker compose up -d # Start Supabase       | docker compose logs -f
 | Kong | lims-kong | 8000 |
 | Studio | lims-studio | 3002 |
 
+## Session Management
+
+**Token Expiry:**
+- Access tokens: 1h (`GOTRUE_JWT_EXP=3600`)
+- Refresh tokens: 4h (`GOTRUE_REFRESH_TOKEN_EXPIRY=14400`)
+- Absolute session lifetime: 4h (enforced by middleware)
+
+**Cookie Configuration (CRITICAL):**
+- Cookie name MUST be consistent across ALL Supabase clients
+- Use `SUPABASE_COOKIE_NAME` from `src/lib/supabase/constants.ts`
+- Files that must use this constant:
+  - `src/lib/supabase/client.ts` (browser)
+  - `src/lib/supabase/server.ts` (server)
+  - `src/middleware.ts` (middleware)
+- **WHY:** Supabase SSR defaults to URL-derived cookie names, causing mismatches between localhost/Docker/production
+- **TEST:** `src/__tests__/supabase-cookie-consistency.test.ts` verifies consistency
+
+**Concurrent Login Prevention:**
+- Only one active session per user allowed
+- New login invalidates all existing sessions for that user
+- Previous devices logged out on next request
+- Implementation: `invalidate_other_user_sessions()` RPC called in `src/app/actions/auth.ts:62-86`
+
+**Session Invalidation Flow:**
+1. User logs in with `signInWithPassword()` → new session created
+2. `get_latest_session_id()` RPC retrieves the new session ID
+3. `invalidate_other_user_sessions()` RPC deletes OTHER sessions (keeps current)
+4. Middleware (`src/middleware.ts`) validates session on every request
+5. Client guard (`SessionTimeboxGuard`) polls for session expiry
+6. Invalid sessions redirect to `/login`
+
 ## Database Migrations
 
 ```bash

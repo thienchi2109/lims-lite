@@ -69,50 +69,52 @@ export default async function AnalystDashboard() {
                 className="relative z-10"
             />
 
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
                 {/* Hero / Welcome Section */}
-                <div className="mb-12">
-                    <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-3 tracking-tight">
+                <div className="mb-8">
+                    <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">
                         Xin chào, <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400">{userData?.full_name}</span>
                     </h1>
-                    <p className="text-slate-500 dark:text-slate-400 text-lg max-w-2xl">
+                    <p className="text-slate-500 dark:text-slate-400 text-base max-w-2xl">
                         Chào mừng trở lại. Hãy bắt đầu phiên làm việc của bạn.
                     </p>
                 </div>
 
                 {/* Dashboard Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Dashboard Grid - Compact Modern Design */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {menuItems.map((item) => (
                         <Link
                             key={item.href}
                             href={item.href}
                             className="group relative"
                         >
-                            {/* Neumorphism Card */}
-                            <div className="relative h-full bg-slate-50 dark:bg-slate-950 rounded-3xl p-6 transition-all duration-300 ease-out
-                                shadow-[9px_9px_16px_#cbd5e1,-9px_-9px_16px_#ffffff]
-                                dark:shadow-[10px_10px_20px_#020617,-10px_-10px_20px_#1e293b]
-                                hover:shadow-[12px_12px_24px_#cbd5e1,-12px_-12px_24px_#ffffff]
-                                dark:hover:shadow-[14px_14px_28px_#020617,-14px_-14px_28px_#1e293b]
-                                hover:scale-[1.02] hover:-translate-y-1 overflow-hidden">
+                            <div className="h-full bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/50 dark:border-slate-800/50 rounded-2xl p-5 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/10 dark:hover:shadow-emerald-900/20 hover:border-emerald-500/30 dark:hover:border-emerald-400/30 hover:-translate-y-1 overflow-hidden">
 
-                                {/* Hover Gradient Glow (Subtle) */}
-                                <div className={`absolute -right-10 -top-10 w-32 h-32 bg-gradient-to-br ${item.color} opacity-0 group-hover:opacity-10 blur-2xl transition-opacity duration-500`} />
+                                {/* Hover Gradient subtle */}
+                                <div className={`absolute inset-0 bg-gradient-to-br ${item.color} opacity-0 group-hover:opacity-[0.03] transition-opacity duration-500`} />
 
-                                <div className="flex flex-col h-full relative z-10">
-                                    <div className="flex justify-between items-start mb-6">
-                                        <div className={`p-4 rounded-2xl bg-gradient-to-br ${item.color} shadow-lg shadow-emerald-900/10 transition-all duration-300 group-hover:scale-110 group-hover:rotate-6`}>
-                                            <item.icon className={`h-7 w-7 ${item.iconColor} transition-transform duration-300 group-hover:scale-110`} strokeWidth={2} />
+                                <div className="relative z-10 flex flex-col h-full">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className={`p-2.5 rounded-xl bg-gradient-to-br ${item.color} bg-opacity-10 shadow-sm group-hover:scale-110 transition-transform duration-300`}>
+                                            <item.icon className={`h-5 w-5 ${item.iconColor}`} strokeWidth={2.5} />
                                         </div>
                                     </div>
 
-                                    <div className="mt-auto">
-                                        <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors duration-300">
+                                    <div>
+                                        <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-1.5 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors duration-200">
                                             {item.title}
                                         </h3>
-                                        <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed transition-colors duration-300 group-hover:text-slate-600 dark:group-hover:text-slate-300">
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">
                                             {item.description}
                                         </p>
+                                    </div>
+
+                                    {/* Arrow indicator that appears on hover */}
+                                    <div className="absolute bottom-4 right-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+                                        <svg className="w-4 h-4 text-emerald-500 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                                        </svg>
                                     </div>
                                 </div>
                             </div>

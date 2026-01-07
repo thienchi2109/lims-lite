@@ -112,7 +112,7 @@ export async function saveBatchResults(data: SaveBatchResults) {
         const existingResults = fetchResult.data
 
         // Check sample editability
-        const editError = checkSampleEditability(existingResults)
+        const editError = await checkSampleEditability(existingResults)
         if (editError) {
             return { error: editError }
         }

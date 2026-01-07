@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useQueryClient } from '@tanstack/react-query'
-import { sampleKeys, resultKeys, invalidateSampleQueries } from '@/types/query-keys'
+import { sampleKeys, resultKeys, invalidateSampleQueries, approvalKeys } from '@/types/query-keys'
 import { approveResultsClient, cancelApprovalClient } from '@/lib/api-client'
 import { getActiveSignature } from '@/app/actions/signatures'
 import { checkQCSessionStatus } from '@/app/actions/qc-violations'
@@ -124,6 +124,7 @@ export function ApprovalDialog({
                 } else {
                     toast.success(`Approved ${result.approvedCount} results`)
                     await invalidateSampleQueries(queryClient, sampleId)
+                    queryClient.invalidateQueries({ queryKey: approvalKeys.count })
                     onOpenChange(false)
                     setNote('')
 
@@ -142,6 +143,7 @@ export function ApprovalDialog({
                 } else {
                     toast.success(`Canceled approval for ${result.canceledCount} results`)
                     await invalidateSampleQueries(queryClient, sampleId)
+                    queryClient.invalidateQueries({ queryKey: approvalKeys.count })
                     onOpenChange(false)
                     setNote('')
 

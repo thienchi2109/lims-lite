@@ -8,198 +8,162 @@
  */
 
 import { CoAAccessForm } from '@/components/coa-access-form'
-import { FileText, Shield, Clock } from 'lucide-react'
+import { FileText, Shield, Clock, CheckCircle2, Phone, Search } from 'lucide-react'
+import Link from 'next/link'
 
 export default function CoAAccessPage() {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-white to-blue-50">
-            {/* Header */}
-            <header className="border-b border-cyan-100/50 bg-white/80 backdrop-blur-sm">
-                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center">
-                            <FileText className="w-6 h-6 text-white" />
+        <div className="min-h-screen bg-white relative overflow-hidden font-sans selection:bg-blue-100 selection:text-blue-900">
+
+            {/* Background Decoration */}
+            <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-blue-50/50 to-white -z-10" />
+            <div className="absolute top-[-100px] right-[-100px] w-96 h-96 bg-blue-100/30 rounded-full blur-3xl -z-10" />
+            <div className="absolute top-[200px] left-[-50px] w-72 h-72 bg-cyan-100/30 rounded-full blur-3xl -z-10" />
+
+            {/* Header / Brand */}
+            <header className="relative z-10 w-full border-b border-slate-200/60 bg-white/80 backdrop-blur-md sticky top-0">
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                            <FileText className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-base font-bold text-slate-900 leading-tight tracking-tight">
+                                Hệ Thống CDC LIMS
+                            </span>
+                            <span className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">
+                                Cổng Tra Cứu Kết Quả
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="text-sm font-medium text-slate-600 hidden sm:flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
+                            <Phone className="w-4 h-4 text-blue-600" />
                         </div>
                         <div>
-                            <h1 className="text-xl font-semibold text-slate-900">
-                                Cổng Tra Cứu Giấy Chứng Nhận
-                            </h1>
-                            <p className="text-sm text-slate-600">
-                                Hệ thống quản lý kết quả xét nghiệm
-                            </p>
+                            <span className="text-xs text-slate-400 block leading-none mb-0.5">Hotline hỗ trợ</span>
+                            <span className="text-blue-700 font-bold">0292 3822 351</span>
                         </div>
                     </div>
                 </div>
             </header>
 
-            {/* Main Content */}
-            <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <div className="grid lg:grid-cols-[1fr,400px] gap-8 items-start">
-                    {/* Left: Information */}
-                    <div className="space-y-8">
-                        {/* Welcome Section */}
-                        <div>
-                            <h2 className="text-3xl font-semibold text-slate-900 mb-3">
-                                Truy Cập Kết Quả Xét Nghiệm
-                            </h2>
-                            <p className="text-lg text-slate-600">
-                                Nhập số điện thoại để xem và tải về giấy chứng nhận kết quả xét nghiệm của bạn
+            <main className="relative z-10 w-full">
+
+                {/* Top Row: Hero & Search Form */}
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-8 lg:pt-20 lg:pb-12 text-center">
+
+                    {/* Hero Text */}
+                    <div className="max-w-3xl mx-auto mb-10 space-y-5">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-blue-100 text-blue-700 text-xs font-bold uppercase tracking-wide shadow-sm">
+                            <Shield className="w-3.5 h-3.5 text-blue-500" />
+                            <span>Bảo Mật · Chính Xác · Nhanh Chóng</span>
+                        </div>
+
+                        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.15]">
+                            Tra Cứu Kết Quả <br className="hidden sm:block" />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">
+                                Xét Nghiệm Trực Tuyến
+                            </span>
+                        </h1>
+
+                        <p className="text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
+                            Hệ thống trả kết quả xét nghiệm điện tử đạt chuẩn <strong>21 CFR Part 11</strong>. <br className="hidden sm:block" />
+                            Nhập số điện thoại để xem và tải về giấy chứng nhận chính thức.
+                        </p>
+                    </div>
+
+                    {/* Search Form Container - Widened for better result display */}
+                    <div className="max-w-xl mx-auto relative mb-12">
+                        <CoAAccessForm />
+
+                        <div className="mt-6 text-center">
+                            <p className="text-xs text-slate-400">
+                                Bằng việc tra cứu, bạn đồng ý với <Link href="#" className="underline hover:text-slate-600 transition-colors">Điều khoản sử dụng</Link> và <Link href="#" className="underline hover:text-slate-600 transition-colors">Chính sách bảo mật</Link> của chúng tôi.
                             </p>
                         </div>
+                    </div>
 
-                        {/* Features */}
-                        <div className="grid sm:grid-cols-3 gap-4">
-                            <FeatureCard
-                                icon={<Shield className="w-6 h-6 text-cyan-600" />}
-                                title="Bảo mật cao"
-                                description="Thông tin được mã hóa và bảo vệ theo tiêu chuẩn 21 CFR Part 11"
-                            />
-                            <FeatureCard
-                                icon={<FileText className="w-6 h-6 text-cyan-600" />}
-                                title="Giấy chứng nhận chính thức"
-                                description="Tải về PDF có chữ ký số hợp lệ của phòng xét nghiệm"
-                            />
-                            <FeatureCard
-                                icon={<Clock className="w-6 h-6 text-cyan-600" />}
-                                title="Truy cập mọi lúc"
-                                description="Xem kết quả 24/7 ngay khi mẫu được phê duyệt"
-                            />
-                        </div>
-
-                        {/* Instructions */}
-                        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-                            <h3 className="text-lg font-semibold text-slate-900 mb-4">
-                                Hướng Dẫn Truy Cập
-                            </h3>
-                            <ol className="space-y-3">
-                                <InstructionStep
-                                    number="1"
-                                    title="Nhập số điện thoại"
-                                    description="Sử dụng số điện thoại bạn đã cung cấp khi gửi mẫu xét nghiệm"
-                                />
-                                <InstructionStep
-                                    number="2"
-                                    title="Xem danh sách mẫu"
-                                    description="Hệ thống sẽ hiển thị tất cả các mẫu đã hoàn thành xét nghiệm"
-                                />
-                                <InstructionStep
-                                    number="3"
-                                    title="Tải về giấy chứng nhận"
-                                    description="Nhấn nút 'Tải về' để lưu file PDF chính thức"
-                                />
-                            </ol>
-                        </div>
-
-                        {/* Important Notice */}
-                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                            <div className="flex gap-3">
-                                <div className="flex-shrink-0">
-                                    <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center">
-                                        <span className="text-white text-sm font-bold">!</span>
-                                    </div>
-                                </div>
-                                <div>
-                                    <h4 className="text-sm font-semibold text-amber-900 mb-1">
-                                        Lưu ý quan trọng
-                                    </h4>
-                                    <p className="text-sm text-amber-800">
-                                        Nếu nhập sai số điện thoại quá 5 lần, hệ thống sẽ tạm khóa truy cập trong 15 phút để bảo vệ thông tin của bạn.
-                                    </p>
-                                </div>
+                    {/* Notice Card Centered */}
+                    <div className="max-w-xl mx-auto bg-amber-50/80 border border-amber-100 rounded-xl p-4 flex gap-3 text-left items-start backdrop-blur-sm">
+                        <div className="flex-shrink-0 mt-0.5">
+                            <div className="w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center">
+                                <span className="text-amber-600 text-xs font-bold">!</span>
                             </div>
                         </div>
+                        <p className="text-sm text-amber-900 leading-snug">
+                            <span className="font-semibold">Lưu ý bảo mật:</span> Hệ thống sẽ tạm khóa truy cập trong 15 phút nếu nhập sai số điện thoại quá 5 lần liên tiếp để bảo vệ dữ liệu của bạn.
+                        </p>
                     </div>
 
-                    {/* Right: Login Form */}
-                    <div className="lg:sticky lg:top-8">
-                        <CoAAccessForm />
-                    </div>
                 </div>
 
-                {/* Support Contact */}
-                <div className="mt-12 text-center">
-                    <div className="inline-flex flex-col items-center gap-2 px-6 py-4 bg-white rounded-xl border border-slate-200 shadow-sm">
-                        <p className="text-sm text-slate-600">
-                            Cần hỗ trợ?
-                        </p>
-                        <a
-                            href="tel:1900xxxx"
-                            className="text-cyan-600 hover:text-cyan-700 font-medium transition-colors"
-                        >
-                            Liên hệ phòng xét nghiệm: 1900 xxxx
-                        </a>
+                {/* Bottom Row: Information & Features */}
+                <div className="bg-slate-50 border-t border-slate-200">
+                    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+
+                        <div className="text-center mb-12">
+                            <h2 className="text-2xl font-bold text-slate-900">Tại sao nên tra cứu trực tuyến?</h2>
+                            <p className="text-slate-500 mt-2">Tiện ích vượt trội dành cho khách hàng của CDC</p>
+                        </div>
+
+                        {/* Features Grid */}
+                        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <FeatureCard
+                                icon={Shield}
+                                title="Bảo mật tuyệt đối"
+                                description="Mã hóa đầu cuối, tuân thủ tiêu chuẩn FDA 21 CFR Part 11 về hồ sơ điện tử."
+                                color="bg-blue-100 text-blue-600"
+                            />
+                            <FeatureCard
+                                icon={CheckCircle2}
+                                title="Chứng nhận hợp lệ"
+                                description="File PDF có chữ ký số CA, có giá trị pháp lý tương đương bản giấy."
+                                color="bg-emerald-100 text-emerald-600"
+                            />
+                            <FeatureCard
+                                icon={Clock}
+                                title="Thời gian thực"
+                                description="Nhận kết quả ngay lập tức sau khi mẫu được phê duyệt bởi phòng lab."
+                                color="bg-amber-100 text-amber-600"
+                            />
+                            <FeatureCard
+                                icon={Search}
+                                title="Tra cứu dễ dàng"
+                                description="Chỉ cần số điện thoại đăng ký, không cần tạo tài khoản hay nhớ mật khẩu."
+                                color="bg-purple-100 text-purple-600"
+                            />
+                        </div>
                     </div>
                 </div>
             </main>
 
-            {/* Footer */}
-            <footer className="mt-16 border-t border-slate-200 bg-white/50 backdrop-blur-sm">
-                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                    <p className="text-center text-sm text-slate-500">
-                        © 2024 Hệ thống CDC-LIMS. Tuân thủ tiêu chuẩn 21 CFR Part 11.
-                    </p>
-                </div>
+            {/* Simple Footer */}
+            <footer className="w-full py-8 text-center bg-slate-50 border-t border-slate-200">
+                <p className="text-xs text-slate-400 font-medium">
+                    &copy; {new Date().getFullYear()} Trung tâm Kiểm soát Bệnh tật (CDC). All rights reserved.
+                </p>
+                <p className="text-[10px] text-slate-300 mt-2">
+                    Powered by CDC LIMS Platform
+                </p>
             </footer>
         </div>
     )
 }
 
-// ============================================================================
-// FEATURE CARD COMPONENT
-// ============================================================================
+// ----------------------------------------------------------------------
+// Sub-components
+// ----------------------------------------------------------------------
 
-interface FeatureCardProps {
-    icon: React.ReactNode
-    title: string
-    description: string
-}
-
-function FeatureCard({ icon, title, description }: FeatureCardProps) {
+function FeatureCard({ icon: Icon, title, description, color }: { icon: any, title: string, description: string, color: string }) {
     return (
-        <div className="bg-white rounded-lg border border-slate-200 p-4 hover:border-cyan-300 hover:shadow-md transition-all cursor-pointer">
-            <div className="flex flex-col gap-3">
-                <div className="w-12 h-12 rounded-lg bg-cyan-50 flex items-center justify-center">
-                    {icon}
-                </div>
-                <div>
-                    <h3 className="font-semibold text-slate-900 mb-1">
-                        {title}
-                    </h3>
-                    <p className="text-sm text-slate-600">
-                        {description}
-                    </p>
-                </div>
+        <div className="group p-6 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 hover:border-slate-200 transition-all duration-300">
+            <div className={`w-12 h-12 rounded-xl ${color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                <Icon className="w-6 h-6" />
             </div>
+            <h3 className="font-bold text-slate-900 text-base mb-2">{title}</h3>
+            <p className="text-sm text-slate-500 leading-relaxed">{description}</p>
         </div>
-    )
-}
-
-// ============================================================================
-// INSTRUCTION STEP COMPONENT
-// ============================================================================
-
-interface InstructionStepProps {
-    number: string
-    title: string
-    description: string
-}
-
-function InstructionStep({ number, title, description }: InstructionStepProps) {
-    return (
-        <li className="flex gap-4">
-            <div className="flex-shrink-0">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white font-semibold text-sm">
-                    {number}
-                </div>
-            </div>
-            <div className="flex-1 pt-0.5">
-                <h4 className="font-medium text-slate-900 mb-1">
-                    {title}
-                </h4>
-                <p className="text-sm text-slate-600">
-                    {description}
-                </p>
-            </div>
-        </li>
     )
 }

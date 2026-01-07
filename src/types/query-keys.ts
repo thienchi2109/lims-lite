@@ -76,6 +76,15 @@ export const clientKeys = {
 }
 
 /**
+ * Query key factory for approval queue
+ */
+export const approvalKeys = {
+    all: ['approvals'] as const,
+    count: ['approvals', 'count'] as const,
+    list: (tab: string) => ['approvals', 'list', tab] as const,
+}
+
+/**
  * Query key factory for search queries
  *
  * Hierarchical structure:
