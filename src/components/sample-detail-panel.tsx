@@ -21,7 +21,7 @@ import { useState } from 'react'
 import { SampleEditDialog } from '@/components/sample-edit-dialog'
 import { SampleActivityFeed } from '@/components/sample-activity-feed'
 import { useQueryClient } from '@tanstack/react-query'
-import { sampleKeys } from '@/types/query-keys'
+import { sampleKeys, clientKeys } from '@/types/query-keys'
 import { cn } from '@/lib/utils'
 
 interface SampleDetailPanelProps {
@@ -52,6 +52,11 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
     const handleEditSuccess = () => {
         // Invalidate sample queries to refetch fresh data
         queryClient.invalidateQueries({ queryKey: sampleKeys.all })
+
+        // Also invalidate the client detail query to refresh client data
+        if (sample.client_id) {
+            queryClient.invalidateQueries({ queryKey: clientKeys.detail(sample.client_id) })
+        }
     }
 
     const displayedClientName = client?.name || sample.client_name || 'N/A'
