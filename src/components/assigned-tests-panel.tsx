@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
-import { sampleKeys, invalidateSampleQueries } from '@/types/query-keys'
+import { sampleKeys, invalidateSampleQueries, approvalKeys } from '@/types/query-keys'
 import {
     Table,
     TableBody,
@@ -184,6 +184,7 @@ export function AssignedTestsPanel({ sampleId, specialties = [], userRole }: Ass
                 toast.success('Đã gửi mẫu để duyệt')
                 setShowSubmitDialog(false)
                 await invalidateSampleQueries(queryClient, sampleId, { includeResults: false })
+                queryClient.invalidateQueries({ queryKey: approvalKeys.count })
                 fetchTests()
             }
         } catch (err) {
