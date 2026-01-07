@@ -30,6 +30,7 @@ import { QCDefinitionsTable, type QCDefinitionWithDetails } from './qc-definitio
 import { QCSessionsTable } from './qc-sessions-table'
 import { ControlLimitsWizard } from './control-limits-wizard'
 import { LotChangeoverDialog } from './lot-changeover-dialog'
+import { QCMaterialDialog } from './qc-material-dialog'
 import { ViolationResolutionDialog } from './violation-resolution-dialog'
 import { QCAnalyticsTab, type QCDefinitionForAnalytics, type QCResultDataPoint } from './qc-analytics-tab'
 import { WalkthroughTrigger } from '@/components/walkthrough'
@@ -90,6 +91,7 @@ export function QualityControlPageClient({
 }: QualityControlPageClientProps) {
     const [activeTab, setActiveTab] = useState('overview')
     const [showEstablishLimits, setShowEstablishLimits] = useState(false)
+    const [showAddMaterial, setShowAddMaterial] = useState(false)
 
     // Transform materials for ControlLimitsWizard (needs MaterialOption format)
     const materialOptions = materials.map(m => ({
@@ -235,6 +237,11 @@ export function QualityControlPageClient({
                                         Quản lý vật liệu kiểm soát chất lượng
                                     </CardDescription>
                                 </div>
+                                <div className="flex items-center gap-2">
+                                    <Button size="sm" onClick={() => setShowAddMaterial(true)}>
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Thêm vật liệu
+                                    </Button>
                                 {firstMaterial && (
                                     <LotChangeoverDialog
                                         currentMaterial={firstMaterial}
@@ -247,6 +254,7 @@ export function QualityControlPageClient({
                                         }
                                     />
                                 )}
+                                </div>
                             </div>
                         </CardHeader>
                         <CardContent>
@@ -334,6 +342,13 @@ export function QualityControlPageClient({
                     />
                 </DialogContent>
             </Dialog>
+
+            {/* Add Material Dialog */}
+            <QCMaterialDialog
+                open={showAddMaterial}
+                onOpenChange={setShowAddMaterial}
+                mode="create"
+            />
         </div>
     )
 }
