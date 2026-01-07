@@ -84,6 +84,58 @@ def weighted_consensus(responses):
 5. Design clear handoffs
 6. Validate between agents
 
+## Implementation Example: Subagent-Driven Development
+
+The `superpowers:subagent-driven-development` skill demonstrates a production-ready multi-agent pattern:
+
+### Architecture
+
+```
+Controller (Supervisor)
+    ├── Implementer Subagent (fresh per task)
+    ├── Spec Reviewer Subagent (validates completeness)
+    └── Quality Reviewer Subagent (validates quality)
+```
+
+### Pattern Characteristics
+
+| Aspect | Implementation |
+|--------|----------------|
+| **Pattern** | Supervisor/Orchestrator |
+| **Isolation** | Instruction passing (high) |
+| **State** | File coordination (plan file, code) |
+| **Validation** | Two-stage review between agents |
+
+### Context Flow
+
+```
+1. Controller reads plan once (Write bucket)
+2. Controller extracts relevant context per task (Select bucket)
+3. Fresh implementer receives curated context (Isolate bucket)
+4. Reviews use minimal context (spec OR quality, not both)
+5. Between tasks: compress prior work (Compress bucket)
+```
+
+### Token Economics
+
+Per task: ~3x single agent (implementer + 2 reviewers)
+Per plan: ~15x for 5 tasks with reviews
+
+**Justified by:**
+- No context pollution between tasks
+- Quality gates prevent expensive rework
+- Fresh context = higher accuracy
+
+### Context-Aware Extension
+
+For plans with 5+ tasks or large specs, use `context-aware-sdd` which adds:
+- Pre-dispatch budget checks
+- Post-task compression
+- Minimal-context reviewer prompts
+- Degradation detection
+
+See: `superpowers:subagent-driven-development`, `context-aware-sdd`
+
 ## Related
 
 - [Context Optimization](./context-optimization.md)
