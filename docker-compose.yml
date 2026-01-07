@@ -210,6 +210,8 @@ services:
       # Internal URL for Server Actions/SSR
       SUPABASE_INTERNAL_URL: http://kong:8000
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${ANON_KEY}
+      # Service role key for admin operations
+      SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
       # JWT secret for token signing/verification (CoA access, etc.)
       JWT_SECRET: ${JWT_SECRET}
     depends_on:
