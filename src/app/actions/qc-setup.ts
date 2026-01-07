@@ -213,24 +213,129 @@ export async function updateQCDefinition(data: UpdateQCDefinition) {
 }
 
 /**
- * Gets all QC materials (active only)
+ * Parameters for getQCMaterials pagination and filtering
  */
-export async function getQCMaterials() {
+export interface GetQCMaterialsParams {
+    page?: number           // Default: 1
+    pageSize?: number       // Default: 20
+    search?: string         // Searches: name, lot_number, manufacturer
+    level?: 'low' | 'normal' | 'high' | null
+    status?: 'valid' | 'expiring_soon' | 'expired' | null
+}
+
+/**
+ * Result type for paginated QC materials
+ */
+export interface GetQCMaterialsResult {
+    data: Array<{
+        id: string
+        name: string
+        manufacturer: string
+        lot_number: string
+        expiry_date: string
+        level: 'low' | 'normal' | 'high'
+        created_at: string
+        updated_at: string
+        deleted_at: string | null
+    }>
+    total: number
+    page: number
+    pageSize: number
+}
+
+/**
+ * Gets QC materials with optional pagination and filtering
+ *
+ * When called without params, returns all materials (backward compatible).
+ * When called with params, returns paginated and filtered results.
+ */
+export async function getQCMaterials(params?: GetQCMaterialsParams): Promise<
+    | { data: GetQCMaterialsResult['data']; total?: number; page?: number; pageSize?: number }
+    | { error: string }
+> {
     try {
         const supabase = await createClient()
 
-        const { data, error } = await supabase
+        // If no params provided, return all materials (backward compatibility)
+        if (!params || Object.keys(params).length === 0) {
+            const { data, error } = await supabase
+                .from('qc_materials')
+                .select('id, name, manufacturer, lot_number, expiry_date, level, created_at, updated_at, deleted_at')
+                .is('deleted_at', null)
+                .order('name')
+
+            if (error) {
+                console.error('Error fetching QC materials:', error)
+                return { error: error.message }
+            }
+
+            return { data: data || [] }
+        }
+
+        // Paginated query with filters
+        const page = params.page ?? 1
+        const pageSize = params.pageSize ?? 20
+        const from = (page - 1) * pageSize
+        const to = from + pageSize - 1
+
+        // Build query with count
+        let query = supabase
             .from('qc_materials')
-            .select('*')
+            .select('id, name, manufacturer, lot_number, expiry_date, level, created_at, updated_at, deleted_at', { count: 'exact' })
             .is('deleted_at', null)
-            .order('name')
+
+        // Apply search filter (searches name, lot_number, manufacturer)
+        if (params.search && params.search.trim()) {
+            const searchTerm = `%${params.search.trim()}%`
+            query = query.or(`name.ilike.${searchTerm},lot_number.ilike.${searchTerm},manufacturer.ilike.${searchTerm}`)
+        }
+
+        // Apply level filter
+        if (params.level) {
+            query = query.eq('level', params.level)
+        }
+
+        // Apply status filter based on expiry_date
+        if (params.status) {
+            const today = new Date()
+            const todayStr = today.toISOString().split('T')[0]
+
+            const thirtyDaysFromNow = new Date(today)
+            thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30)
+            const thirtyDaysStr = thirtyDaysFromNow.toISOString().split('T')[0]
+
+            switch (params.status) {
+                case 'valid':
+                    // expiry_date > today + 30 days
+                    query = query.gt('expiry_date', thirtyDaysStr)
+                    break
+                case 'expiring_soon':
+                    // expiry_date between today and today + 30 days
+                    query = query.gte('expiry_date', todayStr).lte('expiry_date', thirtyDaysStr)
+                    break
+                case 'expired':
+                    // expiry_date < today
+                    query = query.lt('expiry_date', todayStr)
+                    break
+            }
+        }
+
+        // Apply ordering and pagination
+        query = query.order('name').range(from, to)
+
+        const { data, error, count } = await query
 
         if (error) {
             console.error('Error fetching QC materials:', error)
             return { error: error.message }
         }
 
-        return { data }
+        return {
+            data: data || [],
+            total: count ?? 0,
+            page,
+            pageSize,
+        }
     } catch (error) {
         console.error('Error in getQCMaterials:', error)
         return { error: error instanceof Error ? error.message : 'Không thể tải vật liệu QC' }
