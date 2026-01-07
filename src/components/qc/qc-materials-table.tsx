@@ -1,9 +1,17 @@
 'use client'
 
+import { useState } from 'react'
 import { format } from 'date-fns'
 import { vi } from 'date-fns/locale'
-import { AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Edit, MoreHorizontal, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
     Table,
     TableBody,
@@ -12,6 +20,8 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
+import { QCMaterialDialog } from './qc-material-dialog'
+import { DeleteQCMaterialDialog } from './delete-qc-material-dialog'
 
 export interface QCMaterial {
     id: string
@@ -28,10 +38,13 @@ interface QCMaterialsTableProps {
 }
 
 export function QCMaterialsTable({ materials }: QCMaterialsTableProps) {
+    const [editMaterial, setEditMaterial] = useState<QCMaterial | null>(null)
+    const [deleteMaterial, setDeleteMaterial] = useState<QCMaterial | null>(null)
+
     if (materials.length === 0) {
         return (
             <div className="text-center py-8 text-muted-foreground">
-                Chưa có vật liệu QC nào. Vui lòng thêm vật liệu kiểm soát để bắt đầu.
+                Chưa có vật liệu QC nào. Nhấn &quot;Thêm vật liệu&quot; để bắt đầu.
             </div>
         )
     }
@@ -50,6 +63,7 @@ export function QCMaterialsTable({ materials }: QCMaterialsTableProps) {
     }
 
     return (
+        <>
         <Table>
             <TableHeader>
                 <TableRow>
@@ -59,6 +73,7 @@ export function QCMaterialsTable({ materials }: QCMaterialsTableProps) {
                     <TableHead>Mức độ</TableHead>
                     <TableHead>Hạn sử dụng</TableHead>
                     <TableHead>Trạng thái</TableHead>
+                    <TableHead className="w-[70px]">Thao tác</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -73,9 +88,9 @@ export function QCMaterialsTable({ materials }: QCMaterialsTableProps) {
                             <TableCell className="font-mono text-sm">{material.lot_number}</TableCell>
                             <TableCell>
                                 <Badge variant="outline">
-                                    {material.level === 'Low' ? 'Thấp' :
-                                     material.level === 'Normal' ? 'Bình thường' :
-                                     material.level === 'High' ? 'Cao' : material.level}
+                                    {material.level === 'low' ? 'Thấp' :
+                                     material.level === 'normal' ? 'Bình thường' :
+                                     material.level === 'high' ? 'Cao' : material.level}
                                 </Badge>
                             </TableCell>
                             <TableCell>
@@ -101,10 +116,53 @@ export function QCMaterialsTable({ materials }: QCMaterialsTableProps) {
                                     </Badge>
                                 )}
                             </TableCell>
+                            <TableCell>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                            <span className="sr-only">Mở menu</span>
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => setEditMaterial(material)}>
+                                            <Edit className="mr-2 h-4 w-4" />
+                                            Sửa
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={() => setDeleteMaterial(material)}
+                                            className="text-red-600"
+                                        >
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            Xóa
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </TableCell>
                         </TableRow>
                     )
                 })}
             </TableBody>
         </Table>
+
+        {/* Edit Dialog */}
+        {editMaterial && (
+            <QCMaterialDialog
+                open={!!editMaterial}
+                onOpenChange={(open) => !open && setEditMaterial(null)}
+                mode="edit"
+                material={editMaterial}
+            />
+        )}
+
+        {/* Delete Dialog */}
+        {deleteMaterial && (
+            <DeleteQCMaterialDialog
+                open={!!deleteMaterial}
+                onOpenChange={(open) => !open && setDeleteMaterial(null)}
+                material={deleteMaterial}
+            />
+        )}
+        </>
     )
 }
