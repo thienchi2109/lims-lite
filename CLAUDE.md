@@ -324,6 +324,16 @@ docker compose up -d # Start Supabase       | docker compose logs -f
 - Refresh tokens: 4h (`GOTRUE_REFRESH_TOKEN_EXPIRY=14400`)
 - Absolute session lifetime: 4h (enforced by middleware)
 
+**Cookie Configuration (CRITICAL):**
+- Cookie name MUST be consistent across ALL Supabase clients
+- Use `SUPABASE_COOKIE_NAME` from `src/lib/supabase/constants.ts`
+- Files that must use this constant:
+  - `src/lib/supabase/client.ts` (browser)
+  - `src/lib/supabase/server.ts` (server)
+  - `src/middleware.ts` (middleware)
+- **WHY:** Supabase SSR defaults to URL-derived cookie names, causing mismatches between localhost/Docker/production
+- **TEST:** `src/__tests__/supabase-cookie-consistency.test.ts` verifies consistency
+
 **Concurrent Login Prevention:**
 - Only one active session per user allowed
 - New login invalidates all existing sessions for that user
