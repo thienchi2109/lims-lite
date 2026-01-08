@@ -198,7 +198,8 @@ export function AssignedTestsPanel({ sampleId, specialties = [], userRole }: Ass
     const handlePrint = async () => {
         try {
             const sampleData = await fetchSampleDetail(sampleId)
-            const htmlContent = generatePrintTemplate(sampleData, results)
+            const currentDate = new Date().toLocaleDateString('vi-VN')
+            const htmlContent = generatePrintTemplate(sampleData, results, currentDate)
             const printWindow = window.open('', '_blank')
             if (printWindow) {
                 printWindow.document.write(htmlContent)

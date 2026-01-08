@@ -7,10 +7,14 @@ type SampleForPrint = SampleWithUser & {
   > | null
 }
 
-export function generatePrintTemplate(sample: SampleForPrint, results: ResultWithAssay[]) {
+export function generatePrintTemplate(
+  sample: SampleForPrint,
+  results: ResultWithAssay[],
+  dateStr?: string
+) {
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${sample.sample_id}&margin=0`;
   const logoUrl = "https://i.postimg.cc/8zFZ52j1/cdc-logo-150.png";
-  const dateStr = new Date().toLocaleDateString('vi-VN');
+  const currentDate = dateStr || new Date().toLocaleDateString('vi-VN');
 
   const client = sample.client ?? null
   const clientName = client?.name || sample.client_name || ''
@@ -399,7 +403,7 @@ export function generatePrintTemplate(sample: SampleForPrint, results: ResultWit
             <div style="font-size: 12px;">(Ký và ghi rõ họ tên)</div>
           </div>
           <div class="footer-col">
-            <div style="font-style: italic; font-size: 12px; margin-bottom: 5px;">Cần Thơ, ngày ${dateStr.split('/')[0]} tháng ${dateStr.split('/')[1]} năm ${dateStr.split('/')[2]}</div>
+            <div style="font-style: italic; font-size: 12px; margin-bottom: 5px;">Cần Thơ, ngày ${currentDate.split('/')[0]} tháng ${currentDate.split('/')[1]} năm ${currentDate.split('/')[2]}</div>
             <div class="footer-title">Bác Sĩ Chỉ Định</div>
             <div class="footer-sign-area"></div>
             <div style="font-weight: bold; font-size: 12px;">(Ký và ghi rõ họ tên)</div>
@@ -424,7 +428,7 @@ export function generatePrintTemplate(sample: SampleForPrint, results: ResultWit
         <div class="footer-info">
             <div>PL2.1.CDC.STLM</div>
             <div>Trang: 1/1</div>
-            <div>Ngày ban hành: ${dateStr}</div>
+            <div>Ngày ban hành: ${currentDate}</div>
         </div>
 
       </div>
