@@ -16,6 +16,7 @@ export {
     updateQCMaterial,
     deleteQCMaterial,
     getQCMaterials,
+    searchQCMaterials,
     type GetQCMaterialsParams,
     type GetQCMaterialsResult,
 } from './qc-materials'

@@ -36,8 +36,6 @@ import { Step3Review } from './control-limits-step3'
 // ============================================================================
 
 interface ControlLimitsWizardProps {
-    assays: AssayOption[]
-    materials: MaterialOption[]
     onSuccess?: () => void
     onCancel?: () => void
 }
@@ -47,17 +45,15 @@ interface ControlLimitsWizardProps {
 // ============================================================================
 
 export function ControlLimitsWizard({
-    assays,
-    materials,
     onSuccess,
     onCancel,
 }: ControlLimitsWizardProps) {
     const [step, setStep] = useState(1)
     const [isSubmitting, setIsSubmitting] = useState(false)
 
-    // Step 1: Selection
-    const [selectedAssayId, setSelectedAssayId] = useState<string>('')
-    const [selectedMaterialId, setSelectedMaterialId] = useState<string>('')
+    // Step 1: Selection - store full objects, not just IDs
+    const [selectedAssay, setSelectedAssay] = useState<AssayOption | null>(null)
+    const [selectedMaterial, setSelectedMaterial] = useState<MaterialOption | null>(null)
 
     // Step 2: Data points
     const [dataPoints, setDataPoints] = useState<DataPoint[]>([])
@@ -71,10 +67,6 @@ export function ControlLimitsWizard({
     }, [dataPoints])
 
     const hasMinimumPoints = dataPoints.length >= MINIMUM_DATA_POINTS
-
-    // Get selected items for display
-    const selectedAssay = assays.find(a => a.id === selectedAssayId)
-    const selectedMaterial = materials.find(m => m.id === selectedMaterialId)
 
     // ========================================================================
     // HANDLERS
@@ -104,7 +96,7 @@ export function ControlLimitsWizard({
 
     const handleNext = () => {
         if (step === 1) {
-            if (!selectedAssayId || !selectedMaterialId) {
+            if (!selectedAssay || !selectedMaterial) {
                 toast.error('Vui lòng chọn xét nghiệm và vật liệu QC')
                 return
             }
@@ -122,11 +114,16 @@ export function ControlLimitsWizard({
             return
         }
 
+        if (!selectedAssay || !selectedMaterial) {
+            toast.error('Vui lòng chọn xét nghiệm và vật liệu QC')
+            return
+        }
+
         setIsSubmitting(true)
         try {
             const result = await createQCDefinition({
-                assay_id: selectedAssayId,
-                material_id: selectedMaterialId,
+                assay_id: selectedAssay.id,
+                material_id: selectedMaterial.id,
                 mean: stats.mean,
                 sd: stats.sd,
                 cv_percent: stats.cv,
@@ -171,12 +168,10 @@ export function ControlLimitsWizard({
             <CardContent>
                 {step === 1 && (
                     <Step1Selection
-                        assays={assays}
-                        materials={materials}
-                        selectedAssayId={selectedAssayId}
-                        selectedMaterialId={selectedMaterialId}
-                        onAssayChange={setSelectedAssayId}
-                        onMaterialChange={setSelectedMaterialId}
+                        selectedAssay={selectedAssay}
+                        selectedMaterial={selectedMaterial}
+                        onAssayChange={setSelectedAssay}
+                        onMaterialChange={setSelectedMaterial}
                     />
                 )}
                 {step === 2 && (
@@ -193,8 +188,8 @@ export function ControlLimitsWizard({
                 )}
                 {step === 3 && (
                     <Step3Review
-                        selectedAssay={selectedAssay}
-                        selectedMaterial={selectedMaterial}
+                        selectedAssay={selectedAssay ?? undefined}
+                        selectedMaterial={selectedMaterial ?? undefined}
                         stats={stats}
                     />
                 )}

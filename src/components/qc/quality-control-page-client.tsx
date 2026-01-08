@@ -106,21 +106,6 @@ export function QualityControlPageClient({
     const [showEstablishLimits, setShowEstablishLimits] = useState(false)
     const [showAddMaterial, setShowAddMaterial] = useState(false)
 
-    // Transform materials for ControlLimitsWizard (needs MaterialOption format)
-    const materialOptions = materials.map(m => ({
-        id: m.id,
-        name: m.name,
-        lot_number: m.lot_number,
-        level: m.level,
-    }))
-
-    // Transform assays for ControlLimitsWizard (needs AssayOption format)
-    const assayOptions = assays.map(a => ({
-        id: a.id,
-        name: a.name,
-        units: a.units ?? undefined,
-    }))
-
     // Get first material for LotChangeoverDialog (requires currentMaterial)
     const firstMaterial = materials[0] ? {
         id: materials[0].id,
@@ -198,7 +183,7 @@ export function QualityControlPageClient({
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList id="tour-iqc-mgr-tabs" className="grid w-full grid-cols-6 lg:w-auto lg:inline-flex">
+                <TabsList id="tour-iqc-mgr-tabs" className="grid w-full grid-cols-6">
                     <TabsTrigger value="overview" className="gap-2">
                         <BarChart3 className="h-4 w-4 hidden sm:inline" />
                         Tổng quan
@@ -353,8 +338,6 @@ export function QualityControlPageClient({
                         <DialogTitle>Thiết lập giới hạn kiểm soát mới</DialogTitle>
                     </DialogHeader>
                     <ControlLimitsWizard
-                        assays={assayOptions}
-                        materials={materialOptions}
                         onSuccess={() => {
                             setShowEstablishLimits(false)
                             window.location.reload()

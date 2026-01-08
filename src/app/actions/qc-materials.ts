@@ -145,6 +145,48 @@ export interface GetQCMaterialsResult {
 }
 
 /**
+ * Search QC materials by name, lot_number, or manufacturer
+ * Returns: id, name, lot_number, level
+ * Used for searchable dropdowns in Control Limits dialog
+ */
+export async function searchQCMaterials(query: string, maxResults = 20) {
+    try {
+        const supabase = await createClient()
+
+        // Verify authentication
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+            return { error: 'Unauthorized' }
+        }
+
+        let queryBuilder = supabase
+            .from('qc_materials')
+            .select('id, name, lot_number, level')
+            .is('deleted_at', null)
+            .order('name')
+            .limit(maxResults)
+
+        if (query.trim()) {
+            const searchTerm = `%${query.trim()}%`
+            queryBuilder = queryBuilder.or(
+                `name.ilike.${searchTerm},lot_number.ilike.${searchTerm},manufacturer.ilike.${searchTerm}`
+            )
+        }
+
+        const { data, error } = await queryBuilder
+
+        if (error) {
+            console.error('searchQCMaterials error:', error)
+            return { error: error.message }
+        }
+        return { data: data || [] }
+    } catch (error) {
+        console.error('Error in searchQCMaterials:', error)
+        return { error: error instanceof Error ? error.message : 'Không thể tìm kiếm vật liệu QC' }
+    }
+}
+
+/**
  * Gets QC materials with optional pagination and filtering
  *
  * When called without params, returns all materials (backward compatible).
