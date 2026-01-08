@@ -482,6 +482,8 @@ export async function managerOnlyAction(id: string) {
 
 **Auth helpers:** `requireAuth()`, `requireRole('manager')`, `requireRole(['analyst', 'manager'])`, `isAuthError()`
 
+**Server Action Barrel Files:** When splitting large action files into modules, the barrel file (re-export file) must NOT have `'use server'` directive. Each sub-module should have its own `'use server'`. Next.js requires `'use server'` files to only export async functions directly - re-exports are not allowed.
+
 ## Error Handling
 
 | Error | Cause |
