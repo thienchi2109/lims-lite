@@ -128,7 +128,7 @@ export async function getSamplesForApprovalCount() {
 export async function submitSampleForReview(sampleId: string) {
     try {
         const auth = await requireRole('analyst')
-        if (isAuthError(auth)) return { error: 'Only analysts can submit samples for review' }
+        if (isAuthError(auth)) return { error: 'Chỉ có kỹ thuật viên mới có thể gửi duyệt kết quả' }
 
         const supabase = await createClient()
 

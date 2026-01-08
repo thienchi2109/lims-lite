@@ -188,7 +188,8 @@ export function AssignedTestsPanel({ sampleId, specialties = [], userRole }: Ass
                 fetchTests()
             }
         } catch (err) {
-            toast.error('Có lỗi xảy ra khi gửi duyệt')
+            const message = err instanceof Error ? err.message : 'Có lỗi xảy ra khi gửi duyệt'
+            toast.error(message)
             console.error(err)
         } finally {
             setIsSubmitting(false)
