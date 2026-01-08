@@ -6,14 +6,33 @@ import { Button } from '@/components/ui/button'
 import { DashboardHeader } from '@/components/dashboard-header'
 import { ArrowLeft } from 'lucide-react'
 import { QualityControlPageClient } from '@/components/qc/quality-control-page-client'
+import { getQCMaterials, type GetQCMaterialsParams } from '@/app/actions/qc-setup'
+
+interface PageSearchParams {
+    qc_days?: string
+    // Materials tab pagination & filtering
+    mat_page?: string
+    mat_size?: string
+    mat_search?: string
+    mat_level?: string
+    mat_status?: string
+}
 
 export default async function QualityControlPage({
     searchParams,
 }: {
-    searchParams: Promise<{ qc_days?: string }>
+    searchParams: Promise<PageSearchParams>
 }) {
-    const { qc_days = '90' } = await searchParams
+    const params = await searchParams
+    const { qc_days = '90' } = params
     const days = qc_days === 'all' ? null : parseInt(qc_days, 10)
+
+    // Parse materials pagination/filter params with defaults
+    const matPage = params.mat_page ? parseInt(params.mat_page, 10) : 1
+    const matPageSize = params.mat_size ? parseInt(params.mat_size, 10) : 20
+    const matSearch = params.mat_search || ''
+    const matLevel = (params.mat_level as GetQCMaterialsParams['level']) || null
+    const matStatus = (params.mat_status as GetQCMaterialsParams['status']) || null
     
     const supabase = await createClient()
 
@@ -42,15 +61,21 @@ export default async function QualityControlPage({
         .select('id, name')
         .order('name', { ascending: true })
 
-    // Fetch QC Materials with counts
-    const { data: materials } = await supabase
-        .from('qc_materials')
-        .select('id, name, manufacturer, lot_number, level, expiration_date, created_at')
-        .is('deleted_at', null)
-        .order('name', { ascending: true })
+    // Fetch QC Materials with pagination and filtering
+    const materialsResult = await getQCMaterials({
+        page: matPage,
+        pageSize: matPageSize,
+        search: matSearch || undefined,
+        level: matLevel,
+        status: matStatus,
+    })
+
+    // Handle materials result
+    const materialsData = 'error' in materialsResult ? [] : materialsResult.data
+    const materialsTotal = 'error' in materialsResult ? 0 : (materialsResult.total ?? 0)
 
     // Transform materials to map DB field to UI field
-    const transformedMaterials = (materials || []).map(m => ({
+    const transformedMaterials = materialsData.map(m => ({
         ...m,
         expiry_date: m.expiration_date, // Map DB field to expected UI field
     }))
@@ -266,7 +291,7 @@ export default async function QualityControlPage({
 
     // Summary stats
     const stats = {
-        totalMaterials: materials?.length || 0,
+        totalMaterials: materialsTotal,
         totalDefinitions: transformedDefinitions.length,
         activeDefinitions: transformedDefinitions.filter(d => d.is_active).length,
         activeSessions: transformedSessions.length,
@@ -302,6 +327,13 @@ export default async function QualityControlPage({
                     analyticsDefinitions={analyticsDefinitions}
                     qcResults={qcResultsByDefinition}
                     qcDays={qc_days}
+                    // Materials pagination props
+                    materialsTotal={materialsTotal}
+                    materialsPage={matPage}
+                    materialsPageSize={matPageSize}
+                    materialsSearch={matSearch}
+                    materialsLevel={matLevel}
+                    materialsStatus={matStatus}
                 />
             </main>
         </div>

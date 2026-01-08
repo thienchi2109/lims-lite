@@ -25,7 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { QCStatsCards } from './qc-stats-cards'
 import { QCOverviewTab, type ActiveSession, type PendingViolation } from './qc-overview-tab'
 import { QCViolationsTab } from './qc-violations-tab'
-import { QCMaterialsTable, type QCMaterial } from './qc-materials-table'
+import { QCMaterialsList, type QCMaterial } from './qc-materials-list'
 import { QCDefinitionsTable, type QCDefinitionWithDetails } from './qc-definitions-table'
 import { QCSessionsTable } from './qc-sessions-table'
 import { ControlLimitsWizard } from './control-limits-wizard'
@@ -71,6 +71,13 @@ interface QualityControlPageClientProps {
     analyticsDefinitions: QCDefinitionForAnalytics[]
     qcResults: Record<string, QCResultDataPoint[]>
     qcDays: string
+    // Materials pagination props
+    materialsTotal: number
+    materialsPage: number
+    materialsPageSize: number
+    materialsSearch: string
+    materialsLevel: 'low' | 'normal' | 'high' | null
+    materialsStatus: 'valid' | 'expiring_soon' | 'expired' | null
 }
 
 // ============================================================================
@@ -88,6 +95,12 @@ export function QualityControlPageClient({
     analyticsDefinitions,
     qcResults,
     qcDays,
+    materialsTotal,
+    materialsPage,
+    materialsPageSize,
+    materialsSearch,
+    materialsLevel,
+    materialsStatus,
 }: QualityControlPageClientProps) {
     const [activeTab, setActiveTab] = useState('overview')
     const [showEstablishLimits, setShowEstablishLimits] = useState(false)
@@ -258,7 +271,15 @@ export function QualityControlPageClient({
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <QCMaterialsTable materials={materials} />
+                            <QCMaterialsList
+                                materials={materials}
+                                total={materialsTotal}
+                                page={materialsPage}
+                                pageSize={materialsPageSize}
+                                search={materialsSearch}
+                                level={materialsLevel}
+                                status={materialsStatus}
+                            />
                         </CardContent>
                     </Card>
                 </TabsContent>

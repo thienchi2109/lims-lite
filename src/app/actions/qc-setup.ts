@@ -232,7 +232,7 @@ export interface GetQCMaterialsResult {
         name: string
         manufacturer: string
         lot_number: string
-        expiry_date: string
+        expiration_date: string
         level: 'low' | 'normal' | 'high'
         created_at: string
         updated_at: string
@@ -260,7 +260,7 @@ export async function getQCMaterials(params?: GetQCMaterialsParams): Promise<
         if (!params || Object.keys(params).length === 0) {
             const { data, error } = await supabase
                 .from('qc_materials')
-                .select('id, name, manufacturer, lot_number, expiry_date, level, created_at, updated_at, deleted_at')
+                .select('id, name, manufacturer, lot_number, expiration_date, level, created_at, updated_at, deleted_at')
                 .is('deleted_at', null)
                 .order('name')
 
@@ -281,7 +281,7 @@ export async function getQCMaterials(params?: GetQCMaterialsParams): Promise<
         // Build query with count
         let query = supabase
             .from('qc_materials')
-            .select('id, name, manufacturer, lot_number, expiry_date, level, created_at, updated_at, deleted_at', { count: 'exact' })
+            .select('id, name, manufacturer, lot_number, expiration_date, level, created_at, updated_at, deleted_at', { count: 'exact' })
             .is('deleted_at', null)
 
         // Apply search filter (searches name, lot_number, manufacturer)
@@ -295,7 +295,7 @@ export async function getQCMaterials(params?: GetQCMaterialsParams): Promise<
             query = query.eq('level', params.level)
         }
 
-        // Apply status filter based on expiry_date
+        // Apply status filter based on expiration_date
         if (params.status) {
             const today = new Date()
             const todayStr = today.toISOString().split('T')[0]
@@ -306,16 +306,16 @@ export async function getQCMaterials(params?: GetQCMaterialsParams): Promise<
 
             switch (params.status) {
                 case 'valid':
-                    // expiry_date > today + 30 days
-                    query = query.gt('expiry_date', thirtyDaysStr)
+                    // expiration_date > today + 30 days
+                    query = query.gt('expiration_date', thirtyDaysStr)
                     break
                 case 'expiring_soon':
-                    // expiry_date between today and today + 30 days
-                    query = query.gte('expiry_date', todayStr).lte('expiry_date', thirtyDaysStr)
+                    // expiration_date between today and today + 30 days
+                    query = query.gte('expiration_date', todayStr).lte('expiration_date', thirtyDaysStr)
                     break
                 case 'expired':
-                    // expiry_date < today
-                    query = query.lt('expiry_date', todayStr)
+                    // expiration_date < today
+                    query = query.lt('expiration_date', todayStr)
                     break
             }
         }
