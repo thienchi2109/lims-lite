@@ -48,6 +48,7 @@ export function DashboardNav({ user, className }: DashboardNavProps) {
             { href: '/manager/samples', label: 'Quản lý mẫu', icon: FlaskConical },
             { href: '/manager/approvals', label: 'Phê duyệt', icon: CheckCircle2 },
             { href: '/manager/assays', label: 'Chỉ tiêu', icon: ClipboardList },
+            { href: '/manager/quality-control', label: 'QA/QC', icon: ShieldCheck },
             { href: '/manager/users', label: 'Người dùng', icon: User },
             { href: '/manager/reports', label: 'Báo cáo', icon: BarChart3 },
             { href: '/manager/qr-code', label: 'Mã QR', icon: QrCode },
