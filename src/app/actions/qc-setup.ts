@@ -1,5 +1,3 @@
-'use server'
-
 /**
  * QC Setup - Barrel file for QC-related server actions
  *
@@ -7,6 +5,9 @@
  * - qc-materials.ts: CRUD for control materials + pagination/filtering
  * - qc-definitions.ts: CRUD for control limits
  * - qc-lot-changeover.ts: Lot changeover protocol
+ *
+ * NOTE: No 'use server' here - each module has its own directive.
+ * Barrel files cannot use 'use server' with re-exports.
  */
 
 // QC Materials
