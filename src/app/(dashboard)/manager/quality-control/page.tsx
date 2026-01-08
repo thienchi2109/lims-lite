@@ -87,14 +87,12 @@ export default async function QualityControlPage({
             id,
             mean,
             sd,
-            cv_percent,
             is_active,
-            active_from,
+            active_date,
             data_points_count,
             assay:assay_definitions!inner(id, name, units),
             material:qc_materials!inner(id, name, lot_number, level)
         `)
-        .is('deleted_at', null)
         .order('created_at', { ascending: false })
 
     // Fetch TEa standards for sigma calculation
@@ -203,13 +201,16 @@ export default async function QualityControlPage({
         const assay = Array.isArray(rawAssay) ? rawAssay[0] : rawAssay
         const material = Array.isArray(rawMaterial) ? rawMaterial[0] : rawMaterial
 
+        // Calculate CV% from mean and SD
+        const cvPercent = def.mean > 0 ? (def.sd / def.mean) * 100 : null
+
         return {
             id: def.id,
             mean: def.mean,
             sd: def.sd,
-            cv_percent: def.cv_percent,
+            cv_percent: cvPercent,
             is_active: def.is_active,
-            active_from: def.active_from,
+            active_from: def.active_date,
             data_points_count: def.data_points_count,
             assay_id: assay?.id || '',
             assay_name: assay?.name || '',
@@ -231,11 +232,14 @@ export default async function QualityControlPage({
             const material = Array.isArray(rawMaterial) ? rawMaterial[0] : rawMaterial
             const assayId = assay?.id || ''
 
+            // Calculate CV% from mean and SD
+            const cvPercent = def.mean > 0 ? (def.sd / def.mean) * 100 : null
+
             return {
                 id: def.id,
                 mean: def.mean,
                 sd: def.sd,
-                cv_percent: def.cv_percent,
+                cv_percent: cvPercent,
                 assay_id: assayId,
                 assay_name: assay?.name || '',
                 assay_units: assay?.units || null,
