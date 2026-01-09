@@ -1,6 +1,6 @@
 import { QCMaterialsFilterBar } from './qc-materials-filter-bar'
 import { QCMaterialsTable, type QCMaterial } from './qc-materials-table'
-import { QCMaterialsPagination } from './qc-materials-pagination'
+import { DataTablePagination } from '@/components/ui/data-table-pagination'
 
 interface QCMaterialsListProps {
     materials: QCMaterial[]
@@ -38,10 +38,11 @@ export function QCMaterialsList({
 
             <QCMaterialsTable materials={materials} />
 
-            <QCMaterialsPagination
+            <DataTablePagination
                 page={page}
                 pageSize={pageSize}
                 total={total}
+                paramPrefix="mat_"
             />
         </div>
     )
