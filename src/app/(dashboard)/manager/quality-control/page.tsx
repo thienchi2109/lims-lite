@@ -7,6 +7,7 @@ import { DashboardHeader } from '@/components/dashboard-header'
 import { ArrowLeft } from 'lucide-react'
 import { QualityControlPageClient } from '@/components/qc/quality-control-page-client'
 import { getQCMaterials, type GetQCMaterialsParams } from '@/app/actions/qc-setup'
+import { getQCSessionsPaginated } from '@/app/actions/qc-sessions'
 
 interface PageSearchParams {
     qc_days?: string
@@ -16,6 +17,15 @@ interface PageSearchParams {
     mat_search?: string
     mat_level?: string
     mat_status?: string
+    // Sessions tab pagination & filtering
+    sess_page?: string
+    sess_size?: string
+    sess_status?: string
+    sess_mode?: string
+    sess_assay?: string
+    sess_specialty?: string
+    sess_active?: string
+    sess_search?: string
 }
 
 export default async function QualityControlPage({
@@ -33,7 +43,17 @@ export default async function QualityControlPage({
     const matSearch = params.mat_search || ''
     const matLevel = (params.mat_level as GetQCMaterialsParams['level']) || null
     const matStatus = (params.mat_status as GetQCMaterialsParams['status']) || null
-    
+
+    // Parse sessions pagination/filter params with defaults
+    const sessPage = params.sess_page ? parseInt(params.sess_page, 10) : 1
+    const sessPageSize = params.sess_size ? parseInt(params.sess_size, 10) : 20
+    const sessStatus = params.sess_status as 'pending' | 'pass' | 'warning' | 'blocked' | 'resolved' | undefined
+    const sessMode = params.sess_mode as 'daily' | 'batch' | 'shift' | undefined
+    const sessAssay = params.sess_assay || undefined
+    const sessSpecialty = params.sess_specialty || undefined
+    const sessActiveOnly = params.sess_active === 'true'
+    const sessSearch = params.sess_search || undefined
+
     const supabase = await createClient()
 
     // Auth check
@@ -79,6 +99,23 @@ export default async function QualityControlPage({
         ...m,
         expiry_date: m.expiration_date, // Map DB field to expected UI field
     }))
+
+    // Fetch QC Sessions with pagination and filtering
+    const sessionsResult = await getQCSessionsPaginated({
+        status: sessStatus,
+        session_mode: sessMode,
+        assay_id: sessAssay,
+        specialty_id: sessSpecialty,
+        active_only: sessActiveOnly,
+        search: sessSearch,
+        page: sessPage,
+        page_size: sessPageSize,
+    })
+
+    // Handle sessions result
+    const sessionsData = 'error' in sessionsResult ? [] : sessionsResult.data
+    const sessionsTotal = 'error' in sessionsResult ? 0 : sessionsResult.total
+    const sessionsTotalPages = 'error' in sessionsResult ? 0 : sessionsResult.total_pages
 
     // Fetch QC Definitions with assay and material details
     const { data: definitions } = await supabase
@@ -338,6 +375,18 @@ export default async function QualityControlPage({
                     materialsSearch={matSearch}
                     materialsLevel={matLevel}
                     materialsStatus={matStatus}
+                    // Sessions pagination props
+                    sessionsData={sessionsData}
+                    sessionsTotal={sessionsTotal}
+                    sessionsTotalPages={sessionsTotalPages}
+                    sessionsPage={sessPage}
+                    sessionsPageSize={sessPageSize}
+                    sessionsStatus={sessStatus}
+                    sessionsMode={sessMode}
+                    sessionsAssay={sessAssay}
+                    sessionsSpecialty={sessSpecialty}
+                    sessionsActiveOnly={sessActiveOnly}
+                    sessionsSearch={sessSearch}
                 />
             </main>
         </div>

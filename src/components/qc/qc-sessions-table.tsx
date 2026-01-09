@@ -55,6 +55,7 @@ interface QCSessionsTableProps {
     specialties: FilterOption[]
     assays: FilterOption[]
     initialData?: QCSessionsResult
+    initialFilters?: Partial<QCSessionFilters>
 }
 
 // ============================================================================
@@ -65,21 +66,37 @@ export function QCSessionsTable({
     specialties,
     assays,
     initialData,
+    initialFilters,
 }: QCSessionsTableProps) {
     const router = useRouter()
     const searchParams = useSearchParams()
 
-    // Parse initial filters from URL
-    const getInitialFilters = useCallback((): QCSessionFilters => ({
-        status: (searchParams.get('status') as QCSessionFilters['status']) || undefined,
-        session_mode: (searchParams.get('mode') as QCSessionFilters['session_mode']) || undefined,
-        assay_id: searchParams.get('assay') || undefined,
-        specialty_id: searchParams.get('specialty') || undefined,
-        active_only: searchParams.get('active') === 'true',
-        search: searchParams.get('search') || undefined,
-        page: parseInt(searchParams.get('page') || '1', 10),
-        page_size: 20,
-    }), [searchParams])
+    // Parse initial filters from props or URL (props take precedence for SSR)
+    const getInitialFilters = useCallback((): QCSessionFilters => {
+        if (initialFilters) {
+            return {
+                status: initialFilters.status,
+                session_mode: initialFilters.session_mode,
+                assay_id: initialFilters.assay_id,
+                specialty_id: initialFilters.specialty_id,
+                active_only: initialFilters.active_only ?? false,
+                search: initialFilters.search,
+                page: initialFilters.page ?? 1,
+                page_size: initialFilters.page_size ?? 20,
+            }
+        }
+        // Fallback to URL params with sess_ prefix for server-side pagination
+        return {
+            status: (searchParams.get('sess_status') as QCSessionFilters['status']) || undefined,
+            session_mode: (searchParams.get('sess_mode') as QCSessionFilters['session_mode']) || undefined,
+            assay_id: searchParams.get('sess_assay') || undefined,
+            specialty_id: searchParams.get('sess_specialty') || undefined,
+            active_only: searchParams.get('sess_active') === 'true',
+            search: searchParams.get('sess_search') || undefined,
+            page: parseInt(searchParams.get('sess_page') || '1', 10),
+            page_size: parseInt(searchParams.get('sess_size') || '20', 10),
+        }
+    }, [searchParams, initialFilters])
 
     const [filters, setFilters] = useState<QCSessionFilters>(getInitialFilters)
     const [data, setData] = useState<QCSessionsResult | null>(initialData || null)
@@ -87,6 +104,23 @@ export function QCSessionsTable({
     const [filtersOpen, setFiltersOpen] = useState(false)
     const [searchInput, setSearchInput] = useState(filters.search || '')
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+    // Sync state with server-provided data when it changes
+    useEffect(() => {
+        if (initialData) {
+            setData(initialData)
+            setLoading(false)
+        }
+    }, [initialData])
+
+    // Sync filters with initialFilters when they change (server-side pagination)
+    useEffect(() => {
+        if (initialFilters) {
+            const newFilters = getInitialFilters()
+            setFilters(newFilters)
+            setSearchInput(newFilters.search || '')
+        }
+    }, [initialFilters, getInitialFilters])
 
     // Get active sessions for selection
     const activeSessions = useMemo(() =>
@@ -117,22 +151,31 @@ export function QCSessionsTable({
         }
     }, [])
 
-    // Update URL when filters change
+    // Update URL when filters change (uses sess_ prefix for server-side pagination)
     const updateURL = useCallback((newFilters: QCSessionFilters) => {
-        const params = new URLSearchParams()
-        if (newFilters.status) params.set('status', newFilters.status)
-        if (newFilters.session_mode) params.set('mode', newFilters.session_mode)
-        if (newFilters.assay_id) params.set('assay', newFilters.assay_id)
-        if (newFilters.specialty_id) params.set('specialty', newFilters.specialty_id)
-        if (newFilters.active_only) params.set('active', 'true')
-        if (newFilters.search) params.set('search', newFilters.search)
-        if (newFilters.page > 1) params.set('page', newFilters.page.toString())
+        // Preserve existing URL params (e.g., materials filters, qc_days)
+        const params = new URLSearchParams(searchParams.toString())
+
+        // Clear all sess_ params first
+        Array.from(params.keys())
+            .filter(key => key.startsWith('sess_'))
+            .forEach(key => params.delete(key))
+
+        // Set new sessions params
+        if (newFilters.status) params.set('sess_status', newFilters.status)
+        if (newFilters.session_mode) params.set('sess_mode', newFilters.session_mode)
+        if (newFilters.assay_id) params.set('sess_assay', newFilters.assay_id)
+        if (newFilters.specialty_id) params.set('sess_specialty', newFilters.specialty_id)
+        if (newFilters.active_only) params.set('sess_active', 'true')
+        if (newFilters.search) params.set('sess_search', newFilters.search)
+        if (newFilters.page > 1) params.set('sess_page', newFilters.page.toString())
+        if (newFilters.page_size !== 20) params.set('sess_size', newFilters.page_size.toString())
 
         const queryString = params.toString()
-        router.push(queryString ? `?${queryString}` : '', { scroll: false })
-    }, [router])
+        router.push(queryString ? `?${queryString}` : window.location.pathname, { scroll: false })
+    }, [router, searchParams])
 
-    // Handle filter change
+    // Handle filter change - update URL for server-side refetch (no client fetchData needed)
     const handleFilterChange = useCallback((key: keyof QCSessionFilters, value: any) => {
         const newFilters = {
             ...filters,
@@ -141,8 +184,8 @@ export function QCSessionsTable({
         }
         setFilters(newFilters)
         updateURL(newFilters)
-        fetchData(newFilters)
-    }, [filters, updateURL, fetchData])
+        // Note: Server-side fetch happens via URL change, no client fetch needed
+    }, [filters, updateURL])
 
     // Handle search with debounce
     useEffect(() => {
@@ -154,7 +197,7 @@ export function QCSessionsTable({
         return () => clearTimeout(timer)
     }, [searchInput]) // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Initial fetch
+    // Initial fetch - only if no initial data provided (backward compatibility)
     useEffect(() => {
         if (!initialData) {
             fetchData(filters)
@@ -166,7 +209,7 @@ export function QCSessionsTable({
         setFilters(defaultFilters)
         setSearchInput('')
         updateURL(defaultFilters)
-        fetchData(defaultFilters)
+        // Note: Server-side fetch happens via URL change
     }
 
     const toggleSelectAll = () => {

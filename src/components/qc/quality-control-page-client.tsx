@@ -34,6 +34,7 @@ import { QCMaterialDialog } from './qc-material-dialog'
 import { ViolationResolutionDialog } from './violation-resolution-dialog'
 import { QCAnalyticsTab, type QCDefinitionForAnalytics, type QCResultDataPoint } from './qc-analytics-tab'
 import { WalkthroughTrigger } from '@/components/walkthrough'
+import type { QCSessionRow } from '@/types/qc'
 
 // ============================================================================
 // TYPES
@@ -78,6 +79,18 @@ interface QualityControlPageClientProps {
     materialsSearch: string
     materialsLevel: 'low' | 'normal' | 'high' | null
     materialsStatus: 'valid' | 'expiring_soon' | 'expired' | null
+    // Sessions pagination props
+    sessionsData: QCSessionRow[]
+    sessionsTotal: number
+    sessionsTotalPages: number
+    sessionsPage: number
+    sessionsPageSize: number
+    sessionsStatus?: 'pending' | 'pass' | 'warning' | 'blocked' | 'resolved'
+    sessionsMode?: 'daily' | 'batch' | 'shift'
+    sessionsAssay?: string
+    sessionsSpecialty?: string
+    sessionsActiveOnly: boolean
+    sessionsSearch?: string
 }
 
 // ============================================================================
@@ -101,6 +114,17 @@ export function QualityControlPageClient({
     materialsSearch,
     materialsLevel,
     materialsStatus,
+    sessionsData,
+    sessionsTotal,
+    sessionsTotalPages,
+    sessionsPage,
+    sessionsPageSize,
+    sessionsStatus,
+    sessionsMode,
+    sessionsAssay,
+    sessionsSpecialty,
+    sessionsActiveOnly,
+    sessionsSearch,
 }: QualityControlPageClientProps) {
     const [activeTab, setActiveTab] = useState('overview')
     const [showEstablishLimits, setShowEstablishLimits] = useState(false)
@@ -303,6 +327,23 @@ export function QualityControlPageClient({
                             <QCSessionsTable
                                 specialties={specialties}
                                 assays={assays.map(a => ({ id: a.id, name: a.name }))}
+                                initialData={{
+                                    data: sessionsData,
+                                    total: sessionsTotal,
+                                    page: sessionsPage,
+                                    page_size: sessionsPageSize,
+                                    total_pages: sessionsTotalPages,
+                                }}
+                                initialFilters={{
+                                    status: sessionsStatus,
+                                    session_mode: sessionsMode,
+                                    assay_id: sessionsAssay,
+                                    specialty_id: sessionsSpecialty,
+                                    active_only: sessionsActiveOnly,
+                                    search: sessionsSearch,
+                                    page: sessionsPage,
+                                    page_size: sessionsPageSize,
+                                }}
                             />
                         </CardContent>
                     </Card>
