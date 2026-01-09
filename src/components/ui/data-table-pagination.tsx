@@ -59,7 +59,8 @@ export function DataTablePagination({
                 params.set(key, value)
             }
         })
-        router.push(params.toString() ? `?${params.toString()}` : '', { scroll: false })
+        const queryString = params.toString()
+        router.push(queryString ? `?${queryString}` : window.location.pathname, { scroll: false })
     }, [router, searchParams])
 
     const handlePageChange = useCallback((newPage: number) => {
