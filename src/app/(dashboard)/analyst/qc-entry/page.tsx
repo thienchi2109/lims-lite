@@ -79,7 +79,7 @@ export default async function QCEntryPage({ searchParams }: Props) {
         redirect('/manager')
     }
 
-    const { data: filteredAssays, qcResultsByDefinition, count, totalPages } = qcResult
+    const { data: filteredAssays, qcResultsByDefinition, count } = qcResult
 
     // Fetch accurate specialty counts (lightweight query for filter badges)
     const { data: allQCDefs } = await supabase
@@ -132,7 +132,6 @@ export default async function QCEntryPage({ searchParams }: Props) {
                 activeSpecialty={params.specialty || null}
                 page={page}
                 pageSize={pageSize}
-                totalPages={totalPages}
                 totalCount={count}
             />
             {params.id && selectedAssay && (
