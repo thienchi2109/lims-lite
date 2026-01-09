@@ -1,5 +1,5 @@
 import { QCFilterControls } from './qc-filter-controls'
-import type { SpecialtyWithQC } from './specialty-filter'
+import type { SpecialtyWithQC } from '@/types/lab'
 
 // ============================================================================
 // TYPES

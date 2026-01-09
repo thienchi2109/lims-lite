@@ -338,3 +338,16 @@ export const SampleDataSchema = z.object({
 })
 
 export type SampleData = z.infer<typeof SampleDataSchema>
+
+// ============================================================================
+// QC ENTRY TYPES
+// ============================================================================
+
+/**
+ * Specialty with QC definition count for filter display
+ */
+export interface SpecialtyWithQC {
+    id: string
+    name: string
+    qc_count: number
+}
