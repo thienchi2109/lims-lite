@@ -87,6 +87,7 @@ export function QCAssayTable({
         page={page}
         pageSize={pageSize}
         total={totalCount}
+        showPageSize={false}
       />
     </div>
   )
