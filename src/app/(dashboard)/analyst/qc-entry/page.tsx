@@ -3,7 +3,8 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { fetchQCEntryData, fetchQCDetailData } from '@/lib/data/qc-entry'
 import { QCEntryHeader } from '@/components/qc-entry/qc-entry-header'
-import { SpecialtyFilter, type SpecialtyWithQC } from '@/components/qc-entry/specialty-filter'
+import { QCFilterBar } from '@/components/qc-entry/qc-filter-bar'
+import type { SpecialtyWithQC } from '@/components/qc-entry/specialty-filter'
 import { QCAssayTable } from '@/components/qc-entry/qc-assay-table'
 import { QCDetailSheet } from '@/components/qc-entry/qc-detail-sheet'
 import { type AssayWithQC } from '@/components/qc-entry/qc-table-row'
@@ -19,6 +20,8 @@ interface SearchParams {
     specialty?: string
     id?: string
     page?: string
+    q?: string        // search query
+    status?: string   // status filter
 }
 
 interface Props {
@@ -50,7 +53,13 @@ export default async function QCEntryPage({ searchParams }: Props) {
     ] = await Promise.all([
         supabase.from('users').select('full_name, role').eq('id', user.id).single(),
         supabase.from('lab_specialties').select('id, name').order('name'),
-        fetchQCEntryData({ page, pageSize, specialty: params.specialty }),
+        fetchQCEntryData({
+            page,
+            pageSize,
+            specialty: params.specialty,
+            search: params.q,
+            status: params.status as 'pending' | 'entered' | 'approved' | undefined,
+        }),
     ])
 
     // Error handling for database queries
@@ -115,10 +124,7 @@ export default async function QCEntryPage({ searchParams }: Props) {
     return (
         <div className="container mx-auto max-w-7xl space-y-6 p-6">
             <QCEntryHeader user={userData} />
-            <SpecialtyFilter
-                specialties={specialtiesWithCounts}
-                activeSpecialty={params.specialty || null}
-            />
+            <QCFilterBar specialties={specialtiesWithCounts} />
             <QCAssayTable
                 assays={filteredAssays}
                 selectedId={params.id || null}
