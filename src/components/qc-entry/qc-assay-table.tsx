@@ -68,8 +68,9 @@ export function QCAssayTable({
   // Empty state
   if (assays.length === 0) {
     return (
-      <div className="flex items-center justify-center py-12 text-muted-foreground">
-        Không có xét nghiệm QC
+      <div className="flex flex-col items-center justify-center gap-2 py-12 text-muted-foreground">
+        <span>Không tìm thấy xét nghiệm phù hợp</span>
+        <span className="text-sm">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</span>
       </div>
     )
   }
