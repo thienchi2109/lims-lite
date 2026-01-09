@@ -4,8 +4,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
     Activity,
-    ChevronLeft,
-    ChevronRight,
     Filter,
     Loader2,
     Search,
@@ -13,6 +11,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { DataTablePagination } from '@/components/ui/data-table-pagination'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -409,33 +408,13 @@ export function QCSessionsTable({
             </div>
 
             {/* Pagination */}
-            {data && data.total_pages > 1 && (
-                <div className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">
-                        Hiển thị {((data.page - 1) * data.page_size) + 1} - {Math.min(data.page * data.page_size, data.total)} trong tổng số {data.total} phiên
-                    </p>
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleFilterChange('page', data.page - 1)}
-                            disabled={data.page <= 1}
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <span className="text-sm">
-                            Trang {data.page} / {data.total_pages}
-                        </span>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleFilterChange('page', data.page + 1)}
-                            disabled={data.page >= data.total_pages}
-                        >
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
-                    </div>
-                </div>
+            {data && (
+                <DataTablePagination
+                    page={data.page}
+                    pageSize={data.page_size}
+                    total={data.total}
+                    paramPrefix="sess_"
+                />
             )}
         </div>
     )
