@@ -121,6 +121,11 @@ export async function fetchQCEntryData(
         query = query.eq('assay.specialty_id', validatedParams.specialty)
     }
 
+    // Apply search filter (ILIKE on assay name)
+    if (validatedParams.search) {
+        query = query.ilike('assay.name', `%${validatedParams.search}%`)
+    }
+
     // Sort by assay name then level
     query = query.order('assay(name)', { ascending: true })
 
@@ -149,6 +154,11 @@ export async function fetchQCEntryData(
         if (nameCompare !== 0) return nameCompare
         return a.level.localeCompare(b.level)
     })
+
+    // Apply status filter (post-query since status is computed)
+    const filteredAssays = validatedParams.status
+        ? assayList.filter((a) => a.status === validatedParams.status)
+        : assayList
 
     // Step 4: Fetch recent QC results for sparklines (last 30 days)
     const thirtyDaysAgo = new Date()
@@ -180,13 +190,16 @@ export async function fetchQCEntryData(
         }
     }
 
+    // Recalculate count for status filter (affects pagination display)
+    const filteredCount = validatedParams.status ? filteredAssays.length : (count || 0)
+
     return {
-        data: assayList,
+        data: filteredAssays,
         qcResultsByDefinition,
-        count: count || 0,
+        count: filteredCount,
         page: validatedParams.page,
         pageSize: validatedParams.pageSize,
-        totalPages: Math.ceil((count || 0) / validatedParams.pageSize),
+        totalPages: Math.ceil(filteredCount / validatedParams.pageSize),
     }
 }
 
