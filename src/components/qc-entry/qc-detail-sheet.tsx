@@ -20,6 +20,8 @@ interface QCDetailSheetProps {
   assay: AssayWithQC
   qcDataPoints: Array<MiniChartDataPoint & { measuredAt: string }>
   recentHistory: QCHistoryEntry[]
+  activeSpecialty?: string | null
+  page?: number
 }
 
 // ============================================================================
@@ -47,7 +49,17 @@ export function QCDetailSheet({
   assay,
   qcDataPoints,
   recentHistory,
+  activeSpecialty,
+  page,
 }: QCDetailSheetProps) {
+  // Build close URL preserving specialty and page
+  const closeParams = new URLSearchParams()
+  if (activeSpecialty) closeParams.set('specialty', activeSpecialty)
+  if (page && page > 1) closeParams.set('page', String(page))
+  const closeHref = closeParams.toString()
+    ? `/analyst/qc-entry?${closeParams.toString()}`
+    : '/analyst/qc-entry'
+
   return (
     <aside
       className="
@@ -64,7 +76,7 @@ export function QCDetailSheet({
           size="icon"
           className="shrink-0"
         >
-          <Link href="/analyst/qc-entry" aria-label="Đóng">
+          <Link href={closeHref} aria-label="Đóng">
             <X className="h-5 w-5" />
           </Link>
         </Button>

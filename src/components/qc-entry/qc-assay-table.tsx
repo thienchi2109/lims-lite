@@ -97,6 +97,7 @@ export function QCAssayTable({
             isSelected={assay.id === selectedId}
             qcDataPoints={qcResultsByDefinition[assay.id] || []}
             activeSpecialty={activeSpecialty}
+            page={page}
           />
         ))}
       </div>

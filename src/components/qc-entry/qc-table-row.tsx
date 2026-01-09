@@ -23,6 +23,7 @@ interface QCTableRowProps {
   isSelected: boolean
   qcDataPoints: MiniChartDataPoint[]
   activeSpecialty?: string | null
+  page?: number
 }
 
 // ============================================================================
@@ -39,11 +40,14 @@ const STATUS_STYLES: Record<AssayWithQC['status'], string> = {
 // COMPONENT
 // ============================================================================
 
-export function QCTableRow({ assay, isSelected, qcDataPoints, activeSpecialty }: QCTableRowProps) {
-  // Preserve specialty filter in URL
-  const href = activeSpecialty
-    ? `/analyst/qc-entry?specialty=${encodeURIComponent(activeSpecialty)}&id=${encodeURIComponent(assay.id)}`
-    : `/analyst/qc-entry?id=${encodeURIComponent(assay.id)}`
+export function QCTableRow({ assay, isSelected, qcDataPoints, activeSpecialty, page }: QCTableRowProps) {
+  // Build URL params preserving specialty and page
+  const params = new URLSearchParams()
+  if (activeSpecialty) params.set('specialty', activeSpecialty)
+  if (page && page > 1) params.set('page', String(page))
+  params.set('id', assay.id)
+
+  const href = `/analyst/qc-entry?${params.toString()}`
 
   return (
     <Link

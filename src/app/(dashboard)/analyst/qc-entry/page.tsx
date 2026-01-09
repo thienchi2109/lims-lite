@@ -134,6 +134,8 @@ export default async function QCEntryPage({ searchParams }: Props) {
                     assay={selectedAssay}
                     qcDataPoints={qcDataPoints}
                     recentHistory={recentHistory}
+                    activeSpecialty={params.specialty || null}
+                    page={page}
                 />
             )}
         </div>
