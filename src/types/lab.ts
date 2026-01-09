@@ -201,7 +201,9 @@ export type SampleListParams = z.infer<typeof SampleListParamsSchema>
 export const QCEntryParamsSchema = PaginationSchema.extend({
     specialty: z.string().uuid().optional(),
     id: z.string().uuid().optional(),
-}).omit({ sortBy: true, sortOrder: true, search: true })
+    search: z.string().max(100).optional(),
+    status: z.enum(['pending', 'entered', 'approved']).optional(),
+}).omit({ sortBy: true, sortOrder: true })
 
 export type QCEntryParams = z.infer<typeof QCEntryParamsSchema>
 
