@@ -188,13 +188,14 @@ export async function generateCoA(
         const html = renderCoATemplate(coaData)
         const htmlHash = generateHtmlHash(html)
 
-        // Step 9: Check for existing CoA record
+        // Step 9: Check for existing CoA record (excluding soft-deleted)
         const version = 1 // TODO Phase 4: Implement versioning logic
         const { data: existingCoa, error: checkError } = await supabase
             .from('coa_reports')
             .select('id, status, file_path')
             .eq('sample_id', sampleId)
             .eq('version', version)
+            .is('deleted_at', null)
             .maybeSingle()
 
         if (checkError) {
@@ -347,13 +348,14 @@ export async function regenerateCoA(
             }
         }
 
-        // Check if CoA exists
+        // Check if CoA exists (excluding soft-deleted)
         const version = 1 // TODO Phase 4: Implement versioning logic
         const { data: existingCoa, error: checkError } = await supabase
             .from('coa_reports')
             .select('id, status, file_path')
             .eq('sample_id', sampleId)
             .eq('version', version)
+            .is('deleted_at', null)
             .maybeSingle()
 
         if (checkError) {
