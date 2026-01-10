@@ -67,6 +67,7 @@ export interface QCDefinitionsFilters {
 export interface QCDefinitionsResult {
     data: QCDefinitionWithDetails[]
     total: number
+    active_count: number  // Total active definitions count (not just current page)
     page: number
     page_size: number
     total_pages: number

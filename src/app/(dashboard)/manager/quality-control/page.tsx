@@ -136,6 +136,7 @@ export default async function QualityControlPage({
     // Handle definitions result
     const definitions = 'error' in definitionsResult ? [] : definitionsResult.data
     const definitionsTotal = 'error' in definitionsResult ? 0 : definitionsResult.total
+    const definitionsActiveCount = 'error' in definitionsResult ? 0 : definitionsResult.active_count
 
     // Fetch TEa standards for sigma calculation
     const { data: teaStandards } = await supabase
@@ -309,7 +310,7 @@ export default async function QualityControlPage({
     const stats = {
         totalMaterials: materialsTotal,
         totalDefinitions: definitionsTotal,
-        activeDefinitions: (definitions || []).filter(d => d.is_active).length,
+        activeDefinitions: definitionsActiveCount,
         activeSessions: transformedSessions.length,
         pendingViolations: transformedViolations.length,
         blockedSessions: transformedSessions.filter(s => s.qc_status === 'blocked').length,

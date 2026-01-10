@@ -195,6 +195,12 @@ export async function getQCDefinitionsPaginated(
             return { error: error.message }
         }
 
+        // Get active count (separate query to get total active definitions regardless of pagination)
+        const { count: activeCount } = await supabase
+            .from('qc_definitions')
+            .select('*', { count: 'exact', head: true })
+            .eq('is_active', true)
+
         // Transform data to match QCDefinitionWithDetails
         const transformedData: QCDefinitionWithDetails[] = (data || []).map((def) => {
             const rawAssay = def.assay as unknown
@@ -230,6 +236,7 @@ export async function getQCDefinitionsPaginated(
         return {
             data: transformedData,
             total,
+            active_count: activeCount ?? 0,
             page,
             page_size: pageSize,
             total_pages: Math.ceil(total / pageSize),
