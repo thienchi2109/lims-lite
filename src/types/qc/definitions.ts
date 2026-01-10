@@ -73,7 +73,6 @@ export type QCDefinitionWithDetails = z.infer<typeof QCDefinitionWithDetailsSche
 export interface QCDefinitionsFilters {
     page?: number           // Default: 1
     page_size?: number      // Default: 20
-    search?: string         // Search by assay name or material name
     status?: 'active' | 'inactive' | null  // Filter by is_active
 }
 

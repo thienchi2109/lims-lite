@@ -26,6 +26,7 @@ export {
     createQCDefinition,
     updateQCDefinition,
     getQCDefinitions,
+    getQCDefinitionsPaginated,
 } from './qc-definitions'
 
 // Lot Changeover
