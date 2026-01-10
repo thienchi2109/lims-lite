@@ -117,7 +117,7 @@ export function AssayDefinitionsTable({
         const params = new URLSearchParams(searchParams.toString())
         params.set('page', String(newPage))
         params.set('pageSize', String(newPageSize))
-        router.replace(`${pathname}?${params.toString()}`)
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false })
     }
 
     const handleSpecialtyFilter = (specialtyId: string) => {
@@ -128,7 +128,7 @@ export function AssayDefinitionsTable({
             params.delete('specialtyId')
         }
         params.set('page', '1') // Reset to page 1
-        router.replace(`${pathname}?${params.toString()}`)
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false })
     }
 
     return (

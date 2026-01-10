@@ -134,7 +134,7 @@ export function SampleListTable({
             }
         })
         const query = params.toString()
-        router.replace(query ? `${pathname}?${query}` : pathname)
+        router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
     }
 
     const handleSort = (column: string) => {

@@ -52,7 +52,7 @@ export function UserListTable({
         const params = new URLSearchParams(searchParams.toString())
         params.set('page', String(newPage))
         params.set('pageSize', String(newPageSize))
-        router.replace(`${pathname}?${params.toString()}`)
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false })
     }
 
     const handleDelete = async (user: User) => {
