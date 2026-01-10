@@ -334,16 +334,6 @@ export function QualityControlPageClient({
                                     page_size: sessionsPageSize,
                                     total_pages: sessionsTotalPages,
                                 }}
-                                initialFilters={{
-                                    status: sessionsStatus,
-                                    session_mode: sessionsMode,
-                                    assay_id: sessionsAssay,
-                                    specialty_id: sessionsSpecialty,
-                                    active_only: sessionsActiveOnly,
-                                    search: sessionsSearch,
-                                    page: sessionsPage,
-                                    page_size: sessionsPageSize,
-                                }}
                             />
                         </CardContent>
                     </Card>
