@@ -65,3 +65,22 @@ export const QCDefinitionWithDetailsSchema = QCDefinitionSchema.extend({
 })
 
 export type QCDefinitionWithDetails = z.infer<typeof QCDefinitionWithDetailsSchema>
+
+// ============================================================================
+// PAGINATION TYPES
+// ============================================================================
+
+export interface QCDefinitionsFilters {
+    page?: number           // Default: 1
+    page_size?: number      // Default: 20
+    search?: string         // Search by assay name or material name
+    status?: 'active' | 'inactive' | null  // Filter by is_active
+}
+
+export interface QCDefinitionsResult {
+    data: QCDefinitionWithDetails[]
+    total: number
+    page: number
+    page_size: number
+    total_pages: number
+}
