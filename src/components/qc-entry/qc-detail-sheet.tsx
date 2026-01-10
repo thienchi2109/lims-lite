@@ -76,7 +76,7 @@ export function QCDetailSheet({
           size="icon"
           className="shrink-0"
         >
-          <Link href={closeHref} aria-label="Đóng">
+          <Link href={closeHref} scroll={false} aria-label="Đóng">
             <X className="h-5 w-5" />
           </Link>
         </Button>

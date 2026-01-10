@@ -52,6 +52,7 @@ export function QCTableRow({ assay, isSelected, qcDataPoints, activeSpecialty, p
   return (
     <Link
       href={href}
+      scroll={false}
       aria-label={`Xem chi tiết QC ${assay.name} ${assay.level}`}
       aria-current={isSelected ? 'true' : undefined}
       className={cn(
