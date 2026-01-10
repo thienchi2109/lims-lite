@@ -72,6 +72,10 @@ interface QualityControlPageClientProps {
     analyticsDefinitions: QCDefinitionForAnalytics[]
     qcResults: Record<string, QCResultDataPoint[]>
     qcDays: string
+    // Definitions pagination props
+    definitionsTotal: number
+    definitionsPage: number
+    definitionsPageSize: number
     // Materials pagination props
     materialsTotal: number
     materialsPage: number
@@ -108,6 +112,9 @@ export function QualityControlPageClient({
     analyticsDefinitions,
     qcResults,
     qcDays,
+    definitionsTotal,
+    definitionsPage,
+    definitionsPageSize,
     materialsTotal,
     materialsPage,
     materialsPageSize,
@@ -310,7 +317,12 @@ export function QualityControlPageClient({
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <QCDefinitionsTable definitions={definitions} />
+                            <QCDefinitionsTable
+                                definitions={definitions}
+                                total={definitionsTotal}
+                                page={definitionsPage}
+                                pageSize={definitionsPageSize}
+                            />
                         </CardContent>
                     </Card>
                 </TabsContent>
