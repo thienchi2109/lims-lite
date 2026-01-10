@@ -166,10 +166,17 @@ Read `.claude/skills/context-engineering/references/` for:
 
 | Task | Tool | Notes |
 |------|------|-------|
+| File autocomplete | File Suggestion | rg + fzf fuzzy matching (~50ms) |
 | Find code | warpgrep | `mcp__filesystem-with-morph__warpgrep_codebase_search` - semantic queries |
+| Find definitions | GKG | `mcp__gkg__search_codebase_definitions` - functions/classes |
 | Edit code | edit_file | `mcp__filesystem-with-morph__edit_file` - use `// ... existing code ...` |
 | Create file | write_file | Only for new files |
 | Library docs | Context7 | `mcp__context7__resolve-library-id` → `mcp__context7__query-docs` |
+
+**Hybrid Search Strategy:**
+- **Layer 1 (Autocomplete):** File Suggestion with rg+fzf - fast path completion
+- **Layer 2 (Semantic):** warpgrep - "Where is X handled?"
+- **Layer 3 (Definitions):** GKG - function/class lookups and references
 
 **MCP Tools - USE PROACTIVELY:**
 
