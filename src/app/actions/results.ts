@@ -17,6 +17,7 @@ import {
     validateResultsBatch,
 } from './results-validation'
 import { getActiveQCSessionsForAssays } from './qc-operations'
+import { generateCoA } from './coa'
 
 /**
  * Gets all results for a specific sample with assay details
@@ -301,6 +302,16 @@ export async function approveResults(data: ApproveResults) {
                 .from('samples')
                 .update({ status: newStatus })
                 .eq('id', sampleIds[0])
+
+            // Auto-generate CoA when sample is completed (all results approved)
+            // The database trigger creates a 'pending' CoA record, this call generates the actual HTML
+            if (newStatus === 'completed') {
+                // Fire and forget - don't block the approval response
+                // Errors are logged but don't fail the approval
+                generateCoA(sampleIds[0]).catch((err) => {
+                    console.error('Auto CoA generation failed for sample', sampleIds[0], err)
+                })
+            }
         }
 
         revalidatePath('/manager/approvals', 'page')

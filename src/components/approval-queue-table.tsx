@@ -200,8 +200,8 @@ export function ApprovalQueueTable({ data, selectedSampleId }: ApprovalQueueTabl
                             </Tooltip>
                         </TooltipProvider>
 
-                        {/* CoA Generation Button - Only for completed samples */}
-                        {isCompleted && (!coaStatus || coaStatus === 'failed') && (
+                        {/* CoA Generation Button - For completed samples without CoA, with failed CoA, or with pending CoA (stuck) */}
+                        {isCompleted && (!coaStatus || coaStatus === 'failed' || coaStatus === 'pending') && (
                             <TooltipProvider>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
@@ -216,7 +216,7 @@ export function ApprovalQueueTable({ data, selectedSampleId }: ApprovalQueueTabl
                                         </Button>
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                        <p>{coaStatus === 'failed' ? 'Tạo lại CoA' : 'Tạo CoA'}</p>
+                                        <p>{coaStatus === 'failed' ? 'Tạo lại CoA' : coaStatus === 'pending' ? 'Tạo lại CoA (đang chờ)' : 'Tạo CoA'}</p>
                                     </TooltipContent>
                                 </Tooltip>
                             </TooltipProvider>
