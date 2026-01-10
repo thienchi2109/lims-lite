@@ -26,7 +26,7 @@ interface RawSample {
     updated_at: string | null
     received_by_user: { full_name: string } | null
     results: RawSampleResult[]
-    coa_reports: { status: CoAReportStatus }[] | null
+    coa_reports: { status: CoAReportStatus; deleted_at: string | null }[] | null
 }
 
 /**
@@ -35,6 +35,10 @@ interface RawSample {
 function transformSamplesWithCounts(samples: RawSample[]) {
     return samples.map((sample) => {
         const results = sample.results || []
+        // Filter out soft-deleted CoA reports
+        const activeCoaReports = (sample.coa_reports || []).filter(
+            (coa) => coa.deleted_at === null
+        )
         return {
             id: sample.id,
             sample_id: sample.sample_id,
@@ -47,7 +51,9 @@ function transformSamplesWithCounts(samples: RawSample[]) {
             pending_count: results.filter((r) => r.status === 'pending').length,
             entered_count: results.filter((r) => r.status === 'entered').length,
             approved_count: results.filter((r) => r.status === 'approved').length,
-            coa_reports: sample.coa_reports || null,
+            coa_reports: activeCoaReports.length > 0 
+                ? activeCoaReports.map(({ status }) => ({ status }))
+                : null,
         }
     })
 }
@@ -75,7 +81,7 @@ export async function getSamplesWithTab(tab: ApprovalTab) {
                 updated_at,
                 received_by_user:users!samples_received_by_fkey(full_name),
                 results(id, status),
-                coa_reports!left(status)
+                coa_reports!left(status, deleted_at)
             `)
             .eq('status', tab)
             .is('deleted_at', null)
