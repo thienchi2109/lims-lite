@@ -11,17 +11,12 @@ export const QCDefinitionSchema = z.object({
     material_id: z.string().uuid(),
     mean: z.number(), // NUMERIC(15,4)
     sd: z.number().positive(), // Must be positive for Z-score calculation
-    cv_percent: z.number().nullable().optional(), // Coefficient of variation
-    target_sigma: z.number().nullable().optional(), // Six Sigma target
-    active_from: z.string(), // DATE when limits became active
-    active_until: z.string().nullable().optional(), // DATE when limits expired
+    cv_percent: z.number().nullable().optional(), // Calculated from mean/sd, not stored in DB
+    active_from: z.string(), // DATE when limits became active (maps to active_date in DB)
     is_active: z.boolean(),
-    established_by: z.string().uuid().nullable().optional(),
-    established_at: z.string().datetime().nullable().optional(),
     data_points_count: z.number().int().nullable().optional(),
     created_at: z.string().datetime(),
     updated_at: z.string().datetime(),
-    deleted_at: z.string().datetime().nullable().optional(),
 })
 
 export type QCDefinition = z.infer<typeof QCDefinitionSchema>
@@ -31,8 +26,6 @@ export const CreateQCDefinitionSchema = z.object({
     material_id: z.string().uuid('ID vật liệu QC không hợp lệ'),
     mean: z.number(),
     sd: z.number().positive('Độ lệch chuẩn phải lớn hơn 0'),
-    cv_percent: z.number().optional(),
-    target_sigma: z.number().optional(),
     active_from: z.string().refine((val) => !isNaN(Date.parse(val)), {
         message: 'Ngày bắt đầu không hợp lệ'
     }),
@@ -45,11 +38,6 @@ export const UpdateQCDefinitionSchema = z.object({
     id: z.string().uuid(),
     mean: z.number().optional(),
     sd: z.number().positive('Độ lệch chuẩn phải lớn hơn 0').optional(),
-    cv_percent: z.number().optional(),
-    target_sigma: z.number().optional(),
-    active_until: z.string().refine((val) => !isNaN(Date.parse(val)), {
-        message: 'Ngày kết thúc không hợp lệ'
-    }).optional(),
     is_active: z.boolean().optional(),
 })
 

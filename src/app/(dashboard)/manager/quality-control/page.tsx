@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { DashboardHeader } from '@/components/dashboard-header'
 import { ArrowLeft } from 'lucide-react'
 import { QualityControlPageClient } from '@/components/qc/quality-control-page-client'
-import { getQCMaterials, type GetQCMaterialsParams } from '@/app/actions/qc-setup'
+import { getQCMaterials, getQCDefinitionsPaginated, type GetQCMaterialsParams } from '@/app/actions/qc-setup'
 import { getQCSessionsPaginated } from '@/app/actions/qc-sessions'
 
 interface PageSearchParams {
@@ -26,6 +26,10 @@ interface PageSearchParams {
     sess_specialty?: string
     sess_active?: string
     sess_search?: string
+    // Definitions tab pagination
+    def_page?: string
+    def_size?: string
+    def_status?: string
 }
 
 export default async function QualityControlPage({
@@ -53,6 +57,11 @@ export default async function QualityControlPage({
     const sessSpecialty = params.sess_specialty || undefined
     const sessActiveOnly = params.sess_active === 'true'
     const sessSearch = params.sess_search || undefined
+
+    // Parse definitions pagination params with defaults
+    const defPage = params.def_page ? parseInt(params.def_page, 10) : 1
+    const defPageSize = params.def_size ? parseInt(params.def_size, 10) : 20
+    const defStatus = params.def_status as 'active' | 'inactive' | undefined
 
     const supabase = await createClient()
 
@@ -117,20 +126,16 @@ export default async function QualityControlPage({
     const sessionsTotal = 'error' in sessionsResult ? 0 : sessionsResult.total
     const sessionsTotalPages = 'error' in sessionsResult ? 0 : sessionsResult.total_pages
 
-    // Fetch QC Definitions with assay and material details
-    const { data: definitions } = await supabase
-        .from('qc_definitions')
-        .select(`
-            id,
-            mean,
-            sd,
-            is_active,
-            active_date,
-            data_points_count,
-            assay:assay_definitions!inner(id, name, units),
-            material:qc_materials!inner(id, name, lot_number, level)
-        `)
-        .order('created_at', { ascending: false })
+    // Fetch QC Definitions with pagination
+    const definitionsResult = await getQCDefinitionsPaginated({
+        page: defPage,
+        page_size: defPageSize,
+        status: defStatus || undefined,
+    })
+
+    // Handle definitions result
+    const definitions = 'error' in definitionsResult ? [] : definitionsResult.data
+    const definitionsTotal = 'error' in definitionsResult ? 0 : definitionsResult.total
 
     // Fetch TEa standards for sigma calculation
     const { data: teaStandards } = await supabase
@@ -231,60 +236,30 @@ export default async function QualityControlPage({
         })
     })
 
-    // Transform data for client component
-    const transformedDefinitions = (definitions || []).map((def) => {
-        const rawAssay = def.assay as any
-        const rawMaterial = def.material as any
-        const assay = Array.isArray(rawAssay) ? rawAssay[0] : rawAssay
-        const material = Array.isArray(rawMaterial) ? rawMaterial[0] : rawMaterial
-
-        // Calculate CV% from mean and SD
-        const cvPercent = def.mean > 0 ? (def.sd / def.mean) * 100 : null
-
-        return {
-            id: def.id,
-            mean: def.mean,
-            sd: def.sd,
-            cv_percent: cvPercent,
-            is_active: def.is_active,
-            active_from: def.active_date,
-            data_points_count: def.data_points_count,
-            assay_id: assay?.id || '',
-            assay_name: assay?.name || '',
-            assay_units: assay?.units || null,
-            material_id: material?.id || '',
-            material_name: material?.name || '',
-            material_lot: material?.lot_number || '',
-            material_level: material?.level || '',
-        }
-    })
+    // Transform data for client component - normalize optional fields to null
+    const transformedDefinitions = definitions.map(def => ({
+        ...def,
+        cv_percent: def.cv_percent ?? null,
+        data_points_count: def.data_points_count ?? null,
+    }))
 
     // Transform definitions for analytics (with TEa)
     const analyticsDefinitions = (definitions || [])
         .filter((d) => d.is_active)
         .map((def) => {
-            const rawAssay = def.assay as any
-            const rawMaterial = def.material as any
-            const assay = Array.isArray(rawAssay) ? rawAssay[0] : rawAssay
-            const material = Array.isArray(rawMaterial) ? rawMaterial[0] : rawMaterial
-            const assayId = assay?.id || ''
-
-            // Calculate CV% from mean and SD
-            const cvPercent = def.mean > 0 ? (def.sd / def.mean) * 100 : null
-
             return {
                 id: def.id,
                 mean: def.mean,
                 sd: def.sd,
-                cv_percent: cvPercent,
-                assay_id: assayId,
-                assay_name: assay?.name || '',
-                assay_units: assay?.units || null,
-                material_id: material?.id || '',
-                material_name: material?.name || '',
-                material_level: material?.level || '',
-                material_lot: material?.lot_number || '',
-                tea_percent: teaMap.get(assayId) ?? null,
+                cv_percent: def.cv_percent ?? null,
+                assay_id: def.assay_id,
+                assay_name: def.assay_name,
+                assay_units: def.assay_units,
+                material_id: def.material_id,
+                material_name: def.material_name,
+                material_level: def.material_level,
+                material_lot: def.material_lot,
+                tea_percent: teaMap.get(def.assay_id) ?? null,
             }
         })
 
@@ -333,8 +308,8 @@ export default async function QualityControlPage({
     // Summary stats
     const stats = {
         totalMaterials: materialsTotal,
-        totalDefinitions: transformedDefinitions.length,
-        activeDefinitions: transformedDefinitions.filter(d => d.is_active).length,
+        totalDefinitions: definitionsTotal,
+        activeDefinitions: (definitions || []).filter(d => d.is_active).length,
         activeSessions: transformedSessions.length,
         pendingViolations: transformedViolations.length,
         blockedSessions: transformedSessions.filter(s => s.qc_status === 'blocked').length,
@@ -387,6 +362,10 @@ export default async function QualityControlPage({
                     sessionsSpecialty={sessSpecialty}
                     sessionsActiveOnly={sessActiveOnly}
                     sessionsSearch={sessSearch}
+                    // Definitions pagination props
+                    definitionsTotal={definitionsTotal}
+                    definitionsPage={defPage}
+                    definitionsPageSize={defPageSize}
                 />
             </main>
         </div>

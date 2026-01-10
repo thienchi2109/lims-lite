@@ -68,9 +68,9 @@ export function ControlLimitsWizard({
 
     const hasMinimumPoints = dataPoints.length >= MINIMUM_DATA_POINTS
 
-    // ========================================================================
+    // ============================================================================
     // HANDLERS
-    // ========================================================================
+    // ============================================================================
 
     const handleAddDataPoint = () => {
         const value = parseFloat(newValue)
@@ -126,7 +126,6 @@ export function ControlLimitsWizard({
                 material_id: selectedMaterial.id,
                 mean: stats.mean,
                 sd: stats.sd,
-                cv_percent: stats.cv,
                 active_from: new Date().toISOString().split('T')[0],
                 data_points_count: stats.count,
             })
@@ -146,9 +145,9 @@ export function ControlLimitsWizard({
         }
     }
 
-    // ========================================================================
+    // ============================================================================
     // MAIN RENDER
-    // ========================================================================
+    // ============================================================================
 
     return (
         <Card className="w-full max-w-2xl">

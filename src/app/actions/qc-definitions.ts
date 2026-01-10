@@ -30,7 +30,7 @@ export async function createQCDefinition(data: CreateQCDefinition) {
         // Deactivate any existing active definition for this assay+material
         await supabase
             .from('qc_definitions')
-            .update({ is_active: false, active_until: new Date().toISOString().split('T')[0] })
+            .update({ is_active: false })
             .eq('assay_id', validated.assay_id)
             .eq('material_id', validated.material_id)
             .eq('is_active', true)
@@ -42,13 +42,10 @@ export async function createQCDefinition(data: CreateQCDefinition) {
                 material_id: validated.material_id,
                 mean: validated.mean,
                 sd: validated.sd,
-                cv_percent: validated.cv_percent || null,
-                target_sigma: validated.target_sigma || null,
-                active_from: validated.active_from,
+                active_date: validated.active_from,
                 is_active: true,
-                established_by: auth.id,
-                established_at: new Date().toISOString(),
-                data_points_count: validated.data_points_count || null,
+                created_by: auth.id,
+                data_points_count: validated.data_points_count || 20,
             })
             .select()
             .single()
@@ -79,9 +76,15 @@ export async function updateQCDefinition(data: UpdateQCDefinition) {
         const validated = UpdateQCDefinitionSchema.parse(data)
         const { id, ...updateData } = validated
 
+        // Map active_from to active_date if present
+        const dbUpdateData: Record<string, unknown> = {}
+        if (updateData.mean !== undefined) dbUpdateData.mean = updateData.mean
+        if (updateData.sd !== undefined) dbUpdateData.sd = updateData.sd
+        if (updateData.is_active !== undefined) dbUpdateData.is_active = updateData.is_active
+
         const { data: definition, error } = await supabase
             .from('qc_definitions')
-            .update(updateData)
+            .update(dbUpdateData)
             .eq('id', id)
             .select()
             .single()
@@ -109,11 +112,19 @@ export async function getQCDefinitions(assayId?: string) {
         let query = supabase
             .from('qc_definitions')
             .select(`
-                *,
+                id,
+                mean,
+                sd,
+                is_active,
+                active_date,
+                data_points_count,
+                assay_id,
+                material_id,
+                created_at,
+                updated_at,
                 assay:assay_definitions(id, name, units),
                 material:qc_materials(id, name, lot_number, level)
             `)
-            .is('deleted_at', null)
             .order('created_at', { ascending: false })
 
         if (assayId) {
@@ -149,30 +160,23 @@ export async function getQCDefinitionsPaginated(
         const from = (page - 1) * pageSize
         const to = from + pageSize - 1
 
-        // Build base query with count - select all fields needed for QCDefinitionWithDetails
+        // Build base query with count - only select columns that exist in DB
         let query = supabase
             .from('qc_definitions')
             .select(`
                 id,
-                assay_id,
-                material_id,
                 mean,
                 sd,
-                cv_percent,
-                target_sigma,
-                active_from,
-                active_until,
                 is_active,
-                established_by,
-                established_at,
+                active_date,
                 data_points_count,
+                assay_id,
+                material_id,
                 created_at,
                 updated_at,
-                deleted_at,
                 assay:assay_definitions!inner(id, name, units),
                 material:qc_materials!inner(id, name, lot_number, level)
             `, { count: 'exact' })
-            .is('deleted_at', null)
 
         // Apply status filter
         if (filters.status === 'active') {
@@ -193,31 +197,26 @@ export async function getQCDefinitionsPaginated(
 
         // Transform data to match QCDefinitionWithDetails
         const transformedData: QCDefinitionWithDetails[] = (data || []).map((def) => {
-            const rawAssay = def.assay as any
-            const rawMaterial = def.material as any
-            const assay = Array.isArray(rawAssay) ? rawAssay[0] : rawAssay
-            const material = Array.isArray(rawMaterial) ? rawMaterial[0] : rawMaterial
+            const rawAssay = def.assay as unknown
+            const rawMaterial = def.material as unknown
+            const assay = Array.isArray(rawAssay) ? rawAssay[0] : rawAssay as { id: string; name: string; units: string | null } | null
+            const material = Array.isArray(rawMaterial) ? rawMaterial[0] : rawMaterial as { id: string; name: string; lot_number: string; level: string } | null
 
-            // Calculate CV% from mean and SD if not stored
-            const cvPercent = def.cv_percent ?? (def.mean > 0 ? (def.sd / def.mean) * 100 : null)
+            // Calculate CV% from mean and SD
+            const cvPercent = def.mean > 0 ? (def.sd / def.mean) * 100 : null
 
             return {
                 id: def.id,
-                assay_id: def.assay_id,
-                material_id: def.material_id,
+                assay_id: assay?.id || '',
+                material_id: material?.id || '',
                 mean: def.mean,
                 sd: def.sd,
                 cv_percent: cvPercent,
-                target_sigma: def.target_sigma,
-                active_from: def.active_from,
-                active_until: def.active_until,
                 is_active: def.is_active,
-                established_by: def.established_by,
-                established_at: def.established_at,
+                active_from: def.active_date,  // Map DB column name to type field name
                 data_points_count: def.data_points_count,
                 created_at: def.created_at,
                 updated_at: def.updated_at,
-                deleted_at: def.deleted_at,
                 assay_name: assay?.name || '',
                 assay_units: assay?.units || null,
                 material_name: material?.name || '',
