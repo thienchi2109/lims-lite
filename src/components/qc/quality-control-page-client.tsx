@@ -24,15 +24,14 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { QCStatsCards } from './qc-stats-cards'
 import { QCOverviewTab, type ActiveSession, type PendingViolation } from './qc-overview-tab'
-import { QCViolationsTab } from './qc-violations-tab'
-import { QCMaterialsList, type QCMaterial } from './qc-materials-list'
-import { QCDefinitionsTable, type QCDefinitionWithDetails } from './qc-definitions-table'
-import { QCSessionsTable } from './qc-sessions-table'
+import { type QCMaterial } from './qc-materials-list'
+import { type QCDefinitionWithDetails } from './qc-definitions-table'
 import { ControlLimitsWizard } from './control-limits-wizard'
-import { LotChangeoverDialog } from './lot-changeover-dialog'
-import { QCMaterialDialog } from './qc-material-dialog'
-import { ViolationResolutionDialog } from './violation-resolution-dialog'
 import { QCAnalyticsTab, type QCDefinitionForAnalytics, type QCResultDataPoint } from './qc-analytics-tab'
+import { QCMaterialsTabContent } from './qc-materials-tab-content'
+import { QCDefinitionsTabContent } from './qc-definitions-tab-content'
+import { QCSessionsTabContent } from './qc-sessions-tab-content'
+import { QCViolationsTabContent } from './qc-violations-tab-content'
 import { WalkthroughTrigger } from '@/components/walkthrough'
 import type { QCSessionRow } from '@/types/qc'
 
@@ -135,26 +134,6 @@ export function QualityControlPageClient({
 }: QualityControlPageClientProps) {
     const [activeTab, setActiveTab] = useState('overview')
     const [showEstablishLimits, setShowEstablishLimits] = useState(false)
-    const [showAddMaterial, setShowAddMaterial] = useState(false)
-
-    // Get first material for LotChangeoverDialog (requires currentMaterial)
-    const firstMaterial = materials[0] ? {
-        id: materials[0].id,
-        name: materials[0].name,
-        manufacturer: materials[0].manufacturer || '',
-        lot_number: materials[0].lot_number,
-        level: materials[0].level,
-        expiry_date: materials[0].expiry_date || '',
-    } : null
-
-    // Transform definitions for LotChangeoverDialog
-    const definitionsForChangeover = definitions.map(d => ({
-        id: d.id,
-        mean: d.mean,
-        sd: d.sd,
-        cv_percent: d.cv_percent,
-        assay: { id: d.assay_id, name: d.assay_name, units: d.assay_units },
-    }))
 
     return (
         <div className="space-y-6">
@@ -257,112 +236,42 @@ export function QualityControlPageClient({
                 </TabsContent>
 
                 <TabsContent value="materials">
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <CardTitle>Vật liệu QC</CardTitle>
-                                    <CardDescription>
-                                        Quản lý vật liệu kiểm soát chất lượng
-                                    </CardDescription>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Button size="sm" onClick={() => setShowAddMaterial(true)}>
-                                        <Plus className="h-4 w-4 mr-2" />
-                                        Thêm vật liệu
-                                    </Button>
-                                {firstMaterial && (
-                                    <LotChangeoverDialog
-                                        currentMaterial={firstMaterial}
-                                        definitions={definitionsForChangeover}
-                                        trigger={
-                                            <Button size="sm">
-                                                <RefreshCw className="h-4 w-4 mr-2" />
-                                                Chuyển lô
-                                            </Button>
-                                        }
-                                    />
-                                )}
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <QCMaterialsList
-                                materials={materials}
-                                total={materialsTotal}
-                                page={materialsPage}
-                                pageSize={materialsPageSize}
-                                search={materialsSearch}
-                                level={materialsLevel}
-                                status={materialsStatus}
-                            />
-                        </CardContent>
-                    </Card>
+                    <QCMaterialsTabContent
+                        materials={materials}
+                        definitions={definitions}
+                        total={materialsTotal}
+                        page={materialsPage}
+                        pageSize={materialsPageSize}
+                        search={materialsSearch}
+                        level={materialsLevel}
+                        status={materialsStatus}
+                    />
                 </TabsContent>
 
                 <TabsContent value="definitions">
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <CardTitle>Giới hạn kiểm soát</CardTitle>
-                                    <CardDescription>
-                                        Cấu hình Mean và SD cho từng xét nghiệm
-                                    </CardDescription>
-                                </div>
-                                <Button size="sm" onClick={() => setShowEstablishLimits(true)}>
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Thiết lập mới
-                                </Button>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <QCDefinitionsTable
-                                definitions={definitions}
-                                total={definitionsTotal}
-                                page={definitionsPage}
-                                pageSize={definitionsPageSize}
-                            />
-                        </CardContent>
-                    </Card>
+                    <QCDefinitionsTabContent
+                        definitions={definitions}
+                        total={definitionsTotal}
+                        page={definitionsPage}
+                        pageSize={definitionsPageSize}
+                        onEstablishLimits={() => setShowEstablishLimits(true)}
+                    />
                 </TabsContent>
 
                 <TabsContent value="sessions">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Quản lý phiên QC</CardTitle>
-                            <CardDescription>
-                                Xem, lọc và quản lý tất cả các phiên QC
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <QCSessionsTable
-                                specialties={specialties}
-                                assays={assays.map(a => ({ id: a.id, name: a.name }))}
-                                initialData={{
-                                    data: sessionsData,
-                                    total: sessionsTotal,
-                                    page: sessionsPage,
-                                    page_size: sessionsPageSize,
-                                    total_pages: sessionsTotalPages,
-                                }}
-                            />
-                        </CardContent>
-                    </Card>
+                    <QCSessionsTabContent
+                        specialties={specialties}
+                        assays={assays}
+                        sessionsData={sessionsData}
+                        sessionsTotal={sessionsTotal}
+                        sessionsTotalPages={sessionsTotalPages}
+                        sessionsPage={sessionsPage}
+                        sessionsPageSize={sessionsPageSize}
+                    />
                 </TabsContent>
 
                 <TabsContent value="violations">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Vi phạm QC</CardTitle>
-                            <CardDescription>
-                                Danh sách vi phạm quy tắc Westgard cần xử lý
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <QCViolationsTabWithDialogs violations={pendingViolations} />
-                        </CardContent>
-                    </Card>
+                    <QCViolationsTabContent violations={pendingViolations} />
                 </TabsContent>
 
                 <TabsContent value="analytics">
@@ -389,75 +298,6 @@ export function QualityControlPageClient({
                     />
                 </DialogContent>
             </Dialog>
-
-            {/* Add Material Dialog */}
-            <QCMaterialDialog
-                open={showAddMaterial}
-                onOpenChange={setShowAddMaterial}
-                mode="create"
-            />
-        </div>
-    )
-}
-
-// ============================================================================
-// VIOLATIONS TAB WITH EMBEDDED DIALOGS
-// ============================================================================
-
-function QCViolationsTabWithDialogs({ violations }: { violations: PendingViolation[] }) {
-    if (violations.length === 0) {
-        return (
-            <div className="text-center py-12 text-green-600">
-                <Activity className="h-12 w-12 mx-auto mb-4" />
-                <p className="font-medium">Không có vi phạm nào chờ xử lý</p>
-                <p className="text-sm text-muted-foreground">
-                    Tất cả các phiên QC đang hoạt động bình thường
-                </p>
-            </div>
-        )
-    }
-
-    return (
-        <div className="space-y-3">
-            {violations.map((violation) => (
-                <div
-                    id="tour-iqc-mgr-resolve"
-                    key={violation.id}
-                    className="flex items-center justify-between p-4 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20"
-                >
-                    <div className="space-y-1">
-                        <div className="font-medium text-red-700">
-                            {violation.assay_name}
-                        </div>
-                        <div className="text-sm text-red-600">
-                            {violation.material_name} - {violation.material_level}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                            Quy tắc vi phạm: <strong>{violation.rule_violated}</strong> |
-                            Giá trị: {violation.value} |
-                            Z-score: {violation.z_score.toFixed(2)}
-                        </div>
-                    </div>
-                    <ViolationResolutionDialog
-                        violation={{
-                            id: violation.id,
-                            rule_violated: violation.rule_violated as any,
-                            z_score_at_violation: violation.z_score,
-                            value: violation.value,
-                            mean: violation.mean,
-                            sd: violation.sd,
-                            assay_name: violation.assay_name,
-                            created_at: violation.created_at,
-                        }}
-                        trigger={
-                            <Button variant="destructive" size="sm">
-                                Xử lý vi phạm
-                            </Button>
-                        }
-                        onSuccess={() => window.location.reload()}
-                    />
-                </div>
-            ))}
         </div>
     )
 }
