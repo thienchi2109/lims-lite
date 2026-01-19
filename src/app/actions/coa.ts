@@ -131,30 +131,35 @@ export async function generateCoA(
 
         const approverId = sample.approved_by
 
-        // Step 2: Fetch approver's active signature (OPTIONAL - use placeholder if not available)
+        // Step 2: Fetch approver's active signature (REQUIRED for 21 CFR Part 11 compliance)
         // Use service role to bypass RLS - analysts need to access manager signatures for CoA
-        let signatureDataUri: string | null = null
-        let signatureId: string | null = null
-
         const signatureResult = await getActiveSignature(approverId, { useServiceRole: true })
 
-        if (signatureResult.success) {
-            const signature = signatureResult.signature
-
-            // Step 3: Download signature file from storage using service role
-            const downloadResult = await downloadSignature(signature.signature_path, { useServiceRole: true })
-
-            if (downloadResult.success) {
-                // Signature downloaded successfully - use it
-                // Note: Hash verification was done during upload, trusted here
-                signatureDataUri = downloadResult.dataUri
-                signatureId = signature.id
-            } else {
-                console.warn('Could not download signature, using placeholder:', downloadResult.error)
+        if (!signatureResult.success) {
+            console.error('No active signature found for approver:', signatureResult.error)
+            return {
+                success: false,
+                error: 'Người phê duyệt chưa tải lên chữ ký điện tử. Vui lòng yêu cầu quản lý tải lên chữ ký trước khi tạo CoA.'
             }
-        } else {
-            console.warn('No active signature found for approver, using placeholder:', signatureResult.error)
         }
+
+        const signature = signatureResult.signature
+
+        // Step 3: Download signature file from storage using service role
+        const downloadResult = await downloadSignature(signature.signature_path, { useServiceRole: true })
+
+        if (!downloadResult.success) {
+            console.error('Failed to download signature file:', downloadResult.error)
+            return {
+                success: false,
+                error: 'Không thể tải xuống chữ ký điện tử. File chữ ký có thể bị hỏng. Vui lòng yêu cầu quản lý tải lên lại chữ ký.'
+            }
+        }
+
+        // Signature downloaded successfully - use it
+        // Note: Hash verification was done during upload, trusted here
+        const signatureDataUri = downloadResult.dataUri
+        const signatureId = signature.id
 
         // Step 6: Get approver name
         const { data: approverData, error: approverError } = await supabase
