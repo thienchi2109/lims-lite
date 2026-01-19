@@ -16,7 +16,8 @@ tsconfig.tsbuildinfo
 .DS_Store
 *.log
 coverage
-
+VPS keys
+env.md
 # Claude Code / Beads directories
 .claude
 .beads

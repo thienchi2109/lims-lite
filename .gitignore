@@ -51,7 +51,7 @@ __pycache__/
 *.tar.gz
 /backups/
 /lims-backup-*/
-
+VPS keys
 # Exception: migrations should be version controlled
 !supabase/migrations/*.sql
 nul
