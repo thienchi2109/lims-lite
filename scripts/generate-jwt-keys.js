@@ -1,6 +1,12 @@
 const jwt = require('jsonwebtoken')
 
-const JWT_SECRET = process.env.JWT_SECRET || '3d9867ac0994596c3be58fa3f9bb771b54ea39807d874d1351e0ec95010b3d82'
+const JWT_SECRET = process.env.JWT_SECRET
+
+if (!JWT_SECRET) {
+    console.error('ERROR: JWT_SECRET environment variable is required.')
+    console.error('Usage: JWT_SECRET=your_secret node generate-jwt-keys.js')
+    process.exit(1)
+}
 
 // Generate ANON key
 const anonToken = jwt.sign(

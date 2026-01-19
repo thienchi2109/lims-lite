@@ -56,52 +56,34 @@ else
 fi
 
 # 4. Tạo file .env
-echo ">>> Đang cấu hình biến môi trường (.env)..."
-cat > .env <<EOL
-# =============================================================================
-# CDC-LIMS Environment Configuration (Auto-generated)
-# =============================================================================
+echo ""
+echo "========================================================================"
+echo "QUAN TRỌNG: Bạn cần tạo file .env thủ công!"
+echo ""
+echo "Chạy lệnh: nano .env"
+echo ""
+echo "Sau đó copy nội dung từ file .env mẫu (liên hệ admin để lấy secrets)"
+echo "========================================================================"
+echo ""
 
-# Database
-POSTGRES_PASSWORD=3defe2084a9cc94b236423d40f41e59d301f37a9d8f218cbefcf83b348b19943
+if [ ! -f .env ]; then
+    echo ">>> CẢNH BÁO: File .env chưa tồn tại!"
+    echo ">>> Vui lòng tạo file .env trước khi tiếp tục."
+    echo ""
+    read -p ">>> Nhấn ENTER sau khi đã tạo file .env..."
+fi
 
-# Auth & JWT
-JWT_SECRET=3d9867ac0994596c3be58fa3f9bb771b54ea39807d874d1351e0ec95010b3d82
-JWT_EXPIRY=14400
-GOTRUE_REFRESH_TOKEN_EXPIRY=14400
+# Kiểm tra file .env tồn tại
+if [ ! -f .env ]; then
+    echo ">>> LỖI: File .env không tồn tại. Dừng script."
+    exit 1
+fi
 
-# URLs
-API_EXTERNAL_URL=https://cdclims.cloud
-SITE_URL=https://cdclims.cloud
-NEXT_PUBLIC_APP_URL=https://cdclims.cloud
-
-# Supabase Settings
-DISABLE_SIGNUP=false
-ENABLE_EMAIL_SIGNUP=true
-ENABLE_EMAIL_AUTOCONFIRM=true
-PGRST_DB_SCHEMAS=public,storage,graphql_public
-
-# Keys
-ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU2OTM4MTIsImV4cCI6MjA4MTA1MzgxMn0.lK4-P9iyqyrWUNZDwvDzYhcv0gm9xptg3WDAH9SR8T0
-SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTY5MzgxMiwiZXhwIjoyMDgxMDUzODEyfQ.BfZ5PMHxyZMtqwHsSq50y9HD4W94R6Z2K2yHSdIUpYE
-
-NEXT_PUBLIC_SUPABASE_URL=https://cdclims.cloud
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU2OTM4MTIsImV4cCI6MjA4MTA1MzgxMn0.lK4-P9iyqyrWUNZDwvDzYhcv0gm9xptg3WDAH9SR8T0
-
-# Tunnel
-CLOUDFLARE_TUNNEL_TOKEN=eyJhIjoiNDgzMWM4NzczMjU4NWE1ODgwZDZlZmFkMzEzMWRkYWEiLCJ0IjoiMzZjZTM2MWEtNDgxNi00NjdhLTk2ZDktNzAyODQxMmI3NmEzIiwicyI6Ik1qa3pZMkV4WVdZdFltWmhOeTAwTnpCa0xXSXlZVGt0TVdWbVl6ZzBaRGMwTkROayJ9
-EOL
-
-echo ">>> Đã tạo file .env xong."
+echo ">>> File .env đã tồn tại."
 
 # 5. Khởi chạy hệ thống
 echo ">>> Đang khởi chạy hệ thống (việc này có thể mất vài phút)..."
-# Thử docker compose (plugin) trước, nếu lỗi thì thử docker-compose (standalone)
-if dockor compose version &> /dev/null; then
-  docker compose up -d --build
-else
-  docker-compose up -d --build
-fi
+docker compose up -d --build
 
 echo ""
 echo "========================================================================"

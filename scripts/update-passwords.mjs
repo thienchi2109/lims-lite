@@ -1,7 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = 'http://localhost:8000'
-const serviceRoleKey = process.env.SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
+const supabaseUrl = process.env.SUPABASE_URL || 'http://localhost:8000'
+const serviceRoleKey = process.env.SERVICE_ROLE_KEY
+
+if (!serviceRoleKey) {
+    console.error('ERROR: SERVICE_ROLE_KEY environment variable is required.')
+    console.error('Usage: SERVICE_ROLE_KEY=your_key node update-passwords.mjs')
+    process.exit(1)
+}
 
 const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: {

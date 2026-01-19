@@ -1,6 +1,12 @@
 // Script to create test users via Supabase Auth API
-const SUPABASE_URL = 'http://localhost:8000'
-const SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
+const SUPABASE_URL = process.env.SUPABASE_URL || 'http://localhost:8000'
+const SERVICE_ROLE_KEY = process.env.SERVICE_ROLE_KEY
+
+if (!SERVICE_ROLE_KEY) {
+    console.error('ERROR: SERVICE_ROLE_KEY environment variable is required.')
+    console.error('Usage: SERVICE_ROLE_KEY=your_key node create-test-users.js')
+    process.exit(1)
+}
 
 const users = [
     {
