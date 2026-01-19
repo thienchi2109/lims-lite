@@ -16,9 +16,54 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          script_stop: true
           script: |
-            cd ~/lims-lite
-            git pull origin main
-            docker compose up -d --build
-            # Xóa các image cũ để tiết kiệm dung lượng
+            set -e
+            echo "=== Starting deployment at $(date) ==="
+
+            # Navigate to project
+            cd ~/lims-lite || { echo "ERROR: Cannot cd to ~/lims-lite"; exit 1; }
+            echo "Working directory: $(pwd)"
+
+            # Pull latest code
+            echo "=== Pulling latest code ==="
+            git pull origin main || { echo "ERROR: Git pull failed"; exit 1; }
+            git log -1 --oneline
+
+            # Verify .env file exists
+            echo "=== Verifying .env file ==="
+            if [ ! -f .env ]; then
+              echo "ERROR: .env file not found!"
+              echo "Please create .env file on VPS manually with your production secrets"
+              exit 1
+            fi
+            echo ".env file exists"
+
+            # Build and start containers
+            echo "=== Building containers ==="
+            docker compose build --no-cache app || { echo "ERROR: Docker build failed"; docker compose logs app; exit 1; }
+
+            echo "=== Starting services ==="
+            docker compose up -d || { echo "ERROR: Docker compose up failed"; docker compose logs; exit 1; }
+
+            # Wait for services to start
+            echo "=== Waiting for services to start ==="
+            sleep 15
+
+            # Check container status
+            echo "=== Container status ==="
+            docker compose ps
+
+            # Check for unhealthy containers
+            echo "=== Checking container health ==="
+            if docker compose ps | grep -iE "unhealthy|exited|restarting"; then
+              echo "WARNING: Some containers are unhealthy or not running"
+              echo "=== Recent logs ==="
+              docker compose logs --tail=50
+            fi
+
+            # Cleanup old images
+            echo "=== Cleaning up old images ==="
             docker system prune -f
+
+            echo "=== Deployment completed at $(date) ==="
