@@ -85,6 +85,23 @@ export const approvalKeys = {
 }
 
 /**
+ * Query key factory for user signatures
+ *
+ * Hierarchical structure:
+ * - ['signature'] - All signature queries
+ * - ['signature', 'status'] - Current user's signature status
+ * - ['signature', 'history'] - Signature upload history
+ */
+export const signatureKeys = {
+    /** Base key for all signature queries */
+    all: ['signature'] as const,
+    /** Current user's active signature status */
+    status: ['signature', 'status'] as const,
+    /** Signature upload history */
+    history: ['signature', 'history'] as const,
+}
+
+/**
  * Query key factory for search queries
  *
  * Hierarchical structure:

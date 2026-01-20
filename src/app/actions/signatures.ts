@@ -13,7 +13,7 @@ import { createHash } from 'crypto'
 import { z } from 'zod'
 
 /**
- * Server Actions for Manager E-Signature Management
+ * Server Actions for User E-Signature Management
  *
  * Phase 3.5: E-Signature Infrastructure
  *
@@ -23,6 +23,8 @@ import { z } from 'zod'
  * - View signature history for audit trail
  * - SHA-256 hash generation for integrity verification
  * - Automatic deactivation of previous signatures
+ *
+ * Supported roles: Manager, Analyst
  */
 
 // ============================================================================
@@ -81,7 +83,10 @@ async function validateSignatureFile(file: File): Promise<{ valid: true } | { va
 // ============================================================================
 
 /**
- * Upload manager signature
+ * Upload user signature (Manager or Analyst)
+ *
+ * Renamed from uploadManagerSignature to support both roles.
+ * Signature is validated, hashed (SHA-256), and stored with audit trail.
  *
  * Features:
  * - Validates file format, size, dimensions
@@ -92,7 +97,7 @@ async function validateSignatureFile(file: File): Promise<{ valid: true } | { va
  *
  * Path structure: user-signatures/{user_id}/{timestamp}.{ext}
  */
-export async function uploadManagerSignature(formData: FormData): Promise<UploadSignatureResult> {
+export async function uploadSignature(formData: FormData): Promise<UploadSignatureResult> {
     try {
         const supabase = await createClient()
 
@@ -102,7 +107,7 @@ export async function uploadManagerSignature(formData: FormData): Promise<Upload
             return { success: false, error: 'Người dùng chưa đăng nhập' }
         }
 
-        // Verify user is a manager
+        // Verify user is manager OR analyst (updated from manager-only)
         const { data: userData, error: userError } = await supabase
             .from('users')
             .select('role')
@@ -113,8 +118,9 @@ export async function uploadManagerSignature(formData: FormData): Promise<Upload
             return { success: false, error: 'Không tìm thấy thông tin người dùng' }
         }
 
-        if (userData.role !== 'manager') {
-            return { success: false, error: 'Chỉ quản lý mới có thể tải lên chữ ký' }
+        // UPDATED: Allow both manager and analyst roles
+        if (userData.role !== 'manager' && userData.role !== 'analyst') {
+            return { success: false, error: 'Không có quyền tải lên chữ ký' }
         }
 
         // Get file from FormData
@@ -191,6 +197,10 @@ export async function uploadManagerSignature(formData: FormData): Promise<Upload
         return { success: false, error: 'Đã xảy ra lỗi khi tải lên chữ ký' }
     }
 }
+
+// Keep old function name for backward compatibility (deprecated)
+/** @deprecated Use uploadSignature instead */
+export const uploadManagerSignature = uploadSignature
 
 /**
  * Get active signature for current user or specified user

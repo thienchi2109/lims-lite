@@ -1,6 +1,6 @@
 /**
  * Custom React Hooks
- * 
+ *
  * Barrel export for all custom hooks in the application.
  * Includes TanStack Query hooks for data fetching and mutations.
  */
@@ -13,6 +13,9 @@ export { useAssignTests } from './use-assign-tests'
 
 // Approval queue
 export { useApprovalCount } from './use-approval-count'
+
+// Signature status
+export { useSignatureStatus } from './use-signature-status'
 
 // UI utilities
 export { useFaviconBadge } from './use-favicon-badge'

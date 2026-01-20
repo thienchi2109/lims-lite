@@ -26,6 +26,8 @@ import {
     fetchTestResults,
     generateHtmlHash,
     validateSampleForCoAGeneration,
+    fetchLatestSubmission,
+    fetchSignatureDataUri,
     type GenerateCoAResult,
 } from '@/lib/coa/helpers'
 import { renderCoATemplate } from '@/lib/coa/template'
@@ -172,6 +174,39 @@ export async function generateCoA(
             return { success: false, error: 'Không tìm thấy thông tin người phê duyệt' }
         }
 
+        // ========================================
+        // FETCH PERFORMER (ANALYST) SIGNATURE
+        // ========================================
+
+        const submission = await fetchLatestSubmission(sampleId)
+        let performerSignatureDataUri: string | undefined
+        let performerSignatureId: string | undefined
+        let performerName: string | undefined
+        let performerSignatureMeaning: string | undefined
+
+        if (submission) {
+            // Validate signature belongs to the submitter (cross-user validation)
+            const performerSig = await fetchSignatureDataUri(
+                submission.performerId,
+                submission.signatureHash  // Verify hash matches submission record
+            )
+
+            if (performerSig) {
+                // Additional validation: signature ID must match submission record
+                if (performerSig.signatureId !== submission.signatureId) {
+                    console.warn('Signature ID mismatch - using current active signature', {
+                        submissionSignatureId: submission.signatureId,
+                        currentSignatureId: performerSig.signatureId,
+                    })
+                }
+
+                performerSignatureDataUri = performerSig.dataUri
+                performerSignatureId = submission.signatureId
+                performerName = submission.performerName ?? undefined
+                performerSignatureMeaning = submission.signatureMeaning
+            }
+        }
+
         // Step 7: Fetch test results
         const results = await fetchTestResults(sampleId)
 
@@ -188,6 +223,10 @@ export async function generateCoA(
             approvalDate: sample.approved_at ? new Date(sample.approved_at).toLocaleDateString('vi-VN') : 'N/A',
             testingDate: testingDate,
             manualInputs: manualInputs,
+            performerName,
+            performerSignature: performerSignatureDataUri,
+            performerSignatureId,
+            performerSignatureMeaning,
         }
 
         const html = renderCoATemplate(coaData)

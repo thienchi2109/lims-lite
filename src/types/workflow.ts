@@ -119,6 +119,45 @@ export const SignatureHistoryItemSchema = z.object({
 export type SignatureHistoryItem = z.infer<typeof SignatureHistoryItemSchema>
 
 // ============================================================================
+// SAMPLE SUBMISSION SCHEMAS
+// ============================================================================
+
+/**
+ * Sample submission record for analyst e-signature tracking
+ * 21 CFR Part 11 compliant audit trail
+ */
+export const SampleSubmissionSchema = z.object({
+    id: z.string().uuid(),
+    sample_id: z.string().uuid(),
+    user_id: z.string().uuid(),
+    signature_id: z.string().uuid(),
+    submitted_at: z.string().datetime(),
+    submission_number: z.number().int().positive(),
+    superseded_by: z.string().uuid().nullable().optional(),
+    signature_meaning: z.string(),
+    created_at: z.string().datetime(),
+})
+
+export type SampleSubmission = z.infer<typeof SampleSubmissionSchema>
+
+/**
+ * Latest submission with performer (analyst) details
+ * Used for CoA generation - includes joined data from users and user_signatures
+ */
+export const LatestSubmissionSchema = z.object({
+    submissionId: z.string().uuid(),
+    performerId: z.string().uuid(),
+    performerName: z.string().nullable(),
+    signatureId: z.string().uuid(),
+    signatureHash: z.string(),
+    submittedAt: z.string(),
+    submissionNumber: z.number().int().positive(),
+    signatureMeaning: z.string(),
+})
+
+export type LatestSubmission = z.infer<typeof LatestSubmissionSchema>
+
+// ============================================================================
 // COA AUTHENTICATION SCHEMAS
 // ============================================================================
 
@@ -247,6 +286,10 @@ export const CoADataSchema = z.object({
     approvalDate: z.string(),
     testingDate: z.string().nullable().optional(),
     manualInputs: CoAManualInputsSchema.optional(),
+    performerName: z.string().nullable().optional(),
+    performerSignature: z.string().nullable().optional(),
+    performerSignatureId: z.string().uuid().nullable().optional(),
+    performerSignatureMeaning: z.string().nullable().optional(),
 })
 
 export type CoAData = z.infer<typeof CoADataSchema>

@@ -7,7 +7,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createHash } from 'crypto'
-import type { SampleData, UserRole } from '@/types'
+import type { SampleData, UserRole, LatestSubmission } from '@/types'
+import { getActiveSignature, downloadSignature } from '@/app/actions/signatures'
 
 // ============================================================================
 // TYPES
@@ -29,6 +30,31 @@ export type GenerateCoAResult =
 export type ValidationResult = {
     valid: boolean
     error?: string
+}
+
+/**
+ * Query result type for Supabase join
+ * Properly typed to avoid `any` casts
+ * Note: Supabase returns arrays for joined relations even with maybeSingle()
+ */
+interface SubmissionQueryResult {
+    id: string
+    user_id: string
+    signature_id: string
+    submitted_at: string
+    submission_number: number
+    signature_meaning: string
+    user: { full_name: string }[] | null
+    signature: { signature_hash: string }[] | null
+}
+
+/**
+ * Result type for signature data URI fetch
+ */
+interface SignatureDataResult {
+    dataUri: string
+    signatureId: string
+    signatureHash: string
 }
 
 // ============================================================================
@@ -125,6 +151,50 @@ export async function validateSampleForCoAGeneration(
 // ============================================================================
 // DATA FETCHING FUNCTIONS
 // ============================================================================
+
+/**
+ * Fetch the latest (non-superseded) submission for a sample
+ * Used for CoA generation to get performer signature
+ */
+export async function fetchLatestSubmission(
+    sampleId: string
+): Promise<LatestSubmission | null> {
+    const supabase = await createClient()
+
+    const { data, error } = await supabase
+        .from('sample_submissions')
+        .select(`
+            id,
+            user_id,
+            signature_id,
+            submitted_at,
+            submission_number,
+            signature_meaning,
+            user:users!sample_submissions_user_id_fkey(full_name),
+            signature:user_signatures!sample_submissions_signature_id_fkey(signature_hash)
+        `)
+        .eq('sample_id', sampleId)
+        .is('superseded_by', null)
+        .order('submission_number', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+    if (error || !data) return null
+
+    // Type-safe access - Supabase returns arrays for joined relations
+    const result = data as SubmissionQueryResult
+
+    return {
+        submissionId: result.id,
+        performerId: result.user_id,
+        performerName: result.user?.[0]?.full_name ?? null,
+        signatureId: result.signature_id,
+        signatureHash: result.signature?.[0]?.signature_hash ?? '',
+        submittedAt: result.submitted_at,
+        submissionNumber: result.submission_number,
+        signatureMeaning: result.signature_meaning,
+    }
+}
 
 /**
  * Fetch sample data with approver information
@@ -296,6 +366,42 @@ export async function fetchTestResults(sampleId: string): Promise<TestResult[]> 
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
+
+/**
+ * Fetch and download a user's signature as base64 data URI
+ * Consolidates duplicate signature download logic
+ *
+ * @param userId - User whose signature to fetch
+ * @param expectedHash - Optional hash for integrity verification
+ */
+export async function fetchSignatureDataUri(
+    userId: string,
+    expectedHash?: string
+): Promise<SignatureDataResult | null> {
+    const sigResult = await getActiveSignature(userId, { useServiceRole: true })
+    if (!sigResult.success || !sigResult.signature) return null
+
+    const signature = sigResult.signature
+
+    // Hash verification (if expected hash provided)
+    if (expectedHash && signature.signature_hash !== expectedHash) {
+        console.error('Signature hash mismatch - possible tampering detected', {
+            userId,
+            expected: expectedHash,
+            actual: signature.signature_hash,
+        })
+        return null
+    }
+
+    const downloadResult = await downloadSignature(signature.signature_path, { useServiceRole: true })
+    if (!downloadResult.success || !downloadResult.dataUri) return null
+
+    return {
+        dataUri: downloadResult.dataUri,
+        signatureId: signature.id,
+        signatureHash: signature.signature_hash,
+    }
+}
 
 /**
  * Verify signature hash integrity
