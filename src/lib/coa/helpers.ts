@@ -44,8 +44,8 @@ interface SubmissionQueryResult {
     submitted_at: string
     submission_number: number
     signature_meaning: string
-    user: { full_name: string }[] | null
-    signature: { signature_hash: string }[] | null
+    user: { full_name: string } | null
+    signature: { signature_hash: string } | null
 }
 
 /**
@@ -226,15 +226,16 @@ export async function fetchLatestSubmission(
 
     if (error || !data) return null
 
-    // Type-safe access - Supabase returns arrays for joined relations
-    const result = data as SubmissionQueryResult
+    // Type-safe access - Supabase type inference returns arrays but actual data is single objects for many-to-one
+    // Use unknown first to safely cast, then access properties with null checks
+    const result = data as unknown as SubmissionQueryResult
 
     return {
         submissionId: result.id,
         performerId: result.user_id,
-        performerName: result.user?.[0]?.full_name ?? null,
+        performerName: result.user?.full_name ?? null,
         signatureId: result.signature_id,
-        signatureHash: result.signature?.[0]?.signature_hash ?? '',
+        signatureHash: result.signature?.signature_hash ?? '',
         submittedAt: result.submitted_at,
         submissionNumber: result.submission_number,
         signatureMeaning: result.signature_meaning,
