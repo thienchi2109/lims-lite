@@ -15,7 +15,7 @@ export function renderResultsTable(results: TestResult[]): string {
     const order: string[] = []
 
     results.forEach(result => {
-        const key = result.lab_specialty_name || 'KHAC'
+        const key = result.lab_specialty_name || 'KHÁC'
         if (!groups[key]) {
             groups[key] = []
             order.push(key)
@@ -28,7 +28,7 @@ export function renderResultsTable(results: TestResult[]): string {
         tbody = `
             <tr>
                 <td colspan="6" style="text-align: center; font-style: italic; color: #666;">
-                    Khong co ket qua xet nghiem
+                    Không có kết quả xét nghiệm
                 </td>
             </tr>
         `
@@ -36,8 +36,8 @@ export function renderResultsTable(results: TestResult[]): string {
         tbody = order.map(groupName => {
             let groupHtml = ''
 
-            // Add group header if not 'KHAC' or 'N/A'
-            if (groupName !== 'KHAC' && groupName !== 'N/A') {
+            // Add group header if not 'KHÁC' or 'N/A'
+            if (groupName !== 'KHÁC' && groupName !== 'N/A') {
                 groupHtml += `
                     <tr class="res-group-header">
                         <td colspan="6">${groupName}</td>
@@ -70,11 +70,11 @@ export function renderResultsTable(results: TestResult[]): string {
             <thead>
                 <tr>
                     <th width="5%">STT</th>
-                    <th width="30%">Ten xet nghiem</th>
-                    <th width="15%">Ket qua</th>
-                    <th width="10%">Don vi</th>
-                    <th width="20%">Khoang tham chieu</th>
-                    <th width="20%">Phuong phap</th>
+                    <th width="30%">Tên xét nghiệm</th>
+                    <th width="15%">Kết quả</th>
+                    <th width="10%">Đơn vị</th>
+                    <th width="20%">Khoảng tham chiếu</th>
+                    <th width="20%">Phương pháp</th>
                 </tr>
             </thead>
             <tbody>

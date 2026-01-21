@@ -16,7 +16,7 @@ import type { CoAData } from '@/types'
 export function renderSignatures(coaData: CoAData, footerDateStr: string): string {
     // Performer (analyst) signature - left column
     const performerSignatureHtml = coaData.performerSignature
-        ? `<img src="${coaData.performerSignature}" alt="Chu ky nguoi thuc hien" class="signature-image" />`
+        ? `<img src="${coaData.performerSignature}" alt="Chữ ký người thực hiện" class="signature-image" />`
         : ''
 
     const performerNameHtml = coaData.performerName
@@ -25,7 +25,7 @@ export function renderSignatures(coaData: CoAData, footerDateStr: string): strin
 
     // Approver (manager) signature - right column
     const approverSignatureHtml = coaData.approverSignature
-        ? `<img src="${coaData.approverSignature}" alt="Chu ky" class="signature-image" />`
+        ? `<img src="${coaData.approverSignature}" alt="Chữ ký" class="signature-image" />`
         : ''
 
     return `
@@ -33,13 +33,13 @@ export function renderSignatures(coaData: CoAData, footerDateStr: string): strin
         <div class="signatures">
             <div class="sig-col">
                 <div class="sig-date invisible">Spacer</div>
-                <div class="sig-title">Nguoi thuc hien</div>
+                <div class="sig-title">Người thực hiện</div>
                 ${performerSignatureHtml}
                 <div class="sig-name">${performerNameHtml}</div>
             </div>
             <div class="sig-col">
-                <div class="sig-date">Can Tho, ${footerDateStr}</div>
-                <div class="sig-title">Lanh dao khoa Xet nghiem</div>
+                <div class="sig-date">Cần Thơ, ${footerDateStr}</div>
+                <div class="sig-title">Lãnh đạo khoa Xét nghiệm</div>
                 ${approverSignatureHtml}
                 <div class="sig-name">${coaData.approverName}</div>
             </div>

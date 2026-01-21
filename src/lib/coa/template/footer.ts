@@ -12,10 +12,10 @@ export function renderAbsoluteFooter(): string {
         <!-- FOOTER -->
         <div class="absolute-footer">
             <div class="footer-disclaimer">
-                Ket qua xet nghiem chi co gia tri tren mau thu.
+                Kết quả xét nghiệm chỉ có giá trị trên mẫu thử.
             </div>
             <div class="footer-disclaimer">
-                Ket qua nam ngoai khoang tham chieu, yeu cau gap bac si chi dinh.
+                Kết quả nằm ngoài khoảng tham chiếu, yêu cầu gặp bác sĩ chỉ định.
             </div>
             <div class="footer-info">
                 <div class="footer-address">
@@ -23,8 +23,8 @@ export function renderAbsoluteFooter(): string {
                         <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
                     </svg>
                     <div class="footer-address-text">
-                        <div>So 01 Ngo Duc Ke, P. Ninh Kieu, Tp. Can Tho</div>
-                        <div>So 400 Nguyen Van Cu noi dai, P. An Binh, Tp. Can Tho</div>
+                        <div>Số 01 Ngô Đức Kế, P. Ninh Kiều, Tp. Cần Thơ</div>
+                        <div>Số 400 Nguyễn Văn Cừ nối dài, P. An Bình, Tp. Cần Thơ</div>
                     </div>
                 </div>
                 <div class="footer-code">

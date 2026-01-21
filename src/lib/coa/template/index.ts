@@ -34,12 +34,12 @@ export function renderCoATemplate(coaData: CoAData): string {
     const logoUrl = "https://i.postimg.cc/8zFZ52j1/cdc-logo-150.png"
     const dateStr = coaData.approvalDate
 
-    // Format date for signature section "Can Tho, ngay... thang... nam..."
+    // Format date for signature section "Cần Thơ, ngày... tháng... năm..."
     let footerDateStr = dateStr;
     try {
         if (dateStr && dateStr.includes('/')) {
             const [day, month, year] = dateStr.split('/');
-            footerDateStr = `ngay ${day} thang ${month} nam ${year}`;
+            footerDateStr = `ngày ${day} tháng ${month} năm ${year}`;
         }
     } catch (e) {
         console.error('Error formatting date:', e);
@@ -51,7 +51,7 @@ export function renderCoATemplate(coaData: CoAData): string {
 
 <head>
     <meta charset="UTF-8">
-    <title>Ket qua xet nghiem - ${coaData.sample.sample_id_display}</title>
+    <title>Kết quả xét nghiệm - ${coaData.sample.sample_id_display}</title>
     <style>
         ${getStylesheet()}
     </style>

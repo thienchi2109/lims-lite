@@ -110,7 +110,7 @@ export function renderWatermark(): string {
     return `
         <!-- WATERMARK -->
         <div class="watermark">
-            <div class="watermark-text">CDC CAN THO</div>
+            <div class="watermark-text">CDC CẦN THƠ</div>
         </div>
     `
 }

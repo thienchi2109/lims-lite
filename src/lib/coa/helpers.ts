@@ -83,7 +83,8 @@ interface SampleWithClientQueryResult {
 
 /**
  * Result row from test results query with assay definitions join
- * Note: Supabase returns arrays for joined relations
+ * Note: For many-to-one joins (result -> assay_definition), Supabase returns a single object
+ * For one-to-many joins (assay_definition -> lab_specialty), Supabase returns an array
  */
 interface TestResultQueryRow {
     value: string | null
@@ -94,11 +95,11 @@ interface TestResultQueryRow {
         lab_specialties: {
             name: string | null
             display_order: number | null
-        }[] | null
-    }[] | null
+        } | null
+    } | null
     methods: {
         name: string | null
-    }[] | null
+    } | null
 }
 
 // ============================================================================
@@ -385,36 +386,34 @@ export async function fetchTestResults(sampleId: string): Promise<TestResult[]> 
         return []
     }
 
-    // Type-safe cast with defined interface
-    const typedData = data as TestResultQueryRow[]
+    // Supabase type inference returns arrays but actual data is single objects for many-to-one
+    // Use unknown first to safely cast, then access properties with null checks
+    const typedData = data as unknown as TestResultQueryRow[]
 
     // Sort by lab specialty order, then assay name
     const sorted = typedData.sort((a, b) => {
-        const assayA = a.assay_definitions?.[0]
-        const assayB = b.assay_definitions?.[0]
-        const orderA = assayA?.lab_specialties?.[0]?.display_order ?? 9999
-        const orderB = assayB?.lab_specialties?.[0]?.display_order ?? 9999
+        const orderA = a.assay_definitions?.lab_specialties?.display_order ?? 9999
+        const orderB = b.assay_definitions?.lab_specialties?.display_order ?? 9999
 
         if (orderA !== orderB) return orderA - orderB
 
-        const nameA = assayA?.name ?? ''
-        const nameB = assayB?.name ?? ''
+        const nameA = a.assay_definitions?.name ?? ''
+        const nameB = b.assay_definitions?.name ?? ''
         return nameA.localeCompare(nameB)
     })
 
     return sorted.map((row) => {
-        const assay = row.assay_definitions?.[0]
         // Extract normal_range from validation_rules if it exists
-        const validationRules = assay?.validation_rules ?? {}
+        const validationRules = row.assay_definitions?.validation_rules ?? {}
         const normalRange = (validationRules as Record<string, string>).normal_range ?? null
 
         return {
-            assay_name: assay?.name ?? 'N/A',
+            assay_name: row.assay_definitions?.name ?? 'N/A',
             value: row.value,
-            unit: assay?.units ?? null,
+            unit: row.assay_definitions?.units ?? null,
             normal_range: normalRange,
-            method_name: row.methods?.[0]?.name ?? null,
-            lab_specialty_name: assay?.lab_specialties?.[0]?.name ?? null
+            method_name: row.methods?.name ?? null,
+            lab_specialty_name: row.assay_definitions?.lab_specialties?.name ?? null
         }
     })
 }
