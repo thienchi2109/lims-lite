@@ -30,6 +30,8 @@ interface AssignedTestsToolbarProps {
     coaStatus: CoAReportStatus | null
     canSubmitForReview: boolean
     hasPendingChanges: boolean
+    hasSignature: boolean
+    signatureLoading: boolean
     isGeneratingCoA: boolean
     onPrint: () => void
     onGenerateCoA: () => void
@@ -45,6 +47,8 @@ export function AssignedTestsToolbar({
     coaStatus,
     canSubmitForReview,
     hasPendingChanges,
+    hasSignature,
+    signatureLoading,
     isGeneratingCoA,
     onPrint,
     onGenerateCoA,
@@ -193,13 +197,23 @@ export function AssignedTestsToolbar({
                                 size="icon"
                                 className="h-8 w-8 bg-emerald-600 text-white shadow-sm transition-all hover:scale-105 hover:bg-emerald-700 hover:shadow-emerald-500/20"
                                 onClick={onSubmitForReview}
-                                disabled={hasPendingChanges}
+                                disabled={hasPendingChanges || !hasSignature || signatureLoading}
+                                title={!hasSignature ? "Vui lòng tải lên chữ ký trước khi nộp" : undefined}
+                                aria-disabled={hasPendingChanges || !hasSignature || signatureLoading}
                             >
                                 <CheckCircle className="h-4 w-4" />
                                 <span className="sr-only">Gửi duyệt</span>
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Gửi duyệt kết quả</TooltipContent>
+                        <TooltipContent>
+                            {signatureLoading
+                                ? 'Đang kiểm tra chữ ký...'
+                                : !hasSignature
+                                    ? 'Vui lòng tải lên chữ ký trước khi nộp'
+                                    : hasPendingChanges
+                                        ? 'Lưu thay đổi trước khi gửi duyệt'
+                                        : 'Gửi duyệt kết quả'}
+                        </TooltipContent>
                     </Tooltip>
                 )}
 

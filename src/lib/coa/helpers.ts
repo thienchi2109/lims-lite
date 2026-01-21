@@ -7,7 +7,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createHash } from 'crypto'
-import type { SampleData, UserRole, LatestSubmission } from '@/types'
+import type { SampleData, UserRole, LatestSubmission, Gender } from '@/types'
 import { getActiveSignature, downloadSignature } from '@/app/actions/signatures'
 
 // ============================================================================
@@ -55,6 +55,50 @@ interface SignatureDataResult {
     dataUri: string
     signatureId: string
     signatureHash: string
+}
+
+/**
+ * Client data from Supabase join query
+ * Used for type-safe access instead of `as any`
+ */
+interface ClientQueryData {
+    name: string | null
+    date_of_birth: string | null
+    gender: Gender | null
+    address: string | null
+    health_insurance_num: string | null
+}
+
+/**
+ * Sample query result with client join
+ */
+interface SampleWithClientQueryResult {
+    id: string
+    sample_id: string
+    type: string
+    received_at: string
+    status: string
+    clients: ClientQueryData | ClientQueryData[] | null
+}
+
+/**
+ * Result row from test results query with assay definitions join
+ * Note: Supabase returns arrays for joined relations
+ */
+interface TestResultQueryRow {
+    value: string | null
+    assay_definitions: {
+        name: string | null
+        units: string | null
+        validation_rules: Record<string, unknown> | null
+        lab_specialties: {
+            name: string | null
+            display_order: number | null
+        }[] | null
+    }[] | null
+    methods: {
+        name: string | null
+    }[] | null
 }
 
 // ============================================================================
@@ -228,6 +272,12 @@ export async function fetchSampleWithApprover(sampleId: string): Promise<SampleD
         return null
     }
 
+    // Type-safe access: Supabase may return single object or array for joins
+    const typedSample = sample as SampleWithClientQueryResult
+    const client: ClientQueryData | null = Array.isArray(typedSample.clients)
+        ? typedSample.clients[0] ?? null
+        : typedSample.clients
+
     // Get approver info from the first approved result
     const { data: approvedResult, error: resultError } = await supabase
         .from('results')
@@ -245,18 +295,18 @@ export async function fetchSampleWithApprover(sampleId: string): Promise<SampleD
     }
 
     return {
-        id: sample.id,
-        sample_id_display: sample.sample_id,
+        id: typedSample.id,
+        sample_id_display: typedSample.sample_id,
         approved_by: approvedResult.approved_by,
         approved_at: approvedResult.approved_at,
-        client_name: (sample.clients as any)?.name,
-        sample_type: sample.type,
-        received_date: sample.received_at,
+        client_name: client?.name ?? undefined,
+        sample_type: typedSample.type,
+        received_date: typedSample.received_at,
         // Client demographic fields for CoA template
-        client_dob: (sample.clients as any)?.date_of_birth || null,
-        client_gender: (sample.clients as any)?.gender || null,
-        client_address: (sample.clients as any)?.address || null,
-        client_health_insurance_num: (sample.clients as any)?.health_insurance_num || null,
+        client_dob: client?.date_of_birth ?? undefined,
+        client_gender: client?.gender ?? undefined,
+        client_address: client?.address ?? undefined,
+        client_health_insurance_num: client?.health_insurance_num ?? undefined,
     }
 }
 
@@ -335,30 +385,36 @@ export async function fetchTestResults(sampleId: string): Promise<TestResult[]> 
         return []
     }
 
+    // Type-safe cast with defined interface
+    const typedData = data as TestResultQueryRow[]
+
     // Sort by lab specialty order, then assay name
-    const sorted = data.sort((a: any, b: any) => {
-        const orderA = a.assay_definitions?.lab_specialties?.display_order ?? 9999
-        const orderB = b.assay_definitions?.lab_specialties?.display_order ?? 9999
+    const sorted = typedData.sort((a, b) => {
+        const assayA = a.assay_definitions?.[0]
+        const assayB = b.assay_definitions?.[0]
+        const orderA = assayA?.lab_specialties?.[0]?.display_order ?? 9999
+        const orderB = assayB?.lab_specialties?.[0]?.display_order ?? 9999
 
         if (orderA !== orderB) return orderA - orderB
 
-        const nameA = a.assay_definitions?.name || ''
-        const nameB = b.assay_definitions?.name || ''
+        const nameA = assayA?.name ?? ''
+        const nameB = assayB?.name ?? ''
         return nameA.localeCompare(nameB)
     })
 
-    return sorted.map((row: any) => {
+    return sorted.map((row) => {
+        const assay = row.assay_definitions?.[0]
         // Extract normal_range from validation_rules if it exists
-        const validationRules = row.assay_definitions?.validation_rules || {}
-        const normalRange = validationRules.normal_range || null
+        const validationRules = assay?.validation_rules ?? {}
+        const normalRange = (validationRules as Record<string, string>).normal_range ?? null
 
         return {
-            assay_name: row.assay_definitions?.name || 'N/A',
+            assay_name: assay?.name ?? 'N/A',
             value: row.value,
-            unit: row.assay_definitions?.units || null,
+            unit: assay?.units ?? null,
             normal_range: normalRange,
-            method_name: row.methods?.name || null,
-            lab_specialty_name: row.assay_definitions?.lab_specialties?.name || null
+            method_name: row.methods?.[0]?.name ?? null,
+            lab_specialty_name: assay?.lab_specialties?.[0]?.name ?? null
         }
     })
 }

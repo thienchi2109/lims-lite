@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { DashboardHeader } from '@/components/dashboard-header'
 import { UserProfileInfo } from '@/components/user-profile-info'
 import { ChangePasswordForm } from '@/components/change-password-form'
+import SignatureUpload from '@/components/profile/signature-upload'
 
 export default async function ProfilePage() {
     const supabase = await createClient()
@@ -53,9 +54,15 @@ export default async function ProfilePage() {
                         <UserProfileInfo user={userData} />
                     </div>
 
-                    {/* Right Column: Change Password */}
-                    <div className="lg:col-span-2">
+                    {/* Right Column: Settings */}
+                    <div className="lg:col-span-2 space-y-8">
+                        {/* Change Password Section */}
                         <ChangePasswordForm />
+
+                        {/* Electronic Signature Section - Only for Manager and Analyst */}
+                        {(userData.role === 'manager' || userData.role === 'analyst') && (
+                            <SignatureUpload />
+                        )}
                     </div>
                 </div>
             </main>

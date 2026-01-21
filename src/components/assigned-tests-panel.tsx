@@ -14,7 +14,9 @@ import {
 } from '@/components/ui/table'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Loader2, AlertCircle } from 'lucide-react'
+import { Loader2, AlertCircle, AlertTriangle } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import Link from 'next/link'
 import {
     Dialog,
     DialogContent,
@@ -36,6 +38,7 @@ import { generatePrintTemplate } from '@/lib/print-template'
 import { regenerateCoA, getCoAStatus } from '@/app/actions/coa'
 import { useResultsEditor } from '@/hooks/use-results-editor'
 import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard'
+import { useSignatureStatus } from '@/hooks/use-signature-status'
 import { QCRowIndicator } from '@/components/qc/qc-row-indicator'
 import { getQCStatusForAssays, type AssayQCStatus } from '@/app/actions/qc-status'
 import type { CoAReportStatus } from '@/types'
@@ -68,6 +71,16 @@ export function AssignedTestsPanel({ sampleId, specialties = [], userRole }: Ass
 
     // QC status state
     const [qcStatuses, setQcStatuses] = useState<Record<string, AssayQCStatus>>({})
+
+    // Signature status hook
+    const { hasSignature, isLoading: signatureLoading, error: signatureError } = useSignatureStatus()
+
+    // Log signature fetch errors
+    useEffect(() => {
+        if (signatureError) {
+            console.warn('Failed to fetch signature status:', signatureError)
+        }
+    }, [signatureError])
 
     const handleRefocus = useCallback(
         (targetSampleId: string) => {
@@ -252,6 +265,8 @@ export function AssignedTestsPanel({ sampleId, specialties = [], userRole }: Ass
                 coaStatus={coaStatus}
                 canSubmitForReview={allResultsEntered}
                 hasPendingChanges={editor.pendingCount > 0}
+                hasSignature={hasSignature}
+                signatureLoading={signatureLoading}
                 isGeneratingCoA={isGeneratingCoA}
                 onPrint={handlePrint}
                 onGenerateCoA={handleGenerateCoA}
@@ -353,12 +368,43 @@ export function AssignedTestsPanel({ sampleId, specialties = [], userRole }: Ass
                             &quot;Chờ duyệt&quot; và bạn sẽ không thể chỉnh sửa kết quả cho đến khi quản lý phản hồi.
                         </DialogDescription>
                     </DialogHeader>
+
+                    {!signatureLoading && !hasSignature && (
+                        <Alert variant="destructive" className="my-4">
+                            <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                            <AlertTitle>Chữ ký chưa được thiết lập</AlertTitle>
+                            <AlertDescription>
+                                <Link
+                                    href="/profile?tab=signature"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="underline hover:no-underline"
+                                    aria-label="Tải lên chữ ký điện tử"
+                                >
+                                    Vui lòng tải lên chữ ký điện tử
+                                </Link>
+                                {' '}trước khi nộp kết quả xét nghiệm.
+                            </AlertDescription>
+                        </Alert>
+                    )}
+
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setShowSubmitDialog(false)} disabled={isSubmitting}>
                             Hủy
                         </Button>
-                        <Button onClick={handleSubmitForReview} disabled={isSubmitting} className="bg-emerald-600 hover:bg-emerald-700">
-                            {isSubmitting ? (
+                        <Button
+                            onClick={handleSubmitForReview}
+                            disabled={!hasSignature || signatureLoading || isSubmitting}
+                            title={!hasSignature ? "Vui lòng tải lên chữ ký trước khi nộp" : undefined}
+                            aria-disabled={!hasSignature || signatureLoading}
+                            className="bg-emerald-600 hover:bg-emerald-700"
+                        >
+                            {signatureLoading ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Đang kiểm tra...
+                                </>
+                            ) : isSubmitting ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                     Đang gửi...

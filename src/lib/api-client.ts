@@ -271,9 +271,10 @@ export async function getSessionTimeboxExpiryClient(
 // ============================================================================
 
 /**
- * Upload manager signature file
- * Client-side wrapper that calls uploadManagerSignature server action
- * NOTE: This bypasses the JSON API because FormData cannot be JSON-serialized
+ * Upload user signature (Manager or Analyst)
+ *
+ * NOTE: This bypasses the JSON API because FormData cannot be JSON-serialized.
+ * Sends FormData directly to /api/signatures/upload endpoint.
  */
 export async function uploadSignatureClient(formData: FormData) {
     const response = await fetch('/api/signatures/upload', {
@@ -304,6 +305,14 @@ export async function uploadSignatureClient(formData: FormData) {
     }
 
     return await response.json()
+}
+
+/**
+ * Upload manager signature file
+ * @deprecated Use uploadSignatureClient instead - supports both Manager and Analyst roles
+ */
+export async function uploadManagerSignatureClient(formData: FormData) {
+    return uploadSignatureClient(formData)
 }
 
 /**

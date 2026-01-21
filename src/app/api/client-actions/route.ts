@@ -42,6 +42,7 @@ import {
     updateClient,
 } from '@/app/actions/clients'
 import {
+    uploadSignature,
     uploadManagerSignature,
     getActiveSignature,
     getSignatureHistory,
@@ -239,10 +240,17 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
     },
     // Signature management actions
     uploadManagerSignature: async (payload) => {
+        // @deprecated - kept for backward compatibility
         if (!payload || !(payload instanceof FormData)) {
             return { error: 'FormData là bắt buộc' }
         }
-        return uploadManagerSignature(payload)
+        return uploadSignature(payload)
+    },
+    uploadSignature: async (payload) => {
+        if (!payload || !(payload instanceof FormData)) {
+            return { error: 'FormData là bắt buộc' }
+        }
+        return uploadSignature(payload)
     },
     getActiveSignature: async () => getActiveSignature(),
     getSignatureHistory: async () => getSignatureHistory(),

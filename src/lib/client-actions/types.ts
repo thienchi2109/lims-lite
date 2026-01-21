@@ -29,7 +29,8 @@ export type ClientActionName =
     | 'getClient'
     | 'getClients'
     | 'updateClient'
-    | 'uploadManagerSignature'
+    | 'uploadManagerSignature'    // @deprecated - use uploadSignature
+    | 'uploadSignature'           // New generic action for both roles
     | 'getActiveSignature'
     | 'getSignatureHistory'
     | 'downloadSignature'
