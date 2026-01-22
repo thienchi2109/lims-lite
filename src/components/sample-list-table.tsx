@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import {
     useReactTable,
     getCoreRowModel,
@@ -130,7 +130,9 @@ export function SampleListTable({
     }
 
     // Define columns using shared cell components
-    const columns: ColumnDef<SampleWithUser>[] = useMemo(() => [
+    // Note: Not memoized because action handlers need fresh closures for searchParams.
+    // TanStack Table handles column re-renders efficiently.
+    const columns: ColumnDef<SampleWithUser>[] = [
         {
             accessorKey: 'sample_id',
             header: GRID_LABELS.columns.sampleId,
@@ -252,7 +254,7 @@ export function SampleListTable({
                 )
             },
         },
-    ], [permissions, sortBy, sortOrder])
+    ]
 
     const table = useReactTable({
         data: samples,
