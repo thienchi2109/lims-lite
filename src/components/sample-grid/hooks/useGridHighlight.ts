@@ -9,7 +9,7 @@ interface UseGridHighlightOptions {
 
 interface RowWithTimestamp {
   id: string
-  updated_at: string
+  updated_at: string | null
 }
 
 /**
@@ -25,7 +25,7 @@ export function useGridHighlight<T extends RowWithTimestamp>(
 ): Set<string> {
   const { highlightDuration = 2000, skipInitialAnimation = true } = options
 
-  const prevTimestampsRef = useRef<Map<string, string>>(new Map())
+  const prevTimestampsRef = useRef<Map<string, string | null>>(new Map())
   const isInitialMountRef = useRef(skipInitialAnimation)
   const timeoutIdsRef = useRef<Set<NodeJS.Timeout>>(new Set())
   const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set())
@@ -43,7 +43,7 @@ export function useGridHighlight<T extends RowWithTimestamp>(
     if (isInitialMountRef.current) {
       isInitialMountRef.current = false
       // Store initial timestamps
-      const initialMap = new Map<string, string>()
+      const initialMap = new Map<string, string | null>()
       rows.forEach(row => initialMap.set(row.id, row.updated_at))
       prevTimestampsRef.current = initialMap
       return
@@ -81,7 +81,7 @@ export function useGridHighlight<T extends RowWithTimestamp>(
     }
 
     // Update timestamps (for new rows and changed rows)
-    const newMap = new Map<string, string>()
+    const newMap = new Map<string, string | null>()
     rows.forEach(row => newMap.set(row.id, row.updated_at))
     prevTimestampsRef.current = newMap
   }, [rows, highlightDuration])
