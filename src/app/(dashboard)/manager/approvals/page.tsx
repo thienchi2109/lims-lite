@@ -81,7 +81,7 @@ export default async function ApprovalsPage({ searchParams }: ApprovalsPageProps
                 />
 
                 {/* Top Row: Queue (Fixed Height ~50%) */}
-                <div id="tour-approval-queue" className="h-[50vh] min-h-[400px] shrink-0">
+                <div id="tour-approval-queue" className="h-[50vh] min-h-[400px] shrink-0 flex flex-col">
                     {error ? (
                         <div className="text-center py-8 text-destructive bg-white dark:bg-slate-900 rounded-lg border">
                             Lỗi khi tải hàng đợi phê duyệt: {error}
