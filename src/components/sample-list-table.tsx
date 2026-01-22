@@ -1,52 +1,31 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
-import { motion } from 'motion/react'
+import { useEffect, useState } from 'react'
 import {
     useReactTable,
     getCoreRowModel,
-    flexRender,
     type ColumnDef,
 } from '@tanstack/react-table'
 import { type SampleWithUser } from '@/types'
-import { formatDate } from '@/lib/utils-lims'
 import { Button } from '@/components/ui/button'
-import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { SampleStatusBadge } from '@/components/sample-status-badge'
 import { SampleEditDialog } from '@/components/sample-edit-dialog'
 import { DiscardSampleDialog } from '@/components/discard-sample-dialog'
-import { ChevronLeft, ChevronRight, Eye, Pencil, ArrowUpDown, ArrowUp, ArrowDown, ClipboardPen, Trash2 } from 'lucide-react'
+import { Eye, Pencil, ClipboardPen, Trash2 } from 'lucide-react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { sampleKeys } from '@/types/query-keys'
-import { rowHighlight } from '@/lib/motion'
-
-/**
- * Hook to track which rows have been updated since last render
- * Compares updated_at timestamps to detect changes
- */
-function useUpdatedRows(samples: SampleWithUser[], isInitialMount: boolean) {
-    const prevTimestamps = useRef<Map<string, string>>(new Map())
-    const updatedIds = new Set<string>()
-
-    // Only check for updates after initial mount (not on first load or pagination)
-    if (!isInitialMount) {
-        samples.forEach(sample => {
-            const prev = prevTimestamps.current.get(sample.id)
-            if (prev && prev !== sample.updated_at) {
-                updatedIds.add(sample.id)
-            }
-        })
-    }
-
-    useEffect(() => {
-        const newMap = new Map<string, string>()
-        samples.forEach(s => newMap.set(s.id, s.updated_at))
-        prevTimestamps.current = newMap
-    }, [samples])
-
-    return updatedIds
-}
+import {
+    SampleDataGrid,
+    SampleIdCell,
+    ClientNameCell,
+    StatusCell,
+    DateCell,
+    ReceiverCell,
+    ColumnHeader,
+    useGridHighlight,
+    GRID_LABELS,
+    type SortDirection,
+} from '@/components/sample-grid'
 
 interface SampleListTableProps {
     samples: SampleWithUser[]
@@ -84,45 +63,18 @@ export function SampleListTable({
     const [discardDialogOpen, setDiscardDialogOpen] = useState(false)
     const [selectedSampleForDiscard, setSelectedSampleForDiscard] = useState<string | null>(null)
 
-    // Track if this is the initial mount to prevent animation on first load
-    const isInitialMountRef = useRef(true)
-    useEffect(() => {
-        isInitialMountRef.current = false
-    }, [])
-
     const router = useRouter()
     const searchParams = useSearchParams()
     const pathname = usePathname()
     const queryClient = useQueryClient()
 
-    // Track updated rows for highlight animation
-    const updatedRows = useUpdatedRows(samples, isInitialMountRef.current)
+    // Use shared highlight hook for realtime updates
+    const highlightedRowIds = useGridHighlight(samples)
 
     // Keep local state in sync with server data on navigation
     useEffect(() => {
         setSamples(serverSamples)
     }, [serverSamples])
-
-    const handleEditSample = (sample: SampleWithUser) => {
-        setSelectedSampleForEdit(sample)
-        setEditDialogOpen(true)
-    }
-
-    const handleEditSuccess = () => {
-        if (!selectedSampleForEdit) return
-
-        // Apply the same refresh pattern as result saving and sample editing:
-        // 1. Update URL params to sort by updated_at DESC and navigate to page 1
-        const params = new URLSearchParams(searchParams?.toString() ?? '')
-        params.set('sortBy', 'updated_at')
-        params.set('sortOrder', 'desc')
-        params.set('sampleId', selectedSampleForEdit.id)
-        params.set('page', '1')
-        router.push(`${pathname}?${params.toString()}`)
-
-        // 2. Invalidate TanStack Query cache to trigger refetch
-        queryClient.invalidateQueries({ queryKey: sampleKeys.all })
-    }
 
     const updateQuery = (updates: Record<string, string | null>) => {
         const params = new URLSearchParams(searchParams.toString())
@@ -145,183 +97,164 @@ export function SampleListTable({
         })
     }
 
-    const handleRowClick = (sample: SampleWithUser, event: React.MouseEvent<HTMLTableRowElement>) => {
-        const target = event.target as HTMLElement | null
-        const isInteractiveClick = target?.closest('button, a, input, textarea, select, [role="button"], [data-stop-row-click="true"]')
-        if (isInteractiveClick) {
-            return
-        }
+    const handleEditSample = (sample: SampleWithUser) => {
+        setSelectedSampleForEdit(sample)
+        setEditDialogOpen(true)
+    }
 
+    const handleEditSuccess = () => {
+        if (!selectedSampleForEdit) return
+
+        const params = new URLSearchParams(searchParams?.toString() ?? '')
+        params.set('sortBy', 'updated_at')
+        params.set('sortOrder', 'desc')
+        params.set('sampleId', selectedSampleForEdit.id)
+        params.set('page', '1')
+        router.push(`${pathname}?${params.toString()}`)
+
+        queryClient.invalidateQueries({ queryKey: sampleKeys.all })
+    }
+
+    const handleRowClick = (sample: SampleWithUser) => {
         updateQuery({ sampleId: sample.id })
     }
 
+    const handlePageChange = (newPage: number) => {
+        updateQuery({ page: String(newPage) })
+    }
+
+    // Helper to get sort direction for a column
+    const getSortDirection = (column: string): SortDirection => {
+        if (sortBy !== column) return null
+        return sortOrder
+    }
+
+    // Define columns using shared cell components
+    // Note: Not memoized because action handlers need fresh closures for searchParams.
+    // TanStack Table handles column re-renders efficiently.
     const columns: ColumnDef<SampleWithUser>[] = [
         {
             accessorKey: 'sample_id',
-            header: 'Mã mẫu',
-            cell: ({ row }) => (
-                <span className="font-mono font-medium text-slate-700 dark:text-slate-200">{row.original.sample_id}</span>
-            ),
+            header: GRID_LABELS.columns.sampleId,
+            cell: ({ row }) => <SampleIdCell value={row.original.sample_id} />,
         },
         {
             accessorKey: 'client_name',
-            header: 'Tên khách hàng',
-            cell: ({ row }) => (
-                <span className="text-sm text-slate-700 dark:text-slate-200">
-                    {row.original.client_name || '-'}
-                </span>
-            ),
+            header: GRID_LABELS.columns.clientName,
+            cell: ({ row }) => <ClientNameCell value={row.original.client_name} />,
         },
         {
             accessorKey: 'status',
-            header: 'Trạng thái',
-            cell: ({ row }) => <SampleStatusBadge status={row.original.status} />,
+            header: GRID_LABELS.columns.status,
+            cell: ({ row }) => <StatusCell status={row.original.status} />,
         },
         {
             accessorKey: 'received_at',
-            header: ({ column }) => {
-                return (
-                    <Button
-                        variant="ghost"
-                        onClick={() => handleSort('received_at')}
-                        className="-ml-4 h-8 data-[state=open]:bg-accent text-xs font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-700 hover:bg-transparent"
-                    >
-                        Ngày nhận
-                        {sortBy === 'received_at' ? (
-                            sortOrder === 'asc' ? (
-                                <ArrowUp className="ml-2 h-3 w-3" />
-                            ) : (
-                                <ArrowDown className="ml-2 h-3 w-3" />
-                            )
-                        ) : (
-                            <ArrowUpDown className="ml-2 h-3 w-3 opacity-50" />
-                        )}
-                    </Button>
-                )
-            },
-            cell: ({ row }) => (
-                <span className="text-sm text-muted-foreground font-mono">
-                    {formatDate(row.original.received_at)}
-                </span>
+            header: () => (
+                <ColumnHeader
+                    label={GRID_LABELS.columns.receivedAt}
+                    sortDirection={getSortDirection('received_at')}
+                    onSort={() => handleSort('received_at')}
+                />
             ),
+            cell: ({ row }) => <DateCell value={row.original.received_at} />,
         },
         {
             accessorKey: 'received_by_name',
-            header: 'Người nhận',
-            cell: ({ row }) => (
-                <span className="text-sm text-slate-600 dark:text-slate-400">{row.original.received_by_name || 'N/A'}</span>
-            ),
+            header: GRID_LABELS.columns.receiver,
+            cell: ({ row }) => <ReceiverCell receiverName={row.original.received_by_name} />,
         },
         {
             accessorKey: 'updated_at',
-            header: ({ column }) => {
+            header: () => (
+                <ColumnHeader
+                    label={GRID_LABELS.columns.updatedAt}
+                    sortDirection={getSortDirection('updated_at')}
+                    onSort={() => handleSort('updated_at')}
+                />
+            ),
+            cell: ({ row }) => <DateCell value={row.original.updated_at} />,
+        },
+        {
+            id: 'actions',
+            header: GRID_LABELS.columns.actions,
+            cell: ({ row }) => {
+                const status = row.original.status
+
+                // Calculate granular permissions based on status
+                const canEdit = permissions?.canEdit && status === 'received'
+                const canEnterResults = permissions?.canEnterResults &&
+                    ['assigned', 'in_progress'].includes(status)
+                const canViewResults = permissions?.canViewResults &&
+                    ['assigned', 'in_progress', 'review', 'completed'].includes(status)
+                const canDiscard = permissions?.canDiscard &&
+                    ['received', 'assigned'].includes(status)
+
                 return (
-                    <Button
-                        variant="ghost"
-                        onClick={() => handleSort('updated_at')}
-                        className="-ml-4 h-8 data-[state=open]:bg-accent text-xs font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-700 hover:bg-transparent"
+                    <div
+                        className="flex items-center gap-1"
+                        onClick={(e) => e.stopPropagation()}
+                        data-stop-row-click="true"
                     >
-                        Ngày cập nhật
-                        {sortBy === 'updated_at' ? (
-                            sortOrder === 'asc' ? (
-                                <ArrowUp className="ml-2 h-3 w-3" />
-                            ) : (
-                                <ArrowDown className="ml-2 h-3 w-3" />
-                            )
-                        ) : (
-                            <ArrowUpDown className="ml-2 h-3 w-3 opacity-50" />
+                        {/* Edit button - Both roles, status-gated */}
+                        {canEdit && (
+                            <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() => handleEditSample(row.original)}
+                                title="Chỉnh sửa"
+                                className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                            >
+                                <Pencil className="h-4 w-4" />
+                            </Button>
                         )}
-                    </Button>
+
+                        {/* Enter Results button - Analyst only */}
+                        {canEnterResults && (
+                            <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() => updateQuery({ sampleId: row.original.id, view: 'results' })}
+                                title="Nhập kết quả"
+                                className="h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50"
+                            >
+                                <ClipboardPen className="h-4 w-4" />
+                            </Button>
+                        )}
+
+                        {/* View Results button - Manager only (when can't enter) */}
+                        {canViewResults && !canEnterResults && (
+                            <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() => updateQuery({ sampleId: row.original.id, view: 'results' })}
+                                title="Xem kết quả"
+                                className="h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50"
+                            >
+                                <Eye className="h-4 w-4" />
+                            </Button>
+                        )}
+
+                        {/* Discard button - Manager only, status-gated */}
+                        {canDiscard && (
+                            <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() => {
+                                    setSelectedSampleForDiscard(row.original.id)
+                                    setDiscardDialogOpen(true)
+                                }}
+                                title="Loại bỏ mẫu"
+                                className="h-8 w-8 text-slate-500 hover:text-red-600 hover:bg-red-50"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        )}
+                    </div>
                 )
             },
-            cell: ({ row }) => (
-                <span className="text-sm text-muted-foreground font-mono">
-                    {formatDate(row.original.updated_at)}
-                </span>
-            ),
         },
     ]
-
-    // Add unified actions column with permission-based gating
-    columns.push({
-        id: 'actions',
-        header: 'Hành động',
-        cell: ({ row }) => {
-            const status = row.original.status
-
-            // Calculate granular permissions based on status
-            const canEdit = permissions?.canEdit && status === 'received'
-            const canEnterResults = permissions?.canEnterResults &&
-                ['assigned', 'in_progress'].includes(status)
-            const canViewResults = permissions?.canViewResults &&
-                ['assigned', 'in_progress', 'review', 'completed'].includes(status)
-            const canDiscard = permissions?.canDiscard &&
-                ['received', 'assigned'].includes(status)
-
-            return (
-                <div
-                    className="flex items-center gap-1"
-                    onClick={(e) => e.stopPropagation()}
-                    data-stop-row-click="true"
-                >
-                    {/* Edit button - Both roles, status-gated */}
-                    {canEdit && (
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => handleEditSample(row.original)}
-                            title="Chỉnh sửa"
-                            className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-                        >
-                            <Pencil className="h-4 w-4" />
-                        </Button>
-                    )}
-
-                    {/* Enter Results button - Analyst only */}
-                    {canEnterResults && (
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => updateQuery({ sampleId: row.original.id, view: 'results' })}
-                            title="Nhập kết quả"
-                            className="h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50"
-                        >
-                            <ClipboardPen className="h-4 w-4" />
-                        </Button>
-                    )}
-
-                    {/* View Results button - Manager only (when can't enter) */}
-                    {canViewResults && !canEnterResults && (
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => updateQuery({ sampleId: row.original.id, view: 'results' })}
-                            title="Xem kết quả"
-                            className="h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50"
-                        >
-                            <Eye className="h-4 w-4" />
-                        </Button>
-                    )}
-
-                    {/* Discard button - Manager only, status-gated */}
-                    {canDiscard && (
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => {
-                                setSelectedSampleForDiscard(row.original.id)
-                                setDiscardDialogOpen(true)
-                            }}
-                            title="Loại bỏ mẫu"
-                            className="h-8 w-8 text-slate-500 hover:text-red-600 hover:bg-red-50"
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
-                    )}
-                </div>
-            )
-        },
-    })
 
     const table = useReactTable({
         data: samples,
@@ -331,104 +264,33 @@ export function SampleListTable({
         pageCount: totalPages,
     })
 
-    return (
-        <div className="space-y-4 h-full flex flex-col">
-            {/* Table */}
-            <div className="rounded-lg border border-slate-200 dark:border-slate-800 flex-1 overflow-auto bg-white dark:bg-slate-950 relative shadow-sm">
-                {error ? (
-                    <div className="p-8 text-center text-destructive">{error}</div>
-                ) : samples.length === 0 ? (
-                    <div className="p-12 text-center text-muted-foreground flex flex-col items-center gap-3">
-                        <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                            <ClipboardPen className="h-6 w-6 text-slate-400" />
-                        </div>
-                        <p>Không tìm thấy mẫu nào. Tạo mẫu đầu tiên để bắt đầu.</p>
-                    </div>
-                ) : (
-                    <table className="w-full caption-bottom text-sm">
-                        <TableHeader className="bg-slate-50/95 backdrop-blur supports-[backdrop-filter]:bg-slate-50/60 dark:bg-slate-900/95">
-                            {table.getHeaderGroups().map((headerGroup) => (
-                                <TableRow key={headerGroup.id} className="hover:bg-transparent border-none">
-                                    {headerGroup.headers.map((header) => (
-                                        <TableHead
-                                            key={header.id}
-                                            className="sticky top-0 z-20 h-9 bg-slate-50/95 text-xs font-semibold uppercase tracking-wider text-slate-500 backdrop-blur supports-[backdrop-filter]:bg-slate-50/80 dark:bg-slate-900/95 border-b border-slate-200 dark:border-slate-800"
-                                        >
-                                            {header.isPlaceholder
-                                                ? null
-                                                : flexRender(
-                                                    header.column.columnDef.header,
-                                                    header.getContext()
-                                                )}
-                                        </TableHead>
-                                    ))}
-                                </TableRow>
-                            ))}
-                        </TableHeader>
-                        <TableBody>
-                            {table.getRowModel().rows.map((row) => {
-                                const isSelected = row.original.id === selectedSampleId
-                                const isUpdated = updatedRows.has(row.original.id)
-                                return (
-                                    <motion.tr
-                                        key={row.id}
-                                        onClick={(event) => handleRowClick(row.original, event as unknown as React.MouseEvent<HTMLTableRowElement>)}
-                                        className={`cursor-pointer transition-colors border-b border-slate-100 dark:border-slate-800 ${isSelected
-                                            ? 'bg-sky-50 dark:bg-sky-900/20 hover:bg-sky-100 dark:hover:bg-sky-900/30'
-                                            : 'hover:bg-slate-50/80 dark:hover:bg-slate-900/50'
-                                            }`}
-                                        initial={false}
-                                        animate={isUpdated ? rowHighlight : undefined}
-                                    >
-                                        {row.getVisibleCells().map((cell) => (
-                                            <TableCell key={cell.id} className="py-2">
-                                                {flexRender(
-                                                    cell.column.columnDef.cell,
-                                                    cell.getContext()
-                                                )}
-                                            </TableCell>
-                                        ))}
-                                    </motion.tr>
-                                )
-                            })}
-                        </TableBody>
-                    </table>
-                )}
+    // Handle error state
+    if (error) {
+        return (
+            <div className="rounded-lg border border-slate-200 dark:border-slate-800 p-8 text-center text-destructive">
+                {error}
             </div>
+        )
+    }
 
-            {/* Pagination */}
-            {samples.length > 0 && (
-                <div className="flex items-center justify-between shrink-0 px-1">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>
-                            Hiển thị <span className="font-medium text-foreground">{(page - 1) * pageSize + 1}</span> - <span className="font-medium text-foreground">{Math.min(page * pageSize, totalCount)}</span> của <span className="font-medium text-foreground">{totalCount}</span> mẫu
-                        </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => updateQuery({ page: String(Math.max(1, page - 1)) })}
-                            disabled={page === 1}
-                            className="h-8 w-8 p-0"
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <div className="text-xs font-medium min-w-[3rem] text-center">
-                            {page} / {totalPages}
-                        </div>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => updateQuery({ page: String(Math.min(totalPages, page + 1)) })}
-                            disabled={page === totalPages}
-                            className="h-8 w-8 p-0"
-                        >
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
-                    </div>
-                </div>
-            )}
+    return (
+        <>
+            <SampleDataGrid
+                table={table}
+                pagination={{
+                    mode: 'server',
+                    page,
+                    totalPages,
+                    totalCount,
+                    pageSize,
+                    onPageChange: handlePageChange,
+                }}
+                selectedRowId={selectedSampleId}
+                onRowClick={handleRowClick}
+                highlightedRowIds={highlightedRowIds}
+                emptyIcon={ClipboardPen}
+                emptyMessage="Không tìm thấy mẫu nào. Tạo mẫu đầu tiên để bắt đầu."
+            />
 
             {/* Edit Dialog */}
             {selectedSampleForEdit && (
@@ -449,6 +311,6 @@ export function SampleListTable({
                     onOpenChange={setDiscardDialogOpen}
                 />
             )}
-        </div>
+        </>
     )
 }
