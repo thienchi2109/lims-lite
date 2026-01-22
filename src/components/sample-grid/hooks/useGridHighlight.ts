@@ -53,7 +53,8 @@ export function useGridHighlight<T extends RowWithTimestamp>(
     const changedIds: string[] = []
     rows.forEach(row => {
       const prevTimestamp = prevTimestampsRef.current.get(row.id)
-      if (prevTimestamp && prevTimestamp !== row.updated_at) {
+      // Use undefined check (not truthy) so null→value transitions are detected
+      if (prevTimestamp !== undefined && prevTimestamp !== row.updated_at) {
         changedIds.push(row.id)
       }
     })
