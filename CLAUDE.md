@@ -304,6 +304,7 @@ Use `powershell -Command` or bash syntax with forward slashes. Never mix cmd syn
 ```bash
 mkdir -p src/components/feature  # ✅ bash-style
 ```
+- Python scripts with Unicode: use `powershell -Command "python -X utf8 'script.py'"` (not `set PYTHONIOENCODING`)
 
 ## Development Commands
 
@@ -500,6 +501,19 @@ export async function managerOnlyAction(id: string) {
 | Not null violation | Required field missing |
 
 Check: RLS policies → triggers → Zod schema matches DB
+
+## Testing
+
+- **Test runner:** `vitest` (NOT Jest) — use `npx vitest run <path>` for individual tests
+- Existing regression test pattern: `src/__tests__/supabase-cookie-consistency.test.ts` (static file analysis)
+
+## Route Architecture
+
+- `/` — Public CDC Portal (no auth, statically prerendered)
+- `/login` — Login page
+- `/analyst/*` — Analyst dashboard (protected)
+- `/manager/*` — Manager dashboard (protected)
+- Profile "back" link uses role-based routing (`/manager` or `/analyst`), NOT `/`
 
 ## Testing Checklist
 

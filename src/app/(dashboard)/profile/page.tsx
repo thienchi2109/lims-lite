@@ -40,10 +40,10 @@ export default async function ProfilePage() {
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="mb-6">
-                    <Link href="/">
+                    <Link href={userData.role === 'manager' ? '/manager' : '/analyst'}>
                         <Button variant="ghost" size="sm" className="hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                             <ArrowLeft className="h-4 w-4 mr-2" />
-                            Quay lại trang chủ
+                            Quay lại bảng điều khiển
                         </Button>
                     </Link>
                 </div>

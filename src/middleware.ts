@@ -61,9 +61,8 @@ export async function middleware(request: NextRequest) {
         request.nextUrl.pathname.startsWith('/analyst') ||
         request.nextUrl.pathname.startsWith('/manager')
     const isApiRoute = request.nextUrl.pathname.startsWith('/api')
-    const isRootRoute = request.nextUrl.pathname === '/'
     const isLoginRoute = request.nextUrl.pathname === '/login'
-    const shouldEnforceTimebox = isProtectedRoute || isApiRoute || isRootRoute || isLoginRoute
+    const shouldEnforceTimebox = isProtectedRoute || isApiRoute || isLoginRoute
 
     if (shouldEnforceTimebox && user) {
         const {
@@ -178,17 +177,6 @@ export async function middleware(request: NextRequest) {
     if (isLoginRoute && user) {
         const url = request.nextUrl.clone()
         url.pathname = userRole === 'manager' ? '/manager' : '/analyst'
-        return NextResponse.redirect(url)
-    }
-
-    // Redirect root to appropriate dashboard or login
-    if (isRootRoute) {
-        const url = request.nextUrl.clone()
-        if (user) {
-            url.pathname = userRole === 'manager' ? '/manager' : '/analyst'
-        } else {
-            url.pathname = '/login'
-        }
         return NextResponse.redirect(url)
     }
 
