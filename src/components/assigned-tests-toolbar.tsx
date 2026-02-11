@@ -11,6 +11,12 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip'
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
     FlaskConical,
     Plus,
     CheckCircle,
@@ -37,6 +43,7 @@ interface AssignedTestsToolbarProps {
     onGenerateCoA: () => void
     onSubmitForReview: () => void
     onOpenAssignment: () => void
+    onPrintCoABody: () => void
     userRole?: 'analyst' | 'manager'
 }
 
@@ -54,6 +61,7 @@ export function AssignedTestsToolbar({
     onGenerateCoA,
     onSubmitForReview,
     onOpenAssignment,
+    onPrintCoABody,
     userRole,
 }: AssignedTestsToolbarProps) {
     // Determine QC page link based on user role
@@ -166,23 +174,34 @@ export function AssignedTestsToolbar({
                             </Tooltip>
                         ) : (
                             coaStatus === 'ready' && (
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
                                         <Button
                                             id="tour-coa-view"
                                             variant="ghost"
                                             size="icon"
                                             className="h-8 w-8 text-blue-600 transition-transform hover:scale-105 hover:bg-blue-50 hover:text-blue-700 dark:text-blue-500 dark:hover:bg-blue-900/20"
+                                            title="Phiếu kết quả (CoA)"
+                                        >
+                                            <ExternalLink className="h-4 w-4" />
+                                            <span className="sr-only">Phiếu kết quả (CoA)</span>
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
                                             onClick={() =>
                                                 window.open(`/api/coa/view?sample_id=${sampleId}`, '_blank')
                                             }
                                         >
-                                            <ExternalLink className="h-4 w-4" />
-                                            <span className="sr-only">Xem phiếu KQ</span>
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Xem phiếu Kết quả (CoA)</TooltipContent>
-                                </Tooltip>
+                                            <ExternalLink className="mr-2 h-4 w-4" />
+                                            Xem CoA đầy đủ
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={onPrintCoABody}>
+                                            <Printer className="mr-2 h-4 w-4" />
+                                            Chỉ in bảng kết quả
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             )
                         )}
                     </>

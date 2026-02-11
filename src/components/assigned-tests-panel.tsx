@@ -228,6 +228,50 @@ export function AssignedTestsPanel({ sampleId, specialties = [], userRole }: Ass
         }
     }
 
+    const handlePrintCoABody = async () => {
+        const printWindow = window.open('', '_blank')
+        if (!printWindow) {
+            toast.error('Trình duyệt đã chặn cửa sổ in')
+            return
+        }
+
+        printWindow.document.write(
+            '<html><head><title>Đang tải...</title></head><body><p style="font-family:sans-serif;text-align:center;margin-top:40px;">Đang tải...</p></body></html>'
+        )
+
+        try {
+            const response = await fetch(`/api/coa/view?sample_id=${sampleId}`, { cache: 'no-store' })
+            if (!response.ok) {
+                throw new Error('Không thể tải phiếu kết quả')
+            }
+
+            let html = await response.text()
+
+            const bodyOnlyStyles = `<style>
+                .header { visibility: hidden !important; border-color: transparent !important; }
+                .absolute-footer { display: none !important; }
+                .watermark { display: none !important; }
+                .content { padding-bottom: 32px !important; }
+            </style>`
+
+            if (html.includes('</head>')) {
+                html = html.replace('</head>', `${bodyOnlyStyles}</head>`)
+            } else {
+                html = bodyOnlyStyles + html
+            }
+
+            printWindow.document.open()
+            printWindow.document.write(html)
+            printWindow.document.close()
+            printWindow.onload = () => printWindow.print()
+        } catch (err) {
+            printWindow.close()
+            const message = err instanceof Error ? err.message : 'Không thể tải phiếu kết quả'
+            toast.error(message)
+            console.error(err)
+        }
+    }
+
     if (loading) {
         return (
             <div className="flex h-64 items-center justify-center">
@@ -272,6 +316,7 @@ export function AssignedTestsPanel({ sampleId, specialties = [], userRole }: Ass
                 onGenerateCoA={handleGenerateCoA}
                 onSubmitForReview={() => setShowSubmitDialog(true)}
                 onOpenAssignment={() => setShowAssignmentDialog(true)}
+                onPrintCoABody={handlePrintCoABody}
                 userRole={userRole}
             />
 
