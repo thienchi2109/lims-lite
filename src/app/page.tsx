@@ -4,7 +4,7 @@ import Image from 'next/image'
 import { FlaskConical, Activity, Package, GraduationCap, ExternalLink, ArrowRight } from 'lucide-react'
 
 export const metadata: Metadata = {
-    title: 'Cổng thông tin CDC',
+    title: 'Cổng thông tin dành cho CDC',
     robots: { index: false, follow: false },
 }
 
@@ -86,7 +86,7 @@ export default function PortalPage() {
                         </span>
                     </h1>
                     <p className="text-slate-500 dark:text-slate-400 text-base md:text-lg max-w-md mx-auto leading-relaxed">
-                        Trung tâm Kiểm soát Bệnh tật tỉnh Cà Mau
+                        Trung tâm Kiểm soát bệnh tật thành phố Cần Thơ
                     </p>
                 </div>
 
@@ -142,7 +142,7 @@ export default function PortalPage() {
                 {/* Footer */}
                 <div className="mt-10 text-center opacity-0 animate-fade-in-up animate-delay-500">
                     <p className="text-xs text-slate-400 dark:text-slate-500">
-                        &copy; {new Date().getFullYear()} Khoa Xét nghiệm &mdash; Trung tâm Kiểm soát Bệnh tật tỉnh Cà Mau
+                        &copy; {new Date().getFullYear()} Khoa Xét nghiệm &mdash; Trung tâm Kiểm soát bệnh tật thành phố Cần Thơ
                     </p>
                 </div>
             </div>
