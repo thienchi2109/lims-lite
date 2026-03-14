@@ -115,6 +115,35 @@ export function AssignedTestsPanel({ sampleId, specialties = [], userRole }: Ass
         }
     }, [sampleId])
 
+    // Auto-fetch on sampleId change with race condition guard.
+    // When sampleId changes before a fetch completes, the stale response is discarded.
+    useEffect(() => {
+        let isCancelled = false
+        async function loadTests() {
+            try {
+                setLoading(true)
+                const { data, error: fetchError } = await fetchSampleResultsClient(sampleId)
+                if (isCancelled) return
+                if (fetchError) {
+                    setError(fetchError)
+                } else if (data) {
+                    setResults(data)
+                    if (data.length > 0 && data[0].sample_status) {
+                        setSampleStatus(data[0].sample_status as SampleStatus)
+                    }
+                }
+            } catch (err) {
+                if (isCancelled) return
+                setError('Failed to load assigned tests')
+                console.error(err)
+            } finally {
+                if (!isCancelled) setLoading(false)
+            }
+        }
+        loadTests()
+        return () => { isCancelled = true }
+    }, [sampleId])
+
     // Results editor hook
     const editor = useResultsEditor({
         results,
@@ -130,10 +159,6 @@ export function AssignedTestsPanel({ sampleId, specialties = [], userRole }: Ass
         hasUnsavedChanges: editor.pendingCount > 0,
         onSave: editor.handleSave,
     })
-
-    useEffect(() => {
-        fetchTests()
-    }, [fetchTests])
 
     // Fetch CoA status when sample is completed
     useEffect(() => {
