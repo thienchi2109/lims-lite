@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { sampleKeys, invalidateSampleQueries, approvalKeys } from '@/types/query-keys'
@@ -60,6 +60,10 @@ export function AssignedTestsPanel({ sampleId, specialties = [], userRole }: Ass
     const [error, setError] = useState<string | null>(null)
     const [sampleStatus, setSampleStatus] = useState<SampleStatus | null>(null)
 
+    // Ref to guard stale callbacks (save/submit/assignment)
+    const currentSampleIdRef = useRef(sampleId)
+    currentSampleIdRef.current = sampleId
+
     // Dialog state
     const [showSubmitDialog, setShowSubmitDialog] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -96,10 +100,13 @@ export function AssignedTestsPanel({ sampleId, specialties = [], userRole }: Ass
     )
 
     const fetchTests = useCallback(async () => {
+        const fetchingSampleId = sampleId
         try {
             setLoading(true)
             setError(null)
             const { data, error: fetchError } = await fetchSampleResultsClient(sampleId)
+            // Discard if sampleId changed while this callback was in-flight
+            if (currentSampleIdRef.current !== fetchingSampleId) return
             if (fetchError) {
                 setError(fetchError)
             } else if (data) {
@@ -109,10 +116,11 @@ export function AssignedTestsPanel({ sampleId, specialties = [], userRole }: Ass
                 }
             }
         } catch (err) {
+            if (currentSampleIdRef.current !== fetchingSampleId) return
             setError('Failed to load assigned tests')
             console.error(err)
         } finally {
-            setLoading(false)
+            if (currentSampleIdRef.current === fetchingSampleId) setLoading(false)
         }
     }, [sampleId])
 
