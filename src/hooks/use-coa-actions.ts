@@ -60,7 +60,10 @@ export function useCoaActions(
                 return
             }
 
-            toast.error('Có lỗi không mong đợi khi tạo CoA')
+            const message =
+                err instanceof Error ? err.message : 'Có lỗi không mong đợi khi tạo CoA'
+            toast.error(`Lỗi khi tạo CoA: ${message}`)
+            setCoaStatus('failed')
             console.error(err)
         } finally {
             setActiveGeneration((current) =>

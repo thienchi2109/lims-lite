@@ -66,7 +66,7 @@ describe('useCoaActions', () => {
         expect(toast.error).toHaveBeenCalledWith('Lỗi khi tạo CoA: DB error')
     })
 
-    it('toasts on unexpected throw', async () => {
+    it('sets coaStatus to failed and surfaces thrown client-wrapper errors', async () => {
         mockRegenerateCoA.mockRejectedValue(new Error('Network down'))
         const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
@@ -74,7 +74,21 @@ describe('useCoaActions', () => {
 
         await act(async () => { await result.current.handleGenerateCoA() })
 
-        expect(toast.error).toHaveBeenCalledWith('Có lỗi không mong đợi khi tạo CoA')
+        expect(setCoaStatus).toHaveBeenCalledWith('failed')
+        expect(toast.error).toHaveBeenCalledWith('Lỗi khi tạo CoA: Network down')
+        consoleErrorSpy.mockRestore()
+    })
+
+    it('falls back to a generic message for non-Error throws', async () => {
+        mockRegenerateCoA.mockRejectedValue('boom')
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+        const { result } = renderHook(() => useCoaActions('sample-1', setCoaStatus))
+
+        await act(async () => { await result.current.handleGenerateCoA() })
+
+        expect(setCoaStatus).toHaveBeenCalledWith('failed')
+        expect(toast.error).toHaveBeenCalledWith('Lỗi khi tạo CoA: Có lỗi không mong đợi khi tạo CoA')
         consoleErrorSpy.mockRestore()
     })
 
