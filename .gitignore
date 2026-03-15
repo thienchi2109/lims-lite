@@ -64,6 +64,7 @@ nul
 .claude/context-save-*.md
 .claude/hookify.*.local.md
 .claude/skills/notebooklm
+.gitnexus/
 
 # Documentation references (local/temporary)
 docs/references/

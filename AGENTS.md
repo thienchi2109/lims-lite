@@ -123,6 +123,17 @@ refactor: Optimize database query in practitioners list
 - Small focused changes: Maintain 250-350 line limit
 - Keep it clean: Don't break existing conventions
 
+## Code Graph Tooling
+
+- Prefer `gitnexus` for graph-based code navigation in this repo
+- If `gitnexus list` shows multiple indexed repos, prefer `--repo lims-lite` for commands in this workspace
+- Use `gitnexus context <symbol> --file <path>` to inspect a known symbol and its callers/callees
+- Use `gitnexus impact <symbol>` before refactors, renames, or dependency-sensitive edits
+- Use `gitnexus query <term>` when you know the concept/module and want graph-backed discovery beyond raw text search
+- Use Morph or targeted file reads for semantic exploration, configuration lookup, and business-logic walkthroughs
+- Run `gitnexus status` or `gitnexus list` before assuming a repo is already indexed
+- Do not run `gitnexus analyze` in `E:\lims-lite` unless the user explicitly asks or you are working in an isolated worktree, because it generates repo files such as `AGENTS.md`, `CLAUDE.md`, and `.claude/skills/*`
+
 ## Quality Check
 
 Before completing tasks:

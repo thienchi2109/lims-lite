@@ -12,6 +12,65 @@ import { regenerateCoAClient } from '@/lib/api-client'
 import { toast } from 'sonner'
 import type { CoAReportStatus } from '@/types'
 
+const GENERIC_COA_ERROR_MESSAGE = 'Có lỗi không mong đợi khi tạo CoA'
+const NETWORK_COA_ERROR_MESSAGE = 'Không thể kết nối đến máy chủ. Vui lòng thử lại.'
+const UNAUTHORIZED_COA_ERROR_MESSAGE = 'Bạn không có quyền tạo hoặc tạo lại CoA'
+
+function isNetworkCoAErrorMessage(message: string): boolean {
+    return (
+        /failed to fetch/i.test(message) ||
+        /network\s?error/i.test(message) ||
+        /load failed/i.test(message)
+    )
+}
+
+function isTechnicalCoAErrorMessage(message: string): boolean {
+    return (
+        /^typeerror:/i.test(message) ||
+        /^syntaxerror:/i.test(message) ||
+        /^referenceerror:/i.test(message) ||
+        /^aborterror/i.test(message) ||
+        /unexpected end of json input/i.test(message) ||
+        /unexpected token/i.test(message) ||
+        /cannot (read|set|convert|destructure|access) /i.test(message) ||
+        /\bis not a function\b/i.test(message) ||
+        /\bis not defined\b/i.test(message) ||
+        /\bqueue aborted\b/i.test(message)
+    )
+}
+
+function getLocalizedCoAErrorMessage(error: unknown): string {
+    if (!(error instanceof Error) || !error.message.trim()) {
+        return GENERIC_COA_ERROR_MESSAGE
+    }
+
+    const message = error.message.trim()
+
+    if (isNetworkCoAErrorMessage(message)) {
+        return NETWORK_COA_ERROR_MESSAGE
+    }
+
+    if (/^unauthorized$/i.test(message)) {
+        return UNAUTHORIZED_COA_ERROR_MESSAGE
+    }
+
+    if (isTechnicalCoAErrorMessage(message)) {
+        return GENERIC_COA_ERROR_MESSAGE
+    }
+
+    return message
+}
+
+function shouldMarkCoAStatusFailed(error: unknown): boolean {
+    if (!(error instanceof Error) || !error.message.trim()) {
+        return false
+    }
+
+    const message = error.message.trim()
+
+    return !isNetworkCoAErrorMessage(message) && !isTechnicalCoAErrorMessage(message)
+}
+
 export interface UseCoaActionsReturn {
     isGeneratingCoA: boolean
     handleGenerateCoA: () => Promise<void>
@@ -60,7 +119,11 @@ export function useCoaActions(
                 return
             }
 
-            toast.error('Có lỗi không mong đợi khi tạo CoA')
+            const message = getLocalizedCoAErrorMessage(err)
+            toast.error(`Lỗi khi tạo CoA: ${message}`)
+            if (shouldMarkCoAStatusFailed(err)) {
+                setCoaStatus('failed')
+            }
             console.error(err)
         } finally {
             setActiveGeneration((current) =>
