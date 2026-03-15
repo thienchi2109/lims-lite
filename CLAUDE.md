@@ -24,8 +24,8 @@
 **BEFORE generating code with a library, ASK:** Does this involve Supabase, React, Zod, TanStack, Recharts, or any external package?
 → **STOP.** Use Context7: `resolve-library-id` → `query-docs` FIRST.
 
-**BEFORE looking for a function/class definition, ASK:** Do I need to find where something is defined or what calls it?
-→ **STOP.** Use GKG: `mcp__gkg__search_codebase_definitions` or `mcp__gkg__get_references`.
+**BEFORE looking for a function/class definition, ASK:** Do I need symbol context, callers/callees, or blast-radius analysis?
+→ **STOP.** Use GitNexus: `gitnexus context <symbol> --file <path>` for symbol context or `gitnexus impact <symbol>` for blast radius. Use `gitnexus query <term>` for graph-backed discovery.
 
 **AFTER editing a file, CHECK:** Is the file now >350 lines?
 → **STOP.** Refactor immediately - extract to separate files.
@@ -38,7 +38,7 @@
 | `grep`, `Grep`, `rg` for code search | `warpgrep` MCP tool |
 | `Edit` tool for file changes | `edit_file` MCP tool |
 | Generate library code from memory | Context7 lookup first |
-| Manual search for definitions | GKG `search_codebase_definitions` |
+| Manual symbol lookup / callers | GitNexus `context` / `impact` |
 | Create files >350 lines | Split into focused modules |
 | Skip skills that might apply | Invoke skill, then decide |
 | Use `cat`, `head`, `tail` | Use `Read` tool |
@@ -168,7 +168,8 @@ Read `.claude/skills/context-engineering/references/` for:
 |------|------|-------|
 | File autocomplete | File Suggestion | rg + fzf fuzzy matching (~50ms) |
 | Find code | warpgrep | `mcp__filesystem-with-morph__warpgrep_codebase_search` - semantic queries |
-| Find definitions | GKG | `mcp__gkg__search_codebase_definitions` - functions/classes |
+| Find symbol context | GitNexus | `gitnexus context <symbol> --file <path>` - definitions, callers, callees |
+| Impact analysis | GitNexus | `gitnexus impact <symbol>` - upstream blast radius before changes |
 | Edit code | edit_file | `mcp__filesystem-with-morph__edit_file` - use `// ... existing code ...` |
 | Create file | write_file | Only for new files |
 | Library docs | Context7 | `mcp__context7__resolve-library-id` → `mcp__context7__query-docs` |
@@ -176,7 +177,7 @@ Read `.claude/skills/context-engineering/references/` for:
 **Hybrid Search Strategy:**
 - **Layer 1 (Autocomplete):** File Suggestion with rg+fzf - fast path completion
 - **Layer 2 (Semantic):** warpgrep - "Where is X handled?"
-- **Layer 3 (Definitions):** GKG - function/class lookups and references
+- **Layer 3 (Graph Context):** GitNexus - symbol context, callers/callees, and blast radius
 
 **MCP Tools - USE PROACTIVELY:**
 
@@ -193,54 +194,51 @@ Read `.claude/skills/context-engineering/references/` for:
 
       NOTE: Always use context7 when I need code generation, setup or configuration steps, or library/API documentation. This means you should automatically use the Context7 MCP tools to resolve library id and get library docs without me having to explicitly ask.
 
-3. **GitLab Knowledge Graph (GKG)** 
-This project is indexed with **GitLab Knowledge Graph MCP**. You have access to the following tools:
+3. **GitNexus**
+This machine has a working global `gitnexus` CLI. Use it as the default graph-based code intelligence tool for this repo.
 
-    #### When to Use GKG:
+    #### When to Use GitNexus:
 
-    **✅ ALWAYS use GKG for:**
-    - Finding where functions/classes are defined
-    - Understanding code structure and relationships
-    - Discovering what calls/uses a specific function
+    **✅ ALWAYS use GitNexus for:**
+    - Inspecting a known symbol with callers/callees
+    - Impact analysis before refactors, renames, and shared-utility edits
     - Mapping dependencies between modules
-    - Finding all implementations of an interface/class
-    - Impact analysis ("what breaks if I change X?")
-    - Locating test files for specific code
+    - Discovering inbound usages of a function/class/symbol
+    - Graph-backed concept lookup when raw text search is too shallow
 
-    **❌ DON'T use GKG for:**
-    - Understanding business logic flow (use code reading instead)
-    - Finding configuration values (just read config files)
-    - Simple grep tasks (e.g., "find string 'TODO'")
-    - When user explicitly asks to read specific files
+    **❌ DON'T use GitNexus for:**
+    - Simple string/config searches (use Morph or direct file reads)
+    - Understanding business logic flow end-to-end without first reading the code
+    - Requests where the user explicitly asked to read specific files
+    - Blindly running `gitnexus analyze` in this repo without approval
 
-    #### Available GKG Tools:
+    #### Safe GitNexus Workflow:
 
-    1. **`list_projects`**
-      - Lists all indexed projects in knowledge graph
-      - Use when: User asks "what projects do you have access to?"
+    1. **`gitnexus status`**
+      - Check whether the current repo is already indexed
+      - Use first before assuming graph commands will work
 
-    2. **`search_codebase_definitions`**
-      - Search for functions, classes, methods, types, interfaces
-      - Parameters: `query` (string), `project_name` (optional)
-      - Example: Find all controller classes, locate UserService, find calculatePrice function
-      - **Use this FIRST** when user asks about specific code elements
+    2. **`gitnexus list`**
+      - Lists indexed repositories
+      - Use when multiple repos may be registered
 
-    3. **`get_references`**
-      - Find all places where a definition is used/called
-      - Parameters: `uri` (from search results), `project_name`
-      - Example: "What calls this function?", "Where is this class used?"
-      - **Critical for impact analysis**
+    3. **`gitnexus query <term>`**
+      - Graph-backed concept search across the indexed repo
+      - Use after Morph when you know the concept/module and want relationship-aware results
 
-    4. **`get_definition`**
-      - Get full details of a specific definition
-      - Parameters: `uri` (from search results), `project_name`
-      - Returns: Code location, signature, documentation
-      - Use when: Need exact implementation details
+    4. **`gitnexus context <symbol> --file <path>`**
+      - Best default for a known symbol
+      - Returns definition context plus inbound/outbound relationships
+      - Use for: "where is this used?", "what does this call?", "show me the symbol neighborhood"
 
-    5. **`reindex_project`**
-      - Refresh knowledge graph after code changes
-      - Only use if: User reports stale/missing results
-      - Note: Requires GKG server restart
+    5. **`gitnexus impact <symbol>`**
+      - Blast-radius analysis for upstream dependants
+      - Use before changing shared helpers, hooks, utilities, and types
+
+    6. **`gitnexus analyze [path]`**
+      - Indexes a repository and generates local helper files
+      - **Do not run this in `E:\lims-lite` unless the user explicitly asks or you are in a disposable worktree**
+      - Reason: it can generate/update `AGENTS.md`, `CLAUDE.md`, and `.claude/skills/*`
 
 
 ## Beads Task Tracking + Beads Viewer (Windows PowerShell)
