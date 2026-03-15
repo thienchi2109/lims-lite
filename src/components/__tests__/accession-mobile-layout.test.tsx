@@ -36,7 +36,12 @@ vi.mock('@/components/ui/collapsible', () => ({
 // Mock UI primitives
 vi.mock('@/components/ui/button', () => ({
     Button: ({ children, onClick, disabled, ...props }: any) => (
-        <button onClick={onClick} disabled={disabled} data-testid={props['data-testid']}>
+        <button
+            type={props.type}
+            onClick={onClick}
+            disabled={disabled}
+            data-testid={props['data-testid']}
+        >
             {children}
         </button>
     ),
@@ -83,6 +88,7 @@ describe('AccessionMobileLayout', () => {
     const mockSetSelectedSpecialtyId = vi.fn()
     const mockSetIsContextOpen = vi.fn()
     const mockToggleTestSelection = vi.fn()
+    const customSaveLabel = 'Lưu & Chỉ định (3)'
 
     beforeEach(() => {
         vi.clearAllMocks()
@@ -106,6 +112,7 @@ describe('AccessionMobileLayout', () => {
         toggleTestSelection: mockToggleTestSelection,
         onSave: mockOnSave,
         isSaving: false,
+        saveLabel: customSaveLabel,
     }
 
     // Test #1: Renders context collapsible + test list
@@ -145,6 +152,14 @@ describe('AccessionMobileLayout', () => {
         expect(mockOnSave).toHaveBeenCalledOnce()
     })
 
+    // Test #4b: Save button shows caller-provided label
+    it('renders save CTA using caller-provided saveLabel', () => {
+        render(<AccessionMobileLayout {...defaultProps} />)
+
+        const saveBtn = screen.getByTestId('save-button')
+        expect(within(saveBtn).getByText(customSaveLabel)).toBeDefined()
+    })
+
     // Test #5: Selected summary strip shows chip per test
     it('shows a removable chip for each selected test', () => {
         render(<AccessionMobileLayout {...defaultProps} />)
@@ -176,5 +191,20 @@ describe('AccessionMobileLayout', () => {
         render(<AccessionMobileLayout {...defaultProps} selected={[]} />)
 
         expect(screen.queryByTestId('selected-strip')).toBeNull()
+    })
+
+    // Test #8: Non-submit controls use type="button" inside surrounding form
+    it('uses type=button for non-submit controls', () => {
+        render(<AccessionMobileLayout {...defaultProps} />)
+
+        const contextToggle = screen.getByRole('button', { name: /Toggle Info/i })
+        const allFilter = screen.getByRole('button', { name: /Tất cả/i })
+        const clearAll = screen.getByRole('button', { name: /Xóa hết/i })
+        const removeChip = screen.getByRole('button', { name: /Xóa ALT \(GPT\)/i })
+
+        expect((contextToggle as HTMLButtonElement).type).toBe('button')
+        expect((allFilter as HTMLButtonElement).type).toBe('button')
+        expect((clearAll as HTMLButtonElement).type).toBe('button')
+        expect((removeChip as HTMLButtonElement).type).toBe('button')
     })
 })

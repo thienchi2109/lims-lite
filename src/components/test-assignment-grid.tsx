@@ -56,8 +56,10 @@ export function TestAssignmentGrid({
                 selected={selected}
                 onChange={onChange}
                 toggleTestSelection={logic.toggleTestSelection}
+                handleMethodChange={logic.handleMethodChange}
                 onSave={onSave}
                 isSaving={isSaving}
+                saveLabel={saveLabel}
             />
         )
     }

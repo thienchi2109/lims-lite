@@ -42,8 +42,10 @@ interface AccessionMobileLayoutProps {
     selected: SelectedTest[]
     onChange: (tests: SelectedTest[]) => void
     toggleTestSelection: (assay: AssayDefinitionWithMethods) => void
+    handleMethodChange: (assayId: string, methodId: string) => void
     onSave: () => void
     isSaving: boolean
+    saveLabel: string
 }
 
 export function AccessionMobileLayout({
@@ -62,8 +64,10 @@ export function AccessionMobileLayout({
     selected,
     onChange,
     toggleTestSelection,
+    handleMethodChange,
     onSave,
     isSaving,
+    saveLabel,
 }: AccessionMobileLayoutProps) {
     const handleRemoveTest = (assayId: string) => {
         onChange(selected.filter((t) => t.assayId !== assayId))
@@ -83,6 +87,7 @@ export function AccessionMobileLayout({
                     </h3>
                     <CollapsibleTrigger asChild>
                         <Button
+                            type="button"
                             variant="ghost"
                             size="sm"
                             className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full"
@@ -161,6 +166,7 @@ export function AccessionMobileLayout({
                         groupedRows={groupedRows}
                         selected={selected}
                         toggleTestSelection={toggleTestSelection}
+                        handleMethodChange={handleMethodChange}
                         disabledSet={disabledSet}
                         specialtiesMap={specialtiesMap}
                         searchQuery={searchQuery}
@@ -221,6 +227,7 @@ export function AccessionMobileLayout({
                             </div>
                         </div>
                         <Button
+                            type="button"
                             data-testid="save-button"
                             onClick={onSave}
                             disabled={isSaving}
@@ -229,7 +236,7 @@ export function AccessionMobileLayout({
                             {isSaving ? (
                                 <Loader2 className="animate-spin" />
                             ) : (
-                                <span>Tiếp tục</span>
+                                <span>{saveLabel}</span>
                             )}
                             {!isSaving && <ArrowRight size={20} />}
                         </Button>

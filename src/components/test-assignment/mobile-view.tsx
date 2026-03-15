@@ -26,10 +26,12 @@ interface MobileViewProps {
     selected: SelectedTest[]
     onChange: (tests: SelectedTest[]) => void
     toggleTestSelection: (assay: AssayDefinitionWithMethods) => void
+    handleMethodChange: (assayId: string, methodId: string) => void
 
     // Save
     onSave: () => void
     isSaving: boolean
+    saveLabel: string
 }
 
 /**
