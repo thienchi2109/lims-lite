@@ -21,20 +21,20 @@ afterEach(() => {
 })
 
 describe('MobileOnly', () => {
-    it('renders nothing on initial render before mount effect (prevents portal flash)', () => {
-        // useMediaQuery returns false (would be mobile), but hasMounted is still false
+    it('renders nothing on SSR where effects do not run (prevents portal flash)', () => {
+        // In SSR, useEffect doesn't fire, so hasMounted stays false.
+        // Even if useMediaQuery returns false (mobile), children must not render.
         mockUseMediaQuery.mockReturnValue(false)
 
-        // Use a custom render that doesn't flush effects
-        const { container } = render(
+        // renderToString does not run useEffect — simulates the SSR/initial paint
+        const { renderToString } = require('react-dom/server')
+        const html = renderToString(
             <MobileOnly>
                 <div data-testid="child">Mobile content</div>
             </MobileOnly>,
         )
 
-        // After effects flush in render(), children should appear on mobile
-        // (React Testing Library flushes effects synchronously)
-        expect(screen.getByTestId('child')).toBeDefined()
+        expect(html).toBe('')
     })
 
     it('renders children when viewport is below breakpoint (mobile)', () => {

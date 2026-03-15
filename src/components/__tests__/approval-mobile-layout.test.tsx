@@ -55,9 +55,10 @@ vi.mock('@/components/ui/badge', () => ({
 
 // Mock next/navigation
 const mockReplace = vi.fn()
+let mockSearchParams = new URLSearchParams()
 vi.mock('next/navigation', () => ({
     useRouter: () => ({ push: vi.fn(), replace: mockReplace }),
-    useSearchParams: () => new URLSearchParams(),
+    useSearchParams: () => mockSearchParams,
     usePathname: () => '/manager/approvals',
 }))
 
@@ -104,6 +105,7 @@ const mockResults: ResultWithAssay[] = [
 
 beforeEach(() => {
     mockReplace.mockClear()
+    mockSearchParams = new URLSearchParams()
 })
 
 describe('ApprovalMobileLayout', () => {
@@ -217,7 +219,10 @@ describe('ApprovalMobileLayout', () => {
         )
     })
 
-    it('clears sampleId when switching tabs', () => {
+    it('clears sampleId from URL when switching tabs', () => {
+        // Set searchParams with an existing sampleId to prove delete works
+        mockSearchParams = new URLSearchParams('tab=review&sampleId=uuid-1')
+
         render(
             <ApprovalMobileLayout
                 samples={mockSamples}
