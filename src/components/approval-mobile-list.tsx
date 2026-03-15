@@ -14,12 +14,14 @@ interface ApprovalMobileListProps {
     samples: ApprovalCardSample[]
     selectedSampleId: string | null
     onSelectSample: (sampleId: string) => void
+    tab?: 'review' | 'completed'
 }
 
 export function ApprovalMobileList({
     samples,
     selectedSampleId,
     onSelectSample,
+    tab = 'review',
 }: ApprovalMobileListProps) {
     if (samples.length === 0) {
         return (
@@ -51,7 +53,7 @@ export function ApprovalMobileList({
             {/* Summary counter */}
             <div className="mt-2 py-3 text-center">
                 <span className="text-xs text-slate-400 dark:text-slate-500">
-                    {samples.length} mẫu đang chờ phê duyệt
+                    {samples.length} {tab === 'completed' ? 'mẫu đã phê duyệt' : 'mẫu đang chờ phê duyệt'}
                 </span>
             </div>
         </div>

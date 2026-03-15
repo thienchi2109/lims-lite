@@ -87,6 +87,7 @@ export function ApprovalMobileLayout({
                 samples={samples}
                 selectedSampleId={selectedSample?.id ?? null}
                 onSelectSample={handleSelectSample}
+                tab={tab}
             />
 
             {/* Detail drawer */}
