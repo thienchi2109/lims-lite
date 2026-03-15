@@ -132,6 +132,25 @@ describe('useCoaActions', () => {
         }
     })
 
+    it('falls back to a generic localized message for runtime errors without an error-name prefix', async () => {
+        mockRegenerateCoA.mockRejectedValue(
+            new Error("Cannot read properties of undefined (reading 'json')")
+        )
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+        try {
+            const { result } = renderHook(() => useCoaActions('sample-1', setCoaStatus))
+
+            await act(async () => { await result.current.handleGenerateCoA() })
+
+            expect(setCoaStatus).not.toHaveBeenCalledWith('failed')
+            expect(toast.error).toHaveBeenCalledWith(
+                'Lỗi khi tạo CoA: Có lỗi không mong đợi khi tạo CoA'
+            )
+        } finally {
+            consoleErrorSpy.mockRestore()
+        }
+    })
+
     it('falls back to a generic message for non-Error throws', async () => {
         mockRegenerateCoA.mockRejectedValue('boom')
         const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})

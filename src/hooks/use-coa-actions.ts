@@ -30,7 +30,12 @@ function isTechnicalCoAErrorMessage(message: string): boolean {
         /^syntaxerror:/i.test(message) ||
         /^referenceerror:/i.test(message) ||
         /^aborterror/i.test(message) ||
-        /unexpected end of json input/i.test(message)
+        /unexpected end of json input/i.test(message) ||
+        /unexpected token/i.test(message) ||
+        /cannot (read|set|convert|destructure|access) /i.test(message) ||
+        /\bis not a function\b/i.test(message) ||
+        /\bis not defined\b/i.test(message) ||
+        /\bqueue aborted\b/i.test(message)
     )
 }
 
