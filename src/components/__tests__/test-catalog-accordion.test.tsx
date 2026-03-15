@@ -35,8 +35,9 @@ vi.mock('@/lib/specialty-badges', () => ({
     },
 }))
 
-vi.mock('@tanstack/react-virtual', () => ({
-    useVirtualizer: ({ count }: { count: number }) => ({
+const virtualizerSpies = vi.hoisted(() => {
+    const measureElement = vi.fn()
+    const useVirtualizer = vi.fn(({ count }: { count: number }) => ({
         getTotalSize: () => count * 72,
         getVirtualItems: () =>
             Array.from({ length: count }, (_, i) => ({
@@ -45,8 +46,14 @@ vi.mock('@tanstack/react-virtual', () => ({
                 start: i * 72,
                 size: 72,
             })),
-        measureElement: () => {},
-    }),
+        measureElement,
+    }))
+
+    return { useVirtualizer, measureElement }
+})
+
+vi.mock('@tanstack/react-virtual', () => ({
+    useVirtualizer: virtualizerSpies.useVirtualizer,
 }))
 
 // ---------- Test Data ----------
@@ -125,6 +132,8 @@ describe('TestCatalogAccordion', () => {
     beforeEach(() => {
         mockToggle.mockClear()
         mockMethodChange.mockClear()
+        virtualizerSpies.useVirtualizer.mockClear()
+        virtualizerSpies.measureElement.mockClear()
     })
 
     const baseProps = {
@@ -232,5 +241,35 @@ describe('TestCatalogAccordion', () => {
         expect(screen.getByTestId('flat-list')).toBeDefined()
         expect(screen.queryByTestId('accordion')).toBeNull()
         expect(screen.getByText('ALT (GPT)')).toBeDefined()
+    })
+
+    it('shows specialty badges in desktop search flat list', () => {
+        render(
+            <TestCatalogAccordion
+                {...baseProps}
+                variant="desktop"
+                searchQuery="ALT"
+            />,
+        )
+
+        expect(
+            within(screen.getByTestId('test-row-assay-alt')).getByText('Sinh hóa'),
+        ).toBeDefined()
+        expect(
+            within(screen.getByTestId('test-row-assay-cbc')).getByText('Huyết học'),
+        ).toBeDefined()
+    })
+
+    it('measures search rows for variable-height virtualization', () => {
+        render(
+            <TestCatalogAccordion
+                {...baseProps}
+                variant="desktop"
+                searchQuery="ALT"
+            />,
+        )
+
+        expect(screen.getByTestId('flat-list')).toBeDefined()
+        expect(virtualizerSpies.measureElement).toHaveBeenCalled()
     })
 })

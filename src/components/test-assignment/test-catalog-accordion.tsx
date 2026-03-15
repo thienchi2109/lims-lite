@@ -124,6 +124,7 @@ export function TestCatalogAccordion({
                                             onToggle={toggleTestSelection}
                                             onMethodChange={handleMethodChange}
                                             variant={variant}
+                                            showSpecialtyBadge={false}
                                         />
                                     )
                                 })}
@@ -160,6 +161,7 @@ export function TestCatalogAccordion({
                                         onToggle={toggleTestSelection}
                                         onMethodChange={handleMethodChange}
                                         variant={variant}
+                                        showSpecialtyBadge
                                     />
                                 )
                             })}
@@ -244,6 +246,8 @@ function VirtualizedFlatList({
                     return (
                         <div
                             key={row.key}
+                            data-index={virtualRow.index}
+                            ref={virtualizer.measureElement}
                             style={{
                                 position: 'absolute',
                                 top: 0,
@@ -264,6 +268,7 @@ function VirtualizedFlatList({
                                 onToggle={toggleTestSelection}
                                 onMethodChange={handleMethodChange}
                                 variant={variant}
+                                showSpecialtyBadge
                             />
                         </div>
                     )
@@ -284,11 +289,12 @@ interface TestRowProps {
     onToggle: (assay: AssayDefinitionWithMethods) => void
     onMethodChange: (assayId: string, methodId: string) => void
     variant: 'mobile' | 'desktop'
+    showSpecialtyBadge: boolean
 }
 
 function TestRow({
     assay, isSelected, isDisabled, selectedTest,
-    specialtiesMap, onToggle, onMethodChange, variant,
+    specialtiesMap, onToggle, onMethodChange, variant, showSpecialtyBadge,
 }: TestRowProps) {
     const [methodOpen, setMethodOpen] = useState(false)
     const isDesktop = variant === 'desktop'
@@ -351,8 +357,7 @@ function TestRow({
                         )}>
                             {assay.name}
                         </span>
-                        {/* On desktop, show specialty badge in flat list mode only (in accordion group it's redundant) */}
-                        {!isDesktop && specialty && (
+                        {showSpecialtyBadge && specialty && (
                             <span
                                 className={cn(
                                     'px-2 py-0.5 rounded text-[10px] font-medium whitespace-nowrap shrink-0',
