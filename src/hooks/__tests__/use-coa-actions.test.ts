@@ -98,6 +98,23 @@ describe('useCoaActions', () => {
         }
     })
 
+    it('preserves non-network backend failures instead of replacing them with the generic fallback', async () => {
+        mockRegenerateCoA.mockRejectedValue(new Error('Unauthorized'))
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+        try {
+            const { result } = renderHook(() => useCoaActions('sample-1', setCoaStatus))
+
+            await act(async () => { await result.current.handleGenerateCoA() })
+
+            expect(setCoaStatus).toHaveBeenCalledWith('failed')
+            expect(toast.error).toHaveBeenCalledWith(
+                'Lỗi khi tạo CoA: Bạn không có quyền tạo hoặc tạo lại CoA'
+            )
+        } finally {
+            consoleErrorSpy.mockRestore()
+        }
+    })
+
     it('falls back to a generic localized message for technical Error instances', async () => {
         mockRegenerateCoA.mockRejectedValue(new Error('TypeError: queue aborted'))
         const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
