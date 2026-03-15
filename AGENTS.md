@@ -126,6 +126,7 @@ refactor: Optimize database query in practitioners list
 ## Code Graph Tooling
 
 - Prefer `gitnexus` for graph-based code navigation in this repo
+- If `gitnexus list` shows multiple indexed repos, prefer `--repo lims-lite` for commands in this workspace
 - Use `gitnexus context <symbol> --file <path>` to inspect a known symbol and its callers/callees
 - Use `gitnexus impact <symbol>` before refactors, renames, or dependency-sensitive edits
 - Use `gitnexus query <term>` when you know the concept/module and want graph-backed discovery beyond raw text search

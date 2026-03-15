@@ -196,6 +196,7 @@ Read `.claude/skills/context-engineering/references/` for:
 
 3. **GitNexus**
 This machine has a working global `gitnexus` CLI. Use it as the default graph-based code intelligence tool for this repo.
+If multiple GitNexus indexes exist on this machine, prefer `--repo lims-lite` in this workspace.
 
     #### When to Use GitNexus:
 
@@ -221,18 +222,22 @@ This machine has a working global `gitnexus` CLI. Use it as the default graph-ba
     2. **`gitnexus list`**
       - Lists indexed repositories
       - Use when multiple repos may be registered
+      - If more than one repo is listed, use `--repo lims-lite` in follow-up commands from `E:\lims-lite`
 
     3. **`gitnexus query <term>`**
       - Graph-backed concept search across the indexed repo
+      - Prefer `gitnexus query <term> --repo lims-lite` when more than one repo is indexed
       - Use after Morph when you know the concept/module and want relationship-aware results
 
     4. **`gitnexus context <symbol> --file <path>`**
       - Best default for a known symbol
+      - Prefer `gitnexus context <symbol> --repo lims-lite --file <path>` when more than one repo is indexed
       - Returns definition context plus inbound/outbound relationships
       - Use for: "where is this used?", "what does this call?", "show me the symbol neighborhood"
 
     5. **`gitnexus impact <symbol>`**
       - Blast-radius analysis for upstream dependants
+      - Prefer `gitnexus impact <symbol> --repo lims-lite` when more than one repo is indexed
       - Use before changing shared helpers, hooks, utilities, and types
 
     6. **`gitnexus analyze [path]`**
