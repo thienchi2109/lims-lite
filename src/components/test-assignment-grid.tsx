@@ -93,7 +93,7 @@ export function TestAssignmentGrid({
 
                 <ResizableHandle withHandle />
 
-                {/* CENTER PANE: DATA GRID */}
+                {/* CENTER PANE: ACCORDION CATALOG */}
                 <ResizablePanel defaultSize={55}>
                     <DesktopGrid
                         searchQuery={logic.searchQuery}
@@ -109,8 +109,6 @@ export function TestAssignmentGrid({
                         isLoading={logic.isLoading}
                         disabledSet={logic.disabledSet}
                         specialtiesMap={logic.specialtiesMap}
-                        sortConfig={logic.sortConfig}
-                        requestSort={logic.requestSort}
                         selected={selected}
                         toggleTestSelection={logic.toggleTestSelection}
                         handleMethodChange={logic.handleMethodChange}
