@@ -8,7 +8,7 @@
  */
 
 import { useState, useCallback, type Dispatch, type SetStateAction } from 'react'
-import { regenerateCoA } from '@/app/actions/coa'
+import { regenerateCoAClient } from '@/lib/api-client'
 import { toast } from 'sonner'
 import type { CoAReportStatus } from '@/types'
 
@@ -26,7 +26,7 @@ export function useCoaActions(
     const handleGenerateCoA = useCallback(async () => {
         setIsGeneratingCoA(true)
         try {
-            const result = await regenerateCoA(sampleId)
+            const result = await regenerateCoAClient(sampleId)
             if (result.success) {
                 toast.success('Đã tạo CoA thành công')
                 setCoaStatus('ready')

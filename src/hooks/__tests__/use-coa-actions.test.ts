@@ -9,18 +9,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useCoaActions } from '../use-coa-actions'
 
-vi.mock('@/app/actions/coa', () => ({
-    regenerateCoA: vi.fn(),
+vi.mock('@/lib/api-client', () => ({
+    regenerateCoAClient: vi.fn(),
 }))
 
 vi.mock('sonner', () => ({
     toast: { success: vi.fn(), error: vi.fn() },
 }))
 
-import { regenerateCoA } from '@/app/actions/coa'
+import { regenerateCoAClient } from '@/lib/api-client'
 import { toast } from 'sonner'
 
-const mockRegenerateCoA = vi.mocked(regenerateCoA)
+const mockRegenerateCoA = vi.mocked(regenerateCoAClient)
 
 describe('useCoaActions', () => {
     const setCoaStatus = vi.fn()
