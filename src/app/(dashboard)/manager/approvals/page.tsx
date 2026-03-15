@@ -9,6 +9,7 @@ import type { ResultWithAssay } from '@/types'
 import { ApprovalTabsClient } from '@/components/approval-tabs-client'
 import { ApprovalPageHeader } from './approval-page-header'
 import { ApprovalMobileLayout } from '@/components/approval-mobile-layout'
+import { MobileOnly } from '@/components/mobile-only'
 
 interface ApprovalsPageProps {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>
@@ -105,21 +106,23 @@ export default async function ApprovalsPage({ searchParams }: ApprovalsPageProps
                 </div>
 
                 {/* ═══ Mobile Layout (below xl) ═══ */}
-                <div className="flex-1 min-h-0 overflow-y-auto xl:hidden">
-                    {error ? (
-                        <div className="text-center py-8 text-destructive bg-white dark:bg-slate-900 rounded-lg border">
-                            Lỗi khi tải hàng đợi phê duyệt: {error}
-                        </div>
-                    ) : (
-                        <ApprovalMobileLayout
-                            samples={samples || []}
-                            selectedSample={selectedSample}
-                            results={results}
-                            tab={tab}
-                            reviewCount={reviewCount}
-                        />
-                    )}
-                </div>
+                <MobileOnly breakpoint={1280}>
+                    <div className="flex-1 min-h-0 overflow-y-auto">
+                        {error ? (
+                            <div className="text-center py-8 text-destructive bg-white dark:bg-slate-900 rounded-lg border">
+                                Lỗi khi tải hàng đợi phê duyệt: {error}
+                            </div>
+                        ) : (
+                            <ApprovalMobileLayout
+                                samples={samples || []}
+                                selectedSample={selectedSample}
+                                results={results}
+                                tab={tab}
+                                reviewCount={reviewCount}
+                            />
+                        )}
+                    </div>
+                </MobileOnly>
             </main>
         </div>
     )
