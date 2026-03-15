@@ -382,6 +382,11 @@ function TestRow({
                                     e.stopPropagation()
                                     setMethodOpen((prev) => !prev)
                                 }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.stopPropagation()
+                                    }
+                                }}
                                 className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
                             >
                                 <span>{methodLabel}</span>
