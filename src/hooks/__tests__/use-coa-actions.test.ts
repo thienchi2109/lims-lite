@@ -69,42 +69,65 @@ describe('useCoaActions', () => {
     it('sets coaStatus to failed and keeps localized thrown messages', async () => {
         mockRegenerateCoA.mockRejectedValue(new Error('Không thể tạo CoA cho mẫu này'))
         const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+        try {
+            const { result } = renderHook(() => useCoaActions('sample-1', setCoaStatus))
 
-        const { result } = renderHook(() => useCoaActions('sample-1', setCoaStatus))
+            await act(async () => { await result.current.handleGenerateCoA() })
 
-        await act(async () => { await result.current.handleGenerateCoA() })
-
-        expect(setCoaStatus).toHaveBeenCalledWith('failed')
-        expect(toast.error).toHaveBeenCalledWith('Lỗi khi tạo CoA: Không thể tạo CoA cho mẫu này')
-        consoleErrorSpy.mockRestore()
+            expect(setCoaStatus).toHaveBeenCalledWith('failed')
+            expect(toast.error).toHaveBeenCalledWith('Lỗi khi tạo CoA: Không thể tạo CoA cho mẫu này')
+        } finally {
+            consoleErrorSpy.mockRestore()
+        }
     })
 
     it('localizes network/runtime errors before showing the toast', async () => {
         mockRegenerateCoA.mockRejectedValue(new TypeError('Failed to fetch'))
         const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+        try {
+            const { result } = renderHook(() => useCoaActions('sample-1', setCoaStatus))
 
-        const { result } = renderHook(() => useCoaActions('sample-1', setCoaStatus))
+            await act(async () => { await result.current.handleGenerateCoA() })
 
-        await act(async () => { await result.current.handleGenerateCoA() })
+            expect(setCoaStatus).toHaveBeenCalledWith('failed')
+            expect(toast.error).toHaveBeenCalledWith(
+                'Lỗi khi tạo CoA: Không thể kết nối đến máy chủ. Vui lòng thử lại.'
+            )
+        } finally {
+            consoleErrorSpy.mockRestore()
+        }
+    })
 
-        expect(setCoaStatus).toHaveBeenCalledWith('failed')
-        expect(toast.error).toHaveBeenCalledWith(
-            'Lỗi khi tạo CoA: Không thể kết nối đến máy chủ. Vui lòng thử lại.'
-        )
-        consoleErrorSpy.mockRestore()
+    it('falls back to a generic localized message for technical Error instances', async () => {
+        mockRegenerateCoA.mockRejectedValue(new Error('TypeError: queue aborted'))
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+        try {
+            const { result } = renderHook(() => useCoaActions('sample-1', setCoaStatus))
+
+            await act(async () => { await result.current.handleGenerateCoA() })
+
+            expect(setCoaStatus).toHaveBeenCalledWith('failed')
+            expect(toast.error).toHaveBeenCalledWith(
+                'Lỗi khi tạo CoA: Có lỗi không mong đợi khi tạo CoA'
+            )
+        } finally {
+            consoleErrorSpy.mockRestore()
+        }
     })
 
     it('falls back to a generic message for non-Error throws', async () => {
         mockRegenerateCoA.mockRejectedValue('boom')
         const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+        try {
+            const { result } = renderHook(() => useCoaActions('sample-1', setCoaStatus))
 
-        const { result } = renderHook(() => useCoaActions('sample-1', setCoaStatus))
+            await act(async () => { await result.current.handleGenerateCoA() })
 
-        await act(async () => { await result.current.handleGenerateCoA() })
-
-        expect(setCoaStatus).toHaveBeenCalledWith('failed')
-        expect(toast.error).toHaveBeenCalledWith('Lỗi khi tạo CoA: Có lỗi không mong đợi khi tạo CoA')
-        consoleErrorSpy.mockRestore()
+            expect(setCoaStatus).toHaveBeenCalledWith('failed')
+            expect(toast.error).toHaveBeenCalledWith('Lỗi khi tạo CoA: Có lỗi không mong đợi khi tạo CoA')
+        } finally {
+            consoleErrorSpy.mockRestore()
+        }
     })
 
     it('ignores stale generation results after the sample changes', async () => {

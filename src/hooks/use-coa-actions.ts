@@ -15,6 +15,15 @@ import type { CoAReportStatus } from '@/types'
 const GENERIC_COA_ERROR_MESSAGE = 'Có lỗi không mong đợi khi tạo CoA'
 const NETWORK_COA_ERROR_MESSAGE = 'Không thể kết nối đến máy chủ. Vui lòng thử lại.'
 
+function isLocalizedCoAErrorMessage(message: string): boolean {
+    return (
+        /[àáạảãăắằẳẵặâấầẩẫậèéẹẻẽêếềểễệìíịỉĩòóọỏõôốồổỗộơớờởỡợùúụủũưứừửữựỳýỵỷỹđ]/i.test(
+            message
+        ) ||
+        /^(không|có lỗi|đã|vui lòng|phiên)/i.test(message)
+    )
+}
+
 function getLocalizedCoAErrorMessage(error: unknown): string {
     if (!(error instanceof Error) || !error.message.trim()) {
         return GENERIC_COA_ERROR_MESSAGE
@@ -30,7 +39,9 @@ function getLocalizedCoAErrorMessage(error: unknown): string {
         return NETWORK_COA_ERROR_MESSAGE
     }
 
-    return message
+    return isLocalizedCoAErrorMessage(message)
+        ? message
+        : GENERIC_COA_ERROR_MESSAGE
 }
 
 export interface UseCoaActionsReturn {
