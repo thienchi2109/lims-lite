@@ -98,6 +98,7 @@ export function AssignedTestsPanel({ sampleId, specialties = [], userRole }: Ass
     const fetchTests = useCallback(async () => {
         try {
             setLoading(true)
+            setError(null)
             const { data, error: fetchError } = await fetchSampleResultsClient(sampleId)
             if (fetchError) {
                 setError(fetchError)
@@ -122,6 +123,7 @@ export function AssignedTestsPanel({ sampleId, specialties = [], userRole }: Ass
         async function loadTests() {
             try {
                 setLoading(true)
+                setError(null)
                 const { data, error: fetchError } = await fetchSampleResultsClient(sampleId)
                 if (isCancelled) return
                 if (fetchError) {
