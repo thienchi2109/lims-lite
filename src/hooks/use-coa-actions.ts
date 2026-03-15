@@ -12,6 +12,27 @@ import { regenerateCoAClient } from '@/lib/api-client'
 import { toast } from 'sonner'
 import type { CoAReportStatus } from '@/types'
 
+const GENERIC_COA_ERROR_MESSAGE = 'Có lỗi không mong đợi khi tạo CoA'
+const NETWORK_COA_ERROR_MESSAGE = 'Không thể kết nối đến máy chủ. Vui lòng thử lại.'
+
+function getLocalizedCoAErrorMessage(error: unknown): string {
+    if (!(error instanceof Error) || !error.message.trim()) {
+        return GENERIC_COA_ERROR_MESSAGE
+    }
+
+    const message = error.message.trim()
+
+    if (
+        /failed to fetch/i.test(message) ||
+        /network\s?error/i.test(message) ||
+        /load failed/i.test(message)
+    ) {
+        return NETWORK_COA_ERROR_MESSAGE
+    }
+
+    return message
+}
+
 export interface UseCoaActionsReturn {
     isGeneratingCoA: boolean
     handleGenerateCoA: () => Promise<void>
@@ -60,8 +81,7 @@ export function useCoaActions(
                 return
             }
 
-            const message =
-                err instanceof Error ? err.message : 'Có lỗi không mong đợi khi tạo CoA'
+            const message = getLocalizedCoAErrorMessage(err)
             toast.error(`Lỗi khi tạo CoA: ${message}`)
             setCoaStatus('failed')
             console.error(err)

@@ -66,8 +66,8 @@ describe('useCoaActions', () => {
         expect(toast.error).toHaveBeenCalledWith('Lỗi khi tạo CoA: DB error')
     })
 
-    it('sets coaStatus to failed and surfaces thrown client-wrapper errors', async () => {
-        mockRegenerateCoA.mockRejectedValue(new Error('Network down'))
+    it('sets coaStatus to failed and keeps localized thrown messages', async () => {
+        mockRegenerateCoA.mockRejectedValue(new Error('Không thể tạo CoA cho mẫu này'))
         const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
         const { result } = renderHook(() => useCoaActions('sample-1', setCoaStatus))
@@ -75,7 +75,22 @@ describe('useCoaActions', () => {
         await act(async () => { await result.current.handleGenerateCoA() })
 
         expect(setCoaStatus).toHaveBeenCalledWith('failed')
-        expect(toast.error).toHaveBeenCalledWith('Lỗi khi tạo CoA: Network down')
+        expect(toast.error).toHaveBeenCalledWith('Lỗi khi tạo CoA: Không thể tạo CoA cho mẫu này')
+        consoleErrorSpy.mockRestore()
+    })
+
+    it('localizes network/runtime errors before showing the toast', async () => {
+        mockRegenerateCoA.mockRejectedValue(new TypeError('Failed to fetch'))
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+        const { result } = renderHook(() => useCoaActions('sample-1', setCoaStatus))
+
+        await act(async () => { await result.current.handleGenerateCoA() })
+
+        expect(setCoaStatus).toHaveBeenCalledWith('failed')
+        expect(toast.error).toHaveBeenCalledWith(
+            'Lỗi khi tạo CoA: Không thể kết nối đến máy chủ. Vui lòng thử lại.'
+        )
         consoleErrorSpy.mockRestore()
     })
 
