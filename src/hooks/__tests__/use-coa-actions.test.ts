@@ -81,7 +81,7 @@ describe('useCoaActions', () => {
         }
     })
 
-    it('localizes network/runtime errors before showing the toast', async () => {
+    it('localizes network/runtime errors without forcing coaStatus to failed', async () => {
         mockRegenerateCoA.mockRejectedValue(new TypeError('Failed to fetch'))
         const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
         try {
@@ -89,7 +89,7 @@ describe('useCoaActions', () => {
 
             await act(async () => { await result.current.handleGenerateCoA() })
 
-            expect(setCoaStatus).toHaveBeenCalledWith('failed')
+            expect(setCoaStatus).not.toHaveBeenCalledWith('failed')
             expect(toast.error).toHaveBeenCalledWith(
                 'Lỗi khi tạo CoA: Không thể kết nối đến máy chủ. Vui lòng thử lại.'
             )
@@ -123,7 +123,7 @@ describe('useCoaActions', () => {
 
             await act(async () => { await result.current.handleGenerateCoA() })
 
-            expect(setCoaStatus).toHaveBeenCalledWith('failed')
+            expect(setCoaStatus).not.toHaveBeenCalledWith('failed')
             expect(toast.error).toHaveBeenCalledWith(
                 'Lỗi khi tạo CoA: Có lỗi không mong đợi khi tạo CoA'
             )
@@ -140,7 +140,7 @@ describe('useCoaActions', () => {
 
             await act(async () => { await result.current.handleGenerateCoA() })
 
-            expect(setCoaStatus).toHaveBeenCalledWith('failed')
+            expect(setCoaStatus).not.toHaveBeenCalledWith('failed')
             expect(toast.error).toHaveBeenCalledWith('Lỗi khi tạo CoA: Có lỗi không mong đợi khi tạo CoA')
         } finally {
             consoleErrorSpy.mockRestore()
