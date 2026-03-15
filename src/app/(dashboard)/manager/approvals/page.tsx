@@ -3,15 +3,13 @@ import { redirect } from 'next/navigation'
 import { getSamplesForApprovalCount, getSamplesWithTab } from '@/app/actions/sample-approvals'
 import { getSample } from '@/app/actions/samples'
 import { getResultsBySample } from '@/app/actions/results'
-import { ApprovalQueueTable } from '@/components/approval-queue-table'
 import { ApprovalBottomRow } from '@/components/approval-bottom-row'
-import { Button } from '@/components/ui/button'
-import { ArrowLeft } from 'lucide-react'
-import Link from 'next/link'
 import { DashboardHeader } from '@/components/dashboard-header'
 import type { ResultWithAssay } from '@/types'
 import { ApprovalTabsClient } from '@/components/approval-tabs-client'
 import { ApprovalPageHeader } from './approval-page-header'
+import { ApprovalMobileLayout } from '@/components/approval-mobile-layout'
+import { MobileOnly } from '@/components/mobile-only'
 
 interface ApprovalsPageProps {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>
@@ -80,29 +78,51 @@ export default async function ApprovalsPage({ searchParams }: ApprovalsPageProps
                     tab={tab}
                 />
 
-                {/* Top Row: Queue (Fixed Height ~50%) */}
-                <div id="tour-approval-queue" className="h-[50vh] min-h-[400px] shrink-0 flex flex-col">
-                    {error ? (
-                        <div className="text-center py-8 text-destructive bg-white dark:bg-slate-900 rounded-lg border">
-                            Lỗi khi tải hàng đợi phê duyệt: {error}
-                        </div>
-                    ) : (
-                        <ApprovalTabsClient
-                            tab={tab}
-                            samples={samples || []}
-                            reviewCount={reviewCount}
-                            selectedSampleId={selectedSample?.id}
+                {/* ═══ Desktop Layout (xl and above) ═══ */}
+                <div className="hidden xl:flex xl:flex-col xl:flex-1 xl:min-h-0 gap-2">
+                    {/* Top Row: Queue (Fixed Height ~50%) */}
+                    <div id="tour-approval-queue" className="h-[50vh] min-h-[400px] shrink-0 flex flex-col">
+                        {error ? (
+                            <div className="text-center py-8 text-destructive bg-white dark:bg-slate-900 rounded-lg border">
+                                Lỗi khi tải hàng đợi phê duyệt: {error}
+                            </div>
+                        ) : (
+                            <ApprovalTabsClient
+                                tab={tab}
+                                samples={samples || []}
+                                reviewCount={reviewCount}
+                                selectedSampleId={selectedSample?.id}
+                            />
+                        )}
+                    </div>
+
+                    {/* Bottom Row: Detail & Actions (Remaining Height) */}
+                    <div id="tour-approval-detail" className="flex-1 min-h-0 border-t pt-4">
+                        <ApprovalBottomRow
+                            sample={selectedSample}
+                            results={results}
                         />
-                    )}
+                    </div>
                 </div>
 
-                {/* Bottom Row: Detail & Actions (Remaining Height) */}
-                <div id="tour-approval-detail" className="flex-1 min-h-0 border-t pt-4">
-                    <ApprovalBottomRow
-                        sample={selectedSample}
-                        results={results}
-                    />
-                </div>
+                {/* ═══ Mobile Layout (below xl) ═══ */}
+                <MobileOnly breakpoint={1280}>
+                    <div className="flex-1 min-h-0 overflow-y-auto">
+                        {error ? (
+                            <div className="text-center py-8 text-destructive bg-white dark:bg-slate-900 rounded-lg border">
+                                Lỗi khi tải hàng đợi phê duyệt: {error}
+                            </div>
+                        ) : (
+                            <ApprovalMobileLayout
+                                samples={samples || []}
+                                selectedSample={selectedSample}
+                                results={results}
+                                tab={tab}
+                                reviewCount={reviewCount}
+                            />
+                        )}
+                    </div>
+                </MobileOnly>
             </main>
         </div>
     )
