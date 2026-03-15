@@ -59,9 +59,12 @@ npm run dev
 
 ## Superpowers Skills
 
-- Run `~/.codex/superpowers/.codex/superpowers-codex bootstrap` at session start
+- Local: Run `~/.codex/superpowers/.codex/superpowers-codex bootstrap` at session start
+- VPS (this environment): Superpowers dir is `/root/.codex/superpowers`
+- VPS bootstrap: `mkdir -p /root/.agents/skills && ln -sfn /root/.codex/superpowers/skills /root/.agents/skills/superpowers`
 - Check for applicable skills before starting tasks
-- Load with `~/.codex/superpowers/.codex/superpowers-codex use-skill <skill>`
+- Local: Load with `~/.codex/superpowers/.codex/superpowers-codex use-skill <skill>`
+- VPS: Load directly from `/root/.codex/superpowers/skills/<skill>/SKILL.md`
 - Follow skill checklists; don't skip mandatory workflows
 
 ## Git Workflow
