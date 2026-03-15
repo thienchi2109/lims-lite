@@ -110,6 +110,7 @@ describe('AccessionMobileLayout', () => {
         selected: mockSelected,
         onChange: mockOnChange,
         toggleTestSelection: mockToggleTestSelection,
+        handleMethodChange: vi.fn(),
         onSave: mockOnSave,
         isSaving: false,
         saveLabel: customSaveLabel,

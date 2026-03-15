@@ -1,7 +1,7 @@
 /**
- * Tests for AccessionMobileTestList component.
- * Verifies accordion-based test selection: group rendering, single-expand,
- * test item display, selection toggling, disabled state, and search fallback.
+ * Tests for TestCatalogAccordion shared component.
+ * Validates accordion rendering in both mobile and desktop variants,
+ * test selection behavior, group headers, and search-mode flat list fallback.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -10,14 +10,20 @@ import type { GridRow } from '@/types/test-assignment'
 import type { AssayDefinitionWithMethods, SelectedTest } from '@/types'
 
 // ---------- Mock Accordion for unit tests ----------
-// (Integration test #2 uses the real Accordion)
+
+const accordionSpies = vi.hoisted(() => ({
+    accordionProps: vi.fn(),
+}))
 
 vi.mock('@/components/ui/accordion', () => ({
-    Accordion: ({ children, onValueChange, collapsible, type, ...props }: any) => (
-        <div data-testid="accordion" data-type={type} {...props}>
-            {children}
-        </div>
-    ),
+    Accordion: ({ children, type, ...props }: any) => {
+        accordionSpies.accordionProps({ type, ...props })
+        return (
+            <div data-testid="accordion" data-type={type} {...props}>
+                {children}
+            </div>
+        )
+    },
     AccordionItem: ({ children, value, ...props }: any) => (
         <div data-testid={`accordion-item-${value}`} {...props}>{children}</div>
     ),
@@ -53,7 +59,6 @@ const virtualizerSpies = vi.hoisted(() => {
     return { useVirtualizer, measureElement }
 })
 
-// Mock virtualizer — jsdom has no layout engine so virtualizer renders nothing
 vi.mock('@tanstack/react-virtual', () => ({
     useVirtualizer: virtualizerSpies.useVirtualizer,
 }))
@@ -67,11 +72,12 @@ const makeAssay = (
     name: string,
     specialtyId: string | null,
     methods: { method_id: string; name: string; is_default: boolean }[] = [],
+    units = 'mmol/L',
 ): AssayDefinitionWithMethods => ({
     id,
     name,
     specialty_id: specialtyId,
-    units: 'mmol/L',
+    units,
     validation_rules: {},
     created_at: now,
     updated_at: now,
@@ -96,7 +102,7 @@ const assayAST = makeAssay('assay-ast', 'AST (GOT)', bioSpecialtyId, [
 ])
 const assayCBC = makeAssay('assay-cbc', 'CBC', hemSpecialtyId, [
     { method_id: 'method-3', name: 'Tự động', is_default: true },
-])
+], 'g/dL')
 
 const groupedRows: GridRow[] = [
     { type: 'group', key: `group:${bioSpecialtyId}`, label: 'Sinh hóa', badgeClass: 'bg-green-50 text-green-700', count: 2 },
@@ -121,40 +127,64 @@ const selectedALT: SelectedTest = {
     units: 'mmol/L',
 }
 
-// ---------- Lazy import (after mocks) ----------
-import { AccessionMobileTestList } from '../accession-mobile-test-list'
+// ---------- Lazy import ----------
+import { TestCatalogAccordion } from '../test-assignment/test-catalog-accordion'
 
 // ---------- Tests ----------
 
-describe('AccessionMobileTestList', () => {
+describe('TestCatalogAccordion', () => {
     const mockToggle = vi.fn()
+    const mockMethodChange = vi.fn()
 
     beforeEach(() => {
         mockToggle.mockClear()
+        mockMethodChange.mockClear()
+        accordionSpies.accordionProps.mockClear()
         virtualizerSpies.useVirtualizer.mockClear()
         virtualizerSpies.measureElement.mockClear()
     })
 
-    const defaultProps = {
+    const baseProps = {
         groupedRows,
         selected: [] as SelectedTest[],
         toggleTestSelection: mockToggle,
-        handleMethodChange: vi.fn(),
+        handleMethodChange: mockMethodChange,
         disabledSet: emptyDisabledSet,
         specialtiesMap,
         searchQuery: '',
         isLoading: false,
     }
 
-    // Test #1: Renders accordion item per specialty group
-    it('renders an accordion item for each specialty group', () => {
-        render(<AccessionMobileTestList {...defaultProps} />)
+    // Test #1: Desktop variant uses type="multiple"
+    it('renders type="multiple" accordion for desktop variant', () => {
+        render(<TestCatalogAccordion {...baseProps} variant="desktop" />)
+        const accordion = screen.getByTestId('accordion')
+        expect(accordion.getAttribute('data-type')).toBe('multiple')
+    })
 
-        // Each specialty group gets an AccordionItem
-        expect(screen.getByTestId(`accordion-item-group:${bioSpecialtyId}`)).toBeDefined()
-        expect(screen.getByTestId(`accordion-item-group:${hemSpecialtyId}`)).toBeDefined()
+    it('does not expand all desktop groups by default', () => {
+        render(<TestCatalogAccordion {...baseProps} variant="desktop" />)
 
-        // Group header buttons are uniquely identified by label + count
+        const lastAccordionProps = accordionSpies.accordionProps.mock.calls.at(-1)?.[0]
+        const groupCount = groupedRows.filter((row) => row.type === 'group').length
+        const defaultOpenCount = Array.isArray(lastAccordionProps?.defaultValue)
+            ? lastAccordionProps.defaultValue.length
+            : 0
+
+        expect(defaultOpenCount).toBeLessThan(groupCount)
+    })
+
+    // Test #2: Mobile variant uses type="single"
+    it('renders type="single" accordion for mobile variant', () => {
+        render(<TestCatalogAccordion {...baseProps} variant="mobile" />)
+        const accordion = screen.getByTestId('accordion')
+        expect(accordion.getAttribute('data-type')).toBe('single')
+    })
+
+    // Test #3: Group headers render badge + label + count
+    it('renders group headers with badge, label, and count', () => {
+        render(<TestCatalogAccordion {...baseProps} variant="desktop" />)
+
         const bioGroup = screen.getByTestId(`accordion-item-group:${bioSpecialtyId}`)
         const hemGroup = screen.getByTestId(`accordion-item-group:${hemSpecialtyId}`)
 
@@ -164,40 +194,36 @@ describe('AccessionMobileTestList', () => {
         expect(
             within(hemGroup).getByRole('button', { name: /Huyết học[\s\S]*1 chỉ tiêu/i }),
         ).toBeDefined()
-        expect(screen.getByText(/2 chỉ tiêu/)).toBeDefined()
-        expect(screen.getByText(/1 chỉ tiêu/)).toBeDefined()
     })
 
-    // Test #2: Single-expand — uses real Accordion (integration)
-    // This test is in a separate describe block below WITHOUT the mock
-
-    // Test #3: Assay row shows test name + method name
-    it('shows test name and method name in assay rows', () => {
-        render(<AccessionMobileTestList {...defaultProps} />)
+    // Test #4: Desktop assay row shows test name + method + units
+    it('shows test name, method, and units in desktop assay rows', () => {
+        render(<TestCatalogAccordion {...baseProps} variant="desktop" />)
 
         expect(screen.getByText('ALT (GPT)')).toBeDefined()
         expect(screen.getByText('Sắc ký lỏng')).toBeDefined()
-        expect(screen.getByText('AST (GOT)')).toBeDefined()
-        expect(screen.getByText('Đo quang')).toBeDefined()
+        // CBC has units g/dL
+        expect(screen.getByText('CBC')).toBeDefined()
+        expect(screen.getByText('g/dL')).toBeDefined()
     })
 
-    // Test #4: Selected test shows checked state
-    it('shows checked state for selected tests', () => {
+    // Test #5: Selected test shows check icon
+    it('shows check icon for selected tests', () => {
         render(
-            <AccessionMobileTestList
-                {...defaultProps}
+            <TestCatalogAccordion
+                {...baseProps}
+                variant="desktop"
                 selected={[selectedALT]}
             />,
         )
 
         const altRow = screen.getByTestId('test-row-assay-alt')
-        // The checked indicator should be present
         expect(within(altRow).getByTestId('check-icon')).toBeDefined()
     })
 
-    // Test #5: Clicking test row calls toggleTestSelection
+    // Test #6: Click assay row → toggleTestSelection called
     it('calls toggleTestSelection when clicking a test row', () => {
-        render(<AccessionMobileTestList {...defaultProps} />)
+        render(<TestCatalogAccordion {...baseProps} variant="desktop" />)
 
         const altRow = screen.getByTestId('test-row-assay-alt')
         fireEvent.click(within(altRow).getByRole('button'))
@@ -205,13 +231,14 @@ describe('AccessionMobileTestList', () => {
         expect(mockToggle).toHaveBeenCalledWith(assayALT)
     })
 
-    // Test #6: Disabled test — click is a no-op
+    // Test #7: Disabled assay row → click no-op
     it('does not call toggleTestSelection for disabled tests', () => {
         const disabledSet = new Set(['assay-alt'])
 
         render(
-            <AccessionMobileTestList
-                {...defaultProps}
+            <TestCatalogAccordion
+                {...baseProps}
+                variant="desktop"
                 disabledSet={disabledSet}
             />,
         )
@@ -221,22 +248,48 @@ describe('AccessionMobileTestList', () => {
         expect(mockToggle).not.toHaveBeenCalled()
     })
 
-    // Test #7: Search active → flat list, no accordion
-    it('renders flat list without accordion headers when searchQuery is non-empty', () => {
+    // Test #8: Search active → flat list, no accordion
+    it('renders flat list without accordion when searchQuery is non-empty', () => {
         render(
-            <AccessionMobileTestList
-                {...defaultProps}
+            <TestCatalogAccordion
+                {...baseProps}
+                variant="desktop"
                 searchQuery="ALT"
             />,
         )
 
-        // Should render flat list container
         expect(screen.getByTestId('flat-list')).toBeDefined()
-
-        // Should NOT render accordion
         expect(screen.queryByTestId('accordion')).toBeNull()
-
-        // Should still render the test items
         expect(screen.getByText('ALT (GPT)')).toBeDefined()
+    })
+
+    it('shows specialty badges in desktop search flat list', () => {
+        render(
+            <TestCatalogAccordion
+                {...baseProps}
+                variant="desktop"
+                searchQuery="ALT"
+            />,
+        )
+
+        expect(
+            within(screen.getByTestId('test-row-assay-alt')).getByText('Sinh hóa'),
+        ).toBeDefined()
+        expect(
+            within(screen.getByTestId('test-row-assay-cbc')).getByText('Huyết học'),
+        ).toBeDefined()
+    })
+
+    it('measures search rows for variable-height virtualization', () => {
+        render(
+            <TestCatalogAccordion
+                {...baseProps}
+                variant="desktop"
+                searchQuery="ALT"
+            />,
+        )
+
+        expect(screen.getByTestId('flat-list')).toBeDefined()
+        expect(virtualizerSpies.measureElement).toHaveBeenCalled()
     })
 })
