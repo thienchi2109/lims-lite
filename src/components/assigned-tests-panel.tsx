@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { sampleKeys, invalidateSampleQueries, approvalKeys } from '@/types/query-keys'
@@ -25,23 +25,21 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
-import { fetchSampleResultsClient, submitSampleForReviewClient } from '@/lib/api-client'
-import { fetchSampleDetail } from '@/hooks/use-sample-detail'
-import { ResultWithAssay, SampleStatus, type LabSpecialty } from '@/types'
+import { submitSampleForReviewClient } from '@/lib/api-client'
+import type { SampleStatus, LabSpecialty } from '@/types'
 import { ResultCellEditor } from '@/components/result-cell-editor'
 import { BatchSaveToolbar } from '@/components/batch-save-toolbar'
 import { ResultStatusBadge } from '@/components/result-status-badge'
 import { AssignedTestsToolbar } from '@/components/assigned-tests-toolbar'
 import { toast } from 'sonner'
 import { TestAssignmentModule } from '@/components/test-assignment-module'
-import { generatePrintTemplate } from '@/lib/print-template'
-import { regenerateCoA, getCoAStatus } from '@/app/actions/coa'
 import { useResultsEditor } from '@/hooks/use-results-editor'
 import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard'
 import { useSignatureStatus } from '@/hooks/use-signature-status'
+import { useAssignedTestsData } from '@/hooks/use-assigned-tests-data'
+import { useCoaActions } from '@/hooks/use-coa-actions'
+import { usePrintHandlers } from '@/hooks/use-print-handlers'
 import { QCRowIndicator } from '@/components/qc/qc-row-indicator'
-import { getQCStatusForAssays, type AssayQCStatus } from '@/app/actions/qc-status'
-import type { CoAReportStatus } from '@/types'
 
 interface AssignedTestsPanelProps {
     sampleId: string
@@ -54,27 +52,18 @@ export function AssignedTestsPanel({ sampleId, specialties = [], userRole }: Ass
     const searchParams = useSearchParams()
     const queryClient = useQueryClient()
 
-    // Data fetching state
-    const [results, setResults] = useState<ResultWithAssay[]>([])
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
-    const [sampleStatus, setSampleStatus] = useState<SampleStatus | null>(null)
-
-    // Ref to guard stale callbacks (save/submit/assignment)
-    const currentSampleIdRef = useRef(sampleId)
-    currentSampleIdRef.current = sampleId
+    // Extracted hooks
+    const {
+        results, loading, error, sampleStatus,
+        qcStatuses, coaStatus, setCoaStatus, fetchTests,
+    } = useAssignedTestsData(sampleId)
+    const { isGeneratingCoA, handleGenerateCoA } = useCoaActions(sampleId, setCoaStatus)
+    const { handlePrint, handlePrintCoABody } = usePrintHandlers(sampleId, results)
 
     // Dialog state
     const [showSubmitDialog, setShowSubmitDialog] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [showAssignmentDialog, setShowAssignmentDialog] = useState(false)
-
-    // CoA state
-    const [coaStatus, setCoaStatus] = useState<CoAReportStatus | null>(null)
-    const [isGeneratingCoA, setIsGeneratingCoA] = useState(false)
-
-    // QC status state
-    const [qcStatuses, setQcStatuses] = useState<Record<string, AssayQCStatus>>({})
 
     // Signature status hook
     const { hasSignature, isLoading: signatureLoading, error: signatureError } = useSignatureStatus()
@@ -99,37 +88,6 @@ export function AssignedTestsPanel({ sampleId, specialties = [], userRole }: Ass
         [searchParams, router, queryClient]
     )
 
-    const fetchTests = useCallback(async () => {
-        const fetchingSampleId = sampleId
-        try {
-            setLoading(true)
-            setError(null)
-            const { data, error: fetchError } = await fetchSampleResultsClient(sampleId)
-            // Discard if sampleId changed while this callback was in-flight
-            if (currentSampleIdRef.current !== fetchingSampleId) return
-            if (fetchError) {
-                setError(fetchError)
-            } else if (data) {
-                setResults(data)
-                if (data.length > 0 && data[0].sample_status) {
-                    setSampleStatus(data[0].sample_status as SampleStatus)
-                }
-            }
-        } catch (err) {
-            if (currentSampleIdRef.current !== fetchingSampleId) return
-            setError('Failed to load assigned tests')
-            console.error(err)
-        } finally {
-            if (currentSampleIdRef.current === fetchingSampleId) setLoading(false)
-        }
-    }, [sampleId])
-
-    // Auto-fetch on sampleId change.
-    // Race condition is guarded by currentSampleIdRef inside fetchTests.
-    useEffect(() => {
-        fetchTests()
-    }, [fetchTests])
-
     // Results editor hook
     const editor = useResultsEditor({
         results,
@@ -145,53 +103,6 @@ export function AssignedTestsPanel({ sampleId, specialties = [], userRole }: Ass
         hasUnsavedChanges: editor.pendingCount > 0,
         onSave: editor.handleSave,
     })
-
-    // Fetch CoA status when sample is completed
-    useEffect(() => {
-        async function fetchCoA() {
-            if (sampleStatus === 'completed') {
-                const result = await getCoAStatus(sampleId)
-                if (result.status) {
-                    setCoaStatus(result.status)
-                }
-            }
-        }
-        fetchCoA()
-    }, [sampleId, sampleStatus])
-
-    // Fetch QC status for all assays when results change
-    useEffect(() => {
-        async function fetchQCStatus() {
-            if (results.length === 0) return
-            const assayIds = [...new Set(results.map(r => r.assay_id))]
-            const qcResult = await getQCStatusForAssays(assayIds)
-            if ('error' in qcResult) {
-                console.error('Failed to fetch QC status:', qcResult.error)
-                return
-            }
-            setQcStatuses(qcResult)
-        }
-        fetchQCStatus()
-    }, [results])
-
-    const handleGenerateCoA = async () => {
-        setIsGeneratingCoA(true)
-        try {
-            const result = await regenerateCoA(sampleId)
-            if (result.success) {
-                toast.success('Đã tạo CoA thành công')
-                setCoaStatus('ready')
-            } else {
-                toast.error(`Lỗi khi tạo CoA: ${result.error}`)
-                setCoaStatus('failed')
-            }
-        } catch (err) {
-            toast.error('Có lỗi không mong đợi khi tạo CoA')
-            console.error(err)
-        } finally {
-            setIsGeneratingCoA(false)
-        }
-    }
 
     const isEditable = useCallback(() => {
         if (!sampleStatus) return false
@@ -217,69 +128,6 @@ export function AssignedTestsPanel({ sampleId, specialties = [], userRole }: Ass
             console.error(err)
         } finally {
             setIsSubmitting(false)
-        }
-    }
-
-    const handlePrint = async () => {
-        try {
-            const sampleData = await fetchSampleDetail(sampleId)
-            const currentDate = new Date().toLocaleDateString('vi-VN')
-            const htmlContent = generatePrintTemplate(sampleData, results, currentDate)
-            const printWindow = window.open('', '_blank')
-            if (printWindow) {
-                printWindow.document.write(htmlContent)
-                printWindow.document.close()
-                printWindow.onload = () => printWindow.print()
-            } else {
-                toast.error('Trình duyệt đã chặn cửa sổ in')
-            }
-        } catch (err) {
-            console.error(err)
-            toast.error('Có lỗi xảy ra khi in')
-        }
-    }
-
-    const handlePrintCoABody = async () => {
-        const printWindow = window.open('', '_blank')
-        if (!printWindow) {
-            toast.error('Trình duyệt đã chặn cửa sổ in')
-            return
-        }
-
-        printWindow.document.write(
-            '<html><head><title>Đang tải...</title></head><body><p style="font-family:sans-serif;text-align:center;margin-top:40px;">Đang tải...</p></body></html>'
-        )
-
-        try {
-            const response = await fetch(`/api/coa/view?sample_id=${sampleId}`, { cache: 'no-store' })
-            if (!response.ok) {
-                throw new Error('Không thể tải phiếu kết quả')
-            }
-
-            let html = await response.text()
-
-            const bodyOnlyStyles = `<style>
-                .header { visibility: hidden !important; border-color: transparent !important; }
-                .absolute-footer { display: none !important; }
-                .watermark { display: none !important; }
-                .content { padding-bottom: 32px !important; }
-            </style>`
-
-            if (html.includes('</head>')) {
-                html = html.replace('</head>', `${bodyOnlyStyles}</head>`)
-            } else {
-                html = bodyOnlyStyles + html
-            }
-
-            printWindow.document.open()
-            printWindow.document.write(html)
-            printWindow.document.close()
-            printWindow.onload = () => printWindow.print()
-        } catch (err) {
-            printWindow.close()
-            const message = err instanceof Error ? err.message : 'Không thể tải phiếu kết quả'
-            toast.error(message)
-            console.error(err)
         }
     }
 
