@@ -34,8 +34,6 @@ vi.mock('@/components/ui/drawer', () => ({
     DrawerHeader: ({ children }: any) => <div>{children}</div>,
     DrawerTitle: ({ children }: any) => <h2>{children}</h2>,
     DrawerClose: ({ children }: any) => <button data-testid="drawer-close">{children}</button>,
-    DrawerOverlay: () => null,
-    DrawerPortal: ({ children }: any) => <>{children}</>,
 }))
 
 import { render, screen } from '@testing-library/react'

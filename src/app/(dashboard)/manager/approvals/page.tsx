@@ -115,6 +115,8 @@ export default async function ApprovalsPage({ searchParams }: ApprovalsPageProps
                             samples={samples || []}
                             selectedSample={selectedSample}
                             results={results}
+                            tab={tab}
+                            reviewCount={reviewCount}
                         />
                     )}
                 </div>

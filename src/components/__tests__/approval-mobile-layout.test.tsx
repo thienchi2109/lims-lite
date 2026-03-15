@@ -1,9 +1,9 @@
 /**
  * Tests for ApprovalMobileLayout component.
- * Verifies layout orchestration: tabs area + mobile list + detail drawer.
+ * Verifies layout orchestration: tabs + mobile list + detail drawer.
  */
 
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 
 // Mock child components for isolation
@@ -29,11 +29,25 @@ vi.mock('@/components/approval-mobile-detail', () => ({
         ) : null,
 }))
 
+// Mock UI components (tabs)
+vi.mock('@/components/ui/tabs', () => ({
+    Tabs: ({ children, value, onValueChange }: any) => (
+        <div data-testid="tabs" data-value={value}>{children}</div>
+    ),
+    TabsList: ({ children }: any) => <div>{children}</div>,
+    TabsTrigger: ({ children, value, ...props }: any) => (
+        <button data-testid={props['data-testid']}>{children}</button>
+    ),
+}))
+
+vi.mock('@/components/ui/badge', () => ({
+    Badge: ({ children }: any) => <span data-testid="badge">{children}</span>,
+}))
+
 // Mock next/navigation
-const mockPush = vi.fn()
 const mockReplace = vi.fn()
 vi.mock('next/navigation', () => ({
-    useRouter: () => ({ push: mockPush, replace: mockReplace }),
+    useRouter: () => ({ push: vi.fn(), replace: mockReplace }),
     useSearchParams: () => new URLSearchParams(),
     usePathname: () => '/manager/approvals',
 }))
@@ -79,6 +93,10 @@ const mockResults: ResultWithAssay[] = [
     { id: 'r1', assay_name: 'Creatinine', status: 'entered' },
 ] as unknown as ResultWithAssay[]
 
+beforeEach(() => {
+    mockReplace.mockClear()
+})
+
 describe('ApprovalMobileLayout', () => {
     it('renders the mobile list with samples', () => {
         render(
@@ -86,6 +104,8 @@ describe('ApprovalMobileLayout', () => {
                 samples={mockSamples}
                 selectedSample={null}
                 results={[]}
+                tab="review"
+                reviewCount={2}
             />,
         )
 
@@ -94,12 +114,30 @@ describe('ApprovalMobileLayout', () => {
         expect(screen.getByText('CDC-XN-0002')).toBeDefined()
     })
 
+    it('renders tab switcher with review and completed tabs', () => {
+        render(
+            <ApprovalMobileLayout
+                samples={mockSamples}
+                selectedSample={null}
+                results={[]}
+                tab="review"
+                reviewCount={3}
+            />,
+        )
+
+        expect(screen.getByTestId('tab-review')).toBeDefined()
+        expect(screen.getByTestId('tab-completed')).toBeDefined()
+        expect(screen.getByTestId('badge').textContent).toBe('3')
+    })
+
     it('does not show detail drawer when no sample is selected', () => {
         render(
             <ApprovalMobileLayout
                 samples={mockSamples}
                 selectedSample={null}
                 results={[]}
+                tab="review"
+                reviewCount={2}
             />,
         )
 
@@ -112,25 +150,44 @@ describe('ApprovalMobileLayout', () => {
                 samples={mockSamples}
                 selectedSample={mockSelectedSample}
                 results={mockResults}
+                tab="review"
+                reviewCount={2}
             />,
         )
 
         expect(screen.getByTestId('mobile-detail')).toBeDefined()
     })
 
-    it('opens drawer when a card is tapped', () => {
+    it('updates URL and shows drawer after rerender with selected sample', () => {
         const { rerender } = render(
             <ApprovalMobileLayout
                 samples={mockSamples}
                 selectedSample={null}
                 results={[]}
+                tab="review"
+                reviewCount={2}
             />,
         )
 
-        // Tap first card
+        // Tap first card — triggers URL update
         fireEvent.click(screen.getByTestId('card-uuid-1'))
+        expect(mockReplace).toHaveBeenCalledWith(
+            expect.stringContaining('sampleId=uuid-1'),
+        )
 
-        // URL update is triggered (router.replace)
-        expect(mockReplace).toHaveBeenCalled()
+        // Simulate server round-trip: parent re-renders with selectedSample
+        rerender(
+            <ApprovalMobileLayout
+                samples={mockSamples}
+                selectedSample={mockSelectedSample}
+                results={mockResults}
+                tab="review"
+                reviewCount={2}
+            />,
+        )
+
+        // Now the drawer should actually render
+        expect(screen.getByTestId('mobile-detail')).toBeDefined()
+        expect(screen.getByTestId('mobile-detail').textContent).toContain('CDC-XN-0001')
     })
 })
