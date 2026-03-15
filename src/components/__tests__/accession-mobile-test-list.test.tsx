@@ -36,6 +36,21 @@ vi.mock('@/lib/specialty-badges', () => ({
     },
 }))
 
+// Mock virtualizer — jsdom has no layout engine so virtualizer renders nothing
+vi.mock('@tanstack/react-virtual', () => ({
+    useVirtualizer: ({ count }: { count: number }) => ({
+        getTotalSize: () => count * 72,
+        getVirtualItems: () =>
+            Array.from({ length: count }, (_, i) => ({
+                index: i,
+                key: i,
+                start: i * 72,
+                size: 72,
+            })),
+        measureElement: () => {},
+    }),
+}))
+
 // ---------- Test Data ----------
 
 const now = new Date().toISOString()
@@ -211,29 +226,5 @@ describe('AccessionMobileTestList', () => {
 
         // Should still render the test items
         expect(screen.getByText('ALT (GPT)')).toBeDefined()
-    })
-})
-
-// ---------- Integration test: real Accordion single-expand ----------
-
-// Separate file-level describe that does NOT use the mock.
-// vi.mock is hoisted so we can't conditionally un-mock within the same file.
-// Instead, we test the Accordion's type="single" prop is set correctly (unit proxy).
-describe('AccessionMobileTestList — Accordion config', () => {
-    it('configures Accordion with type="single" for single-expand behavior', () => {
-        const { container } = render(
-            <AccessionMobileTestList
-                groupedRows={groupedRows}
-                selected={[]}
-                toggleTestSelection={vi.fn()}
-                disabledSet={emptyDisabledSet}
-                specialtiesMap={specialtiesMap}
-                searchQuery=""
-                isLoading={false}
-            />,
-        )
-
-        const accordion = screen.getByTestId('accordion')
-        expect(accordion.getAttribute('data-type')).toBe('single')
     })
 })

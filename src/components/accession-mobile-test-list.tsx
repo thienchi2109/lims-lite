@@ -10,6 +10,8 @@
  * - Expand state is local (not shared with desktop view)
  */
 
+import { useRef } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { cn } from '@/lib/utils'
 import { SPECIALTY_BADGE_CLASSES } from '@/lib/specialty-badges'
 import {
@@ -64,25 +66,20 @@ export function AccessionMobileTestList({
 
     const selectedSet = new Set(selected.map((t) => t.assayId))
 
-    // When search is active → flat list (no accordion)
+    // When search is active → virtualized flat list (no accordion)
     if (searchQuery.trim() !== '') {
         const assayRows = groupedRows.filter(
             (row): row is GridRow & { type: 'assay' } => row.type === 'assay',
         )
 
         return (
-            <div data-testid="flat-list" className="flex flex-col gap-1 px-2">
-                {assayRows.map((row) => (
-                    <TestRow
-                        key={row.key}
-                        assay={row.assay}
-                        isSelected={selectedSet.has(row.assay.id)}
-                        isDisabled={disabledSet.has(row.assay.id)}
-                        specialtiesMap={specialtiesMap}
-                        onToggle={toggleTestSelection}
-                    />
-                ))}
-            </div>
+            <VirtualizedFlatList
+                assayRows={assayRows}
+                selectedSet={selectedSet}
+                disabledSet={disabledSet}
+                specialtiesMap={specialtiesMap}
+                toggleTestSelection={toggleTestSelection}
+            />
         )
     }
 
@@ -139,6 +136,69 @@ export function AccessionMobileTestList({
 }
 
 // ---------- Internal Components ----------
+
+/** Virtualized flat list for search results — prevents perf regression with large catalogs */
+interface VirtualizedFlatListProps {
+    assayRows: Array<GridRow & { type: 'assay' }>
+    selectedSet: Set<string>
+    disabledSet: Set<string>
+    specialtiesMap: Map<string, { id: string; name: string; code: string }>
+    toggleTestSelection: (assay: AssayDefinitionWithMethods) => void
+}
+
+function VirtualizedFlatList({
+    assayRows,
+    selectedSet,
+    disabledSet,
+    specialtiesMap,
+    toggleTestSelection,
+}: VirtualizedFlatListProps) {
+    const parentRef = useRef<HTMLDivElement>(null)
+
+    const virtualizer = useVirtualizer({
+        count: assayRows.length,
+        getScrollElement: () => parentRef.current,
+        estimateSize: () => 72,
+        overscan: 10,
+    })
+
+    return (
+        <div
+            ref={parentRef}
+            data-testid="flat-list"
+            className="h-full overflow-auto px-2"
+        >
+            <div
+                style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative', width: '100%' }}
+            >
+                {virtualizer.getVirtualItems().map((virtualRow) => {
+                    const row = assayRows[virtualRow.index]
+                    return (
+                        <div
+                            key={row.key}
+                            style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                transform: `translateY(${virtualRow.start}px)`,
+                            }}
+                            className="pb-1"
+                        >
+                            <TestRow
+                                assay={row.assay}
+                                isSelected={selectedSet.has(row.assay.id)}
+                                isDisabled={disabledSet.has(row.assay.id)}
+                                specialtiesMap={specialtiesMap}
+                                onToggle={toggleTestSelection}
+                            />
+                        </div>
+                    )
+                })}
+            </div>
+        </div>
+    )
+}
 
 interface TestRowProps {
     assay: AssayDefinitionWithMethods

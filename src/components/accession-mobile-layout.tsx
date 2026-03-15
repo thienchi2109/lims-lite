@@ -123,6 +123,7 @@ export function AccessionMobileLayout({
                     {/* Filter Pills */}
                     <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                         <button
+                            type="button"
                             onClick={() => setSelectedSpecialtyId('all')}
                             className={cn(
                                 'px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors',
@@ -135,6 +136,7 @@ export function AccessionMobileLayout({
                         </button>
                         {specialties.map((spec) => (
                             <button
+                                type="button"
                                 key={spec.id}
                                 onClick={() => setSelectedSpecialtyId(spec.id)}
                                 className={cn(
@@ -151,7 +153,10 @@ export function AccessionMobileLayout({
                 </div>
 
                 {/* Accordion Test List */}
-                <div className="flex-1 overflow-auto w-full relative pb-20 scroll-smooth px-2 pt-2">
+                <div className={cn(
+                    'flex-1 overflow-auto w-full relative scroll-smooth px-2 pt-2',
+                    selected.length > 0 ? 'pb-32' : 'pb-20',
+                )}>
                     <AccessionMobileTestList
                         groupedRows={groupedRows}
                         selected={selected}
@@ -178,6 +183,7 @@ export function AccessionMobileLayout({
                                 >
                                     <span>{test.assayName}</span>
                                     <button
+                                        type="button"
                                         onClick={() => handleRemoveTest(test.assayId)}
                                         className="ml-0.5 hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5 transition-colors"
                                         aria-label={`Xóa ${test.assayName}`}
@@ -205,6 +211,7 @@ export function AccessionMobileLayout({
                                     Đã chọn
                                 </span>
                                 <button
+                                    type="button"
                                     onClick={() => onChange([])}
                                     disabled={selected.length === 0}
                                     className="text-xs text-red-500 hover:text-red-600 hover:underline text-left disabled:opacity-50"
