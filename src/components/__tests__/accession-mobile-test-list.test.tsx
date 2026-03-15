@@ -130,6 +130,7 @@ describe('AccessionMobileTestList', () => {
         groupedRows,
         selected: [] as SelectedTest[],
         toggleTestSelection: mockToggle,
+        handleMethodChange: vi.fn(),
         disabledSet: emptyDisabledSet,
         specialtiesMap,
         searchQuery: '',
@@ -189,7 +190,8 @@ describe('AccessionMobileTestList', () => {
     it('calls toggleTestSelection when clicking a test row', () => {
         render(<AccessionMobileTestList {...defaultProps} />)
 
-        fireEvent.click(screen.getByTestId('test-row-assay-alt'))
+        const altRow = screen.getByTestId('test-row-assay-alt')
+        fireEvent.click(within(altRow).getByRole('button'))
         expect(mockToggle).toHaveBeenCalledTimes(1)
         expect(mockToggle).toHaveBeenCalledWith(assayALT)
     })
@@ -205,7 +207,8 @@ describe('AccessionMobileTestList', () => {
             />,
         )
 
-        fireEvent.click(screen.getByTestId('test-row-assay-alt'))
+        const altRow = screen.getByTestId('test-row-assay-alt')
+        fireEvent.click(within(altRow).getByRole('button'))
         expect(mockToggle).not.toHaveBeenCalled()
     })
 
