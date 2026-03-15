@@ -11,7 +11,7 @@
  * div — portals render to document.body and escape the CSS rule.
  */
 
-import type { ReactNode } from 'react'
+import { type ReactNode, useState, useEffect } from 'react'
 import { useMediaQuery } from '@/hooks/use-media-query'
 
 interface MobileOnlyProps {
@@ -22,8 +22,13 @@ interface MobileOnlyProps {
 
 export function MobileOnly({ children, breakpoint = 1280 }: MobileOnlyProps) {
     const isDesktop = useMediaQuery(`(min-width: ${breakpoint}px)`)
+    const [hasMounted, setHasMounted] = useState(false)
 
-    if (isDesktop) return null
+    useEffect(() => { setHasMounted(true) }, [])
+
+    // Before mount: render nothing (prevents portal flash on desktop)
+    // After mount: render only when viewport is below breakpoint
+    if (!hasMounted || isDesktop) return null
 
     return <>{children}</>
 }

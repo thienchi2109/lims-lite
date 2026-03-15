@@ -30,13 +30,22 @@ vi.mock('@/components/approval-mobile-detail', () => ({
 }))
 
 // Mock UI components (tabs)
+// Shared ref so TabsTrigger can call the parent Tabs onValueChange
+let tabsOnValueChange: ((v: string) => void) | null = null
+
 vi.mock('@/components/ui/tabs', () => ({
-    Tabs: ({ children, value, onValueChange }: any) => (
-        <div data-testid="tabs" data-value={value}>{children}</div>
-    ),
+    Tabs: ({ children, value, onValueChange }: any) => {
+        tabsOnValueChange = onValueChange
+        return <div data-testid="tabs" data-value={value}>{children}</div>
+    },
     TabsList: ({ children }: any) => <div>{children}</div>,
     TabsTrigger: ({ children, value, ...props }: any) => (
-        <button data-testid={props['data-testid']}>{children}</button>
+        <button
+            data-testid={props['data-testid']}
+            onClick={() => tabsOnValueChange?.(value)}
+        >
+            {children}
+        </button>
     ),
 }))
 
@@ -189,5 +198,39 @@ describe('ApprovalMobileLayout', () => {
         // Now the drawer should actually render
         expect(screen.getByTestId('mobile-detail')).toBeDefined()
         expect(screen.getByTestId('mobile-detail').textContent).toContain('CDC-XN-0001')
+    })
+
+    it('navigates to completed tab when clicking tab trigger', () => {
+        render(
+            <ApprovalMobileLayout
+                samples={mockSamples}
+                selectedSample={null}
+                results={[]}
+                tab="review"
+                reviewCount={2}
+            />,
+        )
+
+        fireEvent.click(screen.getByTestId('tab-completed'))
+        expect(mockReplace).toHaveBeenCalledWith(
+            expect.stringContaining('tab=completed'),
+        )
+    })
+
+    it('clears sampleId when switching tabs', () => {
+        render(
+            <ApprovalMobileLayout
+                samples={mockSamples}
+                selectedSample={mockSelectedSample}
+                results={mockResults}
+                tab="review"
+                reviewCount={2}
+            />,
+        )
+
+        fireEvent.click(screen.getByTestId('tab-completed'))
+        const calledUrl = mockReplace.mock.calls[0][0] as string
+        expect(calledUrl).toContain('tab=completed')
+        expect(calledUrl).not.toContain('sampleId')
     })
 })
