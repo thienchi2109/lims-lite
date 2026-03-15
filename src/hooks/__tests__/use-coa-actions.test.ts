@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
 import { useCoaActions } from '../use-coa-actions'
 
 vi.mock('@/lib/api-client', () => ({
@@ -68,11 +68,78 @@ describe('useCoaActions', () => {
 
     it('toasts on unexpected throw', async () => {
         mockRegenerateCoA.mockRejectedValue(new Error('Network down'))
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
         const { result } = renderHook(() => useCoaActions('sample-1', setCoaStatus))
 
         await act(async () => { await result.current.handleGenerateCoA() })
 
         expect(toast.error).toHaveBeenCalledWith('Có lỗi không mong đợi khi tạo CoA')
+        consoleErrorSpy.mockRestore()
+    })
+
+    it('ignores stale generation results after the sample changes', async () => {
+        let resolveGeneration!: (value: { success: true }) => void
+        const pendingGeneration = new Promise<{ success: true }>((resolve) => {
+            resolveGeneration = resolve
+        })
+        mockRegenerateCoA.mockReturnValueOnce(pendingGeneration as any)
+
+        const { result, rerender } = renderHook(
+            ({ id }) => useCoaActions(id, setCoaStatus),
+            { initialProps: { id: 'sample-A' } },
+        )
+
+        let generationPromise!: Promise<void>
+        act(() => {
+            generationPromise = result.current.handleGenerateCoA()
+        })
+
+        await waitFor(() => expect(result.current.isGeneratingCoA).toBe(true))
+
+        rerender({ id: 'sample-B' })
+
+        await waitFor(() => expect(result.current.isGeneratingCoA).toBe(false))
+
+        await act(async () => {
+            resolveGeneration({ success: true })
+            await generationPromise
+        })
+
+        expect(setCoaStatus).not.toHaveBeenCalledWith('ready')
+        expect(setCoaStatus).not.toHaveBeenCalledWith('failed')
+    })
+
+    it('keeps the current sample marked as generating when returning to it mid-request', async () => {
+        let resolveGeneration!: (value: { success: true }) => void
+        const pendingGeneration = new Promise<{ success: true }>((resolve) => {
+            resolveGeneration = resolve
+        })
+        mockRegenerateCoA.mockReturnValueOnce(pendingGeneration as any)
+
+        const { result, rerender } = renderHook(
+            ({ id }) => useCoaActions(id, setCoaStatus),
+            { initialProps: { id: 'sample-A' } },
+        )
+
+        let generationPromise!: Promise<void>
+        act(() => {
+            generationPromise = result.current.handleGenerateCoA()
+        })
+
+        await waitFor(() => expect(result.current.isGeneratingCoA).toBe(true))
+
+        rerender({ id: 'sample-B' })
+        await waitFor(() => expect(result.current.isGeneratingCoA).toBe(false))
+
+        rerender({ id: 'sample-A' })
+        await waitFor(() => expect(result.current.isGeneratingCoA).toBe(true))
+
+        await act(async () => {
+            resolveGeneration({ success: true })
+            await generationPromise
+        })
+
+        expect(result.current.isGeneratingCoA).toBe(false)
     })
 })

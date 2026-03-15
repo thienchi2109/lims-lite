@@ -24,19 +24,27 @@ export function usePrintHandlers(
     results: ResultWithAssay[],
 ): UsePrintHandlersReturn {
     const handlePrint = useCallback(async () => {
+        const printWindow = window.open('', '_blank')
+        if (!printWindow) {
+            toast.error('Trình duyệt đã chặn cửa sổ in')
+            return
+        }
+
+        printWindow.document.write(
+            '<html><head><title>Đang tải...</title></head><body><p style="font-family:sans-serif;text-align:center;margin-top:40px;">Đang tải...</p></body></html>'
+        )
+        printWindow.document.close()
+
         try {
             const sampleData = await fetchSampleDetail(sampleId)
             const currentDate = new Date().toLocaleDateString('vi-VN')
             const htmlContent = generatePrintTemplate(sampleData, results, currentDate)
-            const printWindow = window.open('', '_blank')
-            if (printWindow) {
-                printWindow.document.write(htmlContent)
-                printWindow.document.close()
-                printWindow.onload = () => printWindow.print()
-            } else {
-                toast.error('Trình duyệt đã chặn cửa sổ in')
-            }
+            printWindow.document.open()
+            printWindow.document.write(htmlContent)
+            printWindow.document.close()
+            printWindow.onload = () => printWindow.print()
         } catch (err) {
+            printWindow.close()
             console.error(err)
             toast.error('Có lỗi xảy ra khi in')
         }

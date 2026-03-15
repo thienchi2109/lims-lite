@@ -37,64 +37,153 @@ export function useAssignedTestsData(sampleId: string): UseAssignedTestsDataRetu
     // Ref to guard stale callbacks
     const currentSampleIdRef = useRef(sampleId)
     currentSampleIdRef.current = sampleId
+    const fetchRequestIdRef = useRef(0)
+    const coaRequestIdRef = useRef(0)
+    const qcRequestIdRef = useRef(0)
 
     const fetchTests = useCallback(async () => {
         const fetchingSampleId = sampleId
+        const requestId = fetchRequestIdRef.current + 1
+        fetchRequestIdRef.current = requestId
         try {
             setLoading(true)
             setError(null)
             const { data, error: fetchError } = await fetchSampleResultsClient(sampleId)
             // Discard if sampleId changed while this callback was in-flight
-            if (currentSampleIdRef.current !== fetchingSampleId) return
-            if (fetchError) {
-                setError(fetchError)
-            } else if (data) {
-                setResults(data)
-                if (data.length > 0 && data[0].sample_status) {
-                    setSampleStatus(data[0].sample_status as SampleStatus)
-                }
+            if (
+                currentSampleIdRef.current !== fetchingSampleId ||
+                fetchRequestIdRef.current !== requestId
+            ) {
+                return
             }
+            if (fetchError) {
+                setResults([])
+                setSampleStatus(null)
+                setError(fetchError)
+                return
+            }
+
+            const nextResults = data ?? []
+            const nextSampleStatus =
+                nextResults.length > 0 && nextResults[0].sample_status
+                    ? (nextResults[0].sample_status as SampleStatus)
+                    : null
+
+            setResults(nextResults)
+            setSampleStatus(nextSampleStatus)
         } catch (err) {
-            if (currentSampleIdRef.current !== fetchingSampleId) return
+            if (
+                currentSampleIdRef.current !== fetchingSampleId ||
+                fetchRequestIdRef.current !== requestId
+            ) {
+                return
+            }
+            setResults([])
+            setSampleStatus(null)
             setError('Failed to load assigned tests')
             console.error(err)
         } finally {
-            if (currentSampleIdRef.current === fetchingSampleId) setLoading(false)
+            if (
+                currentSampleIdRef.current === fetchingSampleId &&
+                fetchRequestIdRef.current === requestId
+            ) {
+                setLoading(false)
+            }
         }
     }, [sampleId])
 
     // Auto-fetch on sampleId change
     useEffect(() => {
-        fetchTests()
-    }, [fetchTests])
+        setResults([])
+        setSampleStatus(null)
+        setCoaStatus(null)
+        setQcStatuses({})
+        setError(null)
+        setLoading(true)
+        void fetchTests()
+    }, [sampleId, fetchTests])
 
     // Fetch CoA status when sample is completed
     useEffect(() => {
+        const requestId = coaRequestIdRef.current + 1
+        coaRequestIdRef.current = requestId
+
+        if (sampleStatus !== 'completed') {
+            setCoaStatus(null)
+            return
+        }
+
         async function fetchCoA() {
-            if (sampleStatus === 'completed') {
+            try {
                 const result = await getCoAStatus(sampleId)
-                if (result.status) {
-                    setCoaStatus(result.status)
+                if (
+                    currentSampleIdRef.current !== sampleId ||
+                    coaRequestIdRef.current !== requestId
+                ) {
+                    return
                 }
+
+                setCoaStatus(result.status ?? null)
+            } catch (err) {
+                if (
+                    currentSampleIdRef.current !== sampleId ||
+                    coaRequestIdRef.current !== requestId
+                ) {
+                    return
+                }
+
+                setCoaStatus(null)
+                console.error('Failed to fetch CoA status:', err)
             }
         }
-        fetchCoA()
+
+        void fetchCoA()
     }, [sampleId, sampleStatus])
 
     // Fetch QC status for all assays when results change
     useEffect(() => {
-        async function fetchQCStatus() {
-            if (results.length === 0) return
-            const assayIds = [...new Set(results.map(r => r.assay_id))]
-            const qcResult = await getQCStatusForAssays(assayIds)
-            if ('error' in qcResult) {
-                console.error('Failed to fetch QC status:', qcResult.error)
-                return
-            }
-            setQcStatuses(qcResult)
+        const requestId = qcRequestIdRef.current + 1
+        qcRequestIdRef.current = requestId
+
+        if (results.length === 0) {
+            setQcStatuses({})
+            return
         }
-        fetchQCStatus()
-    }, [results])
+
+        async function fetchQCStatus() {
+            const assayIds = [...new Set(results.map((result) => result.assay_id))]
+
+            try {
+                const qcResult = await getQCStatusForAssays(assayIds)
+                if (
+                    currentSampleIdRef.current !== sampleId ||
+                    qcRequestIdRef.current !== requestId
+                ) {
+                    return
+                }
+
+                if ('error' in qcResult) {
+                    console.error('Failed to fetch QC status:', qcResult.error)
+                    setQcStatuses({})
+                    return
+                }
+
+                setQcStatuses(qcResult)
+            } catch (err) {
+                if (
+                    currentSampleIdRef.current !== sampleId ||
+                    qcRequestIdRef.current !== requestId
+                ) {
+                    return
+                }
+
+                setQcStatuses({})
+                console.error('Failed to fetch QC status:', err)
+            }
+        }
+
+        void fetchQCStatus()
+    }, [results, sampleId])
 
     return {
         results,

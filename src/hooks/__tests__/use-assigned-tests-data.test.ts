@@ -39,6 +39,7 @@ describe('useAssignedTestsData', () => {
     })
 
     it('returns loading=true initially', () => {
+        mockFetch.mockReturnValueOnce(new Promise(() => {}) as any)
         const { result } = renderHook(() => useAssignedTestsData('sample-1'))
         expect(result.current.loading).toBe(true)
     })
@@ -81,8 +82,10 @@ describe('useAssignedTestsData', () => {
 
     it('discards stale response when sampleId changes', async () => {
         // First fetch is slow
-        let resolveFirst: (v: any) => void
-        const slowPromise = new Promise((r) => { resolveFirst = r })
+        let resolveFirst!: (value: { data: Array<{ id: string; assay_id: string; sample_status: string }>; error: null }) => void
+        const slowPromise = new Promise<{ data: Array<{ id: string; assay_id: string; sample_status: string }>; error: null }>((resolve) => {
+            resolveFirst = resolve
+        })
         mockFetch.mockReturnValueOnce(slowPromise as any)
 
         // Second fetch is fast
@@ -102,13 +105,89 @@ describe('useAssignedTestsData', () => {
         await waitFor(() => expect(result.current.loading).toBe(false))
 
         // Resolve stale sample-A response
-        resolveFirst!({
-            data: [{ id: 'r-A', assay_id: 'a1', sample_status: 'completed' }],
-            error: null,
+        await act(async () => {
+            resolveFirst({
+                data: [{ id: 'r-A', assay_id: 'a1', sample_status: 'completed' }],
+                error: null,
+            })
+            await slowPromise
         })
 
         // Should show sample-B data, not stale sample-A
         expect(result.current.results[0]?.id).toBe('r-B')
+    })
+
+    it('clears coaStatus when switching to a different sample', async () => {
+        let resolveSecondFetch!: (value: { data: Array<{ id: string; assay_id: string; sample_status: string }>; error: null }) => void
+        const secondFetch = new Promise<{ data: Array<{ id: string; assay_id: string; sample_status: string }>; error: null }>((resolve) => {
+            resolveSecondFetch = resolve
+        })
+
+        mockFetch
+            .mockResolvedValueOnce({
+                data: [{ id: 'r-A', assay_id: 'a1', sample_status: 'completed' }],
+                error: null,
+            })
+            .mockReturnValueOnce(secondFetch as any)
+        mockCoAStatus.mockResolvedValueOnce({ status: 'ready' })
+
+        const { result, rerender } = renderHook(
+            ({ id }) => useAssignedTestsData(id),
+            { initialProps: { id: 'sample-A' } },
+        )
+
+        await waitFor(() => expect(result.current.coaStatus).toBe('ready'))
+
+        rerender({ id: 'sample-B' })
+
+        await waitFor(() => expect(result.current.coaStatus).toBeNull())
+
+        await act(async () => {
+            resolveSecondFetch({
+                data: [{ id: 'r-B', assay_id: 'a2', sample_status: 'assigned' }],
+                error: null,
+            })
+            await secondFetch
+        })
+
+        await waitFor(() => expect(result.current.loading).toBe(false))
+    })
+
+    it('ignores stale CoA responses from the previous sample', async () => {
+        let resolveCoAStatus!: (value: { status: 'ready' }) => void
+        const staleCoAStatus = new Promise<{ status: 'ready' }>((resolve) => {
+            resolveCoAStatus = resolve
+        })
+
+        mockFetch
+            .mockResolvedValueOnce({
+                data: [{ id: 'r-A', assay_id: 'a1', sample_status: 'completed' }],
+                error: null,
+            })
+            .mockResolvedValueOnce({
+                data: [{ id: 'r-B', assay_id: 'a2', sample_status: 'assigned' }],
+                error: null,
+            })
+        mockCoAStatus.mockReturnValueOnce(staleCoAStatus as any)
+
+        const { result, rerender } = renderHook(
+            ({ id }) => useAssignedTestsData(id),
+            { initialProps: { id: 'sample-A' } },
+        )
+
+        await waitFor(() => expect(mockCoAStatus).toHaveBeenCalledWith('sample-A'))
+
+        rerender({ id: 'sample-B' })
+
+        await waitFor(() => expect(result.current.loading).toBe(false))
+        await waitFor(() => expect(result.current.sampleStatus).toBe('assigned'))
+
+        await act(async () => {
+            resolveCoAStatus({ status: 'ready' })
+            await staleCoAStatus
+        })
+
+        expect(result.current.coaStatus).toBeNull()
     })
 
     it('fetches CoA status when sampleStatus is completed', async () => {
@@ -142,6 +221,69 @@ describe('useAssignedTestsData', () => {
         expect(mockQCStatus).toHaveBeenCalledWith(['a1', 'a2'])
     })
 
+    it('clears QC statuses when switching to a sample without results', async () => {
+        const qcStatusResult = {
+            a1: { status: 'pass', message: 'OK', last_qc_at: null },
+        }
+
+        mockFetch
+            .mockResolvedValueOnce({
+                data: [{ id: 'r-A', assay_id: 'a1', sample_status: 'assigned' }],
+                error: null,
+            })
+            .mockResolvedValueOnce({ data: [], error: null })
+        mockQCStatus.mockResolvedValueOnce(qcStatusResult)
+
+        const { result, rerender } = renderHook(
+            ({ id }) => useAssignedTestsData(id),
+            { initialProps: { id: 'sample-A' } },
+        )
+
+        await waitFor(() => expect(result.current.qcStatuses).toEqual(qcStatusResult))
+
+        rerender({ id: 'sample-B' })
+
+        await waitFor(() => expect(result.current.loading).toBe(false))
+
+        expect(result.current.qcStatuses).toEqual({})
+    })
+
+    it('ignores stale QC responses after switching to a sample without QC data', async () => {
+        let resolveFirstQC!: (value: Record<string, { status: string; message: string; last_qc_at: null }>) => void
+        const firstQCResponse = new Promise<Record<string, { status: string; message: string; last_qc_at: null }>>((resolve) => {
+            resolveFirstQC = resolve
+        })
+
+        mockFetch
+            .mockResolvedValueOnce({
+                data: [{ id: 'r-A', assay_id: 'a1', sample_status: 'assigned' }],
+                error: null,
+            })
+            .mockResolvedValueOnce({ data: [], error: null })
+        mockQCStatus.mockReturnValueOnce(firstQCResponse as any)
+
+        const { result, rerender } = renderHook(
+            ({ id }) => useAssignedTestsData(id),
+            { initialProps: { id: 'sample-A' } },
+        )
+
+        await waitFor(() => expect(mockQCStatus).toHaveBeenCalledWith(['a1']))
+
+        rerender({ id: 'sample-B' })
+
+        await waitFor(() => expect(result.current.loading).toBe(false))
+        expect(result.current.qcStatuses).toEqual({})
+
+        await act(async () => {
+            resolveFirstQC({
+                a1: { status: 'pass', message: 'Stale', last_qc_at: null },
+            })
+            await firstQCResponse
+        })
+
+        expect(result.current.qcStatuses).toEqual({})
+    })
+
     it('exposes fetchTests for manual refetch', async () => {
         mockFetch.mockResolvedValue({ data: [], error: null })
 
@@ -154,5 +296,37 @@ describe('useAssignedTestsData', () => {
         // Manual refetch
         await act(async () => { await result.current.fetchTests() })
         expect(mockFetch).toHaveBeenCalledTimes(2)
+    })
+
+    it('ignores out-of-order refetch responses for the same sample', async () => {
+        let resolveFirstFetch!: (value: { data: Array<{ id: string; assay_id: string; sample_status: string }>; error: null }) => void
+        const firstFetch = new Promise<{ data: Array<{ id: string; assay_id: string; sample_status: string }>; error: null }>((resolve) => {
+            resolveFirstFetch = resolve
+        })
+
+        mockFetch
+            .mockReturnValueOnce(firstFetch as any)
+            .mockResolvedValueOnce({
+                data: [{ id: 'r-new', assay_id: 'a2', sample_status: 'assigned' }],
+                error: null,
+            })
+
+        const { result } = renderHook(() => useAssignedTestsData('sample-1'))
+
+        await act(async () => {
+            await result.current.fetchTests()
+        })
+
+        expect(result.current.results[0]?.id).toBe('r-new')
+
+        await act(async () => {
+            resolveFirstFetch({
+                data: [{ id: 'r-old', assay_id: 'a1', sample_status: 'completed' }],
+                error: null,
+            })
+            await firstFetch
+        })
+
+        expect(result.current.results[0]?.id).toBe('r-new')
     })
 })

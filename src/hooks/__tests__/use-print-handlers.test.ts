@@ -52,6 +52,35 @@ describe('usePrintHandlers', () => {
     })
 
     describe('handlePrint', () => {
+        it('opens the print window before sample detail finishes loading', async () => {
+            let resolveDetail: ((value: any) => void) | undefined
+            const detailPromise = new Promise((resolve) => {
+                resolveDetail = resolve
+            })
+
+            mockFetchDetail.mockReturnValue(detailPromise as Promise<any>)
+            mockTemplate.mockReturnValue('<html>Print Content</html>')
+            const openSpy = vi.spyOn(window, 'open').mockReturnValue(mockPrintWindow)
+
+            const { result } = renderHook(() => usePrintHandlers('sample-1', results))
+
+            const printPromise = result.current.handlePrint()
+
+            expect(openSpy).toHaveBeenCalledWith('', '_blank')
+            expect(mockPrintWindow.document.write).toHaveBeenCalledWith(
+                expect.stringContaining('Đang tải')
+            )
+
+            resolveDetail?.({ id: 'sample-1', sample_code: 'S001' } as any)
+
+            await act(async () => {
+                await printPromise
+            })
+
+            expect(mockTemplate).toHaveBeenCalled()
+            expect(mockPrintWindow.document.write).toHaveBeenCalledWith('<html>Print Content</html>')
+        })
+
         it('fetches sample detail and opens print window with template', async () => {
             mockFetchDetail.mockResolvedValue({ id: 'sample-1', sample_code: 'S001' } as any)
             mockTemplate.mockReturnValue('<html>Print Content</html>')
