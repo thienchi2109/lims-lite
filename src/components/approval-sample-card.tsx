@@ -99,7 +99,8 @@ export function ApprovalSampleCard({
                         </Badge>
 
                         <span className="text-xs text-slate-400 dark:text-slate-500">
-                            {sample.total_tests} xét nghiệm · {sample.entered_count} đã nhập
+                            {sample.entered_count + sample.approved_count}/{sample.total_tests} xét nghiệm
+                            {sample.approved_count > 0 && ` · ${sample.approved_count} đã duyệt`}
                         </span>
                     </div>
                 </div>

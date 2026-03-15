@@ -35,11 +35,10 @@ describe('ApprovalSampleCard', () => {
         expect(screen.getByText('Nguyễn Thành Duy')).toBeDefined()
     })
 
-    it('renders progress text with test counts', () => {
+    it('renders progress text with combined counts', () => {
         render(<ApprovalSampleCard sample={baseSample} onSelect={vi.fn()} />)
 
-        expect(screen.getByText(/3 xét nghiệm/)).toBeDefined()
-        expect(screen.getByText(/2 đã nhập/)).toBeDefined()
+        expect(screen.getByText(/2\/3 xét nghiệm/)).toBeDefined()
     })
 
     it('calls onSelect with sample id when tapped', () => {
