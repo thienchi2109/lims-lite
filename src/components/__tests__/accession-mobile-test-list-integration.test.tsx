@@ -71,12 +71,11 @@ describe('AccessionMobileTestList — real Accordion integration', () => {
         const accordionItems = document.querySelectorAll('[data-slot="accordion-item"]')
 
         // The first item should be closed, second should be open
-        if (accordionItems.length === 2) {
-            const firstContent = accordionItems[0].querySelector('[data-slot="accordion-content"]')
-            const secondContent = accordionItems[1].querySelector('[data-slot="accordion-content"]')
+        expect(accordionItems).toHaveLength(2)
+        const firstContent = accordionItems[0].querySelector('[data-slot="accordion-content"]')
+        const secondContent = accordionItems[1].querySelector('[data-slot="accordion-content"]')
 
-            expect(firstContent?.getAttribute('data-state')).toBe('closed')
-            expect(secondContent?.getAttribute('data-state')).toBe('open')
-        }
+        expect(firstContent?.getAttribute('data-state')).toBe('closed')
+        expect(secondContent?.getAttribute('data-state')).toBe('open')
     })
 })

@@ -189,6 +189,8 @@ function VirtualizedFlatList({
                     return (
                         <div
                             key={row.key}
+                            data-index={virtualRow.index}
+                            ref={virtualizer.measureElement}
                             style={{
                                 position: 'absolute',
                                 top: 0,

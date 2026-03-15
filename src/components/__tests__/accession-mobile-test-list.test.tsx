@@ -36,9 +36,9 @@ vi.mock('@/lib/specialty-badges', () => ({
     },
 }))
 
-// Mock virtualizer — jsdom has no layout engine so virtualizer renders nothing
-vi.mock('@tanstack/react-virtual', () => ({
-    useVirtualizer: ({ count }: { count: number }) => ({
+const virtualizerSpies = vi.hoisted(() => {
+    const measureElement = vi.fn()
+    const useVirtualizer = vi.fn(({ count }: { count: number }) => ({
         getTotalSize: () => count * 72,
         getVirtualItems: () =>
             Array.from({ length: count }, (_, i) => ({
@@ -47,8 +47,15 @@ vi.mock('@tanstack/react-virtual', () => ({
                 start: i * 72,
                 size: 72,
             })),
-        measureElement: () => {},
-    }),
+        measureElement,
+    }))
+
+    return { useVirtualizer, measureElement }
+})
+
+// Mock virtualizer — jsdom has no layout engine so virtualizer renders nothing
+vi.mock('@tanstack/react-virtual', () => ({
+    useVirtualizer: virtualizerSpies.useVirtualizer,
 }))
 
 // ---------- Test Data ----------
@@ -124,6 +131,8 @@ describe('AccessionMobileTestList', () => {
 
     beforeEach(() => {
         mockToggle.mockClear()
+        virtualizerSpies.useVirtualizer.mockClear()
+        virtualizerSpies.measureElement.mockClear()
     })
 
     const defaultProps = {
@@ -229,5 +238,17 @@ describe('AccessionMobileTestList', () => {
 
         // Should still render the test items
         expect(screen.getByText('ALT (GPT)')).toBeDefined()
+    })
+
+    it('wires row measurement refs in search mode for variable-height rows', () => {
+        render(
+            <AccessionMobileTestList
+                {...defaultProps}
+                searchQuery="ALT"
+            />,
+        )
+
+        expect(screen.getByTestId('flat-list')).toBeDefined()
+        expect(virtualizerSpies.measureElement).toHaveBeenCalled()
     })
 })
