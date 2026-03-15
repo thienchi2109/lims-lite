@@ -1,11 +1,10 @@
 /**
- * Test: Signature validation with PostgreSQL timestamp format
+ * Test: Signature schema timestamp validation strategy
  *
  * Validates that ActiveSignatureSchema and SignatureHistoryItemSchema
- * accept PostgreSQL timestamptz format (without strict ISO 8601 validation)
- *
- * Bug Fix: Changed z.string().datetime() to z.string() to accept
- * PostgreSQL format: "2025-12-16 10:23:21.160338+00"
+ * in src/types/workflow.ts use timestamp coercion for uploaded_at.
+ * We intentionally use z.coerce.date() so PostgreSQL timestamptz strings
+ * are accepted and normalized to Date.
  */
 
 import assert from 'node:assert/strict'
@@ -16,42 +15,31 @@ async function readWorkspaceFile(relativePath) {
     return readFile(new URL(`../${relativePath}`, import.meta.url), 'utf8')
 }
 
-test('ActiveSignatureSchema uses z.string() for uploaded_at (not z.string().datetime())', async () => {
-    const content = await readWorkspaceFile('src/types/index.ts')
+function extractSchema(content, schemaName, typeName) {
+    const schemaStart = content.indexOf(`export const ${schemaName}`)
+    assert.notEqual(schemaStart, -1, `${schemaName} not found`)
 
-    // Find ActiveSignatureSchema definition
-    const schemaStart = content.indexOf('export const ActiveSignatureSchema')
-    const schemaEnd = content.indexOf('export type ActiveSignature', schemaStart)
-    const schemaContent = content.slice(schemaStart, schemaEnd)
+    const schemaEnd = content.indexOf(`export type ${typeName}`, schemaStart)
+    assert.notEqual(schemaEnd, -1, `${typeName} not found`)
 
-    // Should contain z.string() for uploaded_at
-    assert.match(schemaContent, /uploaded_at:\s*z\.string\(\)/)
+    return content.slice(schemaStart, schemaEnd)
+}
 
-    // Should NOT contain z.string().datetime()
+test('ActiveSignatureSchema uses z.coerce.date() for uploaded_at', async () => {
+    const content = await readWorkspaceFile('src/types/workflow.ts')
+    const schemaContent = extractSchema(content, 'ActiveSignatureSchema', 'ActiveSignature')
+
+    assert.match(schemaContent, /uploaded_at:\s*z\.coerce\.date\(\)/)
     assert.doesNotMatch(schemaContent, /uploaded_at:\s*z\.string\(\)\.datetime\(\)/)
-
-    // Should have comment explaining why
-    assert.match(schemaContent, /PostgreSQL timestamptz/)
 })
 
-test('SignatureHistoryItemSchema uses z.string() for uploaded_at', async () => {
-    const content = await readWorkspaceFile('src/types/index.ts')
+test('SignatureHistoryItemSchema uses z.coerce.date() for uploaded_at', async () => {
+    const content = await readWorkspaceFile('src/types/workflow.ts')
+    const schemaContent = extractSchema(content, 'SignatureHistoryItemSchema', 'SignatureHistoryItem')
 
-    // Find SignatureHistoryItemSchema definition
-    const schemaStart = content.indexOf('export const SignatureHistoryItemSchema')
-    const schemaEnd = content.indexOf('export type SignatureHistoryItem', schemaStart)
-    const schemaContent = content.slice(schemaStart, schemaEnd)
-
-    // Should contain z.string() for uploaded_at
-    assert.match(schemaContent, /uploaded_at:\s*z\.string\(\)/)
-
-    // Should NOT contain z.string().datetime()
+    assert.match(schemaContent, /uploaded_at:\s*z\.coerce\.date\(\)/)
     assert.doesNotMatch(schemaContent, /uploaded_at:\s*z\.string\(\)\.datetime\(\)/)
-
-    // Should have comment explaining why
-    assert.match(schemaContent, /PostgreSQL timestamptz/)
 })
 
-// Runtime validation tests are done via integration testing
-// since Node can't directly import TypeScript files
-// The schema definition tests above verify the fix is in place
+// Runtime coercion behavior is covered in integration/manual validation scripts.
+// These tests verify source schema definitions stay aligned with that strategy.
