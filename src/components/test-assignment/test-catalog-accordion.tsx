@@ -98,10 +98,11 @@ export function TestCatalogAccordion({
     // Group the rows into sections
     const groups = buildGroups(groupedRows)
     const isDesktop = variant === 'desktop'
+    const desktopDefaultValue = groups.length > 0 ? [groups[0].key] : []
 
     if (isDesktop) {
         return (
-            <Accordion type="multiple" className="w-full" defaultValue={groups.map(g => g.key)}>
+            <Accordion type="multiple" className="w-full" defaultValue={desktopDefaultValue}>
                 {groups.map((group) => (
                     <AccordionItem key={group.key} value={group.key}>
                         <AccordionTrigger
@@ -319,7 +320,7 @@ function TestRow({
                 tabIndex={0}
                 onClick={() => !isDisabled && onToggle(assay)}
                 onKeyDown={(e) => {
-                    if ((e.key === 'Enter' || e.key === ' ') && !isDisabled) {
+                    if ((e.key === 'Enter' || e.key === ' ') && !isDisabled && e.target === e.currentTarget) {
                         e.preventDefault()
                         onToggle(assay)
                     }

@@ -11,12 +11,19 @@ import type { AssayDefinitionWithMethods, SelectedTest } from '@/types'
 
 // ---------- Mock Accordion for unit tests ----------
 
+const accordionSpies = vi.hoisted(() => ({
+    accordionProps: vi.fn(),
+}))
+
 vi.mock('@/components/ui/accordion', () => ({
-    Accordion: ({ children, type, ...props }: any) => (
-        <div data-testid="accordion" data-type={type} {...props}>
-            {children}
-        </div>
-    ),
+    Accordion: ({ children, type, ...props }: any) => {
+        accordionSpies.accordionProps({ type, ...props })
+        return (
+            <div data-testid="accordion" data-type={type} {...props}>
+                {children}
+            </div>
+        )
+    },
     AccordionItem: ({ children, value, ...props }: any) => (
         <div data-testid={`accordion-item-${value}`} {...props}>{children}</div>
     ),
@@ -132,6 +139,7 @@ describe('TestCatalogAccordion', () => {
     beforeEach(() => {
         mockToggle.mockClear()
         mockMethodChange.mockClear()
+        accordionSpies.accordionProps.mockClear()
         virtualizerSpies.useVirtualizer.mockClear()
         virtualizerSpies.measureElement.mockClear()
     })
@@ -152,6 +160,18 @@ describe('TestCatalogAccordion', () => {
         render(<TestCatalogAccordion {...baseProps} variant="desktop" />)
         const accordion = screen.getByTestId('accordion')
         expect(accordion.getAttribute('data-type')).toBe('multiple')
+    })
+
+    it('does not expand all desktop groups by default', () => {
+        render(<TestCatalogAccordion {...baseProps} variant="desktop" />)
+
+        const lastAccordionProps = accordionSpies.accordionProps.mock.calls.at(-1)?.[0]
+        const groupCount = groupedRows.filter((row) => row.type === 'group').length
+        const defaultOpenCount = Array.isArray(lastAccordionProps?.defaultValue)
+            ? lastAccordionProps.defaultValue.length
+            : 0
+
+        expect(defaultOpenCount).toBeLessThan(groupCount)
     })
 
     // Test #2: Mobile variant uses type="single"
