@@ -176,4 +176,116 @@ describe('QRScanner optimized start profile', () => {
 
         expect(html5QrcodeMocks.applyVideoConstraints).not.toHaveBeenCalled()
     })
+
+    it('shows non-blocking Vietnamese guidance while scanning', async () => {
+        const { getByText } = render(<QRScanner onScan={vi.fn()} />)
+
+        await act(async () => {
+            vi.advanceTimersByTime(200)
+            await Promise.resolve()
+        })
+
+        expect(getByText(/Mẹo quét nhanh/i)).toBeDefined()
+    })
+
+    it('shows compatibility guidance when preferred constraints are downgraded', async () => {
+        html5QrcodeMocks.start
+            .mockRejectedValueOnce(new Error('OverconstrainedError: unsupported constraint'))
+            .mockResolvedValueOnce(null)
+
+        const { getByText } = render(<QRScanner onScan={vi.fn()} />)
+
+        await act(async () => {
+            vi.advanceTimersByTime(300)
+            await Promise.resolve()
+        })
+
+        expect(getByText(/chế độ tương thích/i)).toBeDefined()
+    })
+
+    it('captures success telemetry with decoder source and preserves auto-close flow', async () => {
+        const onScan = vi.fn()
+        const onTelemetry = vi.fn()
+
+        html5QrcodeMocks.start.mockImplementationOnce(
+            async (
+                _camera: unknown,
+                _config: unknown,
+                onSuccess: (decodedText: string, result?: unknown) => void,
+            ) => {
+                setTimeout(() => {
+                    onSuccess('CCCD|DUMMY|PAYLOAD', {
+                        result: {
+                            debugData: { decoderName: 'zxing-js' },
+                        },
+                    })
+                }, 1500)
+                return null
+            },
+        )
+
+        render(<QRScanner onScan={onScan} onTelemetry={onTelemetry} />)
+
+        await act(async () => {
+            vi.advanceTimersByTime(300)
+            await Promise.resolve()
+        })
+
+        await act(async () => {
+            vi.advanceTimersByTime(1700)
+            await Promise.resolve()
+        })
+
+        expect(onScan).toHaveBeenCalledWith('CCCD|DUMMY|PAYLOAD')
+        expect(onTelemetry).toHaveBeenCalledWith(
+            expect.objectContaining({
+                type: 'success',
+                decoderSource: 'zxing',
+                timeToFirstDecodeMs: 1500,
+            }),
+        )
+        expect(html5QrcodeMocks.stop).toHaveBeenCalled()
+    })
+
+    it('captures categorized failure telemetry buckets', async () => {
+        const onTelemetry = vi.fn()
+
+        html5QrcodeMocks.start.mockImplementationOnce(
+            async (
+                _camera: unknown,
+                _config: unknown,
+                _onSuccess: (decodedText: string, result?: unknown) => void,
+                onError: (errorMessage: string) => void,
+            ) => {
+                setTimeout(() => onError('NotFoundException: no code found'), 100)
+                setTimeout(() => onError('OverconstrainedError: unsupported constraint'), 1300)
+                return null
+            },
+        )
+
+        render(<QRScanner onScan={vi.fn()} onTelemetry={onTelemetry} />)
+
+        await act(async () => {
+            vi.advanceTimersByTime(300)
+            await Promise.resolve()
+        })
+
+        await act(async () => {
+            vi.advanceTimersByTime(1800)
+            await Promise.resolve()
+        })
+
+        expect(onTelemetry).toHaveBeenCalledWith(
+            expect.objectContaining({
+                type: 'failure',
+                bucket: 'no_code_found',
+            }),
+        )
+        expect(onTelemetry).toHaveBeenCalledWith(
+            expect.objectContaining({
+                type: 'failure',
+                bucket: 'constraints',
+            }),
+        )
+    })
 })

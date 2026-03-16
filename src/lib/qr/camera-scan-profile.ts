@@ -92,6 +92,14 @@ type RuntimeTrackConstraints = MediaTrackConstraints & {
     focusDistance?: number
 }
 
+type DecoderResultLike = {
+    result?: {
+        debugData?: {
+            decoderName?: string
+        }
+    }
+}
+
 function isRangeCapability(value: unknown): value is RangeCapability {
     if (!value || typeof value !== 'object') return false
     const range = value as Partial<RangeCapability>
@@ -128,4 +136,53 @@ export function buildRuntimeEnhancementConstraints(
     }
 
     return Object.keys(runtimeConstraints).length > 0 ? runtimeConstraints : null
+}
+
+export type ScanFailureBucket =
+    | 'no_code_found'
+    | 'constraints'
+    | 'permission'
+    | 'camera_unavailable'
+    | 'unknown'
+
+export type DecoderSource = 'barcode-detector' | 'zxing' | 'unknown'
+
+export type QrScanTelemetryEvent =
+    | {
+        type: 'success'
+        timeToFirstDecodeMs: number
+        decoderSource: DecoderSource
+        usedCompatibilityMode: boolean
+    }
+    | {
+        type: 'failure'
+        bucket: ScanFailureBucket
+        message: string
+    }
+
+export function categorizeScanFailure(errorMessage: string): ScanFailureBucket {
+    const normalizedMessage = errorMessage.toLowerCase()
+
+    if (normalizedMessage.includes('notfoundexception')) return 'no_code_found'
+    if (normalizedMessage.includes('overconstrained') || normalizedMessage.includes('constraint')) return 'constraints'
+    if (normalizedMessage.includes('notallowed') || normalizedMessage.includes('permission')) return 'permission'
+    if (
+        normalizedMessage.includes('notreadable') ||
+        normalizedMessage.includes('notfounderror') ||
+        normalizedMessage.includes('device not found')
+    ) {
+        return 'camera_unavailable'
+    }
+
+    return 'unknown'
+}
+
+export function detectDecoderSource(result?: DecoderResultLike): DecoderSource {
+    const decoderName = result?.result?.debugData?.decoderName?.toLowerCase() ?? ''
+
+    if (!decoderName) return 'unknown'
+    if (decoderName.includes('zxing')) return 'zxing'
+    if (decoderName.includes('barcode') || decoderName.includes('native')) return 'barcode-detector'
+
+    return 'unknown'
 }

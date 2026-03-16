@@ -1,31 +1,45 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import type { Html5QrcodeResult } from 'html5-qrcode'
 import { Html5Qrcode } from 'html5-qrcode'
 import { Button } from '@/components/ui/button'
 import { X } from 'lucide-react'
 import {
     buildRuntimeEnhancementConstraints,
+    categorizeScanFailure,
     createCccdScannerFullConfig,
     createCompatibilityCameraScanConfig,
     createPreferredCameraScanConfig,
+    detectDecoderSource,
     getErrorMessage,
+    type QrScanTelemetryEvent,
     shouldRetryWithCompatibilityMode,
 } from '@/lib/qr/camera-scan-profile'
 
 interface QRScannerProps {
     onScan: (decodedText: string) => void
     onError?: (error: string) => void
+    onTelemetry?: (event: QrScanTelemetryEvent) => void
 }
 
-export function QRScanner({ onScan, onError }: QRScannerProps) {
+const DEFAULT_GUIDANCE =
+    'Mẹo quét nhanh: Giữ mã QR trong khung, cách 10–15cm, đủ sáng và giữ máy ổn định.'
+const COMPATIBILITY_GUIDANCE =
+    'Thiết bị đang dùng chế độ tương thích. Nếu khó quét, tăng ánh sáng hoặc dùng máy quét USB/Bluetooth.'
+
+export function QRScanner({ onScan, onError, onTelemetry }: QRScannerProps) {
     const [isScanning, setIsScanning] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [isInitializing, setIsInitializing] = useState(false)
+    const [scanGuidance, setScanGuidance] = useState(DEFAULT_GUIDANCE)
     const scannerRef = useRef<Html5Qrcode | null>(null)
     const elementId = 'qr-reader'
     const scannerInitializedRef = useRef(false)
     const lastErrorTimeRef = useRef<number>(0)
+    const scanStartedAtRef = useRef<number | null>(null)
+    const didEmitSuccessTelemetryRef = useRef(false)
+    const usedCompatibilityModeRef = useRef(false)
 
     const startScanning = async () => {
         try {
@@ -38,11 +52,27 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
             const html5QrCode = new Html5Qrcode(elementId, createCccdScannerFullConfig())
             scannerRef.current = html5QrCode
             scannerInitializedRef.current = true
+            setScanGuidance(DEFAULT_GUIDANCE)
+            didEmitSuccessTelemetryRef.current = false
+            usedCompatibilityModeRef.current = false
+            scanStartedAtRef.current = Date.now()
 
             const startWithConfig = async (scanConfig = createPreferredCameraScanConfig()) => html5QrCode.start(
                 { facingMode: 'environment' }, // Use back camera on mobile
                 scanConfig,
-                (decodedText) => {
+                (decodedText, result?: Html5QrcodeResult) => {
+                    if (!didEmitSuccessTelemetryRef.current) {
+                        didEmitSuccessTelemetryRef.current = true
+                        const startedAt = scanStartedAtRef.current ?? Date.now()
+                        const timeToFirstDecodeMs = Math.max(0, Date.now() - startedAt)
+                        onTelemetry?.({
+                            type: 'success',
+                            timeToFirstDecodeMs,
+                            decoderSource: detectDecoderSource(result),
+                            usedCompatibilityMode: usedCompatibilityModeRef.current,
+                        })
+                    }
+
                     // Successfully scanned
                     onScan(decodedText)
                     stopScanning()
@@ -53,6 +83,17 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
                     const now = Date.now()
                     if (now - lastErrorTimeRef.current > 1000) {
                         lastErrorTimeRef.current = now
+                        const bucket = categorizeScanFailure(errorMessage)
+                        onTelemetry?.({
+                            type: 'failure',
+                            bucket,
+                            message: errorMessage,
+                        })
+
+                        if (bucket === 'no_code_found') {
+                            setScanGuidance(DEFAULT_GUIDANCE)
+                        }
+
                         // Only log non-NotFoundException errors
                         if (!errorMessage.includes('NotFoundException')) {
                             // Use requestAnimationFrame to avoid blocking
@@ -72,6 +113,8 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
                 }
 
                 console.warn('Không áp dụng được cấu hình camera ưu tiên, chuyển sang chế độ tương thích.')
+                usedCompatibilityModeRef.current = true
+                setScanGuidance(COMPATIBILITY_GUIDANCE)
                 await startWithConfig(createCompatibilityCameraScanConfig())
             }
 
@@ -85,6 +128,11 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
                 }
             } catch (runtimeError) {
                 console.warn('Không thể áp dụng tối ưu camera runtime:', runtimeError)
+                onTelemetry?.({
+                    type: 'failure',
+                    bucket: 'constraints',
+                    message: getErrorMessage(runtimeError),
+                })
             }
 
             setIsScanning(true)
@@ -93,6 +141,11 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
             const errorMsg = getErrorMessage(err)
             setError(errorMsg)
             onError?.(errorMsg)
+            onTelemetry?.({
+                type: 'failure',
+                bucket: categorizeScanFailure(errorMsg),
+                message: errorMsg,
+            })
             setIsInitializing(false)
             console.error('Error starting QR scanner:', err)
         }
@@ -172,6 +225,10 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
                         <X className="mr-2 h-5 w-5" />
                         Dừng quét
                     </Button>
+
+                    <div className="rounded-lg border border-sky-200/70 bg-sky-50 px-3 py-2 text-xs text-sky-900 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200">
+                        {scanGuidance}
+                    </div>
                 </div>
             ) : null}
 
