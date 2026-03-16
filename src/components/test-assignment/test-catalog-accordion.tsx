@@ -108,7 +108,7 @@ export function TestCatalogAccordion({
                         <AccordionTrigger
                             className="px-4 py-3 hover:no-underline"
                         >
-                            <GroupHeader group={group} />
+                            <GroupHeader group={group} variant={variant} />
                         </AccordionTrigger>
                         <AccordionContent className="px-2 pb-2">
                             <div className="flex flex-col gap-1">
@@ -145,7 +145,7 @@ export function TestCatalogAccordion({
                     <AccordionTrigger
                         className="px-3 py-2.5 hover:no-underline"
                     >
-                        <GroupHeader group={group} />
+                        <GroupHeader group={group} variant={variant} />
                     </AccordionTrigger>
                     <AccordionContent className="px-1 pb-1">
                         <div className="flex flex-col gap-1">
@@ -176,11 +176,19 @@ export function TestCatalogAccordion({
 
 // ---------- Internal Components ----------
 
-function GroupHeader({ group }: { group: GroupSection }) {
+function GroupHeader({
+    group,
+    variant,
+}: {
+    group: GroupSection
+    variant: 'mobile' | 'desktop'
+}) {
+    const usePlainDesktopLabel = variant === 'desktop'
+
     return (
         <div className="flex items-center justify-between w-full pr-2">
             <div className="flex items-center gap-2">
-                {group.badgeClass ? (
+                {group.badgeClass && !usePlainDesktopLabel ? (
                     <span
                         className={cn(
                             'px-2 py-0.5 rounded text-[10px] font-medium',
