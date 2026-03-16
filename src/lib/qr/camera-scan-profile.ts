@@ -66,3 +66,66 @@ export function getErrorMessage(error: unknown) {
     if (typeof error === 'string') return error
     return 'Không thể khởi động máy ảnh'
 }
+
+type RangeCapability = {
+    min: number
+    max: number
+    step?: number
+}
+
+type RuntimeTrackCapabilities = Partial<MediaTrackCapabilities> & {
+    zoom?: RangeCapability
+    torch?: boolean
+    focusMode?: string[]
+    focusDistance?: RangeCapability
+}
+
+type RuntimeTrackSettings = Partial<MediaTrackSettings> & {
+    zoom?: number
+    torch?: boolean
+}
+
+type RuntimeTrackConstraints = MediaTrackConstraints & {
+    zoom?: number
+    torch?: boolean
+    focusMode?: string
+    focusDistance?: number
+}
+
+function isRangeCapability(value: unknown): value is RangeCapability {
+    if (!value || typeof value !== 'object') return false
+    const range = value as Partial<RangeCapability>
+    return typeof range.min === 'number' && typeof range.max === 'number'
+}
+
+function resolvePreferredZoom(range: RangeCapability, currentZoom?: number) {
+    const step = typeof range.step === 'number' && range.step > 0 ? range.step : 0.1
+    const baseline = typeof currentZoom === 'number' ? currentZoom : range.min
+    const target = baseline + step * 2
+    return Math.max(range.min, Math.min(range.max, Number(target.toFixed(2))))
+}
+
+export function buildRuntimeEnhancementConstraints(
+    capabilities: RuntimeTrackCapabilities,
+    settings: RuntimeTrackSettings,
+): RuntimeTrackConstraints | null {
+    const runtimeConstraints: RuntimeTrackConstraints = {}
+
+    if (isRangeCapability(capabilities.zoom)) {
+        runtimeConstraints.zoom = resolvePreferredZoom(capabilities.zoom, settings.zoom)
+    }
+
+    if (capabilities.torch === true && settings.torch !== true) {
+        runtimeConstraints.torch = true
+    }
+
+    if (Array.isArray(capabilities.focusMode) && capabilities.focusMode.includes('continuous')) {
+        runtimeConstraints.focusMode = 'continuous'
+    }
+
+    if (isRangeCapability(capabilities.focusDistance)) {
+        runtimeConstraints.focusDistance = capabilities.focusDistance.max
+    }
+
+    return Object.keys(runtimeConstraints).length > 0 ? runtimeConstraints : null
+}

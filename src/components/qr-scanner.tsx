@@ -3,8 +3,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { Html5Qrcode } from 'html5-qrcode'
 import { Button } from '@/components/ui/button'
-import { Camera, X, ScanLine } from 'lucide-react'
+import { X } from 'lucide-react'
 import {
+    buildRuntimeEnhancementConstraints,
     createCccdScannerFullConfig,
     createCompatibilityCameraScanConfig,
     createPreferredCameraScanConfig,
@@ -72,6 +73,18 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
 
                 console.warn('Không áp dụng được cấu hình camera ưu tiên, chuyển sang chế độ tương thích.')
                 await startWithConfig(createCompatibilityCameraScanConfig())
+            }
+
+            try {
+                const capabilities = html5QrCode.getRunningTrackCapabilities()
+                const settings = html5QrCode.getRunningTrackSettings()
+                const runtimeConstraints = buildRuntimeEnhancementConstraints(capabilities, settings)
+
+                if (runtimeConstraints) {
+                    await html5QrCode.applyVideoConstraints(runtimeConstraints)
+                }
+            } catch (runtimeError) {
+                console.warn('Không thể áp dụng tối ưu camera runtime:', runtimeError)
             }
 
             setIsScanning(true)

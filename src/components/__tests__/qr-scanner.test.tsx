@@ -133,4 +133,47 @@ describe('QRScanner optimized start profile', () => {
         expect(secondConfig.videoConstraints).toBeUndefined()
         expect(onError).not.toHaveBeenCalled()
     })
+
+    it('applies runtime camera enhancements when capabilities are supported', async () => {
+        html5QrcodeMocks.getRunningTrackCapabilities.mockReturnValue({
+            zoom: { min: 1, max: 3, step: 0.1 },
+            torch: true,
+            focusMode: ['continuous', 'manual'],
+            focusDistance: { min: 0, max: 2.5, step: 0.1 },
+        })
+        html5QrcodeMocks.getRunningTrackSettings.mockReturnValue({
+            zoom: 1,
+            torch: false,
+        })
+
+        render(<QRScanner onScan={vi.fn()} />)
+
+        await act(async () => {
+            vi.advanceTimersByTime(200)
+            await Promise.resolve()
+        })
+
+        expect(html5QrcodeMocks.applyVideoConstraints).toHaveBeenCalledWith(
+            expect.objectContaining({
+                zoom: 1.2,
+                torch: true,
+                focusMode: 'continuous',
+                focusDistance: 2.5,
+            }),
+        )
+    })
+
+    it('skips runtime tuning safely when no advanced camera capability is available', async () => {
+        html5QrcodeMocks.getRunningTrackCapabilities.mockReturnValue({})
+        html5QrcodeMocks.getRunningTrackSettings.mockReturnValue({})
+
+        render(<QRScanner onScan={vi.fn()} />)
+
+        await act(async () => {
+            vi.advanceTimersByTime(200)
+            await Promise.resolve()
+        })
+
+        expect(html5QrcodeMocks.applyVideoConstraints).not.toHaveBeenCalled()
+    })
 })
