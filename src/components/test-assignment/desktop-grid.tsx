@@ -3,7 +3,6 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import type { AssayDefinitionWithMethods, SelectedTest } from '@/types'
 import type { SortKey, SortConfig, GridRow } from '@/types/test-assignment'
 import { SPECIALTY_BADGE_CLASSES } from '@/lib/specialty-badges'
-import { cn } from '@/lib/utils'
 import {
     Search,
     CheckCircle2,
@@ -226,18 +225,9 @@ export function DesktopGrid({
                                         <div className="p-3" />
                                         <div className="p-3 col-span-4 flex items-center justify-between">
                                             <div className="flex items-center gap-2 min-w-0">
-                                                {row.badgeClass ? (
-                                                    <Badge
-                                                        variant="outline"
-                                                        className={cn("px-2.5 py-0.5 rounded-full font-medium transition-colors", row.badgeClass)}
-                                                    >
-                                                        {row.label}
-                                                    </Badge>
-                                                ) : (
-                                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 truncate">
-                                                        {row.label}
-                                                    </span>
-                                                )}
+                                                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 truncate">
+                                                    {row.label}
+                                                </span>
                                             </div>
                                             <span className="text-xs font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
                                                 {row.count} chỉ tiêu
