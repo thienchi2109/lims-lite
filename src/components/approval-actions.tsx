@@ -12,9 +12,10 @@ import type { ResultWithAssay } from '@/types'
 interface ApprovalActionsProps {
     sampleId: string
     results: ResultWithAssay[]
+    compact?: boolean
 }
 
-export function ApprovalActions({ sampleId, results }: ApprovalActionsProps) {
+export function ApprovalActions({ sampleId, results, compact = false }: ApprovalActionsProps) {
     const [approveDialogOpen, setApproveDialogOpen] = useState(false)
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
     const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
@@ -35,81 +36,92 @@ export function ApprovalActions({ sampleId, results }: ApprovalActionsProps) {
         return null
     }
 
+    const buttonSize = compact ? 'sm' : 'lg'
+    const iconSize = compact ? 'h-4 w-4' : 'h-5 w-5'
+
+    const actionButtons = (
+        <div className={compact ? 'grid grid-cols-2 gap-2' : 'flex flex-wrap gap-3'}>
+            {hasEnteredResults && (
+                <Button
+                    id={compact ? undefined : 'tour-approve-button'}
+                    onClick={() => setApproveDialogOpen(true)}
+                    className="gap-1.5"
+                    size={buttonSize}
+                >
+                    <CheckCircle2 className={iconSize} />
+                    {compact ? `Duyệt (${enteredResults.length})` : `Phê duyệt ${enteredResults.length} kết quả`}
+                </Button>
+            )}
+
+            {hasApprovedResults && (
+                <Button
+                    onClick={() => setCancelDialogOpen(true)}
+                    variant="destructive"
+                    className="gap-1.5"
+                    size={buttonSize}
+                >
+                    <XCircle className={iconSize} />
+                    {compact ? `Hủy (${approvedResults.length})` : `Hủy phê duyệt (${approvedResults.length})`}
+                </Button>
+            )}
+
+            {isReview && (
+                <>
+                    <Button
+                        id={compact ? undefined : 'tour-reject-button'}
+                        onClick={() => setRejectDialogOpen(true)}
+                        variant="secondary"
+                        className="gap-1.5 border border-slate-200"
+                        size={buttonSize}
+                    >
+                        <Ban className={iconSize} />
+                        Từ chối
+                    </Button>
+
+                    <Button
+                        id={compact ? undefined : 'tour-discard-button'}
+                        onClick={() => setDiscardDialogOpen(true)}
+                        variant="outline"
+                        className="gap-1.5 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                        size={buttonSize}
+                    >
+                        <Trash2 className={iconSize} />
+                        Loại bỏ
+                    </Button>
+                </>
+            )}
+        </div>
+    )
+
     return (
         <>
-            <Card id="tour-approval-actions">
-                <CardHeader>
-                    <CardTitle>Thao tác phê duyệt</CardTitle>
-                    <CardDescription>
-                        Xem xét và phê duyệt kết quả xét nghiệm hoặc hủy phê duyệt hiện có
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex flex-wrap gap-3">
-                        {hasEnteredResults && (
-                            <Button
-                                id="tour-approve-button"
-                                onClick={() => setApproveDialogOpen(true)}
-                                className="gap-2"
-                                size="lg"
-                            >
-                                <CheckCircle2 className="h-5 w-5" />
-                                Phê duyệt {enteredResults.length} kết quả
-                            </Button>
-                        )}
+            {compact ? (
+                actionButtons
+            ) : (
+                <Card id="tour-approval-actions">
+                    <CardHeader>
+                        <CardTitle>Thao tác phê duyệt</CardTitle>
+                        <CardDescription>
+                            Xem xét và phê duyệt kết quả xét nghiệm hoặc hủy phê duyệt hiện có
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {actionButtons}
 
-                        {hasApprovedResults && (
-                            <Button
-                                onClick={() => setCancelDialogOpen(true)}
-                                variant="destructive"
-                                className="gap-2"
-                                size="lg"
-                            >
-                                <XCircle className="h-5 w-5" />
-                                Hủy phê duyệt ({approvedResults.length})
-                            </Button>
-                        )}
-
-                        {isReview && (
-                            <>
-                                <Button
-                                    id="tour-reject-button"
-                                    onClick={() => setRejectDialogOpen(true)}
-                                    variant="secondary"
-                                    className="gap-2 border border-slate-200"
-                                    size="lg"
-                                >
-                                    <Ban className="h-5 w-5" />
-                                    Từ chối mẫu
-                                </Button>
-
-                                <Button
-                                    id="tour-discard-button"
-                                    onClick={() => setDiscardDialogOpen(true)}
-                                    variant="outline"
-                                    className="gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
-                                    size="lg"
-                                >
-                                    <Trash2 className="h-5 w-5" />
-                                    Loại bỏ mẫu
-                                </Button>
-                            </>
-                        )}
-                    </div>
-
-                    <div className="mt-4 space-y-2 text-sm text-muted-foreground">
-                        <p>
-                            • <strong>{enteredResults.length}</strong> kết quả sẵn sàng phê duyệt
-                        </p>
-                        <p>
-                            • <strong>{approvedResults.length}</strong> kết quả đã được phê duyệt
-                        </p>
-                        <p>
-                            • <strong>{results.filter((r) => r.status === 'pending').length}</strong> kết quả đang chờ nhập liệu
-                        </p>
-                    </div>
-                </CardContent>
-            </Card>
+                        <div className="mt-4 space-y-2 text-sm text-muted-foreground">
+                            <p>
+                                • <strong>{enteredResults.length}</strong> kết quả sẵn sàng phê duyệt
+                            </p>
+                            <p>
+                                • <strong>{approvedResults.length}</strong> kết quả đã được phê duyệt
+                            </p>
+                            <p>
+                                • <strong>{results.filter((r) => r.status === 'pending').length}</strong> kết quả đang chờ nhập liệu
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Approval Dialog */}
             <ApprovalDialog

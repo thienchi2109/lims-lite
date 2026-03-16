@@ -22,8 +22,8 @@ vi.mock('@/components/assigned-tests-panel', () => ({
 }))
 
 vi.mock('@/components/approval-actions', () => ({
-    ApprovalActions: ({ sampleId, results }: any) => (
-        <div data-testid="approval-actions">{sampleId} ({results.length} results)</div>
+    ApprovalActions: ({ sampleId, results, compact }: any) => (
+        <div data-testid="approval-actions" data-compact={compact ? 'true' : 'false'}>{sampleId} ({results.length} results)</div>
     ),
 }))
 
@@ -33,10 +33,16 @@ vi.mock('@/components/ui/drawer', () => ({
     DrawerContent: ({ children, className }: any) => <div className={className}>{children}</div>,
     DrawerHeader: ({ children }: any) => <div>{children}</div>,
     DrawerTitle: ({ children }: any) => <h2>{children}</h2>,
-    DrawerClose: ({ children }: any) => <button data-testid="drawer-close">{children}</button>,
+    DrawerClose: ({ children, asChild }: any) => {
+        if (asChild) {
+            // asChild pattern: render the child directly, add testid via wrapper
+            return <span data-testid="drawer-close-wrapper">{children}</span>
+        }
+        return <button data-testid="drawer-close">{children}</button>
+    },
 }))
 
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { ApprovalMobileDetail } from '../approval-mobile-detail'
 import type { SampleWithUser, ResultWithAssay } from '@/types'
 
@@ -141,5 +147,38 @@ describe('ApprovalMobileDetail', () => {
         )
 
         expect(screen.queryByTestId('drawer')).toBeNull()
+    })
+
+    it('calls onClose when close button is clicked', () => {
+        const onClose = vi.fn()
+        render(
+            <ApprovalMobileDetail
+                sample={mockSample}
+                results={mockResults}
+                open={true}
+                onClose={onClose}
+            />,
+        )
+
+        // DrawerClose asChild renders a wrapper, the real button is inside
+        const wrapper = screen.getByTestId('drawer-close-wrapper')
+        const closeButton = wrapper.querySelector('button')!
+        fireEvent.click(closeButton)
+        expect(onClose).toHaveBeenCalledTimes(1)
+    })
+
+    it('passes compact prop to ApprovalActions', () => {
+        render(
+            <ApprovalMobileDetail
+                sample={mockSample}
+                results={mockResults}
+                open={true}
+                onClose={vi.fn()}
+            />,
+        )
+
+        // The mocked ApprovalActions should render — verify it receives compact
+        const actionsEl = screen.getByTestId('approval-actions')
+        expect(actionsEl.getAttribute('data-compact')).toBe('true')
     })
 })
