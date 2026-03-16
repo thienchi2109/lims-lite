@@ -59,6 +59,16 @@ describe('ApprovalActions compact mode', () => {
         expect(screen.queryByText(/Hủy phê duyệt/)).toBeNull()
     })
 
+    it('places the compact Duyệt button on the right column', () => {
+        render(
+            <ApprovalActions sampleId="s1" results={mockResults} compact />,
+        )
+
+        const approveLabel = screen.getByText(/Duyệt/)
+        const approveButton = approveLabel.closest('button')
+        expect(approveButton?.className ?? '').toContain('col-start-2')
+    })
+
     it('hides summary bullet points in compact mode', () => {
         render(
             <ApprovalActions sampleId="s1" results={mockResults} compact />,

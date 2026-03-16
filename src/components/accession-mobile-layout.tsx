@@ -178,14 +178,14 @@ export function AccessionMobileLayout({
                 {selected.length > 0 && (
                     <div
                         data-testid="selected-strip"
-                        className="absolute bottom-[76px] left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 px-3 py-2 z-20"
+                        className="absolute bottom-[64px] left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 px-2.5 py-1.5 z-20"
                     >
                         <div className="flex gap-2 overflow-x-auto no-scrollbar">
                             {selected.map((test) => (
                                 <div
                                     key={test.assayId}
                                     data-testid={`chip-${test.assayId}`}
-                                    className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-medium whitespace-nowrap shrink-0"
+                                    className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-[11px] font-medium whitespace-nowrap shrink-0"
                                 >
                                     <span>{test.assayName}</span>
                                     <button
@@ -194,7 +194,7 @@ export function AccessionMobileLayout({
                                         className="ml-0.5 hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5 transition-colors"
                                         aria-label={`Xóa ${test.assayName}`}
                                     >
-                                        <X size={12} />
+                                        <X size={11} />
                                     </button>
                                 </div>
                             ))}
@@ -205,22 +205,22 @@ export function AccessionMobileLayout({
                 {/* Bottom Bar */}
                 <div
                     data-testid="bottom-bar"
-                    className="absolute bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]"
+                    className="absolute bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-3 py-2.5 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]"
                 >
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-lg shadow-md">
+                            <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-sm">
                                 {selected.length}
                             </div>
                             <div className="flex flex-col">
-                                <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
                                     Đã chọn
                                 </span>
                                 <button
                                     type="button"
                                     onClick={() => onChange([])}
                                     disabled={selected.length === 0}
-                                    className="text-xs text-red-500 hover:text-red-600 hover:underline text-left disabled:opacity-50"
+                                    className="text-[11px] text-red-500 hover:text-red-600 hover:underline text-left disabled:opacity-50"
                                 >
                                     Xóa hết
                                 </button>
@@ -231,14 +231,14 @@ export function AccessionMobileLayout({
                             data-testid="save-button"
                             onClick={onSave}
                             disabled={isSaving}
-                            className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 h-auto rounded-xl font-medium shadow-lg shadow-blue-500/30 transition-transform active:scale-95 flex items-center gap-2"
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-4 h-9 rounded-lg text-xs font-semibold shadow-md shadow-blue-500/20 transition-transform active:scale-95 flex items-center gap-1.5"
                         >
                             {isSaving ? (
-                                <Loader2 className="animate-spin" />
+                                <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
                                 <span>{saveLabel}</span>
                             )}
-                            {!isSaving && <ArrowRight size={20} />}
+                            {!isSaving && <ArrowRight size={16} />}
                         </Button>
                     </div>
                 </div>

@@ -78,7 +78,7 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
                     </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                    <SampleLifecycleChevron status={sample.status} />
+                    <SampleLifecycleChevron status={sample.status} className="hidden sm:flex" />
                     {['received', 'assigned'].includes(sample.status) && (
                         <Button
                             variant="ghost"
