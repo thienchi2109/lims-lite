@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ApprovalDialog } from '@/components/approval-dialog'
@@ -21,11 +21,33 @@ export function ApprovalActions({ sampleId, results, compact = false }: Approval
     const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
     const [discardDialogOpen, setDiscardDialogOpen] = useState(false)
 
-    // Get results that can be approved (status='entered')
-    const enteredResults = results.filter((r) => r.status === 'entered')
+    const { enteredResults, approvedResults, pendingResultsCount } = useMemo(() => {
+        const entered: ResultWithAssay[] = []
+        const approved: ResultWithAssay[] = []
+        let pending = 0
 
-    // Get results that are approved (status='approved')
-    const approvedResults = results.filter((r) => r.status === 'approved')
+        for (const result of results) {
+            if (result.status === 'entered') {
+                entered.push(result)
+                continue
+            }
+
+            if (result.status === 'approved') {
+                approved.push(result)
+                continue
+            }
+
+            if (result.status === 'pending') {
+                pending += 1
+            }
+        }
+
+        return {
+            enteredResults: entered,
+            approvedResults: approved,
+            pendingResultsCount: pending,
+        }
+    }, [results])
 
     const hasEnteredResults = enteredResults.length > 0
     const hasApprovedResults = approvedResults.length > 0
@@ -116,7 +138,7 @@ export function ApprovalActions({ sampleId, results, compact = false }: Approval
                                 • <strong>{approvedResults.length}</strong> kết quả đã được phê duyệt
                             </p>
                             <p>
-                                • <strong>{results.filter((r) => r.status === 'pending').length}</strong> kết quả đang chờ nhập liệu
+                                • <strong>{pendingResultsCount}</strong> kết quả đang chờ nhập liệu
                             </p>
                         </div>
                     </CardContent>
