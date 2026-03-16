@@ -91,7 +91,11 @@ export function QRScanner({ onScan, onError, onTelemetry }: QRScannerProps) {
                         })
 
                         if (bucket === 'no_code_found') {
-                            setScanGuidance(DEFAULT_GUIDANCE)
+                            setScanGuidance(
+                                usedCompatibilityModeRef.current
+                                    ? COMPATIBILITY_GUIDANCE
+                                    : DEFAULT_GUIDANCE,
+                            )
                         }
 
                         // Only log non-NotFoundException errors

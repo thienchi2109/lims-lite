@@ -109,6 +109,8 @@ describe('QRScanner optimized start profile', () => {
                 height: expect.objectContaining({ ideal: 1080 }),
             }),
         )
+        expect(scannerConfig.videoConstraints.width).not.toHaveProperty('min')
+        expect(scannerConfig.videoConstraints.height).not.toHaveProperty('min')
     })
 
     it('retries with compatibility profile when preferred constraints are unsupported', async () => {
@@ -201,6 +203,39 @@ describe('QRScanner optimized start profile', () => {
         })
 
         expect(getByText(/chế độ tương thích/i)).toBeDefined()
+    })
+
+    it('keeps compatibility guidance after no-code errors while in compatibility mode', async () => {
+        html5QrcodeMocks.start
+            .mockRejectedValueOnce(new Error('OverconstrainedError: unsupported constraint'))
+            .mockImplementationOnce(
+                async (
+                    _camera: unknown,
+                    _config: unknown,
+                    _onSuccess: (decodedText: string, result?: unknown) => void,
+                    onError: (errorMessage: string) => void,
+                ) => {
+                    setTimeout(() => onError('NotFoundException: no code found'), 1200)
+                    return null
+                },
+            )
+
+        const { getByText, queryByText } = render(<QRScanner onScan={vi.fn()} />)
+
+        await act(async () => {
+            vi.advanceTimersByTime(300)
+            await Promise.resolve()
+        })
+
+        expect(getByText(/chế độ tương thích/i)).toBeDefined()
+
+        await act(async () => {
+            vi.advanceTimersByTime(1600)
+            await Promise.resolve()
+        })
+
+        expect(getByText(/chế độ tương thích/i)).toBeDefined()
+        expect(queryByText(/Mẹo quét nhanh/i)).toBeNull()
     })
 
     it('captures success telemetry with decoder source and preserves auto-close flow', async () => {
