@@ -17,13 +17,15 @@ export function ApprovalPageHeader({ samplesCount, tab }: ApprovalPageHeaderProp
                 <Link href="/manager">
                     <Button variant="ghost" size="sm">
                         <ArrowLeft className="h-4 w-4 mr-2" />
-                        Quay lại Bảng điều khiển
+                        Quay lại<span className="hidden sm:inline">{' '}Bảng điều khiển</span>
                     </Button>
                 </Link>
-                <WalkthroughTrigger tourId="approval" />
+                <span className="hidden sm:inline-flex">
+                    <WalkthroughTrigger tourId="approval" />
+                </span>
             </div>
-            <div className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                {samplesCount} mẫu {tab === 'review' ? 'đang chờ phê duyệt' : 'đã hoàn thành'}
+            <div className="whitespace-nowrap text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400">
+                {samplesCount} mẫu {tab === 'review' ? 'chờ duyệt' : 'đã hoàn thành'}
             </div>
         </div>
     )

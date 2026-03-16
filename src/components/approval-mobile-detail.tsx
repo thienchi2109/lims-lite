@@ -7,8 +7,8 @@
  * Reuses existing SampleDetailPanel, AssignedTestsPanel, and ApprovalActions.
  * Opens when a sample is selected from the mobile card list.
  *
- * NOTE: DrawerContent already renders its own DrawerPortal + DrawerOverlay,
- * so we must NOT wrap it again (avoiding duplicate backdrop).
+ * Close flow: DrawerClose asChild wraps a button that calls onClose.
+ * The Drawer's onOpenChange handles swipe-to-dismiss (single close path).
  */
 
 import { X } from 'lucide-react'
@@ -42,15 +42,19 @@ export function ApprovalMobileDetail({
 
     return (
         <Drawer open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-            <DrawerContent className="max-h-[90vh] flex flex-col">
+            <DrawerContent className="max-h-[85vh] flex flex-col">
                 {/* Drawer Header */}
                 <DrawerHeader className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 shrink-0">
                     <DrawerTitle className="font-mono text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
                         {sample.sample_id}
                     </DrawerTitle>
-                    <DrawerClose className="rounded-full p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                        <X className="h-4 w-4 text-slate-500" />
-                        <span className="sr-only">Đóng</span>
+                    <DrawerClose asChild>
+                        <button
+                            className="rounded-full p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        >
+                            <X className="h-4 w-4 text-slate-500" />
+                            <span className="sr-only">Đóng</span>
+                        </button>
                     </DrawerClose>
                 </DrawerHeader>
 
@@ -63,9 +67,9 @@ export function ApprovalMobileDetail({
                     <AssignedTestsPanel sampleId={sample.id} userRole="manager" />
                 </div>
 
-                {/* Sticky footer with approval actions */}
+                {/* Sticky footer with compact approval actions */}
                 <div className="shrink-0 border-t border-slate-200 dark:border-slate-800 px-4 py-3 bg-white dark:bg-slate-950">
-                    <ApprovalActions sampleId={sample.id} results={results} />
+                    <ApprovalActions sampleId={sample.id} results={results} compact />
                 </div>
             </DrawerContent>
         </Drawer>

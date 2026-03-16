@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { CoAStatusBadge } from '@/components/coa-status-badge'
-import { WalkthroughTrigger } from '@/components/walkthrough'
+import { WalkthroughTrigger, useWalkthrough } from '@/components/walkthrough'
 import {
     Tooltip,
     TooltipContent,
@@ -25,6 +25,8 @@ import {
     RefreshCw,
     ExternalLink,
     Activity,
+    MoreHorizontal,
+    HelpCircle,
 } from 'lucide-react'
 import type { SampleStatus, CoAReportStatus } from '@/types'
 import { cn } from '@/lib/utils'
@@ -66,7 +68,9 @@ export function AssignedTestsToolbar({
 }: AssignedTestsToolbarProps) {
     // Determine QC page link based on user role
     const qcHref = userRole === 'manager' ? '/manager/quality-control' : '/analyst/qc-entry'
-    
+    const walkthroughTourId = sampleStatus === 'completed' && coaStatus !== 'ready' ? 'coa' : 'results'
+    const { startTour, isReady: isWalkthroughReady } = useWalkthrough()
+
     return (
         <div
             id="tour-sample-info"
@@ -94,31 +98,33 @@ export function AssignedTestsToolbar({
                     </div>
                 )}
 
-                <WalkthroughTrigger
-                    tourId={sampleStatus === 'completed' && coaStatus !== 'ready' ? 'coa' : 'results'}
-                />
+                <span className="hidden sm:inline-flex">
+                    <WalkthroughTrigger tourId={walkthroughTourId} />
+                </span>
             </div>
 
             <div className="flex items-center gap-1">
                 {/* Visual Separator */}
                 <div className="mx-1 h-5 w-px bg-slate-200 dark:bg-slate-800" />
 
-                {/* Test Order Form Print Button */}
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-slate-500 transition-transform hover:scale-105 hover:bg-slate-100 hover:text-indigo-600 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-indigo-400"
-                            disabled={resultsCount === 0}
-                            onClick={onPrint}
-                        >
-                            <Printer className="h-4 w-4" />
-                            <span className="sr-only">In Phiếu chỉ định</span>
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>In Phiếu chỉ định</TooltipContent>
-                </Tooltip>
+                {/* Test Order Form Print Button — desktop only */}
+                <span className="hidden sm:inline-flex">
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-slate-500 transition-transform hover:scale-105 hover:bg-slate-100 hover:text-indigo-600 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-indigo-400"
+                                disabled={resultsCount === 0}
+                                onClick={onPrint}
+                            >
+                                <Printer className="h-4 w-4" />
+                                <span className="sr-only">In Phiếu chỉ định</span>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>In Phiếu chỉ định</TooltipContent>
+                    </Tooltip>
+                </span>
 
                 {/* IQC Button - Internal Quality Control */}
                 <Tooltip>
@@ -236,23 +242,56 @@ export function AssignedTestsToolbar({
                     </Tooltip>
                 )}
 
-                {/* Add Test Button - Primary Gradient */}
-                <Tooltip>
-                    <TooltipTrigger asChild>
+                {/* Add Test Button — desktop only */}
+                <span className="hidden sm:inline-flex">
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                size="icon"
+                                className={cn(
+                                    "ml-1 h-8 w-8 text-white shadow-md transition-all hover:scale-105 hover:shadow-lg",
+                                    "bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 shadow-indigo-500/20"
+                                )}
+                                onClick={onOpenAssignment}
+                            >
+                                <Plus className="h-4 w-4" />
+                                <span className="sr-only">Chỉ định</span>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Chỉ định xét nghiệm</TooltipContent>
+                    </Tooltip>
+                </span>
+
+                {/* Mobile overflow menu — collapses Print, Hướng dẫn, Add Test */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
                         <Button
+                            variant="ghost"
                             size="icon"
-                            className={cn(
-                                "ml-1 h-8 w-8 text-white shadow-md transition-all hover:scale-105 hover:shadow-lg",
-                                "bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 shadow-indigo-500/20"
-                            )}
-                            onClick={onOpenAssignment}
+                            className="h-8 w-8 text-slate-500 sm:hidden flex"
+                            data-testid="mobile-overflow-menu"
                         >
-                            <Plus className="h-4 w-4" />
-                            <span className="sr-only">Chỉ định</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Thêm thao tác</span>
                         </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Chỉ định xét nghiệm</TooltipContent>
-                </Tooltip>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={onPrint} disabled={resultsCount === 0}>
+                            <Printer className="mr-2 h-4 w-4" />
+                            In Phiếu chỉ định
+                        </DropdownMenuItem>
+                        {isWalkthroughReady && (
+                            <DropdownMenuItem onClick={() => startTour(walkthroughTourId)}>
+                                <HelpCircle className="mr-2 h-4 w-4" />
+                                Hướng dẫn
+                            </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem onClick={onOpenAssignment}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Chỉ định xét nghiệm
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
         </div>
     )
