@@ -45,7 +45,7 @@ export function ApprovalActions({ sampleId, results, compact = false }: Approval
                 <Button
                     id={compact ? undefined : 'tour-approve-button'}
                     onClick={() => setApproveDialogOpen(true)}
-                    className="gap-1.5"
+                    className={compact ? 'gap-1.5 col-start-2 justify-self-end' : 'gap-1.5'}
                     size={buttonSize}
                 >
                     <CheckCircle2 className={iconSize} />
