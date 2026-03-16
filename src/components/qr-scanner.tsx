@@ -4,6 +4,13 @@ import { useState, useRef, useEffect } from 'react'
 import { Html5Qrcode } from 'html5-qrcode'
 import { Button } from '@/components/ui/button'
 import { Camera, X, ScanLine } from 'lucide-react'
+import {
+    createCccdScannerFullConfig,
+    createCompatibilityCameraScanConfig,
+    createPreferredCameraScanConfig,
+    getErrorMessage,
+    shouldRetryWithCompatibilityMode,
+} from '@/lib/qr/camera-scan-profile'
 
 interface QRScannerProps {
     onScan: (decodedText: string) => void
@@ -27,26 +34,13 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
             // Wait for DOM element to be ready
             await new Promise(resolve => setTimeout(resolve, 100))
 
-            const html5QrCode = new Html5Qrcode(elementId)
+            const html5QrCode = new Html5Qrcode(elementId, createCccdScannerFullConfig())
             scannerRef.current = html5QrCode
             scannerInitializedRef.current = true
 
-            await html5QrCode.start(
+            const startWithConfig = async (scanConfig = createPreferredCameraScanConfig()) => html5QrCode.start(
                 { facingMode: 'environment' }, // Use back camera on mobile
-                {
-                    fps: 10,
-                    qrbox: function (viewfinderWidth, viewfinderHeight) {
-                        // Responsive QR box sizing
-                        const minEdgePercentage = 0.7 // 70% of the smaller edge
-                        const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight)
-                        const qrboxSize = Math.floor(minEdgeSize * minEdgePercentage)
-                        return {
-                            width: qrboxSize,
-                            height: qrboxSize
-                        }
-                    },
-                    aspectRatio: 1.0,
-                },
+                scanConfig,
                 (decodedText) => {
                     // Successfully scanned
                     onScan(decodedText)
@@ -66,13 +60,24 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
                             })
                         }
                     }
-                }
+                },
             )
+
+            try {
+                await startWithConfig()
+            } catch (startError) {
+                if (!shouldRetryWithCompatibilityMode(startError)) {
+                    throw startError
+                }
+
+                console.warn('Không áp dụng được cấu hình camera ưu tiên, chuyển sang chế độ tương thích.')
+                await startWithConfig(createCompatibilityCameraScanConfig())
+            }
 
             setIsScanning(true)
             setIsInitializing(false)
         } catch (err) {
-            const errorMsg = err instanceof Error ? err.message : 'Không thể khởi động máy ảnh'
+            const errorMsg = getErrorMessage(err)
             setError(errorMsg)
             onError?.(errorMsg)
             setIsInitializing(false)
