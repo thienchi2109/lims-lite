@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { CoAStatusBadge } from '@/components/coa-status-badge'
-import { WalkthroughTrigger } from '@/components/walkthrough'
+import { WalkthroughTrigger, useWalkthrough } from '@/components/walkthrough'
 import {
     Tooltip,
     TooltipContent,
@@ -26,6 +26,7 @@ import {
     ExternalLink,
     Activity,
     MoreHorizontal,
+    HelpCircle,
 } from 'lucide-react'
 import type { SampleStatus, CoAReportStatus } from '@/types'
 import { cn } from '@/lib/utils'
@@ -67,6 +68,8 @@ export function AssignedTestsToolbar({
 }: AssignedTestsToolbarProps) {
     // Determine QC page link based on user role
     const qcHref = userRole === 'manager' ? '/manager/quality-control' : '/analyst/qc-entry'
+    const walkthroughTourId = sampleStatus === 'completed' && coaStatus !== 'ready' ? 'coa' : 'results'
+    const { startTour, isReady: isWalkthroughReady } = useWalkthrough()
 
     return (
         <div
@@ -96,9 +99,7 @@ export function AssignedTestsToolbar({
                 )}
 
                 <span className="hidden sm:inline-flex">
-                    <WalkthroughTrigger
-                        tourId={sampleStatus === 'completed' && coaStatus !== 'ready' ? 'coa' : 'results'}
-                    />
+                    <WalkthroughTrigger tourId={walkthroughTourId} />
                 </span>
             </div>
 
@@ -279,6 +280,12 @@ export function AssignedTestsToolbar({
                             <Printer className="mr-2 h-4 w-4" />
                             In Phiếu chỉ định
                         </DropdownMenuItem>
+                        {isWalkthroughReady && (
+                            <DropdownMenuItem onClick={() => startTour(walkthroughTourId)}>
+                                <HelpCircle className="mr-2 h-4 w-4" />
+                                Hướng dẫn
+                            </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onClick={onOpenAssignment}>
                             <Plus className="mr-2 h-4 w-4" />
                             Chỉ định xét nghiệm

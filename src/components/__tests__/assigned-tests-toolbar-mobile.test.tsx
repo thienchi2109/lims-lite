@@ -6,12 +6,20 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
+const mockStartTour = vi.hoisted(() => vi.fn())
+
 // Mock UI components that are complex
 vi.mock('@/components/coa-status-badge', () => ({
     CoAStatusBadge: ({ status }: any) => <span data-testid="coa-badge">{status}</span>,
 }))
 vi.mock('@/components/walkthrough', () => ({
-    WalkthroughTrigger: () => <button data-testid="walkthrough-trigger">Hướng dẫn</button>,
+    WalkthroughTrigger: () => <button data-testid="walkthrough-trigger">Walkthrough Trigger</button>,
+    useWalkthrough: () => ({
+        startTour: mockStartTour,
+        isReady: true,
+        isActive: false,
+        tourStatus: null,
+    }),
 }))
 vi.mock('@/components/ui/tooltip', () => ({
     Tooltip: ({ children }: any) => <>{children}</>,
@@ -67,13 +75,19 @@ describe('AssignedTestsToolbar mobile overflow', () => {
         expect(overflowButton.className).toContain('sm:hidden')
     })
 
-    it('hides walkthrough trigger on mobile', () => {
+    it('hides standalone walkthrough trigger on mobile', () => {
         render(<AssignedTestsToolbar {...defaultProps} />)
 
         const walkthrough = screen.getByTestId('walkthrough-trigger')
-        // Should have hidden sm:inline-flex or similar mobile-hidden class
+        // Standalone trigger is desktop-only and wrapped with mobile-hidden classes.
         const parent = walkthrough.closest('[class]')
-        expect(parent?.className ?? '').toContain('sm:')
+        expect(parent?.className ?? '').toContain('hidden')
+    })
+
+    it('includes walkthrough action in mobile overflow menu', () => {
+        render(<AssignedTestsToolbar {...defaultProps} />)
+
+        expect(screen.getByText('Hướng dẫn')).toBeDefined()
     })
 
     it('always shows the results count badge', () => {
