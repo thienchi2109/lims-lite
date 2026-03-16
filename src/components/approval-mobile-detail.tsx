@@ -51,7 +51,6 @@ export function ApprovalMobileDetail({
                     <DrawerClose asChild>
                         <button
                             className="rounded-full p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                            onClick={onClose}
                         >
                             <X className="h-4 w-4 text-slate-500" />
                             <span className="sr-only">Đóng</span>

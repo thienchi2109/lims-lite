@@ -28,17 +28,24 @@ vi.mock('@/components/approval-actions', () => ({
 }))
 
 // Mock vaul Drawer to render children directly (no portal/animation)
+let mockOnOpenChange: ((open: boolean) => void) | null = null
 vi.mock('@/components/ui/drawer', () => ({
-    Drawer: ({ open, children }: any) => open ? <div data-testid="drawer">{children}</div> : null,
+    Drawer: ({ open, children, onOpenChange }: any) => {
+        mockOnOpenChange = onOpenChange
+        return open ? <div data-testid="drawer">{children}</div> : null
+    },
     DrawerContent: ({ children, className }: any) => <div className={className}>{children}</div>,
     DrawerHeader: ({ children }: any) => <div>{children}</div>,
     DrawerTitle: ({ children }: any) => <h2>{children}</h2>,
     DrawerClose: ({ children, asChild }: any) => {
         if (asChild) {
-            // asChild pattern: render the child directly, add testid via wrapper
-            return <span data-testid="drawer-close-wrapper">{children}</span>
+            return (
+                <span data-testid="drawer-close-wrapper" onClick={() => mockOnOpenChange?.(false)}>
+                    {children}
+                </span>
+            )
         }
-        return <button data-testid="drawer-close">{children}</button>
+        return <button data-testid="drawer-close" onClick={() => mockOnOpenChange?.(false)}>{children}</button>
     },
 }))
 
