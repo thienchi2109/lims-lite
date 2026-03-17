@@ -67,6 +67,7 @@ export function useCccdSerialController({
     const [error, setError] = useState<string | null>(null)
 
     const onPayloadRef = useRef(onPayload)
+    const isMountedRef = useRef(true)
     const portRef = useRef<BrowserSerialPortLike | null>(null)
     const readerRef = useRef<BrowserSerialReaderLike | null>(null)
     const isConnectingRef = useRef(false)
@@ -75,6 +76,12 @@ export function useCccdSerialController({
     useEffect(() => {
         onPayloadRef.current = onPayload
     }, [onPayload])
+
+    const isSessionActive = useCallback((token?: number) => {
+        if (!isMountedRef.current) return false
+        if (token === undefined) return true
+        return sessionTokenRef.current === token
+    }, [])
 
     const releaseConnection = useCallback(async ({ resetState }: ReleaseConnectionOptions) => {
         sessionTokenRef.current += 1
@@ -120,10 +127,10 @@ export function useCccdSerialController({
 
     const connectToPort = useCallback(
         async (port: BrowserSerialPortLike) => {
-            const token = sessionTokenRef.current + 1
-            sessionTokenRef.current = token
+            await releaseConnection({ resetState: false })
+            if (!isSessionActive()) return
 
-            await disconnect()
+            const token = sessionTokenRef.current + 1
             sessionTokenRef.current = token
 
             setError(null)
@@ -132,6 +139,16 @@ export function useCccdSerialController({
 
             try {
                 await port.open({ baudRate: DEFAULT_CCCD_SERIAL_BAUD_RATE })
+                if (!isSessionActive(token)) {
+                    isConnectingRef.current = false
+
+                    try {
+                        await port.close()
+                    } catch {
+                        // Port may already be closing after teardown.
+                    }
+                    return
+                }
 
                 if (!port.readable) {
                     throw new Error('Scanner CCCD không cung cấp luồng dữ liệu để đọc.')
@@ -194,10 +211,18 @@ export function useCccdSerialController({
                 })()
             } catch (error) {
                 isConnectingRef.current = false
+                if (!isSessionActive(token)) {
+                    try {
+                        await port.close()
+                    } catch {
+                        // Ignore teardown races after unmount.
+                    }
+                    return
+                }
                 throw error
             }
         },
-        [active, disconnect],
+        [active, isSessionActive, releaseConnection],
     )
 
     const connect = useCallback(async () => {
@@ -209,8 +234,10 @@ export function useCccdSerialController({
 
         try {
             const port = await serialApi.requestPort()
+            if (!isSessionActive()) return
             await connectToPort(port)
         } catch (connectError) {
+            if (!isSessionActive()) return
             if (isPortSelectionCanceled(connectError)) {
                 setState('permission_required')
                 return
@@ -219,7 +246,7 @@ export function useCccdSerialController({
             setError(getErrorMessage(connectError))
             setState('error')
         }
-    }, [connectToPort])
+    }, [connectToPort, isSessionActive])
 
     useEffect(() => {
         const serialApi = getBrowserSerialApi()
@@ -262,6 +289,7 @@ export function useCccdSerialController({
 
     useEffect(() => {
         return () => {
+            isMountedRef.current = false
             void releaseConnection({ resetState: false })
         }
     }, [releaseConnection])

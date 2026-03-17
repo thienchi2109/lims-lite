@@ -5,6 +5,18 @@ import { useCccdSerialController } from './use-cccd-serial-controller'
 
 type MockReaderResult = { value?: Uint8Array; done: boolean }
 
+function createDeferred<T>() {
+    let resolve!: (value: T | PromiseLike<T>) => void
+    let reject!: (reason?: unknown) => void
+
+    const promise = new Promise<T>((res, rej) => {
+        resolve = res
+        reject = rej
+    })
+
+    return { promise, resolve, reject }
+}
+
 function createMockSerialPort(chunks: Uint8Array[] = []) {
     let index = 0
     let pendingResolve: ((result: MockReaderResult) => void) | null = null
@@ -258,5 +270,66 @@ describe('useCccdSerialController', () => {
             expect(reader.cancel).toHaveBeenCalledTimes(1)
             expect(port.close).toHaveBeenCalledTimes(1)
         })
+    })
+
+    it('does not open a port if requestPort resolves after the hook unmounts', async () => {
+        const { port } = createMockSerialPort()
+        const requestPortDeferred = createDeferred<typeof port>()
+        const serialApi = {
+            getPorts: vi.fn().mockResolvedValue([]),
+            requestPort: vi.fn().mockReturnValue(requestPortDeferred.promise),
+        }
+
+        setNavigatorSerial(serialApi)
+
+        const { result, unmount } = renderHook(() =>
+            useCccdSerialController({
+                active: true,
+                onPayload: vi.fn(),
+            }),
+        )
+
+        await waitFor(() => {
+            expect(result.current.state).toBe('permission_required')
+        })
+
+        const connectPromise = result.current.connect()
+        unmount()
+        requestPortDeferred.resolve(port)
+        await connectPromise
+
+        expect(serialApi.requestPort).toHaveBeenCalledTimes(1)
+        expect(port.open).not.toHaveBeenCalled()
+    })
+
+    it('closes a port if port.open resolves after the hook unmounts', async () => {
+        const openDeferred = createDeferred<void>()
+        const { port } = createMockSerialPort()
+        port.open = vi.fn().mockReturnValue(openDeferred.promise)
+        const serialApi = {
+            getPorts: vi.fn().mockResolvedValue([port]),
+            requestPort: vi.fn(),
+        }
+
+        setNavigatorSerial(serialApi)
+
+        const { unmount } = renderHook(() =>
+            useCccdSerialController({
+                active: true,
+                onPayload: vi.fn(),
+            }),
+        )
+
+        await waitFor(() => {
+            expect(port.open).toHaveBeenCalledTimes(1)
+        })
+
+        unmount()
+        openDeferred.resolve()
+        await Promise.resolve()
+        await Promise.resolve()
+
+        expect(port.close).toHaveBeenCalledTimes(1)
+        expect(port.readable.getReader).not.toHaveBeenCalled()
     })
 })
