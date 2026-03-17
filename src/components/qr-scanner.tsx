@@ -39,6 +39,14 @@ export function QRScanner({ onScan, onError, onTelemetry }: QRScannerProps) {
     const didEmitSuccessTelemetryRef = useRef(false)
     const usedCompatibilityModeRef = useRef(false)
 
+    // Callback refs — prevent startScanning identity changes on parent re-render
+    const onScanRef = useRef(onScan)
+    const onErrorRef = useRef(onError)
+    const onTelemetryRef = useRef(onTelemetry)
+    useEffect(() => { onScanRef.current = onScan }, [onScan])
+    useEffect(() => { onErrorRef.current = onError }, [onError])
+    useEffect(() => { onTelemetryRef.current = onTelemetry }, [onTelemetry])
+
     const stopScanning = useCallback(async () => {
         const scanner = scannerRef.current
         if (!scanner) return
@@ -93,7 +101,7 @@ export function QRScanner({ onScan, onError, onTelemetry }: QRScannerProps) {
                             didEmitSuccessTelemetryRef.current = true
                             const startedAt = scanStartedAtRef.current ?? Date.now()
                             const timeToFirstDecodeMs = Math.max(0, Date.now() - startedAt)
-                            onTelemetry?.({
+                            onTelemetryRef.current?.({
                                 type: 'success',
                                 timeToFirstDecodeMs,
                                 decoderSource: detectDecoderSource(result),
@@ -102,7 +110,7 @@ export function QRScanner({ onScan, onError, onTelemetry }: QRScannerProps) {
                         }
 
                         // Successfully scanned
-                        onScan(decodedText)
+                        onScanRef.current(decodedText)
                         void stopScanning()
                     },
                     (errorMessage) => {
@@ -111,7 +119,7 @@ export function QRScanner({ onScan, onError, onTelemetry }: QRScannerProps) {
                         if (now - lastErrorTimeRef.current > 1000) {
                             lastErrorTimeRef.current = now
                             const bucket = categorizeScanFailure(errorMessage)
-                            onTelemetry?.({
+                            onTelemetryRef.current?.({
                                 type: 'failure',
                                 bucket,
                                 message: errorMessage,
@@ -158,7 +166,7 @@ export function QRScanner({ onScan, onError, onTelemetry }: QRScannerProps) {
                 }
             } catch (runtimeError) {
                 console.warn('Không thể áp dụng tối ưu camera runtime:', runtimeError)
-                onTelemetry?.({
+                onTelemetryRef.current?.({
                     type: 'failure',
                     bucket: 'constraints',
                     message: getErrorMessage(runtimeError),
@@ -167,11 +175,12 @@ export function QRScanner({ onScan, onError, onTelemetry }: QRScannerProps) {
 
             setIsScanning(true)
             setIsInitializing(false)
+            isStartingRef.current = false
         } catch (err) {
             const errorMsg = getErrorMessage(err)
             setError(errorMsg)
-            onError?.(errorMsg)
-            onTelemetry?.({
+            onErrorRef.current?.(errorMsg)
+            onTelemetryRef.current?.({
                 type: 'failure',
                 bucket: categorizeScanFailure(errorMsg),
                 message: errorMsg,
@@ -188,16 +197,17 @@ export function QRScanner({ onScan, onError, onTelemetry }: QRScannerProps) {
             isStartingRef.current = false
             console.error('Error starting QR scanner:', err)
         }
-    }, [onScan, onError, onTelemetry, stopScanning])
+    }, [stopScanning])
 
     // Auto-start scanning once on mount, cleanup on unmount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         void startScanning()
 
         return () => {
             void stopScanning()
         }
-    }, [startScanning, stopScanning])
+    }, [])
 
     // If camera failed, render nothing — the parent dialog has other scan methods
     if (error && !isScanning && !isInitializing) {
