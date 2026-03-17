@@ -33,6 +33,7 @@ interface MobileViewProps {
     // Save
     onSave: () => void
     isSaving: boolean
+    isSaveDisabled?: boolean
     saveLabel: string
 
     /** When provided, renders wizard instead of flat layout */

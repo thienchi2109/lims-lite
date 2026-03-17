@@ -45,6 +45,7 @@ interface AccessionMobileLayoutProps {
     handleMethodChange: (assayId: string, methodId: string) => void
     onSave: () => void
     isSaving: boolean
+    isSaveDisabled?: boolean
     saveLabel: string
 }
 
@@ -67,6 +68,7 @@ export function AccessionMobileLayout({
     handleMethodChange,
     onSave,
     isSaving,
+    isSaveDisabled,
     saveLabel,
 }: AccessionMobileLayoutProps) {
     const handleRemoveTest = (assayId: string) => {
@@ -230,7 +232,7 @@ export function AccessionMobileLayout({
                             type="button"
                             data-testid="save-button"
                             onClick={onSave}
-                            disabled={isSaving}
+                            disabled={isSaving || isSaveDisabled}
                             className="bg-blue-500 hover:bg-blue-600 text-white px-4 h-9 rounded-lg text-xs font-semibold shadow-md shadow-blue-500/20 transition-transform active:scale-95 flex items-center gap-1.5"
                         >
                             {isSaving ? (

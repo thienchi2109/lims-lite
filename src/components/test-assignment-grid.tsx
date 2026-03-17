@@ -61,6 +61,7 @@ export function TestAssignmentGrid({
                 handleMethodChange={logic.handleMethodChange}
                 onSave={onSave}
                 isSaving={isSaving}
+                isSaveDisabled={isSaveDisabled}
                 saveLabel={saveLabel}
                 wizardProps={wizardProps}
             />
