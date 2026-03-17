@@ -77,16 +77,16 @@ export function AccessionWizardStepSuccess({
                             <Printer className="size-4" />
                             In phiếu yêu cầu
                         </Button>
-                        <Link href="/analyst" className="w-full">
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                className="min-h-11 w-full gap-2 text-muted-foreground"
-                            >
+                        <Button
+                            asChild
+                            variant="ghost"
+                            className="min-h-11 w-full gap-2 text-muted-foreground"
+                        >
+                            <Link href="/analyst">
                                 <Home className="size-4" />
                                 Quay lại trang chủ
-                            </Button>
-                        </Link>
+                            </Link>
+                        </Button>
                     </div>
                 </CardContent>
             </Card>

@@ -65,6 +65,7 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
         handleSubmit,
         reset,
         setValue,
+        watch,
     } = useForm<FormData>({
         resolver: zodResolver(FormSchema),
         defaultValues: {
@@ -84,6 +85,8 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
             { shouldValidate: false } // Don't trigger validation on every change
         )
     }, [selectedTests, setValue])
+
+    const receivedAtWatched = watch('received_at')
 
     const onSubmit = async (data: FormData) => {
         // Validate Client Selection
@@ -121,13 +124,6 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
                     const sampleData = result.data
                     const sampleCode = sampleData?.sample_id
                     setSubmitSuccess(`Mẫu ${sampleCode || ''} đã được tạo.`.trim())
-
-                    // Reset form but keep client selected for convenience? 
-                    // Usually better to reset everything to avoid mistakes.
-                    reset()
-                    setSelectedTests([])
-                    setSelectedClient(null)
-                    setSelectedSampleType('Máu')
                 }
             } else {
                 // Create sample WITH tests (existing flow)
@@ -152,11 +148,6 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
                     const sampleCode = sampleData?.sample_id
                     const assignedCount = payload?.results?.length || selectedTests.length
                     setSubmitSuccess(`Mẫu ${sampleCode || ''} đã được tạo và chỉ định ${assignedCount} xét nghiệm.`.trim())
-
-                    reset()
-                    setSelectedTests([])
-                    setSelectedClient(null)
-                    setSelectedSampleType('Máu')
                 }
             }
         } catch {
@@ -339,13 +330,13 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
         selectedSampleType,
         onSampleTypeChange: setSelectedSampleType,
         receivedAtRegister: register('received_at'),
-        receivedAtValue: '',
+        receivedAtValue: receivedAtWatched || '',
         submitSuccess,
         onReset: handleResetForm,
     }), [
         selectedClient, showClientForm, clientFormData,
         showQRScanner, handleQRScan, serialController,
-        selectedSampleType, register, submitSuccess, handleResetForm,
+        selectedSampleType, register, receivedAtWatched, submitSuccess, handleResetForm,
     ])
 
     return (
