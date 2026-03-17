@@ -132,7 +132,7 @@ export function buildRuntimeEnhancementConstraints(
     }
 
     if (isRangeCapability(capabilities.focusDistance)) {
-        runtimeConstraints.focusDistance = capabilities.focusDistance.max
+        runtimeConstraints.focusDistance = capabilities.focusDistance.min
     }
 
     return Object.keys(runtimeConstraints).length > 0 ? runtimeConstraints : null

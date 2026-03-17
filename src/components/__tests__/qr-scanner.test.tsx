@@ -160,7 +160,7 @@ describe('QRScanner optimized start profile', () => {
                 zoom: 1.2,
                 torch: true,
                 focusMode: 'continuous',
-                focusDistance: 2.5,
+                focusDistance: 0,
             }),
         )
     })
