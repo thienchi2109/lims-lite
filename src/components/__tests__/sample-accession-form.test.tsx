@@ -92,16 +92,29 @@ vi.mock('@/components/client-selector', () => ({
     ClientSelector: ({
         selectedClient,
         onSelect,
+        formData,
+        onFormDataChange,
     }: {
         selectedClient: { name: string } | null
         onSelect: (client: unknown) => void
+        formData?: { name?: string }
+        onFormDataChange?: (data: unknown) => void
     }) => (
-        <button
-            type="button"
-            onClick={() => onSelect(accessionFormMocks.mockClient)}
-        >
-            {selectedClient?.name ?? 'Chọn khách hàng'}
-        </button>
+        <div>
+            <div data-testid="client-form-draft-name">{formData?.name ?? ''}</div>
+            <button
+                type="button"
+                onClick={() => onSelect(accessionFormMocks.mockClient)}
+            >
+                {selectedClient?.name ?? 'Chọn khách hàng'}
+            </button>
+            <button
+                type="button"
+                onClick={() => onFormDataChange?.({ name: 'Khách hàng nháp' })}
+            >
+                Điền nháp khách hàng
+            </button>
+        </div>
     ),
 }))
 
@@ -287,5 +300,24 @@ describe('SampleAccessionForm', () => {
         expect(screen.getByTestId('selected-sample-type').textContent).toBe('Máu')
         expect(screen.getByTestId('selected-count').textContent).toBe('0')
         expect((saveButton as HTMLButtonElement).disabled).toBe(false)
+    })
+
+    it('clears the client draft data when starting a new accession', async () => {
+        render(<SampleAccessionForm specialties={[]} />)
+
+        fireEvent.click(screen.getByRole('button', { name: 'Điền nháp khách hàng' }))
+        expect(screen.getByTestId('client-form-draft-name').textContent).toBe('Khách hàng nháp')
+
+        fireEvent.click(screen.getByRole('button', { name: 'Chọn khách hàng' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Thêm xét nghiệm' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Lưu mẫu' }))
+
+        await waitFor(() => {
+            expect(accessionFormMocks.accessionAndAssignTestsClient).toHaveBeenCalledTimes(1)
+        })
+
+        fireEvent.click(screen.getByRole('button', { name: 'Tiếp nhận mẫu mới' }))
+
+        expect(screen.getByTestId('client-form-draft-name').textContent).toBe('')
     })
 })

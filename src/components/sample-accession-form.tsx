@@ -209,6 +209,7 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
         setSelectedTests([])
         setSelectedClient(null)
         setSelectedSampleType('Máu')
+        setClientFormData(undefined)
         setSubmitSuccess(null)
         setSubmitError(null)
     }, [reset])
