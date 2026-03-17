@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -27,6 +27,7 @@ import Link from 'next/link'
 import { ClientSelector } from '@/components/client-selector'
 import { SampleTypeSelector } from '@/components/sample-type-selector'
 import { useMediaQuery } from '@/hooks/use-media-query'
+import { useCccdSerialController } from '@/hooks/use-cccd-serial-controller'
 import { toast } from 'sonner'
 
 interface SampleAccessionFormProps {
@@ -177,7 +178,7 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
         setIsSubmitting(false)
     }
 
-    const handleQRScan = async (decodedText: string) => {
+    const handleQRScan = useCallback(async (decodedText: string) => {
         setShowQRScanner(false)
 
         const parsed = parseClientIdentityQr(decodedText)
@@ -212,7 +213,12 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
 
         setClientFormData(formData)
         setShowClientForm(true)
-    }
+    }, [])
+
+    const serialController = useCccdSerialController({
+        active: showQRScanner,
+        onPayload: handleQRScan,
+    })
 
     // Context Content (Card Style)
     const contextContent = (
@@ -309,7 +315,12 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
                 </div>
             )}
 
-            <ClientQrScannerDialog open={showQRScanner} onOpenChange={setShowQRScanner} onScan={handleQRScan} />
+            <ClientQrScannerDialog
+                open={showQRScanner}
+                onOpenChange={setShowQRScanner}
+                onScan={handleQRScan}
+                serialController={serialController}
+            />
         </div>
     )
 

@@ -1,6 +1,25 @@
 export const DEFAULT_CCCD_SERIAL_IDLE_TIMEOUT_MS = 120
 export const DEFAULT_CCCD_SERIAL_BAUD_RATE = 9600
 
+export type BrowserSerialPortLike = {
+    readable: {
+        getReader: () => BrowserSerialReaderLike
+    } | null
+    open: (options: { baudRate: number }) => Promise<void>
+    close: () => Promise<void>
+}
+
+export type BrowserSerialReaderLike = {
+    read: () => Promise<{ value?: Uint8Array; done: boolean }>
+    cancel: () => Promise<void>
+    releaseLock: () => void
+}
+
+export type BrowserSerialLike = {
+    requestPort: () => Promise<BrowserSerialPortLike>
+    getPorts: () => Promise<BrowserSerialPortLike[]>
+}
+
 type WebSerialTarget = {
     serial?: {
         requestPort?: unknown
@@ -29,6 +48,11 @@ export function isWebSerialSupported(target: WebSerialTarget | undefined): boole
         typeof target.serial.requestPort === 'function' &&
         typeof target.serial.getPorts === 'function',
     )
+}
+
+export function getWebSerialApi(target: WebSerialTarget | undefined): BrowserSerialLike | null {
+    if (!isWebSerialSupported(target)) return null
+    return target.serial as BrowserSerialLike
 }
 
 export async function getGrantedSerialPorts<TPort>(serialApi: GrantedPortApi<TPort>): Promise<TPort[]> {
