@@ -209,9 +209,13 @@ export function QRScanner({ onScan, onError, onTelemetry }: QRScannerProps) {
         }
     }, [])
 
-    // If camera failed, render nothing — the parent dialog has other scan methods
+    // Camera failed — show minimal notice (some callers have no fallback UI)
     if (error && !isScanning && !isInitializing) {
-        return null
+        return (
+            <div className="rounded-lg bg-slate-100 dark:bg-slate-800/50 px-4 py-3 text-center text-sm text-slate-500 dark:text-slate-400">
+                Camera không khả dụng
+            </div>
+        )
     }
 
     if (!isScanning && !isInitializing) {

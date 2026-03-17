@@ -196,18 +196,17 @@ describe('QRScanner optimized start profile', () => {
         expect(getByText(/Đang quét/i)).toBeDefined()
     })
 
-    it('renders nothing when camera fails to start', async () => {
+    it('shows minimal notice when camera fails to start', async () => {
         html5QrcodeMocks.start.mockRejectedValueOnce(new Error('NotReadableError: no camera'))
 
-        const { container } = render(<QRScanner onScan={vi.fn()} />)
+        const { getByText } = render(<QRScanner onScan={vi.fn()} />)
 
         await act(async () => {
             vi.advanceTimersByTime(200)
             await Promise.resolve()
         })
 
-        // Component should render nothing on error
-        expect(container.innerHTML).toBe('')
+        expect(getByText('Camera không khả dụng')).toBeDefined()
     })
 
     it('captures success telemetry with decoder source and preserves auto-close flow', async () => {
