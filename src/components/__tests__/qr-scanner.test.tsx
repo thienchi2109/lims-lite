@@ -1,6 +1,18 @@
 import { act, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+function createDeferred<T>() {
+    let resolve!: (value: T | PromiseLike<T>) => void
+    let reject!: (reason?: unknown) => void
+
+    const promise = new Promise<T>((res, rej) => {
+        resolve = res
+        reject = rej
+    })
+
+    return { promise, resolve, reject }
+}
+
 const html5QrcodeMocks = vi.hoisted(() => {
     const constructorSpy = vi.fn()
     const start = vi.fn()
@@ -207,6 +219,47 @@ describe('QRScanner optimized start profile', () => {
         })
 
         expect(getByText('Camera không khả dụng')).toBeDefined()
+    })
+
+    it('does not construct or start the scanner after unmounting before startup delay completes', async () => {
+        const { unmount } = render(<QRScanner onScan={vi.fn()} />)
+
+        unmount()
+
+        await act(async () => {
+            vi.advanceTimersByTime(200)
+            await Promise.resolve()
+        })
+
+        expect(html5QrcodeMocks.constructorSpy).not.toHaveBeenCalled()
+        expect(html5QrcodeMocks.start).not.toHaveBeenCalled()
+    })
+
+    it('does not continue scanner startup after unmounting while start is pending', async () => {
+        const startDeferred = createDeferred<null>()
+        html5QrcodeMocks.start.mockReturnValueOnce(startDeferred.promise)
+        html5QrcodeMocks.getState.mockReturnValue(0) // Html5QrcodeState.NOT_STARTED
+
+        const { unmount } = render(<QRScanner onScan={vi.fn()} />)
+
+        await act(async () => {
+            vi.advanceTimersByTime(200)
+            await Promise.resolve()
+        })
+
+        expect(html5QrcodeMocks.start).toHaveBeenCalledTimes(1)
+
+        unmount()
+
+        await act(async () => {
+            startDeferred.resolve(null)
+            await Promise.resolve()
+            await Promise.resolve()
+        })
+
+        expect(html5QrcodeMocks.clear).toHaveBeenCalledTimes(1)
+        expect(html5QrcodeMocks.getRunningTrackCapabilities).not.toHaveBeenCalled()
+        expect(html5QrcodeMocks.applyVideoConstraints).not.toHaveBeenCalled()
     })
 
     it('captures success telemetry with decoder source and preserves auto-close flow', async () => {

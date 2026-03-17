@@ -33,6 +33,8 @@ export function QRScanner({ onScan, onError, onTelemetry }: QRScannerProps) {
     const scanStartedAtRef = useRef<number | null>(null)
     const didEmitSuccessTelemetryRef = useRef(false)
     const usedCompatibilityModeRef = useRef(false)
+    const isMountedRef = useRef(false)
+    const scanSessionRef = useRef(0)
 
     // Callback refs — prevent startScanning identity changes on parent re-render
     const onScanRef = useRef(onScan)
@@ -42,37 +44,55 @@ export function QRScanner({ onScan, onError, onTelemetry }: QRScannerProps) {
     useEffect(() => { onErrorRef.current = onError }, [onError])
     useEffect(() => { onTelemetryRef.current = onTelemetry }, [onTelemetry])
 
-    const stopScanning = useCallback(async () => {
-        const scanner = scannerRef.current
-        if (!scanner) return
+    const isScanSessionActive = useCallback(
+        (sessionToken: number) => isMountedRef.current && scanSessionRef.current === sessionToken,
+        [],
+    )
 
-        try {
-            const state = scanner.getState()
-            // Html5QrcodeState: NOT_STARTED=0, SCANNING=2, PAUSED=3
-            if (state === 2 || state === 3) {
-                await scanner.stop()
+    const stopScanning = useCallback(
+        async ({ resetUi = true, scanner = scannerRef.current }: { resetUi?: boolean; scanner?: Html5Qrcode | null } = {}) => {
+            try {
+                if (scanner) {
+                    const state = scanner.getState()
+                    // Html5QrcodeState: NOT_STARTED=0, SCANNING=2, PAUSED=3
+                    if (state === 2 || state === 3) {
+                        await scanner.stop()
+                    }
+                    scanner.clear()
+                }
+            } catch (err) {
+                console.warn('Error stopping QR scanner:', err)
+            } finally {
+                if (scannerRef.current === scanner) {
+                    scannerRef.current = null
+                }
+
+                if (resetUi && isMountedRef.current) {
+                    setIsScanning(false)
+                    setIsInitializing(false)
+                }
+
+                isStartingRef.current = false
             }
-            scanner.clear()
-        } catch (err) {
-            console.warn('Error stopping QR scanner:', err)
-        } finally {
-            scannerRef.current = null
-            setIsScanning(false)
-            isStartingRef.current = false
-        }
-    }, [])
+        },
+        [],
+    )
 
-    const startScanning = useCallback(async () => {
+    const startScanning = useCallback(async (sessionToken: number) => {
         // Prevent concurrent starts
         if (isStartingRef.current || scannerRef.current) return
         isStartingRef.current = true
+        let html5QrCode: Html5Qrcode | null = null
 
         try {
+            if (!isScanSessionActive(sessionToken)) return
+
             setError(null)
             setIsInitializing(true)
 
             // Wait for DOM element to be ready
             await new Promise(resolve => setTimeout(resolve, 150))
+            if (!isScanSessionActive(sessionToken)) return
 
             // Verify DOM element exists before initializing
             const readerElement = document.getElementById(elementId)
@@ -80,14 +100,15 @@ export function QRScanner({ onScan, onError, onTelemetry }: QRScannerProps) {
                 throw new Error('Phần tử camera chưa sẵn sàng. Vui lòng thử lại.')
             }
 
-            const html5QrCode = new Html5Qrcode(elementId, createCccdScannerFullConfig())
-            scannerRef.current = html5QrCode
+            const activeScanner = new Html5Qrcode(elementId, createCccdScannerFullConfig())
+            html5QrCode = activeScanner
+            scannerRef.current = activeScanner
             didEmitSuccessTelemetryRef.current = false
             usedCompatibilityModeRef.current = false
             scanStartedAtRef.current = Date.now()
 
             const startWithConfig = async (scanConfig = createPreferredCameraScanConfig()) =>
-                html5QrCode.start(
+                activeScanner.start(
                     { facingMode: 'environment' },
                     scanConfig,
                     (decodedText, result?: Html5QrcodeResult) => {
@@ -142,13 +163,15 @@ export function QRScanner({ onScan, onError, onTelemetry }: QRScannerProps) {
                 await startWithConfig(createCompatibilityCameraScanConfig())
             }
 
+            if (!isScanSessionActive(sessionToken)) return
+
             try {
-                const capabilities = html5QrCode.getRunningTrackCapabilities()
-                const settings = html5QrCode.getRunningTrackSettings()
+                const capabilities = activeScanner.getRunningTrackCapabilities()
+                const settings = activeScanner.getRunningTrackSettings()
                 const runtimeConstraints = buildRuntimeEnhancementConstraints(capabilities, settings)
 
                 if (runtimeConstraints) {
-                    await html5QrCode.applyVideoConstraints(runtimeConstraints)
+                    await activeScanner.applyVideoConstraints(runtimeConstraints)
                 }
             } catch (runtimeError) {
                 console.warn('Không thể áp dụng tối ưu camera runtime:', runtimeError)
@@ -159,10 +182,14 @@ export function QRScanner({ onScan, onError, onTelemetry }: QRScannerProps) {
                 })
             }
 
+            if (!isScanSessionActive(sessionToken)) return
+
             setIsScanning(true)
             setIsInitializing(false)
             isStartingRef.current = false
         } catch (err) {
+            if (!isScanSessionActive(sessionToken)) return
+
             const errorMsg = getErrorMessage(err)
             setError(errorMsg)
             onErrorRef.current?.(errorMsg)
@@ -174,26 +201,31 @@ export function QRScanner({ onScan, onError, onTelemetry }: QRScannerProps) {
             setIsInitializing(false)
             setIsScanning(false)
             // Clean up partial scanner state on failure
-            if (scannerRef.current) {
+            if (html5QrCode) {
                 try {
-                    scannerRef.current.clear()
+                    html5QrCode.clear()
                 } catch { /* ignore */ }
-                scannerRef.current = null
+                if (scannerRef.current === html5QrCode) {
+                    scannerRef.current = null
+                }
             }
             isStartingRef.current = false
             console.error('Error starting QR scanner:', err)
         }
-    }, [stopScanning])
+    }, [isScanSessionActive, stopScanning])
 
-    // Auto-start scanning once on mount, cleanup on unmount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
-        void startScanning()
+        isMountedRef.current = true
+        const sessionToken = scanSessionRef.current + 1
+        scanSessionRef.current = sessionToken
+        void startScanning(sessionToken)
 
         return () => {
-            void stopScanning()
+            isMountedRef.current = false
+            scanSessionRef.current += 1
+            void stopScanning({ resetUi: false })
         }
-    }, [])
+    }, [startScanning, stopScanning])
 
     // Camera failed — show minimal notice (some callers have no fallback UI)
     if (error && !isScanning && !isInitializing) {
