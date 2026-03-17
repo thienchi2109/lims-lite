@@ -25,7 +25,7 @@ describe('ClientQrScannerDialog continuity', () => {
         vi.useRealTimers()
     })
 
-    it('keeps USB/Bluetooth input and camera scanner in the same dialog', () => {
+    it('shows COM connect button, keyboard input, and camera when serial is available but not connected', () => {
         render(
             <ClientQrScannerDialog
                 open={true}
@@ -40,14 +40,13 @@ describe('ClientQrScannerDialog continuity', () => {
             />,
         )
 
-        expect(screen.getByText('Máy quét CCCD qua cổng COM')).toBeDefined()
+        expect(screen.getByText(/Scanner CCCD \(COM\)/i)).toBeDefined()
         expect(screen.getByRole('button', { name: 'Kết nối scanner CCCD' })).toBeDefined()
-        expect(screen.getByText('Máy quét QR dạng bàn phím (dự phòng)')).toBeDefined()
         expect(screen.getByPlaceholderText('Đặt con trỏ ở đây rồi quét CCCD…')).toBeDefined()
         expect(screen.getByTestId('camera-scan-trigger')).toBeDefined()
     })
 
-    it('processes USB/Bluetooth payload and camera payload without flow regression', async () => {
+    it('processes keyboard payload and camera payload without flow regression', async () => {
         const onScan = vi.fn()
 
         render(
@@ -103,7 +102,7 @@ describe('ClientQrScannerDialog continuity', () => {
         expect(connect).toHaveBeenCalledTimes(1)
     })
 
-    it('shows connected serial status and allows disconnecting', () => {
+    it('shows connected status, hides camera, and allows disconnecting', () => {
         const disconnect = vi.fn()
 
         render(
@@ -120,13 +119,15 @@ describe('ClientQrScannerDialog continuity', () => {
             />,
         )
 
-        expect(screen.getByText('Đã kết nối scanner CCCD')).toBeDefined()
+        expect(screen.getByText('Đã kết nối')).toBeDefined()
+        // Camera should be hidden when COM is connected
+        expect(screen.queryByTestId('camera-scan-trigger')).toBeNull()
 
-        fireEvent.click(screen.getByRole('button', { name: 'Ngắt kết nối scanner' }))
+        fireEvent.click(screen.getByText('Ngắt'))
         expect(disconnect).toHaveBeenCalledTimes(1)
     })
 
-    it('shows unsupported guidance while preserving fallback inputs', () => {
+    it('hides COM section when serial is unsupported but preserves keyboard and camera', () => {
         render(
             <ClientQrScannerDialog
                 open={true}
@@ -141,7 +142,8 @@ describe('ClientQrScannerDialog continuity', () => {
             />,
         )
 
-        expect(screen.getByText(/Web Serial/i)).toBeDefined()
+        // COM section should be hidden when unsupported
+        expect(screen.queryByText(/Scanner CCCD \(COM\)/i)).toBeNull()
         expect(screen.getByPlaceholderText('Đặt con trỏ ở đây rồi quét CCCD…')).toBeDefined()
         expect(screen.getByTestId('camera-scan-trigger')).toBeDefined()
     })

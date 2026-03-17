@@ -28,7 +28,6 @@ export function createPreferredCameraScanConfig(): Html5QrcodeCameraScanConfig {
             }
         },
         videoConstraints: {
-            facingMode: { ideal: 'environment' },
             width: { ideal: 1920 },
             height: { ideal: 1080 },
         },
