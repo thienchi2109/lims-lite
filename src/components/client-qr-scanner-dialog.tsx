@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { QRScanner } from '@/components/qr-scanner'
+import { Unplug, Plug, Keyboard, Camera } from 'lucide-react'
 
 export type SerialConnectionState =
     | 'unsupported'
@@ -32,111 +33,125 @@ type ClientQrScannerDialogBodyProps = {
     serialController?: ClientQrScannerDialogSerialController
 }
 
-function ClientQrScannerDialogBody({
-    onScan,
-    serialController,
-}: ClientQrScannerDialogBodyProps) {
-    const [scannerPayload, setScannerPayload] = useState('')
-    const scannerInputRef = useRef<HTMLInputElement>(null)
-    const lastHandledPayloadRef = useRef<string>('')
+/**
+ * Inline keyboard-mode scanner input.
+ * Fires onScan when payload has ≥ 3 pipe-delimited tokens (auto or Enter).
+ */
+function KeyboardScannerInput({ onScan }: { onScan: (text: string) => void | Promise<void> }) {
+    const [payload, setPayload] = useState('')
+    const inputRef = useRef<HTMLInputElement>(null)
+    const lastHandledRef = useRef('')
 
-    const sanitizeScannerPayload = (value: string) =>
-        value
-            .replace(/\uFEFF/g, '')
+    const sanitize = (v: string) =>
+        v.replace(/\uFEFF/g, '')
             .replace(/[\u001c\u001d\u001e\u001f]/g, '|')
             .replace(/[\r\n]/g, '')
             .trim()
 
     useEffect(() => {
-        const timer = window.setTimeout(() => {
-            scannerInputRef.current?.focus()
-        }, 0)
-
-        return () => window.clearTimeout(timer)
+        const t = window.setTimeout(() => inputRef.current?.focus(), 0)
+        return () => window.clearTimeout(t)
     }, [])
 
     useEffect(() => {
-        const payload = sanitizeScannerPayload(scannerPayload)
-        const tokenCount = payload.split('|').filter(Boolean).length
-        if (!payload || tokenCount < 3) return
-        if (payload === lastHandledPayloadRef.current) return
+        const clean = sanitize(payload)
+        if (!clean || clean.split('|').filter(Boolean).length < 3) return
+        if (clean === lastHandledRef.current) return
 
-        const timer = window.setTimeout(() => {
-            const finalPayload = sanitizeScannerPayload(scannerPayload)
-            const finalTokenCount = finalPayload.split('|').filter(Boolean).length
-            if (!finalPayload || finalTokenCount < 3) return
-            if (finalPayload === lastHandledPayloadRef.current) return
-
-            lastHandledPayloadRef.current = finalPayload
-            void onScan(finalPayload)
+        const t = window.setTimeout(() => {
+            const final = sanitize(payload)
+            if (!final || final.split('|').filter(Boolean).length < 3) return
+            if (final === lastHandledRef.current) return
+            lastHandledRef.current = final
+            void onScan(final)
         }, 300)
-
-        return () => window.clearTimeout(timer)
-    }, [scannerPayload, onScan])
+        return () => window.clearTimeout(t)
+    }, [payload, onScan])
 
     return (
-        <div className="p-4">
-            {serialController ? (
-                <div className="space-y-2 mb-4 rounded-lg border border-sky-900/70 bg-sky-950/40 p-3">
-                    <div className="text-xs font-semibold uppercase tracking-wider text-sky-300">
-                        Máy quét CCCD qua cổng COM
+        <Input
+            ref={inputRef}
+            value={payload}
+            onChange={(e) => setPayload(e.target.value)}
+            onKeyDown={(e) => {
+                if (e.key !== 'Enter') return
+                e.preventDefault()
+                const clean = sanitize(payload)
+                if (!clean || clean === lastHandledRef.current) return
+                lastHandledRef.current = clean
+                void onScan(clean)
+            }}
+            placeholder="Đặt con trỏ ở đây rồi quét CCCD…"
+            className="bg-slate-900 border-slate-700 text-slate-100 placeholder:text-slate-500 text-sm"
+            inputMode="none"
+            autoComplete="off"
+        />
+    )
+}
+
+function ClientQrScannerDialogBody({
+    onScan,
+    serialController,
+}: ClientQrScannerDialogBodyProps) {
+    const isSerialConnected = serialController?.state === 'connected'
+    const isSerialConnecting = serialController?.state === 'connecting'
+    const showSerialConnect =
+        serialController?.state === 'permission_required' || serialController?.state === 'error'
+    const isSerialUnsupported = serialController?.state === 'unsupported'
+
+    // When COM scanner is connected → no need for camera
+    const showCamera = !isSerialConnected
+
+    return (
+        <div className="space-y-4 pt-2">
+            {/* ── COM Scanner Section ── */}
+            {serialController && !isSerialUnsupported ? (
+                <div className="rounded-lg border border-slate-700/60 bg-slate-900/60 p-3.5 space-y-3">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                        <Plug className="h-3.5 w-3.5" />
+                        Scanner CCCD (COM)
                     </div>
 
-                    {serialController.state === 'connected' ? (
-                        <>
-                            <div className="text-sm text-emerald-300">Đã kết nối scanner CCCD</div>
-                            <div className="text-xs text-sky-100/80">
-                                Có thể quét nhiều CCCD liên tiếp trong session này mà không cần chọn lại cổng COM.
+                    {isSerialConnected ? (
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                                </span>
+                                <span className="text-sm text-emerald-300">Đã kết nối</span>
                             </div>
                             <Button
                                 type="button"
-                                variant="outline"
-                                className="border-slate-700 bg-slate-900 text-slate-100 hover:bg-slate-800"
-                                onClick={() => {
-                                    void serialController.disconnect()
-                                }}
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs text-slate-400 hover:text-slate-200"
+                                onClick={() => void serialController.disconnect()}
                             >
-                                Ngắt kết nối scanner
+                                <Unplug className="h-3 w-3 mr-1" />
+                                Ngắt
                             </Button>
-                        </>
-                    ) : null}
-
-                    {serialController.state === 'connecting' ? (
-                        <>
-                            <div className="text-sm text-sky-100">Đang kết nối scanner CCCD...</div>
-                            <div className="text-xs text-sky-100/80">
-                                Nếu trình duyệt hiển thị hộp chọn thiết bị, hãy chọn đúng cổng COM của scanner.
-                            </div>
-                            <Button
-                                type="button"
-                                disabled
-                                className="bg-sky-600 text-white hover:bg-sky-600"
-                            >
-                                Đang kết nối scanner...
-                            </Button>
-                        </>
-                    ) : null}
-
-                    {serialController.state === 'unsupported' ? (
-                        <div className="text-xs text-amber-200">
-                            Trình duyệt này không hỗ trợ Web Serial. Dùng Chrome hoặc Edge trên máy tính để quét CCCD qua cổng COM.
                         </div>
                     ) : null}
 
-                    {serialController.state === 'permission_required' || serialController.state === 'error' ? (
+                    {isSerialConnecting ? (
+                        <div className="text-sm text-sky-300 animate-pulse">
+                            Đang kết nối…
+                        </div>
+                    ) : null}
+
+                    {showSerialConnect ? (
                         <>
-                            <div className="text-xs text-sky-100/80">
-                                {serialController.state === 'error' && serialController.error
-                                    ? serialController.error
-                                    : 'Lần đầu trên trình duyệt này, bấm kết nối rồi chọn đúng cổng COM của scanner CCCD.'}
-                            </div>
+                            {serialController.state === 'error' && serialController.error ? (
+                                <div className="text-xs text-amber-300/80">{serialController.error}</div>
+                            ) : null}
                             <Button
                                 type="button"
-                                className="bg-sky-600 text-white hover:bg-sky-500"
-                                onClick={() => {
-                                    void serialController.connect()
-                                }}
+                                size="sm"
+                                className="w-full bg-sky-600 text-white hover:bg-sky-500"
+                                onClick={() => void serialController.connect()}
                             >
+                                <Plug className="h-3.5 w-3.5 mr-1.5" />
                                 Kết nối scanner CCCD
                             </Button>
                         </>
@@ -144,37 +159,27 @@ function ClientQrScannerDialogBody({
                 </div>
             ) : null}
 
-            <div className="space-y-2 mb-4">
-                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    {serialController
-                        ? 'Máy quét QR dạng bàn phím (dự phòng)'
-                        : 'Máy quét QR (USB/Bluetooth)'}
+            {/* ── Keyboard Scanner Input ── */}
+            <div className="rounded-lg border border-slate-700/60 bg-slate-900/60 p-3.5 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    <Keyboard className="h-3.5 w-3.5" />
+                    {serialController && !isSerialUnsupported
+                        ? 'Quét bằng bàn phím (dự phòng)'
+                        : 'Máy quét QR (USB / Bluetooth)'}
                 </div>
-                <Input
-                    ref={scannerInputRef}
-                    value={scannerPayload}
-                    onChange={(e) => setScannerPayload(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key !== 'Enter') return
-                        e.preventDefault()
-                        const payload = sanitizeScannerPayload(scannerPayload)
-                        if (!payload) return
-                        if (payload === lastHandledPayloadRef.current) return
-                        lastHandledPayloadRef.current = payload
-                        void onScan(payload)
-                    }}
-                    placeholder="Đặt con trỏ ở đây rồi quét CCCD…"
-                    className="bg-slate-900 border-slate-700 text-slate-100 placeholder:text-slate-500"
-                    inputMode="none"
-                    autoComplete="off"
-                />
-                <div className="text-xs text-slate-500">
-                    {serialController
-                        ? 'Dùng khi scanner đang ở chế độ keyboard. Nếu máy quét tự gửi Enter, hệ thống sẽ xử lý ngay; nếu không, sẽ tự xử lý sau khi quét xong.'
-                        : 'Nếu máy quét tự gửi Enter, hệ thống sẽ xử lý ngay; nếu không, sẽ tự xử lý sau khi quét xong.'}
-                </div>
+                <KeyboardScannerInput onScan={onScan} />
             </div>
-            <QRScanner onScan={onScan} onError={(err) => console.error(err)} />
+
+            {/* ── Camera Scanner — hidden when COM is connected ── */}
+            {showCamera ? (
+                <div className="rounded-lg border border-slate-700/60 bg-slate-900/60 p-3.5 space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                        <Camera className="h-3.5 w-3.5" />
+                        Camera
+                    </div>
+                    <QRScanner onScan={onScan} />
+                </div>
+            ) : null}
         </div>
     )
 }
@@ -190,10 +195,10 @@ export function ClientQrScannerDialog({
             <DialogContent className="sm:max-w-md bg-slate-950 border-slate-800 text-slate-100">
                 <DialogHeader>
                     <DialogTitle>Quét mã QR CCCD</DialogTitle>
-                    <DialogDescription className="text-slate-300">
+                    <DialogDescription className="text-slate-400">
                         {serialController
-                            ? 'Ưu tiên máy quét CCCD qua cổng COM. Nếu chưa sẵn sàng, vẫn có thể dùng camera hoặc máy quét dạng bàn phím.'
-                            : 'Có thể dùng camera hoặc máy quét QR (USB/Bluetooth) để tự động điền thông tin khách hàng'}
+                            ? 'Ưu tiên dùng scanner qua cổng COM, hoặc quét bằng bàn phím / camera.'
+                            : 'Dùng camera hoặc máy quét QR để tự động điền thông tin.'}
                     </DialogDescription>
                 </DialogHeader>
                 {open ? <ClientQrScannerDialogBody onScan={onScan} serialController={serialController} /> : null}
@@ -201,4 +206,3 @@ export function ClientQrScannerDialog({
         </Dialog>
     )
 }
-

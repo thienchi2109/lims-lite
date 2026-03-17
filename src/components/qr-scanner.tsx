@@ -1,10 +1,8 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import type { Html5QrcodeResult } from 'html5-qrcode'
 import { Html5Qrcode } from 'html5-qrcode'
-import { Button } from '@/components/ui/button'
-import { X } from 'lucide-react'
 import {
     buildRuntimeEnhancementConstraints,
     categorizeScanFailure,
@@ -23,91 +21,135 @@ interface QRScannerProps {
     onTelemetry?: (event: QrScanTelemetryEvent) => void
 }
 
-const DEFAULT_GUIDANCE =
-    'Mẹo quét nhanh: Giữ mã QR trong khung, cách 10–15cm, đủ sáng và giữ máy ổn định.'
-const COMPATIBILITY_GUIDANCE =
-    'Thiết bị đang dùng chế độ tương thích. Nếu khó quét, tăng ánh sáng hoặc dùng máy quét USB/Bluetooth.'
 
 export function QRScanner({ onScan, onError, onTelemetry }: QRScannerProps) {
     const [isScanning, setIsScanning] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [isInitializing, setIsInitializing] = useState(false)
-    const [scanGuidance, setScanGuidance] = useState(DEFAULT_GUIDANCE)
     const scannerRef = useRef<Html5Qrcode | null>(null)
     const elementId = 'qr-reader'
-    const scannerInitializedRef = useRef(false)
+    const isStartingRef = useRef(false)
     const lastErrorTimeRef = useRef<number>(0)
     const scanStartedAtRef = useRef<number | null>(null)
     const didEmitSuccessTelemetryRef = useRef(false)
     const usedCompatibilityModeRef = useRef(false)
+    const isMountedRef = useRef(false)
+    const scanSessionRef = useRef(0)
 
-    const startScanning = async () => {
+    // Callback refs — prevent startScanning identity changes on parent re-render
+    const onScanRef = useRef(onScan)
+    const onErrorRef = useRef(onError)
+    const onTelemetryRef = useRef(onTelemetry)
+    useEffect(() => { onScanRef.current = onScan }, [onScan])
+    useEffect(() => { onErrorRef.current = onError }, [onError])
+    useEffect(() => { onTelemetryRef.current = onTelemetry }, [onTelemetry])
+
+    const isScanSessionActive = useCallback(
+        (sessionToken: number) => isMountedRef.current && scanSessionRef.current === sessionToken,
+        [],
+    )
+
+    const stopScanning = useCallback(
+        async ({ resetUi = true, scanner = scannerRef.current }: { resetUi?: boolean; scanner?: Html5Qrcode | null } = {}) => {
+            try {
+                if (scanner) {
+                    const state = scanner.getState()
+                    // Html5QrcodeState: NOT_STARTED=0, SCANNING=2, PAUSED=3
+                    if (state === 2 || state === 3) {
+                        await scanner.stop()
+                    }
+                    scanner.clear()
+                }
+            } catch (err) {
+                console.warn('Error stopping QR scanner:', err)
+            } finally {
+                if (scannerRef.current === scanner) {
+                    scannerRef.current = null
+                }
+
+                if (resetUi && isMountedRef.current) {
+                    setIsScanning(false)
+                    setIsInitializing(false)
+                }
+
+                isStartingRef.current = false
+            }
+        },
+        [],
+    )
+
+    const startScanning = useCallback(async (sessionToken: number) => {
+        // Prevent concurrent starts
+        if (isStartingRef.current || scannerRef.current) return
+        isStartingRef.current = true
+        let html5QrCode: Html5Qrcode | null = null
+
         try {
+            if (!isScanSessionActive(sessionToken)) return
+
             setError(null)
             setIsInitializing(true)
 
             // Wait for DOM element to be ready
-            await new Promise(resolve => setTimeout(resolve, 100))
+            await new Promise(resolve => setTimeout(resolve, 150))
+            if (!isScanSessionActive(sessionToken)) return
 
-            const html5QrCode = new Html5Qrcode(elementId, createCccdScannerFullConfig())
-            scannerRef.current = html5QrCode
-            scannerInitializedRef.current = true
-            setScanGuidance(DEFAULT_GUIDANCE)
+            // Verify DOM element exists before initializing
+            const readerElement = document.getElementById(elementId)
+            if (!readerElement) {
+                throw new Error('Phần tử camera chưa sẵn sàng. Vui lòng thử lại.')
+            }
+
+            const activeScanner = new Html5Qrcode(elementId, createCccdScannerFullConfig())
+            html5QrCode = activeScanner
+            scannerRef.current = activeScanner
             didEmitSuccessTelemetryRef.current = false
             usedCompatibilityModeRef.current = false
             scanStartedAtRef.current = Date.now()
 
-            const startWithConfig = async (scanConfig = createPreferredCameraScanConfig()) => html5QrCode.start(
-                { facingMode: 'environment' }, // Use back camera on mobile
-                scanConfig,
-                (decodedText, result?: Html5QrcodeResult) => {
-                    if (!didEmitSuccessTelemetryRef.current) {
-                        didEmitSuccessTelemetryRef.current = true
-                        const startedAt = scanStartedAtRef.current ?? Date.now()
-                        const timeToFirstDecodeMs = Math.max(0, Date.now() - startedAt)
-                        onTelemetry?.({
-                            type: 'success',
-                            timeToFirstDecodeMs,
-                            decoderSource: detectDecoderSource(result),
-                            usedCompatibilityMode: usedCompatibilityModeRef.current,
-                        })
-                    }
-
-                    // Successfully scanned
-                    onScan(decodedText)
-                    stopScanning()
-                },
-                (errorMessage) => {
-                    // Throttle error logging to prevent message handler violations
-                    // Only process errors once per second
-                    const now = Date.now()
-                    if (now - lastErrorTimeRef.current > 1000) {
-                        lastErrorTimeRef.current = now
-                        const bucket = categorizeScanFailure(errorMessage)
-                        onTelemetry?.({
-                            type: 'failure',
-                            bucket,
-                            message: errorMessage,
-                        })
-
-                        if (bucket === 'no_code_found') {
-                            setScanGuidance(
-                                usedCompatibilityModeRef.current
-                                    ? COMPATIBILITY_GUIDANCE
-                                    : DEFAULT_GUIDANCE,
-                            )
-                        }
-
-                        // Only log non-NotFoundException errors
-                        if (!errorMessage.includes('NotFoundException')) {
-                            // Use requestAnimationFrame to avoid blocking
-                            requestAnimationFrame(() => {
-                                console.warn('QR scan error:', errorMessage)
+            const startWithConfig = async (scanConfig = createPreferredCameraScanConfig()) =>
+                activeScanner.start(
+                    { facingMode: 'environment' },
+                    scanConfig,
+                    (decodedText, result?: Html5QrcodeResult) => {
+                        if (!didEmitSuccessTelemetryRef.current) {
+                            didEmitSuccessTelemetryRef.current = true
+                            const startedAt = scanStartedAtRef.current ?? Date.now()
+                            const timeToFirstDecodeMs = Math.max(0, Date.now() - startedAt)
+                            onTelemetryRef.current?.({
+                                type: 'success',
+                                timeToFirstDecodeMs,
+                                decoderSource: detectDecoderSource(result),
+                                usedCompatibilityMode: usedCompatibilityModeRef.current,
                             })
                         }
-                    }
-                },
-            )
+
+                        // Successfully scanned
+                        onScanRef.current(decodedText)
+                        void stopScanning()
+                    },
+                    (errorMessage) => {
+                        // Throttle error logging to prevent message handler violations
+                        const now = Date.now()
+                        if (now - lastErrorTimeRef.current > 1000) {
+                            lastErrorTimeRef.current = now
+                            const bucket = categorizeScanFailure(errorMessage)
+                            onTelemetryRef.current?.({
+                                type: 'failure',
+                                bucket,
+                                message: errorMessage,
+                            })
+
+
+                            // Only log non-NotFoundException errors
+                            if (!errorMessage.includes('NotFoundException')) {
+                                requestAnimationFrame(() => {
+                                    console.warn('QR scan error:', errorMessage)
+                                })
+                            }
+                        }
+                    },
+                )
 
             try {
                 await startWithConfig()
@@ -118,131 +160,114 @@ export function QRScanner({ onScan, onError, onTelemetry }: QRScannerProps) {
 
                 console.warn('Không áp dụng được cấu hình camera ưu tiên, chuyển sang chế độ tương thích.')
                 usedCompatibilityModeRef.current = true
-                setScanGuidance(COMPATIBILITY_GUIDANCE)
                 await startWithConfig(createCompatibilityCameraScanConfig())
             }
 
+            if (!isScanSessionActive(sessionToken)) {
+                await stopScanning({ resetUi: false, scanner: activeScanner })
+                return
+            }
+
             try {
-                const capabilities = html5QrCode.getRunningTrackCapabilities()
-                const settings = html5QrCode.getRunningTrackSettings()
+                const capabilities = activeScanner.getRunningTrackCapabilities()
+                const settings = activeScanner.getRunningTrackSettings()
                 const runtimeConstraints = buildRuntimeEnhancementConstraints(capabilities, settings)
 
                 if (runtimeConstraints) {
-                    await html5QrCode.applyVideoConstraints(runtimeConstraints)
+                    await activeScanner.applyVideoConstraints(runtimeConstraints)
                 }
             } catch (runtimeError) {
                 console.warn('Không thể áp dụng tối ưu camera runtime:', runtimeError)
-                onTelemetry?.({
+                onTelemetryRef.current?.({
                     type: 'failure',
                     bucket: 'constraints',
                     message: getErrorMessage(runtimeError),
                 })
             }
 
+            if (!isScanSessionActive(sessionToken)) {
+                await stopScanning({ resetUi: false, scanner: activeScanner })
+                return
+            }
+
             setIsScanning(true)
             setIsInitializing(false)
+            isStartingRef.current = false
         } catch (err) {
+            if (!isScanSessionActive(sessionToken)) return
+
             const errorMsg = getErrorMessage(err)
             setError(errorMsg)
-            onError?.(errorMsg)
-            onTelemetry?.({
+            onErrorRef.current?.(errorMsg)
+            onTelemetryRef.current?.({
                 type: 'failure',
                 bucket: categorizeScanFailure(errorMsg),
                 message: errorMsg,
             })
             setIsInitializing(false)
+            setIsScanning(false)
+            // Clean up partial scanner state on failure
+            if (html5QrCode) {
+                try {
+                    html5QrCode.clear()
+                } catch { /* ignore */ }
+                if (scannerRef.current === html5QrCode) {
+                    scannerRef.current = null
+                }
+            }
+            isStartingRef.current = false
             console.error('Error starting QR scanner:', err)
         }
-    }
+    }, [isScanSessionActive, stopScanning])
 
-    const stopScanning = async () => {
-        if (scannerRef.current) {
-            try {
-                await scannerRef.current.stop()
-                scannerRef.current.clear()
-                scannerRef.current = null
-                setIsScanning(false)
-            } catch (err) {
-                console.error('Error stopping QR scanner:', err)
-            }
-        }
-    }
-
-    // Initialize scanner when element is mounted
     useEffect(() => {
-        if (isScanning && !scannerInitializedRef.current) {
-            startScanning()
-        }
-    }, [isScanning])
+        isMountedRef.current = true
+        const sessionToken = scanSessionRef.current + 1
+        scanSessionRef.current = sessionToken
+        void startScanning(sessionToken)
 
-    // Cleanup on unmount
-    useEffect(() => {
         return () => {
-            if (scannerRef.current) {
-                scannerRef.current.stop().catch(console.error)
-            }
+            isMountedRef.current = false
+            scanSessionRef.current += 1
+            void stopScanning({ resetUi: false })
         }
-    }, [])
+    }, [startScanning, stopScanning])
 
-    // Auto-start scanning when component mounts
-    useEffect(() => {
-        if (!isScanning && !isInitializing) {
-            setIsInitializing(true)
-            setIsScanning(true)
-        }
-    }, [])
+    // Camera failed — show minimal notice (some callers have no fallback UI)
+    if (error && !isScanning && !isInitializing) {
+        return (
+            <div className="rounded-lg bg-slate-100 dark:bg-slate-800/50 px-4 py-3 text-center text-sm text-slate-500 dark:text-slate-400">
+                Camera không khả dụng
+            </div>
+        )
+    }
+
+    if (!isScanning && !isInitializing) {
+        return null
+    }
 
     return (
-        <div className="space-y-4">
-            {isScanning || isInitializing ? (
-                <div className="space-y-3">
-                    {/* Camera Preview with Glassmorphism Border */}
-                    <div className="relative rounded-xl overflow-hidden border-2 border-sky-500 dark:border-sky-400 shadow-lg">
-                        <div
-                            id={elementId}
-                            className="w-full aspect-square bg-slate-900"
-                        />
-                        {/* Scanning Indicator Overlay */}
-                        <div className="absolute inset-0 pointer-events-none">
-                            <div className="absolute top-4 left-4 right-4 flex justify-center">
-                                <div className="bg-slate-900/80 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-full border border-white/20 shadow-lg">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                                        <span className="font-medium">
-                                            {isInitializing ? 'Đang khởi động...' : 'Đang quét...'}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
+        <div className="relative rounded-lg overflow-hidden bg-slate-900">
+            <div
+                id={elementId}
+                className="w-full aspect-video"
+            />
+            {/* Scanning status pill */}
+            <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute top-2 left-0 right-0 flex justify-center">
+                    <div className="bg-slate-900/70 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-full border border-white/10">
+                        <div className="flex items-center gap-1.5">
+                            <span className="relative flex h-1.5 w-1.5">
+                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                            </span>
+                            <span className="font-medium">
+                                {isInitializing ? 'Khởi động…' : 'Đang quét…'}
+                            </span>
                         </div>
                     </div>
-
-                    {/* Stop Button - Touch Friendly with 8px gap */}
-                    <Button
-                        type="button"
-                        variant="destructive"
-                        onClick={stopScanning}
-                        disabled={isInitializing}
-                        className="w-full min-h-[48px] text-base font-medium transition-colors duration-200"
-                        aria-label="Dừng quét mã QR"
-                    >
-                        <X className="mr-2 h-5 w-5" />
-                        Dừng quét
-                    </Button>
-
-                    <div className="rounded-lg border border-sky-200/70 bg-sky-50 px-3 py-2 text-xs text-sky-900 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200">
-                        {scanGuidance}
-                    </div>
                 </div>
-            ) : null}
-
-            {/* Error Display with Better Styling */}
-            {error && (
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-900 dark:text-red-100 text-sm p-4 rounded-lg shadow-sm">
-                    <p className="font-medium mb-1">Lỗi máy ảnh</p>
-                    <p className="text-red-700 dark:text-red-300">{error}</p>
-                </div>
-            )}
+            </div>
         </div>
     )
 }

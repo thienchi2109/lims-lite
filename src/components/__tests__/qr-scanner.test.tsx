@@ -1,11 +1,24 @@
 import { act, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+function createDeferred<T>() {
+    let resolve!: (value: T | PromiseLike<T>) => void
+    let reject!: (reason?: unknown) => void
+
+    const promise = new Promise<T>((res, rej) => {
+        resolve = res
+        reject = rej
+    })
+
+    return { promise, resolve, reject }
+}
+
 const html5QrcodeMocks = vi.hoisted(() => {
     const constructorSpy = vi.fn()
     const start = vi.fn()
     const stop = vi.fn().mockResolvedValue(undefined)
     const clear = vi.fn()
+    const getState = vi.fn().mockReturnValue(2) // Html5QrcodeState.SCANNING
     const getRunningTrackCapabilities = vi.fn().mockReturnValue({})
     const getRunningTrackSettings = vi.fn().mockReturnValue({})
     const applyVideoConstraints = vi.fn().mockResolvedValue(undefined)
@@ -18,6 +31,7 @@ const html5QrcodeMocks = vi.hoisted(() => {
         start = start
         stop = stop
         clear = clear
+        getState = getState
         getRunningTrackCapabilities = getRunningTrackCapabilities
         getRunningTrackSettings = getRunningTrackSettings
         applyVideoConstraints = applyVideoConstraints
@@ -28,6 +42,7 @@ const html5QrcodeMocks = vi.hoisted(() => {
         start,
         stop,
         clear,
+        getState,
         getRunningTrackCapabilities,
         getRunningTrackSettings,
         applyVideoConstraints,
@@ -50,12 +65,14 @@ describe('QRScanner optimized start profile', () => {
         html5QrcodeMocks.start.mockReset()
         html5QrcodeMocks.stop.mockReset()
         html5QrcodeMocks.clear.mockReset()
+        html5QrcodeMocks.getState.mockReset()
         html5QrcodeMocks.getRunningTrackCapabilities.mockReset()
         html5QrcodeMocks.getRunningTrackSettings.mockReset()
         html5QrcodeMocks.applyVideoConstraints.mockReset()
 
         html5QrcodeMocks.start.mockResolvedValue(null)
         html5QrcodeMocks.stop.mockResolvedValue(undefined)
+        html5QrcodeMocks.getState.mockReturnValue(2) // Html5QrcodeState.SCANNING
         html5QrcodeMocks.getRunningTrackCapabilities.mockReturnValue({})
         html5QrcodeMocks.getRunningTrackSettings.mockReturnValue({})
         html5QrcodeMocks.applyVideoConstraints.mockResolvedValue(undefined)
@@ -104,11 +121,12 @@ describe('QRScanner optimized start profile', () => {
         expect(typeof scannerConfig.qrbox).toBe('function')
         expect(scannerConfig.videoConstraints).toEqual(
             expect.objectContaining({
-                facingMode: expect.objectContaining({ ideal: 'environment' }),
                 width: expect.objectContaining({ ideal: 1920 }),
                 height: expect.objectContaining({ ideal: 1080 }),
             }),
         )
+        // facingMode must NOT be in videoConstraints — it's passed via start() camera ID param
+        expect(scannerConfig.videoConstraints).not.toHaveProperty('facingMode')
         expect(scannerConfig.videoConstraints.width).not.toHaveProperty('min')
         expect(scannerConfig.videoConstraints.height).not.toHaveProperty('min')
     })
@@ -179,7 +197,7 @@ describe('QRScanner optimized start profile', () => {
         expect(html5QrcodeMocks.applyVideoConstraints).not.toHaveBeenCalled()
     })
 
-    it('shows non-blocking Vietnamese guidance while scanning', async () => {
+    it('shows scanning status pill after starting', async () => {
         const { getByText } = render(<QRScanner onScan={vi.fn()} />)
 
         await act(async () => {
@@ -187,55 +205,63 @@ describe('QRScanner optimized start profile', () => {
             await Promise.resolve()
         })
 
-        expect(getByText(/Mẹo quét nhanh/i)).toBeDefined()
+        expect(getByText(/Đang quét/i)).toBeDefined()
     })
 
-    it('shows compatibility guidance when preferred constraints are downgraded', async () => {
-        html5QrcodeMocks.start
-            .mockRejectedValueOnce(new Error('OverconstrainedError: unsupported constraint'))
-            .mockResolvedValueOnce(null)
+    it('shows minimal notice when camera fails to start', async () => {
+        html5QrcodeMocks.start.mockRejectedValueOnce(new Error('NotReadableError: no camera'))
 
         const { getByText } = render(<QRScanner onScan={vi.fn()} />)
 
         await act(async () => {
-            vi.advanceTimersByTime(300)
+            vi.advanceTimersByTime(200)
             await Promise.resolve()
         })
 
-        expect(getByText(/chế độ tương thích/i)).toBeDefined()
+        expect(getByText('Camera không khả dụng')).toBeDefined()
     })
 
-    it('keeps compatibility guidance after no-code errors while in compatibility mode', async () => {
-        html5QrcodeMocks.start
-            .mockRejectedValueOnce(new Error('OverconstrainedError: unsupported constraint'))
-            .mockImplementationOnce(
-                async (
-                    _camera: unknown,
-                    _config: unknown,
-                    _onSuccess: (decodedText: string, result?: unknown) => void,
-                    onError: (errorMessage: string) => void,
-                ) => {
-                    setTimeout(() => onError('NotFoundException: no code found'), 1200)
-                    return null
-                },
-            )
+    it('does not construct or start the scanner after unmounting before startup delay completes', async () => {
+        const { unmount } = render(<QRScanner onScan={vi.fn()} />)
 
-        const { getByText, queryByText } = render(<QRScanner onScan={vi.fn()} />)
+        unmount()
 
         await act(async () => {
-            vi.advanceTimersByTime(300)
+            vi.advanceTimersByTime(200)
             await Promise.resolve()
         })
 
-        expect(getByText(/chế độ tương thích/i)).toBeDefined()
+        expect(html5QrcodeMocks.constructorSpy).not.toHaveBeenCalled()
+        expect(html5QrcodeMocks.start).not.toHaveBeenCalled()
+    })
+
+    it('does not continue scanner startup after unmounting while start is pending', async () => {
+        const startDeferred = createDeferred<null>()
+        html5QrcodeMocks.start.mockReturnValueOnce(startDeferred.promise)
+        html5QrcodeMocks.getState
+            .mockReturnValueOnce(1) // Html5QrcodeState.NOT_STARTED during unmount cleanup
+            .mockReturnValue(2) // Html5QrcodeState.SCANNING once start() finishes
+
+        const { unmount } = render(<QRScanner onScan={vi.fn()} />)
 
         await act(async () => {
-            vi.advanceTimersByTime(1600)
+            vi.advanceTimersByTime(200)
             await Promise.resolve()
         })
 
-        expect(getByText(/chế độ tương thích/i)).toBeDefined()
-        expect(queryByText(/Mẹo quét nhanh/i)).toBeNull()
+        expect(html5QrcodeMocks.start).toHaveBeenCalledTimes(1)
+
+        unmount()
+
+        await act(async () => {
+            startDeferred.resolve(null)
+            await Promise.resolve()
+            await Promise.resolve()
+        })
+
+        expect(html5QrcodeMocks.stop).toHaveBeenCalledTimes(1)
+        expect(html5QrcodeMocks.getRunningTrackCapabilities).not.toHaveBeenCalled()
+        expect(html5QrcodeMocks.applyVideoConstraints).not.toHaveBeenCalled()
     })
 
     it('captures success telemetry with decoder source and preserves auto-close flow', async () => {
