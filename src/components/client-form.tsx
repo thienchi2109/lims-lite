@@ -37,6 +37,7 @@ export function ClientForm({
 }: ClientFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [submitError, setSubmitError] = useState<string | null>(null)
+    const dateInputClassName = "shadow-sm h-9 w-full min-w-0 max-w-full text-sm [appearance:textfield] [&::-webkit-datetime-edit]:block [&::-webkit-datetime-edit]:overflow-hidden [&::-webkit-datetime-edit]:text-ellipsis [&::-webkit-datetime-edit-fields-wrapper]:overflow-hidden [&::-webkit-date-and-time-value]:text-left"
 
     // Prepare safe gender value from initialData
     const safeGender: Gender = (() => {
@@ -155,7 +156,7 @@ export function ClientForm({
                     )}
                 </div>
 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {/* Gender */}
                     <div className="min-w-0 space-y-1.5">
                         <Label htmlFor="gender" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -194,7 +195,7 @@ export function ClientForm({
                             id="date_of_birth"
                             type="date"
                             {...register('date_of_birth')}
-                            className="shadow-sm h-9 min-w-0 text-sm"
+                            className={dateInputClassName}
                         />
                         {errors.date_of_birth && (
                             <p className="text-xs text-red-600" role="alert">{errors.date_of_birth.message}</p>
@@ -245,7 +246,7 @@ export function ClientForm({
                 </div>
 
                 {/* Expiry Date */}
-                <div className="space-y-1.5">
+                <div className="min-w-0 space-y-1.5">
                     <Label htmlFor="expiry_date" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                         Hạn sử dụng BHYT
                     </Label>
@@ -253,7 +254,7 @@ export function ClientForm({
                         id="expiry_date"
                         type="date"
                         {...register('expiry_date')}
-                        className="shadow-sm h-9"
+                        className={dateInputClassName}
                     />
                 </div>
             </div>

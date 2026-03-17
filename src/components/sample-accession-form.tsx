@@ -277,14 +277,14 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
                     <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                         Thời gian nhận
                     </Label>
-                    <div className="relative">
+                    <div className="relative min-w-0">
                         <div className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 pointer-events-none">
                             <Calendar size={18} />
                         </div>
                         <Input
                             type="datetime-local"
                             {...register('received_at')}
-                            className="pl-10 h-11 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                            className="h-11 w-full min-w-0 max-w-full bg-slate-50 pl-10 text-sm [appearance:textfield] [&::-webkit-datetime-edit]:block [&::-webkit-datetime-edit]:overflow-hidden [&::-webkit-datetime-edit]:text-ellipsis [&::-webkit-datetime-edit-fields-wrapper]:overflow-hidden dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                         />
                     </div>
                     <p className="text-[10px] text-slate-400 mt-1">Mặc định là thời gian hiện tại.</p>
