@@ -181,6 +181,7 @@ export function useCccdSerialController({
                         setError(getErrorMessage(readError))
                         setState('error')
                     } finally {
+                        decoder.reset()
                         isConnectingRef.current = false
 
                         try {

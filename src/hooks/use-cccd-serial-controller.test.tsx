@@ -60,6 +60,7 @@ function setNavigatorSerial(serial: unknown) {
 describe('useCccdSerialController', () => {
     afterEach(() => {
         vi.clearAllMocks()
+        vi.useRealTimers()
         setNavigatorSerial(undefined)
     })
 
@@ -367,5 +368,37 @@ describe('useCccdSerialController', () => {
             expect(port.open).toHaveBeenCalledTimes(1)
             expect(result.current.state).toBe('connected')
         })
+    })
+
+    it('does not emit a buffered partial payload after disconnect cancels the read loop', async () => {
+        const onPayload = vi.fn()
+        const partialPayload = '086094006827|331757192|Nguyễn Thiện Chí'
+        const { port } = createMockSerialPort([new TextEncoder().encode(partialPayload)])
+        const serialApi = {
+            getPorts: vi.fn().mockResolvedValue([port]),
+            requestPort: vi.fn(),
+        }
+
+        setNavigatorSerial(serialApi)
+
+        const { result } = renderHook(() =>
+            useCccdSerialController({
+                active: true,
+                onPayload,
+            }),
+        )
+
+        await waitFor(() => {
+            expect(result.current.state).toBe('connected')
+            expect(port.open).toHaveBeenCalledTimes(1)
+        })
+
+        await act(async () => {
+            await result.current.disconnect()
+        })
+
+        await new Promise((resolve) => setTimeout(resolve, 200))
+
+        expect(onPayload).not.toHaveBeenCalled()
     })
 })
