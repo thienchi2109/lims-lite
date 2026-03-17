@@ -65,6 +65,7 @@ export function useCccdSerialController({
     const onPayloadRef = useRef(onPayload)
     const portRef = useRef<BrowserSerialPortLike | null>(null)
     const readerRef = useRef<BrowserSerialReaderLike | null>(null)
+    const isConnectingRef = useRef(false)
     const sessionTokenRef = useRef(0)
 
     useEffect(() => {
@@ -73,6 +74,7 @@ export function useCccdSerialController({
 
     const disconnect = useCallback(async () => {
         sessionTokenRef.current += 1
+        isConnectingRef.current = false
 
         const activeReader = readerRef.current
         const activePort = portRef.current
@@ -115,66 +117,75 @@ export function useCccdSerialController({
             sessionTokenRef.current = token
 
             setError(null)
+            isConnectingRef.current = true
             setState('connecting')
 
-            await port.open({ baudRate: DEFAULT_CCCD_SERIAL_BAUD_RATE })
+            try {
+                await port.open({ baudRate: DEFAULT_CCCD_SERIAL_BAUD_RATE })
 
-            if (!port.readable) {
-                throw new Error('Scanner CCCD không cung cấp luồng dữ liệu để đọc.')
-            }
+                if (!port.readable) {
+                    throw new Error('Scanner CCCD không cung cấp luồng dữ liệu để đọc.')
+                }
 
-            const reader = port.readable.getReader()
-            const decoder = createCccdSerialFrameDecoder({
-                onPayload: (payload) => onPayloadRef.current(payload),
-            })
+                const reader = port.readable.getReader()
+                const decoder = createCccdSerialFrameDecoder({
+                    onPayload: (payload) => onPayloadRef.current(payload),
+                })
 
-            portRef.current = port
-            readerRef.current = reader
-            setState('connected')
+                portRef.current = port
+                readerRef.current = reader
+                isConnectingRef.current = false
+                setState('connected')
 
-            void (async () => {
-                try {
-                    while (sessionTokenRef.current === token) {
-                        const { value, done } = await reader.read()
+                void (async () => {
+                    try {
+                        while (sessionTokenRef.current === token) {
+                            const { value, done } = await reader.read()
+
+                            if (sessionTokenRef.current !== token) return
+                            if (done) break
+                            if (value) decoder.push(value)
+                        }
+
+                        decoder.flush()
+                    } catch (readError) {
+                        if (sessionTokenRef.current !== token) return
+
+                        setError(getErrorMessage(readError))
+                        setState('error')
+                    } finally {
+                        isConnectingRef.current = false
+
+                        try {
+                            reader.releaseLock()
+                        } catch {
+                            // Lock might already be released during teardown.
+                        }
+
+                        if (readerRef.current === reader) {
+                            readerRef.current = null
+                        }
 
                         if (sessionTokenRef.current !== token) return
-                        if (done) break
-                        if (value) decoder.push(value)
+                        portRef.current = null
+
+                        try {
+                            await port.close()
+                        } catch {
+                            // Ignore cleanup failures after read loop exits.
+                        }
+
+                        if (active) {
+                            setState((currentState) =>
+                                currentState === 'error' ? currentState : 'permission_required',
+                            )
+                        }
                     }
-
-                    decoder.flush()
-                } catch (readError) {
-                    if (sessionTokenRef.current !== token) return
-
-                    setError(getErrorMessage(readError))
-                    setState('error')
-                } finally {
-                    try {
-                        reader.releaseLock()
-                    } catch {
-                        // Lock might already be released during teardown.
-                    }
-
-                    if (readerRef.current === reader) {
-                        readerRef.current = null
-                    }
-
-                    if (sessionTokenRef.current !== token) return
-                    portRef.current = null
-
-                    try {
-                        await port.close()
-                    } catch {
-                        // Ignore cleanup failures after read loop exits.
-                    }
-
-                    if (active) {
-                        setState((currentState) =>
-                            currentState === 'error' ? currentState : 'permission_required',
-                        )
-                    }
-                }
-            })()
+                })()
+            } catch (error) {
+                isConnectingRef.current = false
+                throw error
+            }
         },
         [active, disconnect],
     )
@@ -213,7 +224,7 @@ export function useCccdSerialController({
             return
         }
 
-        if (portRef.current || state === 'connecting' || state === 'error') return
+        if (portRef.current || isConnectingRef.current) return
 
         let cancelled = false
 
@@ -237,7 +248,7 @@ export function useCccdSerialController({
         return () => {
             cancelled = true
         }
-    }, [active, connectToPort, disconnect, state])
+    }, [active, connectToPort, disconnect])
 
     return {
         state,

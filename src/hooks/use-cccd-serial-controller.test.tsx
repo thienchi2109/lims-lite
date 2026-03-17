@@ -195,4 +195,40 @@ describe('useCccdSerialController', () => {
         expect(failingPort.open).toHaveBeenCalledTimes(1)
         expect(serialApi.requestPort).not.toHaveBeenCalled()
     })
+
+    it('does not auto-resume immediately after an explicit disconnect while still active', async () => {
+        const { port, reader } = createMockSerialPort()
+        const serialApi = {
+            getPorts: vi.fn().mockResolvedValue([port]),
+            requestPort: vi.fn(),
+        }
+
+        setNavigatorSerial(serialApi)
+
+        const { result } = renderHook(() =>
+            useCccdSerialController({
+                active: true,
+                onPayload: vi.fn(),
+            }),
+        )
+
+        await waitFor(() => {
+            expect(result.current.state).toBe('connected')
+        })
+
+        await act(async () => {
+            await result.current.disconnect()
+        })
+
+        await waitFor(() => {
+            expect(reader.cancel).toHaveBeenCalledTimes(1)
+            expect(port.close).toHaveBeenCalledTimes(1)
+            expect(result.current.state).toBe('permission_required')
+        })
+
+        await new Promise((resolve) => setTimeout(resolve, 50))
+
+        expect(serialApi.getPorts).toHaveBeenCalledTimes(1)
+        expect(port.open).toHaveBeenCalledTimes(1)
+    })
 })
