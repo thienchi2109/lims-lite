@@ -155,9 +155,9 @@ export function ClientForm({
                     )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {/* Gender */}
-                    <div className="space-y-1.5">
+                    <div className="min-w-0 space-y-1.5">
                         <Label htmlFor="gender" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                             Giới tính *
                         </Label>
@@ -186,7 +186,7 @@ export function ClientForm({
                     </div>
 
                     {/* DOB */}
-                    <div className="space-y-1.5">
+                    <div className="min-w-0 space-y-1.5">
                         <Label htmlFor="date_of_birth" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                             Ngày sinh *
                         </Label>
@@ -194,7 +194,7 @@ export function ClientForm({
                             id="date_of_birth"
                             type="date"
                             {...register('date_of_birth')}
-                            className="shadow-sm h-9"
+                            className="shadow-sm h-9 min-w-0 text-sm"
                         />
                         {errors.date_of_birth && (
                             <p className="text-xs text-red-600" role="alert">{errors.date_of_birth.message}</p>
