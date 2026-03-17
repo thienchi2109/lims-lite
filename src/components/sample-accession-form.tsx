@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
 import { TestAssignmentGrid } from '@/components/test-assignment-grid'
 import { CheckCircle2, AlertCircle, QrCode, Scan, Calendar } from 'lucide-react'
 import { ClientSelector } from '@/components/client-selector'
@@ -89,6 +90,10 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
     const receivedAtWatched = watch('received_at')
 
     const onSubmit = async (data: FormData) => {
+        if (submitSuccess) {
+            return
+        }
+
         // Validate Client Selection
         if (!selectedClient) {
             setSubmitError('Vui lòng chọn khách hàng')
@@ -199,6 +204,15 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
         onPayload: handleQRScan,
     })
 
+    const handleResetForm = useCallback(() => {
+        reset()
+        setSelectedTests([])
+        setSelectedClient(null)
+        setSelectedSampleType('Máu')
+        setSubmitSuccess(null)
+        setSubmitError(null)
+    }, [reset])
+
     // Context Content (Card Style)
     const contextContent = (
         <div className="space-y-6 lg:space-y-6">
@@ -295,6 +309,14 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
                         <CheckCircle2 className="h-4 w-4" />
                         {submitSuccess}
                     </div>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full sm:w-auto"
+                        onClick={handleResetForm}
+                    >
+                        Tiếp nhận mẫu mới
+                    </Button>
                 </div>
             )}
 
@@ -306,15 +328,6 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
             />
         </div>
     )
-
-    const handleResetForm = useCallback(() => {
-        reset()
-        setSelectedTests([])
-        setSelectedClient(null)
-        setSelectedSampleType('Máu')
-        setSubmitSuccess(null)
-        setSubmitError(null)
-    }, [reset])
 
     const wizardProps = useMemo(() => ({
         selectedClient,
@@ -349,6 +362,7 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
                     specialties={specialties}
                     context={contextContent}
                     isSaving={isSubmitting}
+                    isSaveDisabled={!!submitSuccess}
                     onSave={handleSubmit(onSubmit)}
                     saveLabel={selectedTests.length > 0
                         ? `Lưu & Chỉ định (${selectedTests.length})`

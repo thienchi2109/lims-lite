@@ -16,6 +16,7 @@ export interface TestAssignmentGridProps {
     specialties?: LabSpecialty[]
     onSave?: () => void
     isSaving?: boolean
+    isSaveDisabled?: boolean
     saveLabel?: string
     summaryInfo?: {
         clientName?: string

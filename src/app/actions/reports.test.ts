@@ -13,6 +13,7 @@ const mockSelect = vi.fn()
 const mockEq = vi.fn()
 const mockSingle = vi.fn()
 const mockGetUser = vi.fn()
+const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(() => ({
@@ -31,6 +32,7 @@ describe('getKPIMetrics', () => {
   beforeEach(() => {
     // Reset all mocks before each test
     vi.clearAllMocks()
+    consoleErrorSpy.mockClear()
 
     // Default mock responses
     mockRpc.mockResolvedValue({ data: null, error: null })
@@ -108,36 +110,49 @@ describe('getKPIMetrics', () => {
     await expect(getKPIMetrics(invalidDateRange)).rejects.toThrow()
   })
 
-  it('should handle RPC error gracefully', async () => {
+  it('logs each KPI RPC failure and throws instead of returning partial metrics', async () => {
     const dateRange: DateRange = {
       start: '2024-12-01T00:00:00Z',
       end: '2024-12-20T23:59:59Z',
     }
 
-    // Mock RPC error
+    // Mock multiple RPC errors so every swallowed failure must be logged.
     mockRpc
       .mockResolvedValueOnce({
         data: null,
         error: { message: 'RPC function not found' },
       })
       .mockResolvedValueOnce({
-        data: [{ status: 'received', count: 20 }],
-        error: null,
+        data: [],
+        error: { message: 'Status RPC failed' },
       })
       .mockResolvedValueOnce({
-        data: { pending_count: 15, avg_wait_hours: 12.0, overdue_count: 2 },
-        error: null,
+        data: null,
+        error: { message: 'Approval RPC failed' },
       })
       .mockResolvedValueOnce({
-        data: { error_rate: 2.5, total_modifications: 10, total_results: 400 },
-        error: null,
+        data: null,
+        error: { message: 'Error-rate RPC failed' },
       })
 
-    const result = await getKPIMetrics(dateRange)
+    await expect(getKPIMetrics(dateRange)).rejects.toThrow('RPC function not found')
 
-    // Should return default/fallback values when RPC fails
-    expect(result.avgTAT.value).toBe(0)
-    expect(result.avgTAT.previousValue).toBe(0)
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'KPI metrics RPC failed: calculate_average_tat',
+      expect.objectContaining({ message: 'RPC function not found' }),
+    )
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'KPI metrics RPC failed: get_samples_by_status',
+      expect.objectContaining({ message: 'Status RPC failed' }),
+    )
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'KPI metrics RPC failed: get_approval_queue_metrics',
+      expect.objectContaining({ message: 'Approval RPC failed' }),
+    )
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'KPI metrics RPC failed: get_error_rate_metrics',
+      expect.objectContaining({ message: 'Error-rate RPC failed' }),
+    )
   })
 
   it('should handle empty data gracefully', async () => {
@@ -305,11 +320,7 @@ describe('RLS Compliance', () => {
         error: null,
       })
 
-    const result = await getKPIMetrics(dateRange)
-
-    // Should return safe defaults when RLS blocks access
-    expect(result.avgTAT.value).toBe(0)
-    expect(result.avgTAT.previousValue).toBe(0)
+    await expect(getKPIMetrics(dateRange)).rejects.toThrow('row-level security policy')
   })
 })
 
@@ -395,9 +406,6 @@ describe('Error Handling', () => {
         error: null,
       })
 
-    const result = await getKPIMetrics(dateRange)
-
-    // Should return safe defaults for timed-out query
-    expect(result.avgTAT.value).toBe(0)
+    await expect(getKPIMetrics(dateRange)).rejects.toThrow('statement timeout')
   })
 })

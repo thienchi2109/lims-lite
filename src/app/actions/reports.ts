@@ -35,6 +35,27 @@ function getRecordList<T extends RpcRecord>(data: T[] | T | null | undefined): T
   return []
 }
 
+function normalizeRpcError(error: unknown, rpcName: string): Error {
+  if (error instanceof Error) {
+    return error
+  }
+
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = typeof error.message === 'string'
+      ? error.message
+      : `KPI metrics RPC failed: ${rpcName}`
+    const normalizedError = new Error(message)
+
+    if ('code' in error && typeof error.code === 'string') {
+      ;(normalizedError as Error & { code?: string }).code = error.code
+    }
+
+    return normalizedError
+  }
+
+  return new Error(`KPI metrics RPC failed: ${rpcName}`)
+}
+
 /**
  * Fetches all 5 KPI metrics for the dashboard
  * Returns: Average TAT, WIP count, pending approvals, on-time rate, error rate
@@ -75,6 +96,22 @@ export async function getKPIMetrics(dateRange: DateRange): Promise<KPIMetrics> {
     const statusRecords = statusError ? [] : getRecordList(statusData)
     const approvalRecord = approvalError ? null : getFirstRecord(approvalData)
     const errorRecord = errorError ? null : getFirstRecord(errorData)
+
+    const rpcFailures = [
+      { rpcName: 'calculate_average_tat', error: tatError },
+      { rpcName: 'get_samples_by_status', error: statusError },
+      { rpcName: 'get_approval_queue_metrics', error: approvalError },
+      { rpcName: 'get_error_rate_metrics', error: errorError },
+    ].filter((failure) => failure.error !== null)
+
+    if (rpcFailures.length > 0) {
+      rpcFailures.forEach(({ rpcName, error }) => {
+        console.error(`KPI metrics RPC failed: ${rpcName}`, error)
+      })
+
+      const firstFailure = rpcFailures[0]
+      throw normalizeRpcError(firstFailure.error, firstFailure.rpcName)
+    }
 
     // Calculate WIP (received + assigned + in_progress + review)
     const wipCount = statusRecords

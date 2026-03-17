@@ -51,12 +51,14 @@ vi.mock('@/components/test-assignment-grid', () => ({
         onChange,
         context,
         onSave,
+        isSaveDisabled,
         wizardProps,
     }: {
         selected: Array<{ assayId: string }>
         onChange: (tests: unknown[]) => void
         context?: React.ReactNode
         onSave: () => void
+        isSaveDisabled?: boolean
         wizardProps?: {
             selectedClient?: { name: string } | null
             selectedSampleType?: string
@@ -76,7 +78,7 @@ vi.mock('@/components/test-assignment-grid', () => ({
             >
                 Thêm xét nghiệm
             </button>
-            <button type="button" onClick={onSave}>
+            <button type="button" onClick={onSave} disabled={isSaveDisabled}>
                 Lưu mẫu
             </button>
             {context}
@@ -241,5 +243,30 @@ describe('SampleAccessionForm', () => {
         )
         expect(screen.getByTestId('selected-sample-type').textContent).toBe('Nước tiểu')
         expect(screen.getByTestId('selected-count').textContent).toBe('0')
+    })
+
+    it('requires an explicit desktop reset before another save after success', async () => {
+        render(<SampleAccessionForm specialties={[]} />)
+
+        fireEvent.click(screen.getByRole('button', { name: 'Chọn khách hàng' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Chọn Nước tiểu' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Thêm xét nghiệm' }))
+
+        const saveButton = screen.getByRole('button', { name: 'Lưu mẫu' })
+        fireEvent.click(saveButton)
+
+        await waitFor(() => {
+            expect(accessionFormMocks.accessionAndAssignTestsClient).toHaveBeenCalledTimes(1)
+        })
+
+        expect((saveButton as HTMLButtonElement).disabled).toBe(true)
+
+        fireEvent.click(screen.getByRole('button', { name: 'Tiếp nhận mẫu mới' }))
+
+        expect(screen.getByTestId('submit-success').textContent).toBe('')
+        expect(screen.getByTestId('selected-client').textContent).toBe('')
+        expect(screen.getByTestId('selected-sample-type').textContent).toBe('Máu')
+        expect(screen.getByTestId('selected-count').textContent).toBe('0')
+        expect((saveButton as HTMLButtonElement).disabled).toBe(false)
     })
 })

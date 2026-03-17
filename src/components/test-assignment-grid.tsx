@@ -23,6 +23,7 @@ export function TestAssignmentGrid({
     specialties = [],
     onSave = () => { },
     isSaving = false,
+    isSaveDisabled = false,
     saveLabel = 'Lưu thay đổi',
     summaryInfo,
     wizardProps,
@@ -129,6 +130,7 @@ export function TestAssignmentGrid({
                         availableAssays={logic.processedAssays}
                         onSave={onSave}
                         isSaving={isSaving}
+                        isSaveDisabled={isSaveDisabled}
                         saveLabel={saveLabel}
                     />
                 </ResizablePanel>
