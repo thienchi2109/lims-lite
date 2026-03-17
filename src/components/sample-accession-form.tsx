@@ -223,10 +223,14 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
                 <button
                     type="button"
                     onClick={() => setShowQRScanner(true)}
-                    className="w-full py-3 border-2 border-dashed border-blue-500/50 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center gap-2 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all active:scale-[0.98]"
+                    className="group w-full rounded-xl border border-sky-200/80 bg-gradient-to-r from-sky-50 via-blue-50 to-indigo-50 px-4 py-3 text-sky-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-sky-300 hover:shadow-md active:translate-y-0 dark:border-sky-800/70 dark:from-sky-950/40 dark:via-blue-950/30 dark:to-indigo-950/30 dark:text-sky-300"
                 >
-                    <Scan size={20} />
-                    <span className="font-medium">Bấm để quét mã khách hàng</span>
+                    <span className="flex items-center justify-center gap-3">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-sky-600 shadow-sm dark:bg-slate-900/70 dark:text-sky-300">
+                            <Scan size={18} />
+                        </span>
+                        <span className="font-medium tracking-tight">Quét mã QR trên CCCD</span>
+                    </span>
                 </button>
             </div>
 
