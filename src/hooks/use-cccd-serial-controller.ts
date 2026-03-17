@@ -30,6 +30,10 @@ type UseCccdSerialControllerResult = {
     disconnect: () => Promise<void>
 }
 
+type ReleaseConnectionOptions = {
+    resetState: boolean
+}
+
 function getErrorMessage(error: unknown): string {
     if (error instanceof Error && error.message) return error.message
     return 'Không thể kết nối scanner CCCD.'
@@ -72,7 +76,7 @@ export function useCccdSerialController({
         onPayloadRef.current = onPayload
     }, [onPayload])
 
-    const disconnect = useCallback(async () => {
+    const releaseConnection = useCallback(async ({ resetState }: ReleaseConnectionOptions) => {
         sessionTokenRef.current += 1
         isConnectingRef.current = false
 
@@ -100,13 +104,19 @@ export function useCccdSerialController({
             // Ignore close failures and allow user to reconnect.
         }
 
-        if (getBrowserSerialApi()) {
-            setState('permission_required')
-            setError(null)
-        } else {
-            setState('unsupported')
+        if (resetState) {
+            if (getBrowserSerialApi()) {
+                setState('permission_required')
+                setError(null)
+            } else {
+                setState('unsupported')
+            }
         }
     }, [])
+
+    const disconnect = useCallback(async () => {
+        await releaseConnection({ resetState: true })
+    }, [releaseConnection])
 
     const connectToPort = useCallback(
         async (port: BrowserSerialPortLike) => {
@@ -249,6 +259,12 @@ export function useCccdSerialController({
             cancelled = true
         }
     }, [active, connectToPort, disconnect])
+
+    useEffect(() => {
+        return () => {
+            void releaseConnection({ resetState: false })
+        }
+    }, [releaseConnection])
 
     return {
         state,

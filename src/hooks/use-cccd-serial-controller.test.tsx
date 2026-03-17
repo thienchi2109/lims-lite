@@ -231,4 +231,32 @@ describe('useCccdSerialController', () => {
         expect(serialApi.getPorts).toHaveBeenCalledTimes(1)
         expect(port.open).toHaveBeenCalledTimes(1)
     })
+
+    it('releases reader and port resources when the hook unmounts while connected', async () => {
+        const { port, reader } = createMockSerialPort()
+        const serialApi = {
+            getPorts: vi.fn().mockResolvedValue([port]),
+            requestPort: vi.fn(),
+        }
+
+        setNavigatorSerial(serialApi)
+
+        const { result, unmount } = renderHook(() =>
+            useCccdSerialController({
+                active: true,
+                onPayload: vi.fn(),
+            }),
+        )
+
+        await waitFor(() => {
+            expect(result.current.state).toBe('connected')
+        })
+
+        unmount()
+
+        await waitFor(() => {
+            expect(reader.cancel).toHaveBeenCalledTimes(1)
+            expect(port.close).toHaveBeenCalledTimes(1)
+        })
+    })
 })
