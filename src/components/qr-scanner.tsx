@@ -163,7 +163,10 @@ export function QRScanner({ onScan, onError, onTelemetry }: QRScannerProps) {
                 await startWithConfig(createCompatibilityCameraScanConfig())
             }
 
-            if (!isScanSessionActive(sessionToken)) return
+            if (!isScanSessionActive(sessionToken)) {
+                await stopScanning({ resetUi: false, scanner: activeScanner })
+                return
+            }
 
             try {
                 const capabilities = activeScanner.getRunningTrackCapabilities()
@@ -182,7 +185,10 @@ export function QRScanner({ onScan, onError, onTelemetry }: QRScannerProps) {
                 })
             }
 
-            if (!isScanSessionActive(sessionToken)) return
+            if (!isScanSessionActive(sessionToken)) {
+                await stopScanning({ resetUi: false, scanner: activeScanner })
+                return
+            }
 
             setIsScanning(true)
             setIsInitializing(false)

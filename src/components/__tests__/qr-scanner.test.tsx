@@ -238,7 +238,9 @@ describe('QRScanner optimized start profile', () => {
     it('does not continue scanner startup after unmounting while start is pending', async () => {
         const startDeferred = createDeferred<null>()
         html5QrcodeMocks.start.mockReturnValueOnce(startDeferred.promise)
-        html5QrcodeMocks.getState.mockReturnValue(0) // Html5QrcodeState.NOT_STARTED
+        html5QrcodeMocks.getState
+            .mockReturnValueOnce(1) // Html5QrcodeState.NOT_STARTED during unmount cleanup
+            .mockReturnValue(2) // Html5QrcodeState.SCANNING once start() finishes
 
         const { unmount } = render(<QRScanner onScan={vi.fn()} />)
 
@@ -257,7 +259,7 @@ describe('QRScanner optimized start profile', () => {
             await Promise.resolve()
         })
 
-        expect(html5QrcodeMocks.clear).toHaveBeenCalledTimes(1)
+        expect(html5QrcodeMocks.stop).toHaveBeenCalledTimes(1)
         expect(html5QrcodeMocks.getRunningTrackCapabilities).not.toHaveBeenCalled()
         expect(html5QrcodeMocks.applyVideoConstraints).not.toHaveBeenCalled()
     })
