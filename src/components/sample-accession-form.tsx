@@ -344,12 +344,14 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
         onSampleTypeChange: setSelectedSampleType,
         receivedAtRegister: register('received_at'),
         receivedAtValue: receivedAtWatched || '',
+        submitError,
         submitSuccess,
         onReset: handleResetForm,
     }), [
         selectedClient, showClientForm, clientFormData,
         showQRScanner, handleQRScan, serialController,
-        selectedSampleType, register, receivedAtWatched, submitSuccess, handleResetForm,
+        selectedSampleType, register, receivedAtWatched,
+        submitError, submitSuccess, handleResetForm,
     ])
 
     return (

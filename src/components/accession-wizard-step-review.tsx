@@ -18,6 +18,7 @@ import {
     CardTitle,
 } from '@/components/ui/card'
 import {
+    AlertCircle,
     ArrowLeft,
     Pencil,
     Eye,
@@ -30,6 +31,7 @@ interface StepReviewProps {
     selectedSampleType: SampleType
     receivedAt: string
     selected: SelectedTest[]
+    submitError?: string | null
     onBack: () => void
     onGoToStep: (step: number) => void
     onConfirm: () => void
@@ -41,6 +43,7 @@ export function AccessionWizardStepReview({
     selectedSampleType,
     receivedAt,
     selected,
+    submitError,
     onBack,
     onGoToStep,
     onConfirm,
@@ -197,31 +200,41 @@ export function AccessionWizardStepReview({
             </div>
 
             {/* Bottom bar */}
-            <div className="absolute inset-x-0 bottom-0 z-20 flex items-center gap-3 border-t border-border bg-background/80 px-4 py-3 backdrop-blur-md">
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={onBack}
-                    className="min-h-11 flex-1 gap-1"
-                >
-                    <ArrowLeft className="size-4" />
-                    Quay lại
-                </Button>
-                <Button
-                    type="button"
-                    onClick={onConfirm}
-                    disabled={isSaving}
-                    className="min-h-11 flex-[1.5] gap-1"
-                >
-                    {isSaving ? (
-                        <Loader2 className="size-4 animate-spin" />
-                    ) : (
-                        <>
-                            <ShieldCheck className="size-4" />
-                            Xác nhận &amp; Lưu
-                        </>
-                    )}
-                </Button>
+            <div className="absolute inset-x-0 bottom-0 z-20 border-t border-border bg-background/80 backdrop-blur-md">
+                {submitError && (
+                    <div className="px-4 pt-3">
+                        <div className="bg-destructive/10 text-destructive rounded-md p-3 text-sm flex items-center gap-2">
+                            <AlertCircle className="size-4" />
+                            {submitError}
+                        </div>
+                    </div>
+                )}
+                <div className="flex items-center gap-3 px-4 py-3">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={onBack}
+                        className="min-h-11 flex-1 gap-1"
+                    >
+                        <ArrowLeft className="size-4" />
+                        Quay lại
+                    </Button>
+                    <Button
+                        type="button"
+                        onClick={onConfirm}
+                        disabled={isSaving}
+                        className="min-h-11 flex-[1.5] gap-1"
+                    >
+                        {isSaving ? (
+                            <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                            <>
+                                <ShieldCheck className="size-4" />
+                                Xác nhận &amp; Lưu
+                            </>
+                        )}
+                    </Button>
+                </div>
             </div>
         </div>
     )

@@ -56,6 +56,7 @@ export interface AccessionMobileWizardProps {
     isSaving: boolean
 
     /* Success state */
+    submitError: string | null
     submitSuccess: string | null
     onReset: () => void
 }
@@ -150,6 +151,7 @@ export function AccessionMobileWizard(props: AccessionMobileWizardProps) {
                         selectedSampleType={props.selectedSampleType}
                         receivedAt={props.receivedAtValue}
                         selected={props.selected}
+                        submitError={props.submitError}
                         onBack={goBack}
                         onGoToStep={goToStep}
                         onConfirm={handleConfirm}

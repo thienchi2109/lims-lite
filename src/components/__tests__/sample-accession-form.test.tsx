@@ -63,6 +63,7 @@ vi.mock('@/components/test-assignment-grid', () => ({
             selectedClient?: { name: string } | null
             selectedSampleType?: string
             receivedAtValue?: string
+            submitError?: string | null
             submitSuccess?: string | null
         }
     }) => (
@@ -71,6 +72,7 @@ vi.mock('@/components/test-assignment-grid', () => ({
             <div data-testid="selected-client">{wizardProps?.selectedClient?.name ?? ''}</div>
             <div data-testid="selected-sample-type">{wizardProps?.selectedSampleType ?? ''}</div>
             <div data-testid="received-at-value">{wizardProps?.receivedAtValue ?? ''}</div>
+            <div data-testid="submit-error">{wizardProps?.submitError ?? ''}</div>
             <div data-testid="submit-success">{wizardProps?.submitSuccess ?? ''}</div>
             <button
                 type="button"
@@ -195,6 +197,23 @@ describe('SampleAccessionForm', () => {
 
         await waitFor(() => {
             expect(screen.getByTestId('received-at-value').textContent).toBe('2026-03-17T08:30')
+        })
+    })
+
+    it('passes submit errors into wizard props for the mobile review flow', async () => {
+        accessionFormMocks.accessionAndAssignTestsClient.mockResolvedValueOnce({
+            error: 'Không thể lưu mẫu',
+        })
+
+        render(<SampleAccessionForm specialties={[]} />)
+
+        fireEvent.click(screen.getByRole('button', { name: 'Chọn khách hàng' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Chọn Nước tiểu' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Thêm xét nghiệm' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Lưu mẫu' }))
+
+        await waitFor(() => {
+            expect(screen.getByTestId('submit-error').textContent).toBe('Không thể lưu mẫu')
         })
     })
 
