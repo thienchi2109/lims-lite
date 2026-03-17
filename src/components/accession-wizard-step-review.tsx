@@ -64,9 +64,11 @@ export function AccessionWizardStepReview({
         }
     }
 
+    const scrollPaddingClassName = submitError ? 'pb-40' : 'pb-24'
+
     return (
         <div className="flex flex-1 flex-col overflow-hidden">
-            <div className="flex-1 overflow-y-auto px-4 pb-24">
+            <div className={`flex-1 overflow-y-auto px-4 ${scrollPaddingClassName}`}>
                 <div className="mb-4 flex items-center gap-2">
                     <Eye className="size-5 text-primary" />
                     <h2 className="text-lg font-bold text-foreground">
