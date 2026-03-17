@@ -122,6 +122,32 @@
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
   }
+
+  /* Prevent native date controls from overflowing narrow mobile containers */
+  .mobile-date-input-fix {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    display: block;
+    overflow: hidden;
+  }
+
+  .mobile-date-input-fix::-webkit-datetime-edit,
+  .mobile-date-input-fix::-webkit-datetime-edit-fields-wrapper {
+    overflow: hidden;
+  }
+
+  .mobile-date-input-fix::-webkit-datetime-edit {
+    display: block;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-date-input-fix::-webkit-date-and-time-value {
+    min-width: 0;
+    width: 100%;
+    text-align: left;
+  }
   
   /* Custom Animations */
   @keyframes fade-in-up {

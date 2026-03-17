@@ -139,7 +139,7 @@ export function ClientSelector({
 
     if (showClientForm) {
         return (
-            <div className="space-y-2 border border-slate-200 dark:border-slate-800 rounded-lg p-3 bg-slate-50/50 dark:bg-slate-900/50">
+            <div className="w-full min-w-0 space-y-2 border border-slate-200 dark:border-slate-800 rounded-lg p-3 bg-slate-50/50 dark:bg-slate-900/50">
                 <div className="flex items-center justify-between mb-2">
                     <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                         {clientFormData ? 'Tạo từ QR' : 'Khách hàng mới'}

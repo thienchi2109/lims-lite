@@ -37,7 +37,7 @@ export function ClientForm({
 }: ClientFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [submitError, setSubmitError] = useState<string | null>(null)
-    const dateInputClassName = "shadow-sm h-9 w-full min-w-0 max-w-full text-sm [appearance:textfield] [&::-webkit-datetime-edit]:block [&::-webkit-datetime-edit]:overflow-hidden [&::-webkit-datetime-edit]:text-ellipsis [&::-webkit-datetime-edit-fields-wrapper]:overflow-hidden [&::-webkit-date-and-time-value]:text-left"
+    const dateInputClassName = "mobile-date-input-fix shadow-sm h-9 text-sm [appearance:textfield]"
 
     // Prepare safe gender value from initialData
     const safeGender: Gender = (() => {
@@ -112,7 +112,7 @@ export function ClientForm({
 
     return (
         <div
-            className={cn("space-y-4", className)}
+            className={cn("w-full min-w-0 space-y-4", className)}
             onKeyDown={handleKeyDown}
         >
             {/* Error Message */}

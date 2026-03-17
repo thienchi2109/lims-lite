@@ -284,7 +284,7 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
                         <Input
                             type="datetime-local"
                             {...register('received_at')}
-                            className="h-11 w-full min-w-0 max-w-full bg-slate-50 pl-10 text-sm [appearance:textfield] [&::-webkit-datetime-edit]:block [&::-webkit-datetime-edit]:overflow-hidden [&::-webkit-datetime-edit]:text-ellipsis [&::-webkit-datetime-edit-fields-wrapper]:overflow-hidden dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                            className="mobile-date-input-fix h-11 bg-slate-50 pl-10 text-sm [appearance:textfield] border-slate-200 dark:border-slate-700 dark:bg-slate-800"
                         />
                     </div>
                     <p className="text-[10px] text-slate-400 mt-1">Mặc định là thời gian hiện tại.</p>
