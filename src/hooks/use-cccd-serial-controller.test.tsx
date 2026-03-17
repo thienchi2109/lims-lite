@@ -1,3 +1,4 @@
+import { StrictMode } from 'react'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -331,5 +332,40 @@ describe('useCccdSerialController', () => {
 
         expect(port.close).toHaveBeenCalledTimes(1)
         expect(port.readable.getReader).not.toHaveBeenCalled()
+    })
+
+    it('allows explicit connects in StrictMode after the initial effect replay', async () => {
+        const { port } = createMockSerialPort()
+        const serialApi = {
+            getPorts: vi.fn().mockResolvedValue([]),
+            requestPort: vi.fn().mockResolvedValue(port),
+        }
+
+        setNavigatorSerial(serialApi)
+
+        const { result } = renderHook(
+            () =>
+                useCccdSerialController({
+                    active: true,
+                    onPayload: vi.fn(),
+                }),
+            {
+                wrapper: ({ children }) => <StrictMode>{children}</StrictMode>,
+            },
+        )
+
+        await waitFor(() => {
+            expect(result.current.state).toBe('permission_required')
+        })
+
+        await act(async () => {
+            await result.current.connect()
+        })
+
+        await waitFor(() => {
+            expect(serialApi.requestPort).toHaveBeenCalledTimes(1)
+            expect(port.open).toHaveBeenCalledTimes(1)
+            expect(result.current.state).toBe('connected')
+        })
     })
 })

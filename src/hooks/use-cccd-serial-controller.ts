@@ -288,6 +288,8 @@ export function useCccdSerialController({
     }, [active, connectToPort, disconnect])
 
     useEffect(() => {
+        isMountedRef.current = true
+
         return () => {
             isMountedRef.current = false
             void releaseConnection({ resetState: false })
