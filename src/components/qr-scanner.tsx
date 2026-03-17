@@ -21,16 +21,11 @@ interface QRScannerProps {
     onTelemetry?: (event: QrScanTelemetryEvent) => void
 }
 
-const DEFAULT_GUIDANCE =
-    'Mẹo quét nhanh: Giữ mã QR trong khung, cách 10–15cm, đủ sáng và giữ máy ổn định.'
-const COMPATIBILITY_GUIDANCE =
-    'Thiết bị đang dùng chế độ tương thích. Nếu khó quét, tăng ánh sáng hoặc dùng máy quét USB/Bluetooth.'
 
 export function QRScanner({ onScan, onError, onTelemetry }: QRScannerProps) {
     const [isScanning, setIsScanning] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [isInitializing, setIsInitializing] = useState(false)
-    const [scanGuidance, setScanGuidance] = useState(DEFAULT_GUIDANCE)
     const scannerRef = useRef<Html5Qrcode | null>(null)
     const elementId = 'qr-reader'
     const isStartingRef = useRef(false)
@@ -87,7 +82,6 @@ export function QRScanner({ onScan, onError, onTelemetry }: QRScannerProps) {
 
             const html5QrCode = new Html5Qrcode(elementId, createCccdScannerFullConfig())
             scannerRef.current = html5QrCode
-            setScanGuidance(DEFAULT_GUIDANCE)
             didEmitSuccessTelemetryRef.current = false
             usedCompatibilityModeRef.current = false
             scanStartedAtRef.current = Date.now()
@@ -125,13 +119,6 @@ export function QRScanner({ onScan, onError, onTelemetry }: QRScannerProps) {
                                 message: errorMessage,
                             })
 
-                            if (bucket === 'no_code_found') {
-                                setScanGuidance(
-                                    usedCompatibilityModeRef.current
-                                        ? COMPATIBILITY_GUIDANCE
-                                        : DEFAULT_GUIDANCE,
-                                )
-                            }
 
                             // Only log non-NotFoundException errors
                             if (!errorMessage.includes('NotFoundException')) {
@@ -152,7 +139,6 @@ export function QRScanner({ onScan, onError, onTelemetry }: QRScannerProps) {
 
                 console.warn('Không áp dụng được cấu hình camera ưu tiên, chuyển sang chế độ tương thích.')
                 usedCompatibilityModeRef.current = true
-                setScanGuidance(COMPATIBILITY_GUIDANCE)
                 await startWithConfig(createCompatibilityCameraScanConfig())
             }
 
