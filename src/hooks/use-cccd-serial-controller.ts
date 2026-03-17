@@ -213,7 +213,7 @@ export function useCccdSerialController({
             return
         }
 
-        if (portRef.current || state === 'connecting') return
+        if (portRef.current || state === 'connecting' || state === 'error') return
 
         let cancelled = false
 

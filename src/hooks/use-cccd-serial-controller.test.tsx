@@ -163,4 +163,36 @@ describe('useCccdSerialController', () => {
             expect(result.current.state).toBe('connected')
         })
     })
+
+    it('does not auto-retry a granted port after resume fails into error state', async () => {
+        const failingPort = {
+            readable: null,
+            open: vi.fn().mockRejectedValue(new Error('Port busy')),
+            close: vi.fn(async () => {}),
+        }
+        const serialApi = {
+            getPorts: vi.fn().mockResolvedValue([failingPort]),
+            requestPort: vi.fn(),
+        }
+
+        setNavigatorSerial(serialApi)
+
+        const { result } = renderHook(() =>
+            useCccdSerialController({
+                active: true,
+                onPayload: vi.fn(),
+            }),
+        )
+
+        await waitFor(() => {
+            expect(result.current.state).toBe('error')
+            expect(result.current.error).toBe('Port busy')
+        })
+
+        await new Promise((resolve) => setTimeout(resolve, 50))
+
+        expect(serialApi.getPorts).toHaveBeenCalledTimes(1)
+        expect(failingPort.open).toHaveBeenCalledTimes(1)
+        expect(serialApi.requestPort).not.toHaveBeenCalled()
+    })
 })
