@@ -24,7 +24,8 @@ export function TestAssignmentGrid({
     onSave = () => { },
     isSaving = false,
     saveLabel = 'Lưu thay đổi',
-    summaryInfo
+    summaryInfo,
+    wizardProps,
 }: TestAssignmentGridProps) {
     const isDesktop = useMediaQuery("(min-width: 1280px)")
     const [isContextOpen, setIsContextOpen] = useState(true)
@@ -60,6 +61,7 @@ export function TestAssignmentGrid({
                 onSave={onSave}
                 isSaving={isSaving}
                 saveLabel={saveLabel}
+                wizardProps={wizardProps}
             />
         )
     }

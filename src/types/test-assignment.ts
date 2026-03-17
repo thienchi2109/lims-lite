@@ -1,4 +1,5 @@
 import type { AssayDefinitionWithMethods, SelectedTest, LabSpecialty } from '@/types'
+import type { AccessionMobileWizardProps } from '@/components/accession-mobile-wizard'
 
 export type SortKey = 'name' | 'units'
 export type SortConfig = { key: SortKey; direction: 'asc' | 'desc' } | null
@@ -21,4 +22,11 @@ export interface TestAssignmentGridProps {
         sampleType?: string
         receivedAt?: string
     }
+    /** Props for mobile wizard mode — when provided, renders wizard instead of flat layout */
+    wizardProps?: Omit<AccessionMobileWizardProps, 
+        'searchQuery' | 'setSearchQuery' | 'selectedSpecialtyId' | 'setSelectedSpecialtyId' |
+        'specialties' | 'groupedRows' | 'isLoading' | 'disabledSet' | 'specialtiesMap' |
+        'selected' | 'onChange' | 'toggleTestSelection' | 'handleMethodChange' |
+        'onSave' | 'isSaving'
+    >
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -316,6 +316,38 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
         </div>
     )
 
+    const handleResetForm = useCallback(() => {
+        reset()
+        setSelectedTests([])
+        setSelectedClient(null)
+        setSelectedSampleType('Máu')
+        setSubmitSuccess(null)
+        setSubmitError(null)
+    }, [reset])
+
+    const wizardProps = useMemo(() => ({
+        selectedClient,
+        onSelectClient: setSelectedClient,
+        showClientForm,
+        onOpenFormChange: setShowClientForm,
+        clientFormData,
+        onFormDataChange: setClientFormData,
+        showQRScanner,
+        onShowQRScanner: setShowQRScanner,
+        onQRScan: handleQRScan,
+        serialController,
+        selectedSampleType,
+        onSampleTypeChange: setSelectedSampleType,
+        receivedAtRegister: register('received_at'),
+        receivedAtValue: '',
+        submitSuccess,
+        onReset: handleResetForm,
+    }), [
+        selectedClient, showClientForm, clientFormData,
+        showQRScanner, handleQRScan, serialController,
+        selectedSampleType, register, submitSuccess, handleResetForm,
+    ])
+
     return (
         <>
             <form onSubmit={handleSubmit(onSubmit)} className="h-full" id="tour-accession-form">
@@ -330,6 +362,7 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
                     saveLabel={selectedTests.length > 0
                         ? `Lưu & Chỉ định (${selectedTests.length})`
                         : "Lưu mẫu (Không chỉ định)"}
+                    wizardProps={wizardProps}
                 />
                 </div>
             </form>

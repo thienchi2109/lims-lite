@@ -1,7 +1,9 @@
 import React from 'react'
 import type { AssayDefinitionWithMethods, SelectedTest } from '@/types'
 import type { GridRow } from '@/types/test-assignment'
+import type { AccessionMobileWizardProps } from '@/components/accession-mobile-wizard'
 import { AccessionMobileLayout } from '@/components/accession-mobile-layout'
+import { AccessionMobileWizard } from '@/components/accession-mobile-wizard'
 
 interface MobileViewProps {
     // Context
@@ -32,15 +34,45 @@ interface MobileViewProps {
     onSave: () => void
     isSaving: boolean
     saveLabel: string
+
+    /** When provided, renders wizard instead of flat layout */
+    wizardProps?: Omit<AccessionMobileWizardProps,
+        'searchQuery' | 'setSearchQuery' | 'selectedSpecialtyId' | 'setSelectedSpecialtyId' |
+        'specialties' | 'groupedRows' | 'isLoading' | 'disabledSet' | 'specialtiesMap' |
+        'selected' | 'onChange' | 'toggleTestSelection' | 'handleMethodChange' |
+        'onSave' | 'isSaving'
+    >
 }
 
 /**
  * MobileView
  *
- * Delegates to AccessionMobileLayout which renders accordion-based
- * specialty groups with a selected tests summary strip.
- * This thin wrapper preserves the existing API contract for TestAssignmentGrid.
+ * Delegates to wizard (when wizardProps provided) or flat AccessionMobileLayout.
+ * The thin wrapper preserves the API contract for TestAssignmentGrid.
  */
 export function MobileView(props: MobileViewProps) {
+    if (props.wizardProps) {
+        return (
+            <AccessionMobileWizard
+                {...props.wizardProps}
+                searchQuery={props.searchQuery}
+                setSearchQuery={props.setSearchQuery}
+                selectedSpecialtyId={props.selectedSpecialtyId}
+                setSelectedSpecialtyId={props.setSelectedSpecialtyId}
+                specialties={props.specialties}
+                groupedRows={props.groupedRows}
+                isLoading={props.isLoading}
+                disabledSet={props.disabledSet}
+                specialtiesMap={props.specialtiesMap}
+                selected={props.selected}
+                onChange={props.onChange}
+                toggleTestSelection={props.toggleTestSelection}
+                handleMethodChange={props.handleMethodChange}
+                onSave={props.onSave}
+                isSaving={props.isSaving}
+            />
+        )
+    }
+
     return <AccessionMobileLayout {...props} />
 }
