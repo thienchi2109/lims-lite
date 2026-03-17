@@ -64,7 +64,7 @@ describe('SampleAccessionForm Web Serial integration', () => {
             }),
         )
 
-        fireEvent.click(screen.getByRole('button', { name: /Bấm để quét mã khách hàng/i }))
+        fireEvent.click(screen.getByRole('button', { name: /Quét mã QR trên CCCD/i }))
 
         expect(useCccdSerialControllerMock).toHaveBeenLastCalledWith(
             expect.objectContaining({

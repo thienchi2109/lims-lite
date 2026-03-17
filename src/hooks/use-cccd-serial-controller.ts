@@ -137,8 +137,11 @@ export function useCccdSerialController({
             isConnectingRef.current = true
             setState('connecting')
 
+            let portOpened = false
+
             try {
                 await port.open({ baudRate: DEFAULT_CCCD_SERIAL_BAUD_RATE })
+                portOpened = true
                 if (!isSessionActive(token)) {
                     isConnectingRef.current = false
 
@@ -212,12 +215,16 @@ export function useCccdSerialController({
                 })()
             } catch (error) {
                 isConnectingRef.current = false
-                if (!isSessionActive(token)) {
+
+                if (portOpened) {
                     try {
                         await port.close()
                     } catch {
-                        // Ignore teardown races after unmount.
+                        // Best-effort port cleanup after post-open failure.
                     }
+                }
+
+                if (!isSessionActive(token)) {
                     return
                 }
                 throw error

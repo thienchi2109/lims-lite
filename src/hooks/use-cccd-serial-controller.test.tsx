@@ -401,4 +401,41 @@ describe('useCccdSerialController', () => {
 
         expect(onPayload).not.toHaveBeenCalled()
     })
+
+    it('closes the port when connect fails after port.open succeeds', async () => {
+        const failingPort = {
+            readable: null,
+            open: vi.fn(async () => {}),
+            close: vi.fn(async () => {}),
+        }
+        const serialApi = {
+            getPorts: vi.fn().mockResolvedValue([]),
+            requestPort: vi.fn().mockResolvedValue(failingPort),
+        }
+
+        setNavigatorSerial(serialApi)
+
+        const { result } = renderHook(() =>
+            useCccdSerialController({
+                active: true,
+                onPayload: vi.fn(),
+            }),
+        )
+
+        await waitFor(() => {
+            expect(result.current.state).toBe('permission_required')
+        })
+
+        await act(async () => {
+            await result.current.connect()
+        })
+
+        await waitFor(() => {
+            expect(result.current.state).toBe('error')
+            expect(result.current.error).toBe('Scanner CCCD không cung cấp luồng dữ liệu để đọc.')
+        })
+
+        expect(failingPort.open).toHaveBeenCalledTimes(1)
+        expect(failingPort.close).toHaveBeenCalledTimes(1)
+    })
 })
