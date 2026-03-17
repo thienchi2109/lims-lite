@@ -37,7 +37,14 @@ function getErrorMessage(error: unknown): string {
 
 function getBrowserSerialApi() {
     if (typeof window === 'undefined') return null
-    return getWebSerialApi(window.navigator)
+    return getWebSerialApi(
+        window.navigator as Navigator & {
+            serial?: {
+                requestPort?: unknown
+                getPorts?: unknown
+            }
+        },
+    )
 }
 
 function isPortSelectionCanceled(error: unknown): boolean {

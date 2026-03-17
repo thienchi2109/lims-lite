@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { CreateSampleWithAssignmentsSchema, type CreateSampleWithAssignments, type CreateSample, type Client, type CreateClient, type LabSpecialty, type SampleType, type SelectedTest } from '@/types'
+import { type CreateSampleWithAssignments, type CreateSample, type Client, type CreateClient, type LabSpecialty, type SampleType, type SelectedTest } from '@/types'
 import { accessionAndAssignTestsClient, createSampleClient, findClientByIdentityClient } from '@/lib/api-client'
 import { parseClientIdentityQr } from '@/lib/qr/parse-client-identity-qr'
 import { ClientQrScannerDialog } from '@/components/client-qr-scanner-dialog'
@@ -18,15 +18,12 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { TestAssignmentGrid } from '@/components/test-assignment-grid'
-import { Loader2, CheckCircle2, AlertCircle, QrCode, Scan, Calendar } from 'lucide-react'
-import Link from 'next/link'
+import { CheckCircle2, AlertCircle, QrCode, Scan, Calendar } from 'lucide-react'
 import { ClientSelector } from '@/components/client-selector'
 import { SampleTypeSelector } from '@/components/sample-type-selector'
-import { useMediaQuery } from '@/hooks/use-media-query'
 import { useCccdSerialController } from '@/hooks/use-cccd-serial-controller'
 import { toast } from 'sonner'
 
@@ -38,7 +35,6 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [submitError, setSubmitError] = useState<string | null>(null)
     const [submitSuccess, setSubmitSuccess] = useState<string | null>(null)
-    const [lastSampleId, setLastSampleId] = useState<string | null>(null)
     const [selectedTests, setSelectedTests] = useState<SelectedTest[]>([])
     const [showConfirmation, setShowConfirmation] = useState(false)
 
@@ -51,8 +47,6 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
     const [showQRScanner, setShowQRScanner] = useState(false)
     const [showClientForm, setShowClientForm] = useState(false)
     const [clientFormData, setClientFormData] = useState<Partial<CreateClient> | undefined>(undefined)
-
-    const isDesktop = useMediaQuery("(min-width: 1024px)")
 
     // Form schema that accepts datetime-local string format
     // We relax validation here and validate manually before submit
@@ -69,10 +63,8 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
     const {
         register,
         handleSubmit,
-        formState: { errors },
         reset,
         setValue,
-        watch
     } = useForm<FormData>({
         resolver: zodResolver(FormSchema),
         defaultValues: {
@@ -128,9 +120,7 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
                 } else {
                     const sampleData = result.data
                     const sampleCode = sampleData?.sample_id
-                    const sampleId = sampleData?.id
                     setSubmitSuccess(`Mẫu ${sampleCode || ''} đã được tạo.`.trim())
-                    setLastSampleId(sampleId || null)
 
                     // Reset form but keep client selected for convenience? 
                     // Usually better to reset everything to avoid mistakes.
@@ -160,10 +150,8 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
                     const payload = Array.isArray(result.data) ? result.data[0] : result.data
                     const sampleData = payload?.sample
                     const sampleCode = sampleData?.sample_id
-                    const sampleId = sampleData?.id
                     const assignedCount = payload?.results?.length || selectedTests.length
                     setSubmitSuccess(`Mẫu ${sampleCode || ''} đã được tạo và chỉ định ${assignedCount} xét nghiệm.`.trim())
-                    setLastSampleId(sampleId || null)
 
                     reset()
                     setSelectedTests([])
@@ -171,7 +159,7 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
                     setSelectedSampleType('Máu')
                 }
             }
-        } catch (error) {
+        } catch {
             setSubmitError('Đã có lỗi xảy ra')
         }
 

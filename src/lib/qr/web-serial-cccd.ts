@@ -52,7 +52,7 @@ export function isWebSerialSupported(target: WebSerialTarget | undefined): boole
 
 export function getWebSerialApi(target: WebSerialTarget | undefined): BrowserSerialLike | null {
     if (!isWebSerialSupported(target)) return null
-    return target.serial as BrowserSerialLike
+    return target?.serial as BrowserSerialLike
 }
 
 export async function getGrantedSerialPorts<TPort>(serialApi: GrantedPortApi<TPort>): Promise<TPort[]> {
