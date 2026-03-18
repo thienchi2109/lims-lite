@@ -54,6 +54,7 @@ export interface AccessionMobileWizardProps {
     /* Submit */
     onSave: () => void
     isSaving: boolean
+    isSaveDisabled?: boolean
 
     /* Success state */
     submitError: string | null
@@ -156,6 +157,7 @@ export function AccessionMobileWizard(props: AccessionMobileWizardProps) {
                         onGoToStep={goToStep}
                         onConfirm={handleConfirm}
                         isSaving={props.isSaving}
+                        isSaveDisabled={props.isSaveDisabled}
                     />
                 )}
 

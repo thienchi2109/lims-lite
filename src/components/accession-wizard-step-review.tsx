@@ -36,6 +36,7 @@ interface StepReviewProps {
     onGoToStep: (step: number) => void
     onConfirm: () => void
     isSaving: boolean
+    isSaveDisabled?: boolean
 }
 
 export function AccessionWizardStepReview({
@@ -48,6 +49,7 @@ export function AccessionWizardStepReview({
     onGoToStep,
     onConfirm,
     isSaving,
+    isSaveDisabled,
 }: StepReviewProps) {
     const formatDate = (dateStr: string) => {
         if (!dateStr) return 'Thời gian hiện tại'
@@ -224,7 +226,7 @@ export function AccessionWizardStepReview({
                     <Button
                         type="button"
                         onClick={onConfirm}
-                        disabled={isSaving}
+                        disabled={isSaving || isSaveDisabled}
                         className="min-h-11 flex-[1.5] gap-1"
                     >
                         {isSaving ? (

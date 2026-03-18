@@ -41,7 +41,7 @@ interface MobileViewProps {
         'searchQuery' | 'setSearchQuery' | 'selectedSpecialtyId' | 'setSelectedSpecialtyId' |
         'specialties' | 'groupedRows' | 'isLoading' | 'disabledSet' | 'specialtiesMap' |
         'selected' | 'onChange' | 'toggleTestSelection' | 'handleMethodChange' |
-        'onSave' | 'isSaving'
+        'onSave' | 'isSaving' | 'isSaveDisabled'
     >
 }
 
@@ -71,6 +71,7 @@ export function MobileView(props: MobileViewProps) {
                 handleMethodChange={props.handleMethodChange}
                 onSave={props.onSave}
                 isSaving={props.isSaving}
+                isSaveDisabled={props.isSaveDisabled}
             />
         )
     }

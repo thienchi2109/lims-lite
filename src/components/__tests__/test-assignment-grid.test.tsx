@@ -16,6 +16,26 @@ vi.mock('@/components/accession-mobile-test-list', () => ({
     AccessionMobileTestList: () => <div data-testid="test-list" />,
 }))
 
+vi.mock('@/components/accession-mobile-layout', () => ({
+    AccessionMobileLayout: () => <div data-testid="legacy-mobile-layout" />,
+}))
+
+vi.mock('@/components/accession-mobile-wizard', () => ({
+    AccessionMobileWizard: ({
+        isSaveDisabled,
+    }: {
+        isSaveDisabled?: boolean
+    }) => (
+        <button
+            type="button"
+            data-testid="wizard-save-button"
+            disabled={isSaveDisabled}
+        >
+            Lưu wizard
+        </button>
+    ),
+}))
+
 vi.mock('@/components/ui/collapsible', () => ({
     Collapsible: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
     CollapsibleContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -96,16 +116,39 @@ describe('TestAssignmentGrid', () => {
         })
     })
 
-    it('disables the mobile save button when isSaveDisabled is true', () => {
+    it('passes isSaveDisabled into the mobile wizard path', () => {
         render(
             <TestAssignmentGrid
                 selected={[]}
                 onChange={vi.fn()}
                 isSaveDisabled={true}
                 onSave={vi.fn()}
+                wizardProps={{
+                    selectedClient: null,
+                    onSelectClient: vi.fn(),
+                    showClientForm: false,
+                    onOpenFormChange: vi.fn(),
+                    clientFormData: undefined,
+                    onFormDataChange: vi.fn(),
+                    showQRScanner: false,
+                    onShowQRScanner: vi.fn(),
+                    onQRScan: vi.fn(),
+                    selectedSampleType: 'Máu',
+                    onSampleTypeChange: vi.fn(),
+                    receivedAtRegister: {
+                        name: 'received_at',
+                        onChange: vi.fn(),
+                        onBlur: vi.fn(),
+                        ref: vi.fn(),
+                    },
+                    receivedAtValue: '',
+                    submitError: null,
+                    submitSuccess: null,
+                    onReset: vi.fn(),
+                }}
             />,
         )
 
-        expect((screen.getByTestId('save-button') as HTMLButtonElement).disabled).toBe(true)
+        expect((screen.getByTestId('wizard-save-button') as HTMLButtonElement).disabled).toBe(true)
     })
 })
