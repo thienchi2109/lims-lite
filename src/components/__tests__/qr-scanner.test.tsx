@@ -69,7 +69,6 @@ describe('QRScanner optimized start profile', () => {
         html5QrcodeMocks.getRunningTrackCapabilities.mockReset()
         html5QrcodeMocks.getRunningTrackSettings.mockReset()
         html5QrcodeMocks.applyVideoConstraints.mockReset()
-
         html5QrcodeMocks.start.mockResolvedValue(null)
         html5QrcodeMocks.stop.mockResolvedValue(undefined)
         html5QrcodeMocks.getState.mockReturnValue(2) // Html5QrcodeState.SCANNING
@@ -102,7 +101,7 @@ describe('QRScanner optimized start profile', () => {
         )
     })
 
-    it('starts scanning with tuned CCCD/VNeID profile including HD constraints', async () => {
+    it('starts scanning with tuned CCCD/VNeID profile and explicit rear-camera constraints', async () => {
         render(<QRScanner onScan={vi.fn()} />)
 
         await act(async () => {
@@ -121,12 +120,11 @@ describe('QRScanner optimized start profile', () => {
         expect(typeof scannerConfig.qrbox).toBe('function')
         expect(scannerConfig.videoConstraints).toEqual(
             expect.objectContaining({
+                facingMode: { exact: 'environment' },
                 width: expect.objectContaining({ ideal: 1920 }),
                 height: expect.objectContaining({ ideal: 1080 }),
             }),
         )
-        // facingMode must NOT be in videoConstraints — it's passed via start() camera ID param
-        expect(scannerConfig.videoConstraints).not.toHaveProperty('facingMode')
         expect(scannerConfig.videoConstraints.width).not.toHaveProperty('min')
         expect(scannerConfig.videoConstraints.height).not.toHaveProperty('min')
     })
