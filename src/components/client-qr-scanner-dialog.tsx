@@ -192,7 +192,7 @@ export function ClientQrScannerDialog({
 }: ClientQrScannerDialogProps) {
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-md bg-slate-950 border-slate-800 text-slate-100">
+            <DialogContent className="max-h-[90vh] overflow-y-auto p-4 sm:max-w-md sm:p-6 bg-slate-950 border-slate-800 text-slate-100">
                 <DialogHeader>
                     <DialogTitle>Quét mã QR CCCD</DialogTitle>
                     <DialogDescription className="text-slate-400">

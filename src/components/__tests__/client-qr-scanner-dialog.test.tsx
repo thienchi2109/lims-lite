@@ -147,4 +147,36 @@ describe('ClientQrScannerDialog continuity', () => {
         expect(screen.getByPlaceholderText('Đặt con trỏ ở đây rồi quét CCCD…')).toBeDefined()
         expect(screen.getByTestId('camera-scan-trigger')).toBeDefined()
     })
+
+    it('keeps the built-in close button available for dismissing the scanner dialog', () => {
+        const onOpenChange = vi.fn()
+
+        render(
+            <ClientQrScannerDialog
+                open={true}
+                onOpenChange={onOpenChange}
+                onScan={vi.fn()}
+            />,
+        )
+
+        fireEvent.click(screen.getByRole('button', { name: /close/i }))
+        expect(onOpenChange).toHaveBeenCalledWith(false)
+    })
+
+    it('adds mobile-safe height and scrolling constraints to the scanner dialog', () => {
+        render(
+            <ClientQrScannerDialog
+                open={true}
+                onOpenChange={vi.fn()}
+                onScan={vi.fn()}
+            />,
+        )
+
+        const dialogClassName = screen.getByRole('dialog').getAttribute('class') ?? ''
+
+        expect(dialogClassName).toContain('max-h-[90vh]')
+        expect(dialogClassName).toContain('overflow-y-auto')
+        expect(dialogClassName).toContain('p-4')
+        expect(dialogClassName).toContain('sm:p-6')
+    })
 })
