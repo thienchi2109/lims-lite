@@ -6,6 +6,7 @@ You are implementing Task 3: discard flow exposure and rejection-banner guard fo
 
 Own this write scope only:
 - `src/app/actions/sample-approvals.ts`
+- matching tests under `src/app/actions/*.test.ts`
 - `src/components/sample-detail-panel.tsx`
 - `src/components/sample-list-table.tsx`
 - matching tests under `src/components/__tests__/*.test.tsx`
@@ -30,6 +31,7 @@ Deliver exactly this work:
 ## Acceptance Criteria
 
 - `discardSample()` accepts `in_progress`.
+- Action-level regression coverage proves `discardSample()` accepts `in_progress` and still rejects non-discardable statuses.
 - The manager samples workspace exposes discard for `in_progress` without breaking existing permission checks.
 - `sample-detail-panel.tsx` only shows the rejection banner for `in_progress` and `discarded`.
 - Component tests cover visible and hidden banner cases.
@@ -37,12 +39,12 @@ Deliver exactly this work:
 
 ## Before You Begin
 
-If the current tests live outside `src/components/__tests__`, ask before widening the test-file scope.
+If the current tests live outside `src/app/actions/*.test.ts` or `src/components/__tests__/*.test.tsx`, ask before widening the test-file scope.
 
 ## Your Job
 
 1. Implement only the task above.
-2. Run targeted component tests for banner and discard visibility.
+2. Run targeted action and component tests for discard status-gate, banner visibility, and discard visibility.
 3. Commit your work.
 4. Self-review for correctness, scope discipline, and UI regression risk.
 5. Report back.

@@ -153,19 +153,34 @@ IS 'Transitions sample from in_progress to review with e-signature capture and c
 -- - review rows should not carry old rejection metadata after re-submit
 -- - completed rows should not carry old rejection metadata after approval
 -- - discarded rows are intentionally untouched
+-- Preserve existing updated_at ordering by temporarily disabling only the
+-- automatic samples updated_at trigger during this cleanup update. Search and
+-- audit triggers remain enabled.
 
-UPDATE public.samples
-SET rejection_reason = NULL,
-    rejected_at = NULL,
-    rejected_by = NULL,
-    updated_at = NOW()
-WHERE deleted_at IS NULL
-  AND status IN ('review', 'completed')
-  AND (
-      rejection_reason IS NOT NULL
-      OR rejected_at IS NOT NULL
-      OR rejected_by IS NOT NULL
-  );
+DO $$
+BEGIN
+    EXECUTE 'ALTER TABLE public.samples DISABLE TRIGGER update_samples_updated_at';
+
+    BEGIN
+        UPDATE public.samples
+        SET rejection_reason = NULL,
+            rejected_at = NULL,
+            rejected_by = NULL
+        WHERE deleted_at IS NULL
+          AND status IN ('review', 'completed')
+          AND (
+              rejection_reason IS NOT NULL
+              OR rejected_at IS NOT NULL
+              OR rejected_by IS NOT NULL
+          );
+    EXCEPTION
+        WHEN OTHERS THEN
+            EXECUTE 'ALTER TABLE public.samples ENABLE TRIGGER update_samples_updated_at';
+            RAISE;
+    END;
+
+    EXECUTE 'ALTER TABLE public.samples ENABLE TRIGGER update_samples_updated_at';
+END $$;
 
 -- ============================================================================
 -- 3. REGRESSION PROTECTION: self-verification block

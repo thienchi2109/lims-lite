@@ -89,7 +89,11 @@ WHERE id = p_sample_id;
 UPDATE public.samples
 SET rejection_reason = NULL, rejected_at = NULL, rejected_by = NULL
 WHERE status IN ('completed', 'review')
-  AND rejection_reason IS NOT NULL;
+  AND (
+      rejection_reason IS NOT NULL
+      OR rejected_at IS NOT NULL
+      OR rejected_by IS NOT NULL
+  );
 ```
 
 #### [MODIFY] [sample-detail-panel.tsx](file:///e:/lims-lite/src/components/sample-detail-panel.tsx)
@@ -194,6 +198,7 @@ This section is a task-assignment plan for a later `subagent-driven-development`
 
 **Write scope**
 - `src/app/actions/sample-approvals.ts`
+- `src/app/actions/*.test.ts`
 - `src/components/sample-detail-panel.tsx`
 - `src/components/sample-list-table.tsx`
 - `src/components/__tests__/*.test.tsx`
@@ -205,5 +210,6 @@ This section is a task-assignment plan for a later `subagent-driven-development`
 - Preserve review-page discard behavior as-is
 
 **Verification**
+- Action tests cover `discardSample()` status-gate acceptance and rejection paths
 - Component tests cover banner visibility by status
 - Manager samples workspace test covers discard visibility on `in_progress`
