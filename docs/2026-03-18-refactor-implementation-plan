@@ -1,0 +1,144 @@
+# Results Actions Split Implementation Plan
+
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task.
+
+**Goal:** Split approval-only server actions out of `src/app/actions/results.ts` so both action files stay under the 350-line limit without breaking the client-actions API surface.
+
+**Architecture:** Keep `src/app/actions/results.ts` as the data-entry module and move approval workflow actions into a new `src/app/actions/results-approval.ts` server-action file. Do not use re-exports from `results.ts`, because this repo forbids re-export barrels inside `'use server'` files; instead, update direct callers to import approval actions from the new module.
+
+**Tech Stack:** Next.js 16 server actions, React 19, Vitest, Node static regression tests, TypeScript.
+
+---
+
+## Constraints And Corrections
+
+- `src/app/actions/results.ts` cannot re-export `approveResults` or `cancelApproval` after the split.
+- `src/app/api/client-actions/route.ts` is part of the change and must import approval actions from `src/app/actions/results-approval.ts`.
+- Keep regression coverage on the public client-actions path. Updating the QC unit test alone is not enough.
+- Use PowerShell-native verification commands for line counts in this workspace.
+
+### Task 1: Add Regression Coverage For The New Module Boundary
+
+**Files:**
+- Modify: `src/app/actions/qc-approval-blocking.test.ts`
+- Create: `tests/results-approval-route-wiring.test.mjs`
+
+**Step 1: Write the failing tests**
+
+- Update `src/app/actions/qc-approval-blocking.test.ts` to import `approveResults` and `cancelApproval` from `@/app/actions/results-approval`.
+- Add `tests/results-approval-route-wiring.test.mjs` to assert:
+  - `src/app/api/client-actions/route.ts` imports `approveResults` and `cancelApproval` from `@/app/actions/results-approval`
+  - `src/app/actions/results-approval.ts` exports both approval actions
+
+**Step 2: Run tests to verify they fail**
+
+Run:
+
+```bash
+npx vitest run src/app/actions/qc-approval-blocking.test.ts
+node tests/results-approval-route-wiring.test.mjs
+```
+
+Expected:
+- Vitest fails with module-not-found for `results-approval`
+- Node test fails because `route.ts` still imports approval actions from `results.ts`
+
+### Task 2: Extract Approval Workflow Into Its Own Server-Action File
+
+**Files:**
+- Create: `src/app/actions/results-approval.ts`
+- Reference: `src/app/actions/results.ts:204-445`
+
+**Step 1: Write minimal implementation**
+
+- Create `src/app/actions/results-approval.ts` with `'use server'`
+- Move `approveResults` and `cancelApproval` into the new file unchanged in behavior
+- Keep imports limited to:
+  - `createClient` from `@/lib/supabase/server`
+  - `revalidatePath` from `next/cache`
+  - `ApproveResultsSchema`, `ApproveResults`, `CancelApprovalSchema`, `CancelApproval` from `@/types`
+  - `generateCoA` from `./coa`
+
+**Step 2: Run the approval test to verify it passes**
+
+Run:
+
+```bash
+npx vitest run src/app/actions/qc-approval-blocking.test.ts
+```
+
+Expected:
+- PASS
+
+### Task 3: Trim `results.ts` And Rewire The Client-Actions Route
+
+**Files:**
+- Modify: `src/app/actions/results.ts`
+- Modify: `src/app/api/client-actions/route.ts`
+
+**Step 1: Update `results.ts`**
+
+- Remove approval-specific imports:
+  - `ApproveResultsSchema`
+  - `ApproveResults`
+  - `CancelApprovalSchema`
+  - `CancelApproval`
+  - `generateCoA`
+- Remove the `approveResults` and `cancelApproval` exports entirely
+- Keep `getResultsBySample` and `saveBatchResults` only
+
+**Step 2: Update `route.ts`**
+
+- Keep importing `getResultsBySample` and `saveBatchResults` from `@/app/actions/results`
+- Import `approveResults` and `cancelApproval` from `@/app/actions/results-approval`
+- Leave the handler names in `actionHandlers` unchanged so `src/lib/api-client.ts` does not need changes
+
+**Step 3: Run regression checks**
+
+Run:
+
+```bash
+node tests/results-approval-route-wiring.test.mjs
+npx vitest run src/app/actions/qc-approval-blocking.test.ts
+```
+
+Expected:
+- Both pass
+
+### Task 4: Verify The Refactor End-To-End
+
+**Files:**
+- Verify only
+
+**Step 1: Run targeted verification**
+
+Run:
+
+```bash
+npx vitest run src/app/actions/qc-approval-blocking.test.ts
+node tests/results-approval-route-wiring.test.mjs
+npm run typecheck
+powershell -Command "(Get-Content 'src/app/actions/results.ts').Count"
+powershell -Command "(Get-Content 'src/app/actions/results-approval.ts').Count"
+```
+
+Expected:
+- All commands succeed
+- Both action files remain under 350 lines
+
+**Step 2: Manual sanity check**
+
+- Confirm `src/app/(dashboard)/manager/approvals/page.tsx` still imports `getResultsBySample` from `@/app/actions/results`
+- Confirm `src/lib/api-client.ts` remains unchanged because the client action names did not change
+
+## Commit Plan
+
+```bash
+git add docs/2026-03-18-refactor-implementation-plan \
+        src/app/actions/results.ts \
+        src/app/actions/results-approval.ts \
+        src/app/actions/qc-approval-blocking.test.ts \
+        src/app/api/client-actions/route.ts \
+        tests/results-approval-route-wiring.test.mjs
+git commit -m "refactor: split results approval actions"
+```

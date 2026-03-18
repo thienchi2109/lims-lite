@@ -18,9 +18,11 @@ import {
 import {
     getResultsBySample,
     saveBatchResults,
+} from '@/app/actions/results'
+import {
     approveResults,
     cancelApproval,
-} from '@/app/actions/results'
+} from '@/app/actions/results-approval'
 import { getAssayDefinitions as fetchAssayDefinitions } from '@/app/actions/assay-queries'
 import { getMethods } from '@/app/actions/assay-lookups'
 import {
