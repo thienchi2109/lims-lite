@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
 import { TestAssignmentGrid } from '@/components/test-assignment-grid'
 import { CheckCircle2, AlertCircle, QrCode, Scan, Calendar } from 'lucide-react'
 import { ClientSelector } from '@/components/client-selector'
@@ -65,6 +66,7 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
         handleSubmit,
         reset,
         setValue,
+        watch,
     } = useForm<FormData>({
         resolver: zodResolver(FormSchema),
         defaultValues: {
@@ -85,7 +87,13 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
         )
     }, [selectedTests, setValue])
 
+    const receivedAtWatched = watch('received_at')
+
     const onSubmit = async (data: FormData) => {
+        if (submitSuccess) {
+            return
+        }
+
         // Validate Client Selection
         if (!selectedClient) {
             setSubmitError('Vui lòng chọn khách hàng')
@@ -121,13 +129,6 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
                     const sampleData = result.data
                     const sampleCode = sampleData?.sample_id
                     setSubmitSuccess(`Mẫu ${sampleCode || ''} đã được tạo.`.trim())
-
-                    // Reset form but keep client selected for convenience? 
-                    // Usually better to reset everything to avoid mistakes.
-                    reset()
-                    setSelectedTests([])
-                    setSelectedClient(null)
-                    setSelectedSampleType('Máu')
                 }
             } else {
                 // Create sample WITH tests (existing flow)
@@ -152,11 +153,6 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
                     const sampleCode = sampleData?.sample_id
                     const assignedCount = payload?.results?.length || selectedTests.length
                     setSubmitSuccess(`Mẫu ${sampleCode || ''} đã được tạo và chỉ định ${assignedCount} xét nghiệm.`.trim())
-
-                    reset()
-                    setSelectedTests([])
-                    setSelectedClient(null)
-                    setSelectedSampleType('Máu')
                 }
             }
         } catch {
@@ -207,6 +203,16 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
         active: showQRScanner,
         onPayload: handleQRScan,
     })
+
+    const handleResetForm = useCallback(() => {
+        reset()
+        setSelectedTests([])
+        setSelectedClient(null)
+        setSelectedSampleType('Máu')
+        setClientFormData(undefined)
+        setSubmitSuccess(null)
+        setSubmitError(null)
+    }, [reset])
 
     // Context Content (Card Style)
     const contextContent = (
@@ -304,6 +310,14 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
                         <CheckCircle2 className="h-4 w-4" />
                         {submitSuccess}
                     </div>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full sm:w-auto"
+                        onClick={handleResetForm}
+                    >
+                        Tiếp nhận mẫu mới
+                    </Button>
                 </div>
             )}
 
@@ -316,6 +330,31 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
         </div>
     )
 
+    const wizardProps = useMemo(() => ({
+        selectedClient,
+        onSelectClient: setSelectedClient,
+        showClientForm,
+        onOpenFormChange: setShowClientForm,
+        clientFormData,
+        onFormDataChange: setClientFormData,
+        showQRScanner,
+        onShowQRScanner: setShowQRScanner,
+        onQRScan: handleQRScan,
+        serialController,
+        selectedSampleType,
+        onSampleTypeChange: setSelectedSampleType,
+        receivedAtRegister: register('received_at'),
+        receivedAtValue: receivedAtWatched || '',
+        submitError,
+        submitSuccess,
+        onReset: handleResetForm,
+    }), [
+        selectedClient, showClientForm, clientFormData,
+        showQRScanner, handleQRScan, serialController,
+        selectedSampleType, register, receivedAtWatched,
+        submitError, submitSuccess, handleResetForm,
+    ])
+
     return (
         <>
             <form onSubmit={handleSubmit(onSubmit)} className="h-full" id="tour-accession-form">
@@ -326,10 +365,12 @@ export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormPro
                     specialties={specialties}
                     context={contextContent}
                     isSaving={isSubmitting}
+                    isSaveDisabled={!!submitSuccess}
                     onSave={handleSubmit(onSubmit)}
                     saveLabel={selectedTests.length > 0
                         ? `Lưu & Chỉ định (${selectedTests.length})`
                         : "Lưu mẫu (Không chỉ định)"}
+                    wizardProps={wizardProps}
                 />
                 </div>
             </form>

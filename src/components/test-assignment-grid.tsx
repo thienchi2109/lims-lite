@@ -23,8 +23,10 @@ export function TestAssignmentGrid({
     specialties = [],
     onSave = () => { },
     isSaving = false,
+    isSaveDisabled = false,
     saveLabel = 'Lưu thay đổi',
-    summaryInfo
+    summaryInfo,
+    wizardProps,
 }: TestAssignmentGridProps) {
     const isDesktop = useMediaQuery("(min-width: 1280px)")
     const [isContextOpen, setIsContextOpen] = useState(true)
@@ -59,7 +61,9 @@ export function TestAssignmentGrid({
                 handleMethodChange={logic.handleMethodChange}
                 onSave={onSave}
                 isSaving={isSaving}
+                isSaveDisabled={isSaveDisabled}
                 saveLabel={saveLabel}
+                wizardProps={wizardProps}
             />
         )
     }
@@ -127,6 +131,7 @@ export function TestAssignmentGrid({
                         availableAssays={logic.processedAssays}
                         onSave={onSave}
                         isSaving={isSaving}
+                        isSaveDisabled={isSaveDisabled}
                         saveLabel={saveLabel}
                     />
                 </ResizablePanel>

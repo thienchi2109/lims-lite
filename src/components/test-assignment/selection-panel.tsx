@@ -18,6 +18,7 @@ interface SelectionPanelProps {
     availableAssays: AssayDefinitionWithMethods[]
     onSave?: () => void
     isSaving?: boolean
+    isSaveDisabled?: boolean
     saveLabel?: string
 }
 
@@ -29,6 +30,7 @@ export function SelectionPanel({
     availableAssays,
     onSave,
     isSaving = false,
+    isSaveDisabled = false,
     saveLabel = 'Lưu thay đổi'
 }: SelectionPanelProps) {
     return (
@@ -89,7 +91,7 @@ export function SelectionPanel({
                     <Button
                         id="tour-save-button"
                         onClick={onSave}
-                        disabled={isSaving}
+                        disabled={isSaving || isSaveDisabled}
                         className="w-full"
                     >
                         {isSaving ? (
