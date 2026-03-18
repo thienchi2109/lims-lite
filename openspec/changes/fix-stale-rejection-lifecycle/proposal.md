@@ -12,9 +12,10 @@ The UI consequence: a `completed` sample displays a "Mẫu đã bị từ chối
 - **RPC `submit_sample_for_review`**: Clear `rejection_reason`, `rejected_at`, `rejected_by` in Phase 5 (migration 119)
 - **`approveResults()`** (`results.ts`): Add `sample.status = 'review'` guard; clear rejection fields when setting `completed`
 - **`cancelApproval()`** (`results.ts`): Clear rejection fields as defense-in-depth
-- **`discardSample()`** (`sample-approvals.ts`): Add `'in_progress'` to `discardableStatuses`
+- **Discard flow**: Add `'in_progress'` to `discardableStatuses` and expose discard action for `in_progress` samples in the manager samples workspace
 - **UI** (`sample-detail-panel.tsx`): Only show rejection banner for `in_progress` and `discarded` statuses
 - **Backfill**: One-time SQL to clear stale rejection data on `completed` and `review` samples
+- **Tests**: Add targeted regression coverage for backfill, approval guard, rejection banner guard, and manager discard UI exposure
 
 ## Impact
 
@@ -23,5 +24,8 @@ The UI consequence: a `completed` sample displays a "Mẫu đã bị từ chối
   - `supabase/migrations/118_analyst_esignature_submissions.sql` → new migration 119
   - `src/app/actions/results.ts` (approveResults, cancelApproval)
   - `src/app/actions/sample-approvals.ts` (discardSample)
+  - `src/components/sample-list-table.tsx` (manager discard button exposure)
+  - `src/components/approval-actions.tsx` (confirm review-only discard UI remains intentional)
   - `src/components/sample-detail-panel.tsx`
+  - `src/app/actions/*.test.ts` and `src/components/__tests__/*.test.tsx`
   - Search index trigger in `069_add_search_to_samples.sql` (auto-cleared via data update)

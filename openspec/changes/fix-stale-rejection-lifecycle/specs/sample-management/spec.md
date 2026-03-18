@@ -4,7 +4,7 @@
 
 The system SHALL clear sample rejection metadata (`rejection_reason`, `rejected_at`, `rejected_by`) when a sample re-enters the approval workflow, ensuring stale rejection data is never displayed on samples that have progressed past the rejection event.
 
-Audit trail integrity is preserved because the original rejection event is recorded in `audit_logs` via `trigger_audit_log()` and in the `sample_submissions.superseded_by` chain.
+Audit trail integrity is preserved because the original rejection event remains in `audit_logs` via `trigger_audit_log()`, while any later re-submission remains visible through the `sample_submissions.superseded_by` lineage.
 
 #### Scenario: Analyst re-submits a previously rejected sample
 
@@ -26,6 +26,13 @@ Audit trail integrity is preserved because the original rejection event is recor
 - **GIVEN** a sample with status = `completed`
 - **WHEN** the sample detail panel renders
 - **THEN** the rejection banner SHALL NOT be displayed, regardless of any residual rejection field values
+
+#### Scenario: Backfill clears stale rejection metadata on active review/completed records
+
+- **GIVEN** existing samples in status = `review` or `completed` with stale `rejection_reason` from an earlier rejection cycle
+- **WHEN** the one-time backfill migration runs
+- **THEN** the system SHALL set `rejection_reason = NULL`, `rejected_at = NULL`, `rejected_by = NULL` for those samples
+- **AND** future search indexing SHALL no longer include the stale rejection text for those records
 
 ### Requirement: Approval status guard
 
@@ -54,3 +61,11 @@ The system SHALL allow managers to discard samples in `in_progress` status, enab
 - **WHEN** the manager calls `discardSample()` with a reason
 - **THEN** the system SHALL set status to `discarded`
 - **AND** record the discard reason, timestamp, and actor
+
+#### Scenario: Manager sees discard action for in_progress sample in samples workspace
+
+- **GIVEN** a manager is viewing the unified samples workspace
+- **AND** a sample has status = `in_progress`
+- **WHEN** the manager opens row actions for that sample
+- **THEN** the discard action SHALL be available
+- **AND** choosing that action SHALL route through the existing discard flow

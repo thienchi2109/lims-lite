@@ -114,6 +114,17 @@ Lines 231-233:
 +const discardableStatuses = ['received', 'assigned', 'in_progress', 'review']
 ```
 
+#### [MODIFY] [sample-list-table.tsx](file:///e:/lims-lite/src/components/sample-list-table.tsx)
+
+Expose discard for managers on `in_progress` samples in the unified samples workspace:
+
+```diff
+-const canDiscard = permissions?.canDiscard &&
+-    ['received', 'assigned'].includes(status)
++const canDiscard = permissions?.canDiscard &&
++    ['received', 'assigned', 'in_progress'].includes(status)
+```
+
 ---
 
 ## Verification Plan
@@ -132,5 +143,67 @@ docker exec lims-postgres psql -U postgres -d postgres -c "SELECT COUNT(*) FROM 
 
 ### Manual Test
 1. Reject → Re-submit → Approve → verify no banner on completed sample
-2. Reject → Discard from `in_progress` → should succeed
-3. Try approve on `in_progress` sample → should be blocked
+2. Existing stale `review`/`completed` samples after backfill → no rejection banner, no stale search hit
+3. Reject → Discard from `in_progress` in manager samples workspace → should succeed
+4. Try approve on `in_progress` sample → should be blocked
+
+## Dispatch Plan
+
+This section is a task-assignment plan for a later `subagent-driven-development` execution pass. Do not dispatch sub-agents from this document immediately; use it as the source of truth for future task ownership, review order, and verification.
+
+### Task 1: Database migration and backfill
+
+**Owner**
+- Worker 1
+
+**Write scope**
+- `supabase/migrations/119_clear_rejection_on_resubmit.sql`
+
+**Goal**
+- Update `submit_sample_for_review` to clear rejection fields on re-submit
+- Backfill stale rejection fields for `review` and `completed` samples
+- Add self-verification SQL proving no stale rejection metadata remains in those statuses after migration
+
+**Verification**
+- Migration file parses cleanly
+- Self-verification block fails loudly if stale rows remain
+
+### Task 2: Results approval/cancel backend guard
+
+**Owner**
+- Worker 2
+
+**Write scope**
+- `src/app/actions/results.ts`
+- `src/app/actions/*.test.ts`
+
+**Goal**
+- Add `review`-only guard to `approveResults()`
+- Clear rejection fields when `approveResults()` sets `completed`
+- Clear rejection fields in `cancelApproval()` as defense-in-depth
+- Add regression tests for blocked approval on non-review samples
+
+**Verification**
+- Targeted tests fail before change and pass after
+- No existing approval/QC tests regress
+
+### Task 3: Discard flow exposure and banner guard
+
+**Owner**
+- Worker 3
+
+**Write scope**
+- `src/app/actions/sample-approvals.ts`
+- `src/components/sample-detail-panel.tsx`
+- `src/components/sample-list-table.tsx`
+- `src/components/__tests__/*.test.tsx`
+
+**Goal**
+- Add `in_progress` to backend discardable statuses
+- Hide rejection banner except for `in_progress` and `discarded`
+- Expose discard action for `in_progress` samples in manager samples workspace
+- Preserve review-page discard behavior as-is
+
+**Verification**
+- Component tests cover banner visibility by status
+- Manager samples workspace test covers discard visibility on `in_progress`
