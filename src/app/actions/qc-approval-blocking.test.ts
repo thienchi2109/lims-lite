@@ -124,6 +124,14 @@ function setupSampleStatusFetch(status: string) {
     }) as any
 }
 
+function setupReviewApprovalFlow(results: any[], remainingUnapprovedCount = 0) {
+    setupInCallSequence([{ data: results, error: null }, { error: null }])
+    setupSampleStatusFetch('review')
+    fromChain.neq = vi.fn(() => ({
+        then: (resolve: any) => resolve({ count: remainingUnapprovedCount, error: null }),
+    })) as any
+}
+
 // ============================================================================
 // TESTS
 // ============================================================================
@@ -140,6 +148,7 @@ describe('QC Approval Blocking Mechanism', () => {
             setupResultsFetch([
                 { id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID },
             ])
+            setupSampleStatusFetch('review')
 
             // Mock RPC check_qc_approval_status - returns blocked
             mockRpc.mockResolvedValueOnce({
@@ -170,6 +179,7 @@ describe('QC Approval Blocking Mechanism', () => {
             setupResultsFetch([
                 { id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID },
             ])
+            setupSampleStatusFetch('review')
 
             // Mock RPC check_qc_approval_status - returns pending (QC not performed)
             mockRpc.mockResolvedValueOnce({
@@ -200,6 +210,7 @@ describe('QC Approval Blocking Mechanism', () => {
                 { id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID },
                 { id: TEST_RESULT_ID_2, status: 'entered', sample_id: TEST_SAMPLE_ID },
             ])
+            setupSampleStatusFetch('review')
 
             // Mock RPC - one pass, one blocked
             mockRpc.mockResolvedValueOnce({
@@ -236,6 +247,7 @@ describe('QC Approval Blocking Mechanism', () => {
                 { id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID },
                 { id: TEST_RESULT_ID_2, status: 'entered', sample_id: TEST_SAMPLE_ID },
             ])
+            setupSampleStatusFetch('review')
 
             // Mock RPC - both blocked with different reasons
             mockRpc.mockResolvedValueOnce({
@@ -293,10 +305,12 @@ describe('QC Approval Blocking Mechanism', () => {
 
         it('allows approval when QC session status is pass', async () => {
             setupManagerAuth()
-            setupResultsFetch([
-                { id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID },
-            ])
-            setupSampleStatusFetch('review')
+            setupReviewApprovalFlow(
+                [
+                    { id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID },
+                ],
+                0
+            )
 
             // Mock RPC - QC passed
             mockRpc.mockResolvedValueOnce({
@@ -311,21 +325,6 @@ describe('QC Approval Blocking Mechanism', () => {
                 error: null,
             })
 
-            // Mock the update
-            setupInCallSequence([
-                {
-                    data: [{ id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID }],
-                    error: null,
-                },
-                { error: null },
-            ])
-
-            // Mock count check for sample status update
-            const mockCountResult = { count: 0, error: null }
-            fromChain.neq = vi.fn(() => ({
-                then: (resolve: any) => resolve(mockCountResult),
-            })) as any
-
             const result = await approveResults({
                 sampleId: TEST_SAMPLE_ID,
                 resultIds: [TEST_RESULT_ID_1],
@@ -337,10 +336,12 @@ describe('QC Approval Blocking Mechanism', () => {
 
         it('allows approval when QC session status is resolved', async () => {
             setupManagerAuth()
-            setupResultsFetch([
-                { id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID },
-            ])
-            setupSampleStatusFetch('review')
+            setupReviewApprovalFlow(
+                [
+                    { id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID },
+                ],
+                0
+            )
 
             // Mock RPC - QC resolved
             mockRpc.mockResolvedValueOnce({
@@ -355,20 +356,6 @@ describe('QC Approval Blocking Mechanism', () => {
                 error: null,
             })
 
-            // Mock the update
-            setupInCallSequence([
-                {
-                    data: [{ id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID }],
-                    error: null,
-                },
-                { error: null },
-            ])
-
-            // Mock count check
-            fromChain.neq = vi.fn(() => ({
-                then: (resolve: any) => resolve({ count: 0, error: null }),
-            })) as any
-
             const result = await approveResults({
                 sampleId: TEST_SAMPLE_ID,
                 resultIds: [TEST_RESULT_ID_1],
@@ -381,10 +368,12 @@ describe('QC Approval Blocking Mechanism', () => {
     describe('Pre-QC Era (NULL qc_session_id)', () => {
         it('allows approval when qc_session_id is NULL (pre-QC era)', async () => {
             setupManagerAuth()
-            setupResultsFetch([
-                { id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID },
-            ])
-            setupSampleStatusFetch('review')
+            setupReviewApprovalFlow(
+                [
+                    { id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID },
+                ],
+                0
+            )
 
             // Mock RPC - NULL session = pre-QC era, allow approval
             mockRpc.mockResolvedValueOnce({
@@ -399,17 +388,6 @@ describe('QC Approval Blocking Mechanism', () => {
                 error: null,
             })
 
-            // Mock the update
-            fromChain.in = vi.fn(() => ({
-                ...fromChain,
-                then: (resolve: any) => resolve({ error: null }),
-            })) as any
-
-            // Mock count check
-            fromChain.neq = vi.fn(() => ({
-                then: (resolve: any) => resolve({ count: 0, error: null }),
-            })) as any
-
             const result = await approveResults({
                 sampleId: TEST_SAMPLE_ID,
                 resultIds: [TEST_RESULT_ID_1],
@@ -421,11 +399,13 @@ describe('QC Approval Blocking Mechanism', () => {
 
         it('allows mixed approval with NULL and pass sessions', async () => {
             setupManagerAuth()
-            setupResultsFetch([
-                { id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID },
-                { id: TEST_RESULT_ID_2, status: 'entered', sample_id: TEST_SAMPLE_ID },
-            ])
-            setupSampleStatusFetch('review')
+            setupReviewApprovalFlow(
+                [
+                    { id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID },
+                    { id: TEST_RESULT_ID_2, status: 'entered', sample_id: TEST_SAMPLE_ID },
+                ],
+                0
+            )
 
             // Mock RPC - one NULL (pre-QC), one pass
             mockRpc.mockResolvedValueOnce({
@@ -446,17 +426,6 @@ describe('QC Approval Blocking Mechanism', () => {
                 error: null,
             })
 
-            // Mock the update
-            fromChain.in = vi.fn(() => ({
-                ...fromChain,
-                then: (resolve: any) => resolve({ error: null }),
-            })) as any
-
-            // Mock count check
-            fromChain.neq = vi.fn(() => ({
-                then: (resolve: any) => resolve({ count: 0, error: null }),
-            })) as any
-
             const result = await approveResults({
                 sampleId: TEST_SAMPLE_ID,
                 resultIds: [TEST_RESULT_ID_1, TEST_RESULT_ID_2],
@@ -469,27 +438,16 @@ describe('QC Approval Blocking Mechanism', () => {
     describe('RPC Error Handling', () => {
         it('handles RPC returning null gracefully', async () => {
             setupManagerAuth()
-            setupResultsFetch([
-                { id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID },
-            ])
-            setupSampleStatusFetch('review')
+            setupReviewApprovalFlow(
+                [{ id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID }],
+                0
+            )
 
             // Mock RPC returning null
             mockRpc.mockResolvedValueOnce({
                 data: null,
                 error: null,
             })
-
-            // Mock the update
-            fromChain.in = vi.fn(() => ({
-                ...fromChain,
-                then: (resolve: any) => resolve({ error: null }),
-            })) as any
-
-            // Mock count check
-            fromChain.neq = vi.fn(() => ({
-                then: (resolve: any) => resolve({ count: 0, error: null }),
-            })) as any
 
             // Should not crash, just proceed
             const result = await approveResults({
@@ -503,27 +461,16 @@ describe('QC Approval Blocking Mechanism', () => {
 
         it('handles RPC returning empty array gracefully', async () => {
             setupManagerAuth()
-            setupResultsFetch([
-                { id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID },
-            ])
-            setupSampleStatusFetch('review')
+            setupReviewApprovalFlow(
+                [{ id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID }],
+                0
+            )
 
             // Mock RPC returning empty array
             mockRpc.mockResolvedValueOnce({
                 data: [],
                 error: null,
             })
-
-            // Mock the update
-            fromChain.in = vi.fn(() => ({
-                ...fromChain,
-                then: (resolve: any) => resolve({ error: null }),
-            })) as any
-
-            // Mock count check
-            fromChain.neq = vi.fn(() => ({
-                then: (resolve: any) => resolve({ count: 0, error: null }),
-            })) as any
 
             const result = await approveResults({
                 sampleId: TEST_SAMPLE_ID,
@@ -536,7 +483,10 @@ describe('QC Approval Blocking Mechanism', () => {
 
         it('clears rejection fields when approval completes the sample', async () => {
             setupManagerAuth()
-            setupSampleStatusFetch('review')
+            setupReviewApprovalFlow(
+                [{ id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID }],
+                0
+            )
 
             mockRpc.mockResolvedValueOnce({
                 data: [
@@ -549,18 +499,6 @@ describe('QC Approval Blocking Mechanism', () => {
                 ],
                 error: null,
             })
-
-            setupInCallSequence([
-                {
-                    data: [{ id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID }],
-                    error: null,
-                },
-                { error: null },
-            ])
-
-            fromChain.neq = vi.fn(() => ({
-                then: (resolve: any) => resolve({ count: 0, error: null }),
-            })) as any
 
             const result = await approveResults({
                 sampleId: TEST_SAMPLE_ID,
@@ -576,6 +514,34 @@ describe('QC Approval Blocking Mechanism', () => {
                     rejected_by: null,
                 })
             )
+        })
+
+        it('keeps sample in review without clearing rejection fields when not all results are approved', async () => {
+            setupManagerAuth()
+            setupReviewApprovalFlow(
+                [{ id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID }],
+                1
+            )
+
+            mockRpc.mockResolvedValueOnce({
+                data: [
+                    {
+                        result_id: TEST_RESULT_ID_1,
+                        can_approve: true,
+                        qc_status: 'pass',
+                        blocking_reason: null,
+                    },
+                ],
+                error: null,
+            })
+
+            const result = await approveResults({
+                sampleId: TEST_SAMPLE_ID,
+                resultIds: [TEST_RESULT_ID_1],
+            })
+
+            expect(result).toHaveProperty('success', true)
+            expect(fromChain.update).toHaveBeenCalledWith({ status: 'review' })
         })
     })
 
