@@ -247,6 +247,23 @@ export async function approveResults(data: ApproveResults) {
             return { error: 'All results must belong to the same sample' }
         }
 
+        if (sampleIds[0]) {
+            const { data: sample, error: sampleError } = await supabase
+                .from('samples')
+                .select('status')
+                .eq('id', sampleIds[0])
+                .single()
+
+            if (sampleError) {
+                console.error('Error fetching sample for approval:', sampleError)
+                return { error: sampleError.message }
+            }
+
+            if (sample?.status !== 'review') {
+                return { error: 'Can only approve results for samples under review' }
+            }
+        }
+
         // QC Session Check: Block approval if QC is blocked
         const { data: qcCheck } = await supabase.rpc('check_qc_approval_status', {
             p_result_ids: validatedData.resultIds,
@@ -298,9 +315,16 @@ export async function approveResults(data: ApproveResults) {
 
             const newStatus = count === 0 ? 'completed' : 'review'
 
+            const sampleUpdateData: Record<string, unknown> = { status: newStatus }
+            if (newStatus === 'completed') {
+                sampleUpdateData.rejection_reason = null
+                sampleUpdateData.rejected_at = null
+                sampleUpdateData.rejected_by = null
+            }
+
             await supabase
                 .from('samples')
-                .update({ status: newStatus })
+                .update(sampleUpdateData)
                 .eq('id', sampleIds[0])
 
             // Auto-generate CoA when sample is completed (all results approved)
@@ -397,7 +421,12 @@ export async function cancelApproval(data: CancelApproval) {
         if (sampleIds[0]) {
             await supabase
                 .from('samples')
-                .update({ status: 'in_progress' })
+                .update({
+                    status: 'in_progress',
+                    rejection_reason: null,
+                    rejected_at: null,
+                    rejected_by: null,
+                })
                 .eq('id', sampleIds[0])
         }
 
