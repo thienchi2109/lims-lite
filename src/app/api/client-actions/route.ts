@@ -15,14 +15,8 @@ import {
     rejectSample,
     discardSample,
 } from '@/app/actions/sample-approvals'
-import {
-    getResultsBySample,
-    saveBatchResults,
-} from '@/app/actions/results'
-import {
-    approveResults,
-    cancelApproval,
-} from '@/app/actions/results-approval'
+import { getResultsBySample, saveBatchResults } from '@/app/actions/results'
+import { approveResults, cancelApproval } from '@/app/actions/results-approval'
 import { getAssayDefinitions as fetchAssayDefinitions } from '@/app/actions/assay-queries'
 import { getMethods } from '@/app/actions/assay-lookups'
 import {

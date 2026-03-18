@@ -12,6 +12,7 @@ const [routeContent, approvalActionsContent] = await Promise.all([
   readFile(routePath, 'utf8'),
   readFile(approvalActionsPath, 'utf8').catch(() => ''),
 ])
+const routeLineCount = routeContent.split('\n').length
 
 assert.ok(
   routeContent.includes("from '@/app/actions/results-approval'"),
@@ -27,6 +28,11 @@ assert.ok(
   approvalActionsContent.includes('export async function approveResults') &&
     approvalActionsContent.includes('export async function cancelApproval'),
   'results-approval.ts should export approveResults and cancelApproval'
+)
+
+assert.ok(
+  routeLineCount <= 350,
+  `client-actions route.ts must stay within the 350-line project limit (got ${routeLineCount})`
 )
 
 console.log('✓ results approval route wiring present')

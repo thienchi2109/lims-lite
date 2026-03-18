@@ -120,11 +120,12 @@ node tests/results-approval-route-wiring.test.mjs
 npm run typecheck
 powershell -Command "(Get-Content 'src/app/actions/results.ts').Count"
 powershell -Command "(Get-Content 'src/app/actions/results-approval.ts').Count"
+powershell -Command "(Get-Content 'src/app/api/client-actions/route.ts').Count"
 ```
 
 Expected:
 - All commands succeed
-- Both action files remain under 350 lines
+- All modified files remain under 350 lines
 
 **Step 2: Manual sanity check**
 
