@@ -13,7 +13,10 @@ export function AccessionPageHeader() {
                     Nhập thông tin mẫu hoặc quét mã QR để tiếp nhận
                 </p>
             </div>
-            <WalkthroughTrigger tourId="accession" />
+            <WalkthroughTrigger
+                tourId="accession"
+                className="hidden xl:inline-flex"
+            />
         </div>
     )
 }
