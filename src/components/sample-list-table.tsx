@@ -188,7 +188,7 @@ export function SampleListTable({
                 const canViewResults = permissions?.canViewResults &&
                     ['assigned', 'in_progress', 'review', 'completed'].includes(status)
                 const canDiscard = permissions?.canDiscard &&
-                    ['received', 'assigned'].includes(status)
+                    ['received', 'assigned', 'in_progress'].includes(status)
 
                 return (
                     <div

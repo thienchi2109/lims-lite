@@ -210,7 +210,7 @@ export async function rejectSample(data: RejectSample) {
 
 /**
  * Discards a sample (Manager only)
- * Changes status to 'discarded' for received, assigned, or review samples
+ * Changes status to 'discarded' for received, assigned, in_progress, or review samples
  */
 export async function discardSample(data: DiscardSample) {
     try {
@@ -228,9 +228,9 @@ export async function discardSample(data: DiscardSample) {
 
         if (!sample) return { error: 'Sample not found' }
 
-        const discardableStatuses = ['received', 'assigned', 'review']
+        const discardableStatuses = ['received', 'assigned', 'in_progress', 'review']
         if (!discardableStatuses.includes(sample.status)) {
-            return { error: `Cannot discard samples with status "${sample.status}". Only received, assigned, or review samples can be discarded.` }
+            return { error: `Cannot discard samples with status "${sample.status}". Only received, assigned, in_progress, or review samples can be discarded.` }
         }
 
         const { error: updateError } = await supabase

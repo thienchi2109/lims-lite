@@ -135,7 +135,7 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
             <div className="flex-1 overflow-y-auto">
                 {activeTab === 'details' ? (
                     <div className="p-3">
-                        {sample.rejection_reason && (
+                        {sample.rejection_reason && ['in_progress', 'discarded'].includes(sample.status) && (
                             <div className={`mb-4 p-3 rounded-md border ${sample.status === 'discarded'
                                 ? 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'
                                 : 'bg-orange-50 border-orange-200 text-orange-800 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-300'
