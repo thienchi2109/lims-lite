@@ -45,6 +45,16 @@ const sample = {
     received_by_name: 'User A',
 } as unknown as SampleWithUser
 
+function buildSampleWithStatus(status: SampleWithUser['status']): SampleWithUser {
+    return {
+        ...sample,
+        status,
+        rejection_reason: 'Thiếu dữ liệu QC',
+        rejected_at: '2026-01-02T08:00:00.000Z',
+        rejected_by_name: 'Manager A',
+    } as unknown as SampleWithUser
+}
+
 describe('SampleDetailPanel mobile behavior', () => {
     it('hides lifecycle progress chevron on mobile breakpoints', () => {
         render(<SampleDetailPanel sample={sample} />)
@@ -52,5 +62,27 @@ describe('SampleDetailPanel mobile behavior', () => {
         const lifecycleChevron = screen.getByTestId('sample-lifecycle-chevron')
         expect(lifecycleChevron.className).toContain('hidden')
         expect(lifecycleChevron.className).toContain('sm:flex')
+    })
+
+    it('shows rejection banner for in_progress samples with rejection metadata', () => {
+        render(<SampleDetailPanel sample={buildSampleWithStatus('in_progress')} />)
+        expect(screen.getByText('Mẫu đã bị từ chối')).toBeDefined()
+    })
+
+    it('shows discard banner for discarded samples with rejection metadata', () => {
+        render(<SampleDetailPanel sample={buildSampleWithStatus('discarded')} />)
+        expect(screen.getByText('Mẫu đã bị loại bỏ')).toBeDefined()
+    })
+
+    it('hides rejection banner for review samples even when rejection metadata exists', () => {
+        render(<SampleDetailPanel sample={buildSampleWithStatus('review')} />)
+        expect(screen.queryByText('Mẫu đã bị từ chối')).toBeNull()
+        expect(screen.queryByText('Mẫu đã bị loại bỏ')).toBeNull()
+    })
+
+    it('hides rejection banner for completed samples even when rejection metadata exists', () => {
+        render(<SampleDetailPanel sample={buildSampleWithStatus('completed')} />)
+        expect(screen.queryByText('Mẫu đã bị từ chối')).toBeNull()
+        expect(screen.queryByText('Mẫu đã bị loại bỏ')).toBeNull()
     })
 })
