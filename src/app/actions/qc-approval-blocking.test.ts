@@ -58,7 +58,7 @@ vi.mock('next/cache', () => ({
 // IMPORT AFTER MOCKS
 // ============================================================================
 
-import { approveResults, cancelApproval } from '@/app/actions/results'
+import { approveResults, cancelApproval } from '@/app/actions/results-approval'
 
 // ============================================================================
 // TEST CONSTANTS
