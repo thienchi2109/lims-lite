@@ -26,7 +26,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog'
 import { submitSampleForReviewClient } from '@/lib/api-client'
-import type { SampleStatus, LabSpecialty } from '@/types'
+import type { LabSpecialty } from '@/types'
 import { ResultCellEditor } from '@/components/result-cell-editor'
 import { BatchSaveToolbar } from '@/components/batch-save-toolbar'
 import { ResultStatusBadge } from '@/components/result-status-badge'

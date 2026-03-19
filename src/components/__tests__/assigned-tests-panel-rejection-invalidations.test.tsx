@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 
@@ -105,26 +106,26 @@ vi.mock('@/components/qc/qc-row-indicator', () => ({
 }))
 
 vi.mock('@/components/ui/dialog', () => ({
-    Dialog: ({ children }: { children: any }) => <>{children}</>,
-    DialogContent: ({ children }: { children: any }) => <>{children}</>,
-    DialogDescription: ({ children }: { children: any }) => <>{children}</>,
-    DialogFooter: ({ children }: { children: any }) => <>{children}</>,
-    DialogHeader: ({ children }: { children: any }) => <>{children}</>,
-    DialogTitle: ({ children }: { children: any }) => <>{children}</>,
+    Dialog: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    DialogContent: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    DialogDescription: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    DialogFooter: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    DialogHeader: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    DialogTitle: ({ children }: { children?: ReactNode }) => <>{children}</>,
 }))
 
 vi.mock('@/components/ui/card', () => ({
-    Card: ({ children }: { children: any }) => <div>{children}</div>,
-    CardContent: ({ children }: { children: any }) => <div>{children}</div>,
+    Card: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+    CardContent: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
 }))
 
 vi.mock('@/components/ui/table', () => ({
-    Table: ({ children }: { children: any }) => <table>{children}</table>,
-    TableBody: ({ children }: { children: any }) => <tbody>{children}</tbody>,
-    TableCell: ({ children }: { children: any }) => <td>{children}</td>,
-    TableHead: ({ children }: { children: any }) => <th>{children}</th>,
-    TableHeader: ({ children }: { children: any }) => <thead>{children}</thead>,
-    TableRow: ({ children }: { children: any }) => <tr>{children}</tr>,
+    Table: ({ children }: { children?: ReactNode }) => <table>{children}</table>,
+    TableBody: ({ children }: { children?: ReactNode }) => <tbody>{children}</tbody>,
+    TableCell: ({ children }: { children?: ReactNode }) => <td>{children}</td>,
+    TableHead: ({ children }: { children?: ReactNode }) => <th>{children}</th>,
+    TableHeader: ({ children }: { children?: ReactNode }) => <thead>{children}</thead>,
+    TableRow: ({ children }: { children?: ReactNode }) => <tr>{children}</tr>,
 }))
 
 vi.mock('sonner', () => ({
