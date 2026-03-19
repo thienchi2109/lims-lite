@@ -10,6 +10,8 @@ import { useQuery } from '@tanstack/react-query'
 import { rejectionKeys } from '@/types/query-keys'
 import { fetchRejectedSamplesCountClient } from '@/lib/api-client'
 
+const COUNT_REFRESH_INTERVAL_MS = 30 * 1000
+
 export function useRejectionCount() {
     return useQuery({
         queryKey: rejectionKeys.count,
@@ -22,8 +24,10 @@ export function useRejectionCount() {
 
             return result.data ?? 0
         },
-        staleTime: 30 * 1000,
+        staleTime: COUNT_REFRESH_INTERVAL_MS,
+        refetchOnMount: 'always',
         refetchOnWindowFocus: true,
         refetchOnReconnect: true,
+        refetchInterval: COUNT_REFRESH_INTERVAL_MS,
     })
 }
