@@ -21,6 +21,6 @@
 - [x] 4.1 `npm run typecheck` passes
 - [x] 4.2 Apply migration to Docker Postgres (when available)
 - [x] 4.3 Run `run_security_tests()` (when available)
-- [ ] 4.4 Manual test: reject → re-submit → approve → verify no banner on completed sample
-- [ ] 4.5 Manual test: stale `review` sample after backfill shows no rejection banner until a new rejection occurs
-- [ ] 4.6 Manual test: reject → discard from `in_progress` in manager samples workspace succeeds
+- [x] 4.4 Manual test: reject → re-submit → approve → verify no banner on completed sample
+- [x] 4.5 Manual test: stale `review` sample after backfill shows no rejection banner until a new rejection occurs
+- [x] 4.6 Manual test: reject → discard from `in_progress` in manager samples workspace succeeds
