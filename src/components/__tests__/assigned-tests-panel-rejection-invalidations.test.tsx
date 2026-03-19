@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 const mockInvalidateQueries = vi.fn().mockResolvedValue(undefined)
 const mockPush = vi.fn()
 const mockFetchTests = vi.fn()
+const capturedSpecialties: unknown[] = []
 
 vi.mock('@tanstack/react-query', () => ({
     useQueryClient: () => ({
@@ -93,7 +94,10 @@ vi.mock('@/components/result-status-badge', () => ({
 }))
 
 vi.mock('@/components/test-assignment-module', () => ({
-    TestAssignmentModule: () => null,
+    TestAssignmentModule: (props: { specialties?: unknown }) => {
+        capturedSpecialties.push(props.specialties)
+        return null
+    },
 }))
 
 vi.mock('@/components/qc/qc-row-indicator', () => ({
@@ -139,6 +143,7 @@ const mockSubmitSampleForReviewClient = vi.mocked(submitSampleForReviewClient)
 describe('AssignedTestsPanel rejection invalidation', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        capturedSpecialties.length = 0
     })
 
     it('invalidates approval and rejection counts after submit for review', async () => {
@@ -154,5 +159,14 @@ describe('AssignedTestsPanel rejection invalidation', () => {
         )
         expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: rejectionKeys.count })
         expect(mockFetchTests).toHaveBeenCalled()
+    })
+
+    it('keeps the default specialties reference stable across rerenders', () => {
+        const { rerender } = render(<AssignedTestsPanel sampleId="sample-1" />)
+
+        rerender(<AssignedTestsPanel sampleId="sample-1" />)
+
+        expect(capturedSpecialties.length).toBeGreaterThan(1)
+        expect(new Set(capturedSpecialties).size).toBe(1)
     })
 })

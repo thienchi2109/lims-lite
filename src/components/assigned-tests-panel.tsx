@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { sampleKeys, invalidateSampleQueries, approvalKeys, rejectionKeys } from '@/types/query-keys'
 import {
@@ -47,9 +47,14 @@ interface AssignedTestsPanelProps {
     userRole?: 'analyst' | 'manager'
 }
 
-export function AssignedTestsPanel({ sampleId, specialties = [], userRole }: AssignedTestsPanelProps) {
+const DEFAULT_SPECIALTIES: LabSpecialty[] = []
+
+export function AssignedTestsPanel({
+    sampleId,
+    specialties = DEFAULT_SPECIALTIES,
+    userRole,
+}: AssignedTestsPanelProps) {
     const router = useRouter()
-    const searchParams = useSearchParams()
     const queryClient = useQueryClient()
 
     // Extracted hooks
@@ -66,18 +71,11 @@ export function AssignedTestsPanel({ sampleId, specialties = [], userRole }: Ass
     const [showAssignmentDialog, setShowAssignmentDialog] = useState(false)
 
     // Signature status hook
-    const { hasSignature, isLoading: signatureLoading, error: signatureError } = useSignatureStatus()
-
-    // Log signature fetch errors
-    useEffect(() => {
-        if (signatureError) {
-            console.warn('Failed to fetch signature status:', signatureError)
-        }
-    }, [signatureError])
+    const { hasSignature, isLoading: signatureLoading } = useSignatureStatus()
 
     const handleRefocus = useCallback(
         (targetSampleId: string) => {
-            const params = new URLSearchParams(searchParams?.toString() ?? '')
+            const params = new URLSearchParams(window.location.search)
             params.set('sortBy', 'updated_at')
             params.set('sortOrder', 'desc')
             params.set('sampleId', targetSampleId)
@@ -85,7 +83,7 @@ export function AssignedTestsPanel({ sampleId, specialties = [], userRole }: Ass
             router.push(`?${params.toString()}`)
             queryClient.invalidateQueries({ queryKey: sampleKeys.all })
         },
-        [searchParams, router, queryClient]
+        [router, queryClient]
     )
 
     // Results editor hook
@@ -127,9 +125,9 @@ export function AssignedTestsPanel({ sampleId, specialties = [], userRole }: Ass
             const message = err instanceof Error ? err.message : 'Có lỗi xảy ra khi gửi duyệt'
             toast.error(message)
             console.error(err)
-        } finally {
-            setIsSubmitting(false)
         }
+
+        setIsSubmitting(false)
     }
 
     if (loading) {
