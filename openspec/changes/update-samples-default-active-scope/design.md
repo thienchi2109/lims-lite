@@ -52,6 +52,12 @@ Examples:
 
 The `Hiển thị tất cả` control should live in the visible samples toolbar rather than inside the advanced filter popover. This is a top-level fetch mode, not a secondary filter.
 
+### Decision 8: Narrow the search bar to accommodate the scope toggle
+
+The current toolbar in `sample-filters/index.tsx` uses a flex row where the search container is `flex-1` (absorbs all remaining space) and the right-side controls (`FilterPopover`, Sort, PageSize`) are `shrink-0`. This means the search bar stretches edge-to-edge minus the fixed controls, leaving no room for an additional button.
+
+To fit the `Hiển thị tất cả` toggle in the toolbar (Decision 4), cap the search container with a `max-w` utility (e.g. `max-w-sm` ≈ 384 px, or `max-w-md` ≈ 448 px). The freed space allows the scope toggle to sit naturally between the search bar and the `Bộ lọc` button. The search field remains responsive via `flex-1` on narrower viewports but stops growing past the cap on wider screens.
+
 ### Decision 5: Keep the scope control visible while explicit status is selected
 
 When the user selects a concrete status, that explicit status should still win over scope for the actual query result. However, the top-level scope control should remain visible and URL-backed so the remembered dataset mode survives refresh/share/bookmark behavior and becomes active again once the explicit status filter is cleared.
