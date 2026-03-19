@@ -146,6 +146,11 @@ services:
       KONG_PLUGINS: request-transformer,cors,key-auth,acl
       KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
       KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
+    healthcheck:
+      test: [ "CMD-SHELL", "kong health" ]
+      interval: 10s
+      timeout: 10s
+      retries: 10
     ports:
       - "8000:8000"
     volumes:
