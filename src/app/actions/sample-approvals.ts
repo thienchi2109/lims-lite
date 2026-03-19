@@ -128,6 +128,36 @@ export async function getSamplesForApprovalCount() {
 }
 
 /**
+ * Gets the count of rejected samples visible to the current analyst.
+ */
+export async function getRejectedSamplesCount() {
+    try {
+        const auth = await requireRole('analyst')
+        if (isAuthError(auth)) return { error: 'Only analysts can view rejection notifications' }
+
+        const supabase = await createClient()
+
+        const { count, error } = await supabase
+            .from('samples')
+            .select('id', { count: 'exact', head: true })
+            .eq('status', 'in_progress')
+            .eq('received_by', auth.id)
+            .not('rejected_at', 'is', null)
+            .is('deleted_at', null)
+
+        if (error) {
+            console.error('Error counting rejected samples:', error)
+            return { error: error.message }
+        }
+
+        return { data: count ?? 0 }
+    } catch (error) {
+        console.error('Error in getRejectedSamplesCount:', error)
+        return { error: error instanceof Error ? error.message : 'Failed to count rejected samples' }
+    }
+}
+
+/**
  * Submits a sample for review (Analyst)
  * Changes status from 'in_progress' to 'review'
  */

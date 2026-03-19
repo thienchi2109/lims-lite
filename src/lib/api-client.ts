@@ -108,6 +108,10 @@ export function fetchSamplesForApprovalCountClient() {
     return callClientAction<{ data: number }>('getSamplesForApprovalCount')
 }
 
+export function fetchRejectedSamplesCountClient() {
+    return callClientAction<{ data: number }>('getRejectedSamplesCount')
+}
+
 export function assignTestsClient(data: AssignTests) {
     return callClientAction('assignTests', data)
 }

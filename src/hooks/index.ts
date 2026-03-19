@@ -13,6 +13,7 @@ export { useAssignTests } from './use-assign-tests'
 
 // Approval queue
 export { useApprovalCount } from './use-approval-count'
+export { useRejectionCount } from './use-rejection-count'
 
 // Signature status
 export { useSignatureStatus } from './use-signature-status'

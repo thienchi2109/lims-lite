@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
-import { invalidateSampleQueries, approvalKeys } from '@/types/query-keys'
+import { invalidateSampleQueries, approvalKeys, rejectionKeys } from '@/types/query-keys'
 import { discardSampleClient } from '@/lib/api-client'
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -50,6 +50,7 @@ export function DiscardSampleDialog({ sampleId, open, onOpenChange }: DiscardSam
                 // Invalidate queries to trigger refetch
                 await invalidateSampleQueries(queryClient, sampleId)
                 queryClient.invalidateQueries({ queryKey: approvalKeys.count })
+                queryClient.invalidateQueries({ queryKey: rejectionKeys.count })
 
                 onOpenChange(false)
                 setReason('')

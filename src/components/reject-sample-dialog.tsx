@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
-import { invalidateSampleQueries, approvalKeys } from '@/types/query-keys'
+import { invalidateSampleQueries, approvalKeys, rejectionKeys } from '@/types/query-keys'
 import { rejectSampleClient } from '@/lib/api-client'
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -40,6 +40,7 @@ export function RejectSampleDialog({ sampleId, open, onOpenChange }: RejectSampl
                 // Invalidate queries
                 await invalidateSampleQueries(queryClient, sampleId)
                 queryClient.invalidateQueries({ queryKey: approvalKeys.count })
+                queryClient.invalidateQueries({ queryKey: rejectionKeys.count })
 
                 router.refresh()
                 onOpenChange(false)

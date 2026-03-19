@@ -24,6 +24,7 @@ export type ClientActionName =
     | 'deleteUser'
     | 'rejectSample'
     | 'discardSample'
+    | 'getRejectedSamplesCount'
     | 'upsertClient'
     | 'findClientByIdentity'
     | 'getClient'
