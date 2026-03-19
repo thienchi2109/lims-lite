@@ -31,8 +31,11 @@ describe('ManagerDashboardClient', () => {
     it('hides the alert banner when there are no pending approvals', () => {
         mockUseApprovalCount.mockReturnValue({ data: 0 })
 
-        render(<ManagerDashboardClient user={{ full_name: 'Tran Thi B' }} />)
+        const { container } = render(<ManagerDashboardClient user={{ full_name: 'Tran Thi B' }} />)
 
         expect(screen.queryByRole('alert')).toBeNull()
+
+        const grid = container.querySelector('.grid')
+        expect(grid?.className).toContain('mt-0')
     })
 })

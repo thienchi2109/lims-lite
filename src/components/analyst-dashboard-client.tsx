@@ -79,7 +79,13 @@ export function AnalystDashboardClient({ user }: AnalystDashboardClientProps) {
                 linkHref="/samples"
             />
 
-            <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div
+                className={
+                    rejectionCount > 0
+                        ? 'mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                        : 'mt-0 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                }
+            >
                 {menuItems.map((item) => (
                     <Link key={item.href} href={item.href} className="group relative">
                         <div className="h-full overflow-hidden rounded-2xl border border-slate-200/50 bg-white/60 p-5 transition-all duration-300 hover:-translate-y-1 hover:border-indigo-500/30 hover:shadow-lg hover:shadow-indigo-500/10 dark:border-slate-800/50 dark:bg-slate-900/60 dark:hover:border-indigo-400/30 dark:hover:shadow-indigo-900/20 backdrop-blur-xl">

@@ -95,7 +95,13 @@ export function ManagerDashboardClient({ user }: ManagerDashboardClientProps) {
             />
 
             {/* Dashboard Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-8">
+            <div
+                className={
+                    pendingCount > 0
+                        ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-8'
+                        : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-0'
+                }
+            >
                 {menuItems.map((item) => (
                     <Link
                         key={item.href}

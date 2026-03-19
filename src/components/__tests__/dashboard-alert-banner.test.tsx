@@ -31,6 +31,7 @@ describe('DashboardAlertBanner', () => {
         const alert = screen.getByRole('alert')
         expect(alert.className).toContain('border-amber-200')
         expect(alert.className).toContain('bg-amber-50')
+        expect(alert.className).toContain('border-l-amber-500')
         expect(screen.getByText('Bạn có 3 mẫu đang chờ phê duyệt')).toBeDefined()
         expect(screen.getByRole('link', { name: 'Mở hàng đợi' }).getAttribute('href')).toBe(
             '/manager/approvals',
@@ -51,6 +52,7 @@ describe('DashboardAlertBanner', () => {
         const alert = screen.getByRole('alert')
         expect(alert.className).toContain('border-destructive')
         expect(alert.className).toContain('text-destructive')
+        expect(alert.className).toContain('border-l-rose-500')
         expect(screen.getByText('Có 2 mẫu bị từ chối')).toBeDefined()
         expect(screen.getByRole('link', { name: 'Xem danh sách mẫu' }).getAttribute('href')).toBe(
             '/samples',

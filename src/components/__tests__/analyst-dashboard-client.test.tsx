@@ -32,12 +32,15 @@ describe('AnalystDashboardClient', () => {
     it('hides the rejection banner and badge when count is zero', () => {
         mockUseRejectionCount.mockReturnValue({ data: 0 })
 
-        render(<AnalystDashboardClient user={{ full_name: 'Nguyen Van A' }} />)
+        const { container } = render(<AnalystDashboardClient user={{ full_name: 'Nguyen Van A' }} />)
 
         expect(screen.queryByRole('alert')).toBeNull()
 
         const sampleCard = screen.getByText('Danh sách mẫu').closest('a')
         expect(sampleCard).not.toBeNull()
         expect(within(sampleCard as HTMLElement).queryByText('0')).toBeNull()
+
+        const grid = container.querySelector('.grid')
+        expect(grid?.className).toContain('mt-0')
     })
 })
