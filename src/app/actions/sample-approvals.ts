@@ -1,8 +1,8 @@
 'use server'
 
 /**
- * Sample Approvals - Manager workflow and approval operations
- * Functions: getSamplesWithTab, getSamplesForApprovalCount, submitSampleForReview, rejectSample, discardSample
+ * Sample Approvals - Analyst and manager sample workflow actions
+ * Functions: getSamplesWithTab, getSamplesForApprovalCount, getRejectedSamplesCount, submitSampleForReview, rejectSample, discardSample
  */
 
 import { createClient } from '@/lib/supabase/server'
@@ -133,7 +133,7 @@ export async function getSamplesForApprovalCount() {
 export async function getRejectedSamplesCount() {
     try {
         const auth = await requireRole('analyst')
-        if (isAuthError(auth)) return { error: 'Only analysts can view rejection notifications' }
+        if (isAuthError(auth)) return auth
 
         const supabase = await createClient()
 

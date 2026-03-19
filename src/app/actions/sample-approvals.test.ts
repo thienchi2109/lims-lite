@@ -164,12 +164,12 @@ describe('getRejectedSamplesCount', () => {
         await expect(getRejectedSamplesCount()).resolves.toEqual({ data: 0 })
     })
 
-    it('rejects non-analyst roles', async () => {
-        mockRequireRole.mockResolvedValueOnce({ error: 'forbidden' })
+    it('preserves auth failures so the client-actions route can derive the correct status', async () => {
+        mockRequireRole.mockResolvedValueOnce({ error: 'Unauthorized' })
         mockIsAuthError.mockReturnValueOnce(true)
 
         await expect(getRejectedSamplesCount()).resolves.toEqual({
-            error: 'Only analysts can view rejection notifications',
+            error: 'Unauthorized',
         })
         expect(mockSelect).not.toHaveBeenCalled()
     })

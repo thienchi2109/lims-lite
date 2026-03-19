@@ -17,7 +17,6 @@ vi.mock('next/navigation', () => ({
     useRouter: () => ({
         push: mockPush,
     }),
-    useSearchParams: () => new URLSearchParams('page=2'),
 }))
 
 vi.mock('@/lib/api-client', () => ({
@@ -77,8 +76,17 @@ vi.mock('@/hooks/use-print-handlers', () => ({
 }))
 
 vi.mock('@/components/assigned-tests-toolbar', () => ({
-    AssignedTestsToolbar: ({ onSubmitForReview }: { onSubmitForReview: () => void }) => (
-        <button onClick={onSubmitForReview}>Submit for review</button>
+    AssignedTestsToolbar: ({
+        onSubmitForReview,
+        onOpenAssignment,
+    }: {
+        onSubmitForReview: () => void
+        onOpenAssignment?: () => void
+    }) => (
+        <>
+            <button onClick={onSubmitForReview}>Submit for review</button>
+            <button onClick={onOpenAssignment}>Open assignment</button>
+        </>
     ),
 }))
 
@@ -106,7 +114,7 @@ vi.mock('@/components/qc/qc-row-indicator', () => ({
 }))
 
 vi.mock('@/components/ui/dialog', () => ({
-    Dialog: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    Dialog: ({ children, open }: { children?: ReactNode; open?: boolean }) => (open ? <>{children}</> : null),
     DialogContent: ({ children }: { children?: ReactNode }) => <>{children}</>,
     DialogDescription: ({ children }: { children?: ReactNode }) => <>{children}</>,
     DialogFooter: ({ children }: { children?: ReactNode }) => <>{children}</>,
@@ -152,7 +160,9 @@ describe('AssignedTestsPanel rejection invalidation', () => {
 
         render(<AssignedTestsPanel sampleId="sample-1" />)
 
+        expect(screen.queryByRole('button', { name: 'Xác nhận gửi' })).toBeNull()
         fireEvent.click(screen.getByRole('button', { name: 'Submit for review' }))
+        expect(screen.getByRole('button', { name: 'Xác nhận gửi' })).not.toBeNull()
         fireEvent.click(screen.getByRole('button', { name: 'Xác nhận gửi' }))
 
         await waitFor(() =>
@@ -164,6 +174,7 @@ describe('AssignedTestsPanel rejection invalidation', () => {
 
     it('keeps the default specialties reference stable across rerenders', () => {
         const { rerender } = render(<AssignedTestsPanel sampleId="sample-1" />)
+        fireEvent.click(screen.getByRole('button', { name: 'Open assignment' }))
 
         rerender(<AssignedTestsPanel sampleId="sample-1" />)
 
