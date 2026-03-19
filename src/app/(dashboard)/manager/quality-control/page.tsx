@@ -202,8 +202,9 @@ export default async function QualityControlPage({
         .map((d) => d.id)
 
     // Calculate cutoff date based on qc_days param
+    const now = Date.now()
     const cutoffDate = days
-        ? new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+        ? new Date(now - days * 24 * 60 * 60 * 1000)
         : null
 
     const { data: qcResultsData } = await supabase

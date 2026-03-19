@@ -15,12 +15,15 @@ import { MobileView } from './test-assignment/mobile-view'
 import { DesktopGrid } from './test-assignment/desktop-grid'
 import { SelectionPanel } from './test-assignment/selection-panel'
 
+const EMPTY_DISABLED_IDS: string[] = []
+const EMPTY_SPECIALTIES: import('@/types').LabSpecialty[] = []
+
 export function TestAssignmentGrid({
     selected,
     onChange,
     context,
-    disabledAssayIds = [],
-    specialties = [],
+    disabledAssayIds = EMPTY_DISABLED_IDS,
+    specialties = EMPTY_SPECIALTIES,
     onSave = () => { },
     isSaving = false,
     isSaveDisabled = false,

@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { LabSpecialty } from '@/types'
 
+const EMPTY_IDS: string[] = []
+
 type LabSpecialtyChipsProps = {
     specialties: LabSpecialty[]
     selectedIds?: string[]
@@ -19,7 +21,7 @@ type LabSpecialtyChipsProps = {
  */
 export function LabSpecialtyChips({
     specialties,
-    selectedIds = [],
+    selectedIds = EMPTY_IDS,
 }: LabSpecialtyChipsProps) {
     const [isExpanded, setIsExpanded] = useState(false)
 

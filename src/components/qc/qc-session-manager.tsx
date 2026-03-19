@@ -32,6 +32,8 @@ import { StartSessionDialog } from './start-session-dialog'
 import { EndSessionDialog } from './end-session-dialog'
 import { SessionHistoryTable } from './session-history-table'
 
+const EMPTY_SESSIONS: SessionWithDetails[] = []
+
 interface QCSessionManagerProps {
     /** Available assays for session creation */
     assays: AssayOption[]
@@ -66,7 +68,7 @@ function StatusBadge({ status }: { status: string }) {
 export function QCSessionManager({
     assays,
     activeSession,
-    sessionHistory = [],
+    sessionHistory = EMPTY_SESSIONS,
     selectedAssayId,
     onAssayChange,
     onSessionChange,

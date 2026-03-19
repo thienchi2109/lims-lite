@@ -28,11 +28,13 @@ import { SampleTypeSelector } from '@/components/sample-type-selector'
 import { useCccdSerialController } from '@/hooks/use-cccd-serial-controller'
 import { toast } from 'sonner'
 
+const EMPTY_SPECIALTIES: LabSpecialty[] = []
+
 interface SampleAccessionFormProps {
     specialties?: LabSpecialty[]
 }
 
-export function SampleAccessionForm({ specialties = [] }: SampleAccessionFormProps) {
+export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleAccessionFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [submitError, setSubmitError] = useState<string | null>(null)
     const [submitSuccess, setSubmitSuccess] = useState<string | null>(null)

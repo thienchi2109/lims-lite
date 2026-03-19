@@ -7,6 +7,8 @@ import { SampleDetailPanel } from '@/components/sample-detail-panel'
 import { AssignedTestsPanel } from '@/components/assigned-tests-panel'
 import { durations, fadeInScale } from '@/lib/motion'
 
+const EMPTY_SPECIALTIES: LabSpecialty[] = []
+
 interface SampleBottomRowProps {
     sample: SampleWithUser | null
     isLoadingSample?: boolean
@@ -20,7 +22,7 @@ interface SampleBottomRowProps {
     userRole?: 'analyst' | 'manager'
 }
 
-export function SampleBottomRow({ sample, isLoadingSample = false, permissions, specialties = [], userRole }: SampleBottomRowProps) {
+export function SampleBottomRow({ sample, isLoadingSample = false, permissions, specialties = EMPTY_SPECIALTIES, userRole }: SampleBottomRowProps) {
     // Track if panels have been shown (for progressive disclosure)
     const hasShownPanelsRef = useRef(false)
 

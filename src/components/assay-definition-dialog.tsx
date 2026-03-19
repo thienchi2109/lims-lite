@@ -27,6 +27,8 @@ import { SpecialtyField } from './assay-definition-dialog/specialty-field'
 import { ValidationRulesFields } from './assay-definition-dialog/validation-rules-fields'
 import { AssayDefinition, AssayFormMode } from './assay-definition-dialog/types'
 
+const EMPTY_SPECIALTIES: LabSpecialty[] = []
+
 type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -42,7 +44,7 @@ export function AssayDefinitionDialog({
   onOpenChange,
   mode,
   assay,
-  specialties = [],
+  specialties = EMPTY_SPECIALTIES,
   onCreated,
   onUpdated,
 }: Props) {

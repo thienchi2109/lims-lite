@@ -19,6 +19,8 @@ import { ChartContainer } from '@/components/chart-container'
 import { chartConfig, getChartColor, formatVietnameseNumber } from '@/lib/chart-theme'
 import type { StaffProductivityData } from '@/types'
 
+const EMPTY_DATA: StaffProductivityData[] = []
+
 export interface StaffProductivityChartProps {
   data: StaffProductivityData[]
   isLoading?: boolean
@@ -59,7 +61,7 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
 }
 
 export function StaffProductivityChart({
-  data = [],
+  data = EMPTY_DATA,
   isLoading = false,
   height = 350,
 }: StaffProductivityChartProps) {

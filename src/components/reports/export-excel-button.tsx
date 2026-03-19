@@ -42,10 +42,14 @@ interface ExportExcelButtonProps {
   disabled?: boolean
 }
 
+const EMPTY_KPI: KPIExportData[] = []
+const EMPTY_SAMPLES: SampleExportData[] = []
+const EMPTY_COA: CoAExportData[] = []
+
 export function ExportExcelButton({
-  kpiData = [],
-  samplesData = [],
-  coaData = [],
+  kpiData = EMPTY_KPI,
+  samplesData = EMPTY_SAMPLES,
+  coaData = EMPTY_COA,
   dateRange,
   disabled = false,
 }: ExportExcelButtonProps) {

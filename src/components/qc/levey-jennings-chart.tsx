@@ -26,6 +26,54 @@ import {
 import { Label } from '@/components/ui/label'
 import type { QCResultStatus } from '@/types/qc'
 
+const STATUS_LABELS = {
+    pass: 'Đạt',
+    warning: 'Cảnh báo',
+    reject: 'Không đạt',
+} as const
+
+/** Tooltip component extracted to module scope to avoid re-creation on every render */
+function LJChartTooltip({ active, payload, units }: { active?: boolean; payload?: any[]; units: string }) {
+    if (!active || !payload?.[0]) return null
+
+    const data = payload[0].payload
+
+    return (
+        <div className="rounded-lg border bg-background p-3 shadow-lg">
+            <p className="text-sm font-medium">{data.fullDate}</p>
+            <div className="mt-2 space-y-1 text-sm">
+                <div className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">Giá trị:</span>
+                    <span className="font-mono font-medium">
+                        {data.value.toFixed(2)} {units}
+                    </span>
+                </div>
+                <div className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">Z-score:</span>
+                    <span className="font-mono font-medium">
+                        {data.zScore?.toFixed(2) ?? 'N/A'}
+                    </span>
+                </div>
+                <div className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">Trạng thái:</span>
+                    <Badge
+                        variant={data.status === 'reject' ? 'destructive' : data.status === 'warning' ? 'secondary' : 'default'}
+                        className={data.status === 'pass' ? 'bg-green-600' : data.status === 'warning' ? 'bg-yellow-500 text-black' : ''}
+                    >
+                        {STATUS_LABELS[data.status as keyof typeof STATUS_LABELS]}
+                    </Badge>
+                </div>
+                {data.ruleViolated && (
+                    <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Vi phạm:</span>
+                        <Badge variant="destructive">{data.ruleViolated}</Badge>
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}
+
 // Color scheme based on NotebookLM best practices
 const COLORS = {
     pass: '#22c55e',      // Green - within ±2SD
@@ -139,53 +187,6 @@ export function LeveyJenningsChart({
         )
     }
 
-    // Custom tooltip
-    const CustomTooltip = ({ active, payload }: any) => {
-        if (!active || !payload?.[0]) return null
-
-        const data = payload[0].payload
-        const statusLabels = {
-            pass: 'Đạt',
-            warning: 'Cảnh báo',
-            reject: 'Không đạt',
-        }
-
-        return (
-            <div className="rounded-lg border bg-background p-3 shadow-lg">
-                <p className="text-sm font-medium">{data.fullDate}</p>
-                <div className="mt-2 space-y-1 text-sm">
-                    <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">Giá trị:</span>
-                        <span className="font-mono font-medium">
-                            {data.value.toFixed(2)} {units}
-                        </span>
-                    </div>
-                    <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">Z-score:</span>
-                        <span className="font-mono font-medium">
-                            {data.zScore?.toFixed(2) ?? 'N/A'}
-                        </span>
-                    </div>
-                    <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">Trạng thái:</span>
-                        <Badge
-                            variant={data.status === 'reject' ? 'destructive' : data.status === 'warning' ? 'secondary' : 'default'}
-                            className={data.status === 'pass' ? 'bg-green-600' : data.status === 'warning' ? 'bg-yellow-500 text-black' : ''}
-                        >
-                            {statusLabels[data.status as keyof typeof statusLabels]}
-                        </Badge>
-                    </div>
-                    {data.ruleViolated && (
-                        <div className="flex justify-between gap-4">
-                            <span className="text-muted-foreground">Vi phạm:</span>
-                            <Badge variant="destructive">{data.ruleViolated}</Badge>
-                        </div>
-                    )}
-                </div>
-            </div>
-        )
-    }
-
     return (
         <ChartContainer
             title={title}
@@ -245,7 +246,7 @@ export function LeveyJenningsChart({
                             }}
                         />
 
-                        <Tooltip content={<CustomTooltip />} />
+                        <Tooltip content={<LJChartTooltip units={units} />} />
 
                         {/* Reference Lines - Order matters for z-index */}
                         {/* ±3SD - Red solid (Action Limits) */}

@@ -25,14 +25,17 @@ import { FilterPopover } from './FilterPopover'
 import { ActiveFilterBadges } from './ActiveFilterBadges'
 import { sortOptions, pageSizeOptions } from './constants'
 
+const EMPTY_SPECIALTIES: LabSpecialty[] = []
+const EMPTY_RECEIVERS: Array<{ id: string; name: string }> = []
+
 type SampleFiltersProps = {
     specialties?: LabSpecialty[]
     receiverOptions?: Array<{ id: string; name: string }>
 }
 
 export function SampleFilters({
-    specialties = [],
-    receiverOptions = [],
+    specialties = EMPTY_SPECIALTIES,
+    receiverOptions = EMPTY_RECEIVERS,
 }: SampleFiltersProps) {
     const [isFilterOpen, setIsFilterOpen] = useState(false)
     const [isScannerOpen, setIsScannerOpen] = useState(false)

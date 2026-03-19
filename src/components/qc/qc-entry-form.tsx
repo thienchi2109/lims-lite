@@ -41,6 +41,26 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
+/** Status badge extracted to module scope to avoid re-creation on every render */
+function StatusBadge({ status }: { status: 'pass' | 'warning' | 'reject' }) {
+    const variants = {
+        pass: { variant: 'default' as const, icon: CheckCircle2, text: 'ĐẠT', className: 'bg-green-600' },
+        warning: { variant: 'secondary' as const, icon: AlertTriangle, text: 'CẢNH BÁO', className: 'bg-yellow-500 text-black' },
+        reject: { variant: 'destructive' as const, icon: XCircle, text: 'KHÔNG ĐẠT', className: '' },
+    }
+    const config = variants[status]
+    const Icon = config.icon
+
+    return (
+        <Badge variant={config.variant} className={`gap-1 ${config.className}`}>
+            <Icon className="h-3 w-3" />
+            {config.text}
+        </Badge>
+    )
+}
+
+const EMPTY_Z_SCORES: number[] = []
+
 // Form schema with validation
 const QCEntryFormSchema = z.object({
     definition_id: z.string().uuid('Vui lòng chọn vật liệu QC'),
@@ -83,7 +103,7 @@ export function QCEntryForm({
     definitions,
     assayName,
     assayUnits,
-    historyZScores = [],
+    historyZScores = EMPTY_Z_SCORES,
     onSuccess,
 }: QCEntryFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -175,24 +195,6 @@ export function QCEntryForm({
         } finally {
             setIsSubmitting(false)
         }
-    }
-
-    // Status badge component
-    const StatusBadge = ({ status }: { status: 'pass' | 'warning' | 'reject' }) => {
-        const variants = {
-            pass: { variant: 'default' as const, icon: CheckCircle2, text: 'ĐẠT', className: 'bg-green-600' },
-            warning: { variant: 'secondary' as const, icon: AlertTriangle, text: 'CẢNH BÁO', className: 'bg-yellow-500 text-black' },
-            reject: { variant: 'destructive' as const, icon: XCircle, text: 'KHÔNG ĐẠT', className: '' },
-        }
-        const config = variants[status]
-        const Icon = config.icon
-
-        return (
-            <Badge variant={config.variant} className={`gap-1 ${config.className}`}>
-                <Icon className="h-3 w-3" />
-                {config.text}
-            </Badge>
-        )
     }
 
     return (

@@ -35,6 +35,8 @@ import {
     type AssayWithMethods,
 } from '@/lib/test-assignment-logic'
 
+const EMPTY_SPECIALTIES: LabSpecialty[] = []
+
 interface TestAssignmentModuleProps {
     sampleId: string
     sampleStatus?: SampleStatus | null
@@ -44,7 +46,7 @@ interface TestAssignmentModuleProps {
     specialties?: LabSpecialty[]
 }
 
-export function TestAssignmentModule({ sampleId, sampleStatus, onClose, onSuccess, onRefocus, specialties = [] }: TestAssignmentModuleProps) {
+export function TestAssignmentModule({ sampleId, sampleStatus, onClose, onSuccess, onRefocus, specialties = EMPTY_SPECIALTIES }: TestAssignmentModuleProps) {
     const queryClient = useQueryClient()
     const [assays, setAssays] = useState<AssayWithMethods[]>([])
     const [loading, setLoading] = useState(true)

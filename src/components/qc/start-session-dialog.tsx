@@ -32,6 +32,8 @@ interface AssayOption {
     name: string
 }
 
+const EMPTY_ASSAYS: AssayOption[] = []
+
 interface StartSessionDialogProps {
     /** Pre-selected assay ID (optional - if not provided, user can select) */
     selectedAssayId?: string
@@ -45,7 +47,7 @@ interface StartSessionDialogProps {
 
 export function StartSessionDialog({
     selectedAssayId,
-    assays = [],
+    assays = EMPTY_ASSAYS,
     onSuccess,
     trigger,
 }: StartSessionDialogProps) {

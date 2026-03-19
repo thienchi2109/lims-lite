@@ -32,6 +32,8 @@ import { SearchInput } from '@/components/ui/search-input'
 import { LabSpecialty } from '@/types'
 import { AssayDefinition, AssayMethod } from './assay-definition-dialog/types'
 
+const EMPTY_SPECIALTIES: LabSpecialty[] = []
+
 type Props = {
     assays: AssayDefinition[]
     page: number
@@ -46,7 +48,7 @@ export function AssayDefinitionsTable({
     pageSize,
     totalPages,
     totalCount,
-    specialties = [],
+    specialties = EMPTY_SPECIALTIES,
 }: Props & { specialties?: LabSpecialty[] }) {
     const [editingAssay, setEditingAssay] = useState<AssayDefinition | null>(null)
     const [deletingAssay, setDeletingAssay] = useState<AssayDefinition | null>(null)
