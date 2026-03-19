@@ -62,6 +62,7 @@ describe('SampleFilters scope toolbar', () => {
 
         expect(screen.getByRole('button', { name: 'Hiển thị tất cả' })).toBeDefined()
         expect(screen.getByText('Mặc định ẩn mẫu hoàn thành')).toBeDefined()
+        expect(screen.queryByRole('button', { name: 'Xóa tất cả' })).toBeNull()
     })
 
     it('keeps the scope control visible while a concrete status filter is selected and hides the active-scope hint', () => {
@@ -126,5 +127,40 @@ describe('SampleFilters scope toolbar', () => {
         screen.getByRole('button', { name: 'Hiển thị tất cả' }).click()
 
         expect(setScope).toHaveBeenCalledWith('active')
+    })
+
+    it('switches to all scope when the toolbar toggle is clicked from the active default', () => {
+        const setScope = vi.fn()
+
+        mockUseFilterParams.mockReturnValue({
+            filters: {
+                search: '',
+                scope: 'active',
+                status: 'all',
+                fromDate: '',
+                toDate: '',
+                receiverId: '',
+                selectedSpecialtyIds: [],
+            },
+            handlers: {
+                ...defaultHandlers,
+                setScope,
+            },
+            sort: {
+                sortBy: 'updated_at',
+                sortOrder: 'desc',
+                pageSize: 20,
+                currentSortValue: 'updated_at-desc',
+                setSortValue: vi.fn(),
+                setPageSize: vi.fn(),
+            },
+            activeFiltersCount: 0,
+        })
+
+        render(<SampleFilters specialties={[]} receiverOptions={[]} />)
+
+        screen.getByRole('button', { name: 'Hiển thị tất cả' }).click()
+
+        expect(setScope).toHaveBeenCalledWith('all')
     })
 })

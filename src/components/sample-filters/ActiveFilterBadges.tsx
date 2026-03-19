@@ -44,7 +44,8 @@ export function ActiveFilterBadges({
     onResetAll,
 }: ActiveFilterBadgesProps) {
     const isActiveScope = scope === 'active' && status === 'all'
-    const hasActiveFilters = isActiveScope || status !== 'all' || receiverId !== '' || fromDate || toDate || selectedSpecialtyIds.length > 0
+    const hasExplicitFilters = status !== 'all' || receiverId !== '' || fromDate || toDate || selectedSpecialtyIds.length > 0
+    const hasActiveFilters = isActiveScope || hasExplicitFilters
 
     if (!hasActiveFilters) return null
 
@@ -146,14 +147,16 @@ export function ActiveFilterBadges({
             )}
 
             {/* Clear All Button */}
-            <Button
-                variant="ghost"
-                size="sm"
-                onClick={onResetAll}
-                className="h-7 text-xs text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 px-2"
-            >
-                Xóa tất cả
-            </Button>
+            {hasExplicitFilters && (
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onResetAll}
+                    className="h-7 text-xs text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 px-2"
+                >
+                    Xóa tất cả
+                </Button>
+            )}
         </div>
     )
 }
