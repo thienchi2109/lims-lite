@@ -26,5 +26,12 @@ env.md
 .turbo
 .vercel
 .idea
+docs
+openspec
+nginx
+supabase
+**/__tests__
+**/*.test.*
+**/*.spec.*
 *.lock
 !package-lock.json
