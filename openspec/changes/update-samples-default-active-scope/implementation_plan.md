@@ -1,116 +1,279 @@
 # Update Samples Default Active Scope Implementation Plan
 
-The `/samples` workspace currently treats a missing `status` query param as "all statuses" in the client route parser and only applies a status predicate server-side when `status` is explicitly present. This means the default `/samples` view currently includes `completed` rows.
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task.
+>
+> **Implementation Rule:** Follow strict TDD for every behavior change. For each step: write the failing test, run it to confirm RED, write the minimal implementation, run it again to confirm GREEN, then refactor without changing behavior.
 
-> [!IMPORTANT]
-> This implementation plan resolves proposal ambiguities against the current codebase before any `subagent-driven-development` execution pass.
+**Goal:** Make `/samples` default to an active scope that hides `completed` rows unless the user explicitly requests all samples or a concrete status.
+
+**Architecture:** Keep the existing `/samples` contract URL-driven. Add a separate `scope=active|all` parameter, resolve missing `scope` to the implicit active default, apply the completed-row exclusion only in the server query layer, and surface the dataset mode in the visible toolbar plus active-filter row.
+
+**Tech Stack:** Next.js 16, React 19, TypeScript, Vitest, TanStack Query, Supabase query builder, Zod.
+
+---
 
 ## Current-State Review Notes
 
-- `src/components/samples-page-client.tsx` parses `status` from the URL and turns missing or `all` into `undefined`, which currently means "fetch everything".
-- `src/components/sample-filters/use-filter-params.ts` only tracks explicit filters such as `status`, dates, receiver, and specialty IDs. It has no concept of list scope today.
-- `src/lib/data/samples.ts` only adds `query.eq('status', ...)` when `validatedParams.status` is present. There is no default exclusion for `completed`.
-- `src/components/sample-filters/ActiveFilterBadges.tsx` currently renders nothing when there are no explicit filters, so it cannot yet communicate an implicit active-scope default.
-- I could not find direct automated coverage around this `/samples` filter-state flow, so this change needs explicit regression coverage rather than manual verification only.
+- `src/components/samples-page-client.tsx` currently treats a missing `status` as "fetch all statuses".
+- `src/components/sample-filters/use-filter-params.ts` currently tracks `status`, dates, receiver, and specialty IDs, but not list scope.
+- `src/lib/data/samples.ts` only applies a status predicate when `validatedParams.status` is present, so default `/samples` still includes `completed`.
+- `src/components/sample-filters/ActiveFilterBadges.tsx` currently renders nothing when there are no explicit filters, so it cannot yet explain an implicit active default.
+- `src/lib/api-client.ts`, `src/app/actions/samples.ts`, `src/hooks/use-samples.ts`, and `src/types/query-keys.ts` already pass `SampleListParams` through generically and should stay context-only unless a blocker appears.
 
-## Resolved Execution Decisions
+## Resolved Decisions
 
 1. Use a separate `scope` contract with `active | all`.
-   - Missing `scope` means the workspace default is `active`.
-   - `scope=all` opts into the full dataset.
-2. Keep `status` as the only real status filter.
-   - Never introduce a pseudo-status such as `not_completed`.
-   - A concrete `status` filter overrides `scope`.
-3. Keep `Hiển thị tất cả` in the visible toolbar.
-   - It is a top-level dataset mode, not an advanced popover filter.
-   - Keep the control visible even while a concrete `status` filter is selected so the remembered `scope` survives URL state.
-4. Show the active-scope hint in the active-filter row.
-   - Only show the hint when active scope is actually in effect, meaning `scope` resolves to `active` and no concrete `status` filter is selected.
-   - Do not add a second scope control inside the advanced filter popover.
-5. Reset behavior returns to the implicit default.
-   - Clear `scope`, `status`, search, dates, receiver, specialty IDs, and pagination.
-   - Preserve sort and page size, following the current filter reset pattern.
+2. Treat missing `scope` as the implicit active default.
+3. Keep `status` reserved for real domain statuses.
+4. A concrete `status` filter overrides scope for the actual query result.
+5. Keep `Hiển thị tất cả` in the visible toolbar, not the advanced filter popover.
+6. Keep the scope control visible and URL-backed while explicit `status` is selected so the remembered scope survives URL state.
+7. Show the active-scope hint in the active-filter row when active scope is actually effective.
+8. Reset removes `scope` and returns the workspace to the implicit active default while preserving sort and page size.
 
-## Proposed Changes
+## TDD Execution Plan
 
 ### Task 1: URL/query contract and server filtering
 
-**Owner**
-- Worker 1
+**Files:**
+- Modify: `src/types/lab.ts`
+- Modify: `src/components/samples-page-client.tsx`
+- Modify: `src/lib/data/samples.ts`
+- Test: `src/lib/data/samples.test.ts`
+- Test: `src/components/__tests__/samples-page-client-scope.test.tsx`
 
-**Write scope**
-- `src/types/lab.ts`
-- `src/components/samples-page-client.tsx`
-- `src/lib/data/samples.ts`
-- focused regression coverage under `src/lib/data/*.test.ts` or `src/components/__tests__/*.test.tsx` only if needed for this task
+**Step 1: Write the failing tests**
 
-**Goal**
-- Extend the sample list contract to accept `scope=active|all`
-- Treat missing `scope` as the active default
-- Apply `status != 'completed'` only when scope resolves to `active` and no explicit `status` filter is selected
-- Preserve existing search, receiver, specialty, sorting, and pagination behavior
+- In `src/lib/data/samples.test.ts`, add focused tests for:
+  - missing `scope` resolves to the active default
+  - `scope=all` does not exclude `completed`
+  - `status=completed` overrides `scope=active`
+- In `src/components/__tests__/samples-page-client-scope.test.tsx`, add a focused test that proves `SamplesPageClient` passes the parsed `scope` and `status` contract into `useSamples`.
 
-**Verification**
-- Coverage or direct assertions prove missing `scope` behaves as active
-- Coverage or direct assertions prove `scope=all` does not exclude `completed`
-- Coverage or direct assertions prove `status=completed` still wins over `scope=active`
+**Step 2: Run the tests to verify RED**
+
+Run:
+
+```bash
+npm run test:run -- src/lib/data/samples.test.ts src/components/__tests__/samples-page-client-scope.test.tsx
+```
+
+Expected:
+- FAIL because `scope` is not yet part of the typed contract
+- FAIL because default `/samples` still behaves like "all statuses"
+
+**Step 3: Write the minimal implementation**
+
+- Add `scope: z.enum(['active', 'all']).optional()` to `SampleListParamsSchema` in `src/types/lab.ts`.
+- Parse `scope` in `src/components/samples-page-client.tsx`, resolving missing or invalid values to `undefined` at the transport boundary while still treating missing scope as active behavior.
+- Update `src/lib/data/samples.ts` so:
+  - explicit `status` still uses `query.eq('status', validatedParams.status)`
+  - otherwise, resolved active scope applies `query.neq('status', 'completed')`
+  - `scope=all` leaves status unfiltered
+
+**Step 4: Run the tests to verify GREEN**
+
+Run:
+
+```bash
+npm run test:run -- src/lib/data/samples.test.ts src/components/__tests__/samples-page-client-scope.test.tsx
+```
+
+Expected:
+- PASS for all new Task 1 tests
+
+**Step 5: Refactor**
+
+- If the precedence logic is getting duplicated, extract a tiny helper adjacent to the current code.
+- Keep the helper inside the owned files for this task.
+- Re-run the Task 1 test command after the refactor.
+
+**Step 6: Commit**
+
+```bash
+git add src/types/lab.ts src/components/samples-page-client.tsx src/lib/data/samples.ts src/lib/data/samples.test.ts src/components/__tests__/samples-page-client-scope.test.tsx
+git commit -m "feat: add active sample scope contract"
+```
 
 ### Task 2: Samples workspace scope UX and reset behavior
 
-**Owner**
-- Worker 2
+**Files:**
+- Modify: `src/components/sample-filters/index.tsx`
+- Modify: `src/components/sample-filters/use-filter-params.ts`
+- Modify: `src/components/sample-filters/ActiveFilterBadges.tsx`
+- Test: `src/components/sample-filters/use-filter-params.test.tsx`
+- Test: `src/components/__tests__/sample-filters-scope.test.tsx`
 
-**Write scope**
-- `src/components/sample-filters/index.tsx`
-- `src/components/sample-filters/use-filter-params.ts`
-- `src/components/sample-filters/ActiveFilterBadges.tsx`
-- focused regression coverage under `src/components/__tests__/*.test.tsx` or `src/components/sample-filters/*.test.tsx`
+**Step 1: Write the failing tests**
 
-**Goal**
-- Add `scope` to filter state and URL handlers
-- Add a visible `Hiển thị tất cả` toolbar control backed by `scope=all`
-- Keep the control visible while explicit status filters are active
-- Add a clear active-scope hint in the active-filter row when completed samples are hidden by default
-- Make reset return to the implicit active default by removing `scope`
+- In `src/components/sample-filters/use-filter-params.test.tsx`, add focused tests for:
+  - `scope` round-trips through URL state
+  - reset removes `scope`, `status`, search, dates, receiver, and specialty IDs
+  - reset preserves `sortBy`, `sortOrder`, and `pageSize`
+- In `src/components/__tests__/sample-filters-scope.test.tsx`, add focused tests for:
+  - the toolbar shows `Hiển thị tất cả`
+  - the scope control stays visible while a concrete `status` filter is active
+  - the active-scope hint appears only when active scope is actually effective
 
-**Verification**
-- UI coverage proves the toolbar exposes `Hiển thị tất cả`
-- UI coverage proves the active-scope hint appears only when active scope is effective
-- URL/reset coverage proves clearing filters removes `scope` and returns to the default active behavior
+**Step 2: Run the tests to verify RED**
+
+Run:
+
+```bash
+npm run test:run -- src/components/sample-filters/use-filter-params.test.tsx src/components/__tests__/sample-filters-scope.test.tsx
+```
+
+Expected:
+- FAIL because there is no scope state yet
+- FAIL because the toolbar does not expose `Hiển thị tất cả`
+- FAIL because the active-filter row cannot show the hidden-completed hint
+
+**Step 3: Write the minimal implementation**
+
+- In `src/components/sample-filters/use-filter-params.ts`:
+  - add `scope` to filter state
+  - add a handler for changing scope
+  - update reset logic to delete `scope`
+  - preserve `sortBy`, `sortOrder`, and `pageSize`
+- In `src/components/sample-filters/index.tsx`:
+  - add the visible `Hiển thị tất cả` control in the toolbar
+  - keep it visible even while `status` is concrete
+- In `src/components/sample-filters/ActiveFilterBadges.tsx`:
+  - render the active-scope hint only when active scope is effective
+
+**Step 4: Run the tests to verify GREEN**
+
+Run:
+
+```bash
+npm run test:run -- src/components/sample-filters/use-filter-params.test.tsx src/components/__tests__/sample-filters-scope.test.tsx
+```
+
+Expected:
+- PASS for all new Task 2 tests
+
+**Step 5: Refactor**
+
+- Remove duplicated `scope` checks between the toolbar and badge row if a tiny shared helper improves clarity.
+- Do not move scope into the advanced filter popover.
+- Re-run the Task 2 test command after the refactor.
+
+**Step 6: Commit**
+
+```bash
+git add src/components/sample-filters/index.tsx src/components/sample-filters/use-filter-params.ts src/components/sample-filters/ActiveFilterBadges.tsx src/components/sample-filters/use-filter-params.test.tsx src/components/__tests__/sample-filters-scope.test.tsx
+git commit -m "feat: add samples scope toolbar flow"
+```
 
 ### Task 3: Regression coverage and integration polish
 
-**Owner**
-- Worker 3
+**Files:**
+- Modify: `src/components/samples-page-client.tsx`
+- Modify: `src/components/sample-filters/use-filter-params.ts`
+- Modify: `src/components/sample-filters/ActiveFilterBadges.tsx`
+- Modify: `src/lib/data/samples.ts`
+- Modify: `src/lib/data/samples.test.ts`
+- Modify: `src/components/__tests__/samples-page-client-scope.test.tsx`
+- Modify: `src/components/sample-filters/use-filter-params.test.tsx`
+- Modify: `src/components/__tests__/sample-filters-scope.test.tsx`
 
-**Write scope**
-- targeted tests under `src/components/__tests__/*.test.tsx`
-- targeted tests under `src/lib/data/*.test.ts`
-- `src/components/samples-page-client.tsx`
-- `src/components/sample-filters/use-filter-params.ts`
-- `src/components/sample-filters/ActiveFilterBadges.tsx`
-- `src/lib/data/samples.ts`
+**Step 1: Write the failing integration-grade tests**
 
-**Goal**
-- Add focused regression coverage for the complete user-visible contract:
+- Extend the existing test files from Tasks 1 and 2 to prove the full contract:
   - default `/samples` excludes `completed`
   - `scope=all` restores the full dataset
   - `status=completed` overrides active scope
-  - refresh/share/bookmark/reset behavior remains URL-stable
-- Make only the minimal production refactors needed to keep those tests robust
+  - remembered `scope` survives while `status` temporarily overrides it
+  - clearing explicit `status` returns the workspace to the remembered scope
+  - refresh/share/bookmark/reset behavior stays URL-stable
 
-**Verification**
-- Targeted tests cover all four contract behaviors above
-- Tests prove remembered `scope` is preserved through explicit status overrides
-- No unrelated UI redesign or query-contract drift is introduced
+**Step 2: Run the tests to verify RED**
 
-## Context-Only Files
+Run:
 
-These files are part of the runtime path but should not change unless a task finds a concrete blocker and asks first:
+```bash
+npm run test:run -- src/lib/data/samples.test.ts src/components/__tests__/samples-page-client-scope.test.tsx src/components/sample-filters/use-filter-params.test.tsx src/components/__tests__/sample-filters-scope.test.tsx
+```
 
-- `src/lib/api-client.ts`
-- `src/app/actions/samples.ts`
-- `src/hooks/use-samples.ts`
-- `src/types/query-keys.ts`
+Expected:
+- At least one integration behavior still FAILS because the earlier tasks only covered local contract pieces
 
-They already pass `SampleListParams` through generically, so they are context surfaces first, not planned write targets.
+**Step 3: Write the minimal integration polish**
+
+- Make only the smallest production changes needed to satisfy the new integration-grade tests.
+- Keep the approved contract intact:
+  - no pseudo-status
+  - no hidden scope control
+  - no redesign of the filter popover
+
+**Step 4: Run the tests to verify GREEN**
+
+Run:
+
+```bash
+npm run test:run -- src/lib/data/samples.test.ts src/components/__tests__/samples-page-client-scope.test.tsx src/components/sample-filters/use-filter-params.test.tsx src/components/__tests__/sample-filters-scope.test.tsx
+```
+
+Expected:
+- PASS for the full targeted suite
+
+**Step 5: Refactor**
+
+- Remove brittle assertions or duplicated setup in the new tests.
+- Keep production refactors minimal and directly justified by the tests.
+- Re-run the Task 3 test command after the refactor.
+
+**Step 6: Commit**
+
+```bash
+git add src/components/samples-page-client.tsx src/components/sample-filters/use-filter-params.ts src/components/sample-filters/ActiveFilterBadges.tsx src/lib/data/samples.ts src/lib/data/samples.test.ts src/components/__tests__/samples-page-client-scope.test.tsx src/components/sample-filters/use-filter-params.test.tsx src/components/__tests__/sample-filters-scope.test.tsx
+git commit -m "test: lock active sample scope behavior"
+```
+
+## Final Verification
+
+**Step 1: Run the full targeted test suite**
+
+```bash
+npm run test:run -- src/lib/data/samples.test.ts src/components/__tests__/samples-page-client-scope.test.tsx src/components/sample-filters/use-filter-params.test.tsx src/components/__tests__/sample-filters-scope.test.tsx
+```
+
+Expected:
+- PASS
+
+**Step 2: Run type checking**
+
+```bash
+npm run typecheck
+```
+
+Expected:
+- PASS with no new type errors
+
+**Step 3: Manual sanity pass if the app environment is available**
+
+Verify:
+- `/samples`
+- `/samples?scope=all`
+- `/samples?status=completed`
+- `/samples?scope=all&status=completed`
+
+Expected:
+- default `/samples` hides `completed`
+- `scope=all` shows the full dataset
+- `status=completed` wins over active scope
+- clearing `status` from `scope=all&status=completed` returns to `scope=all`
+- reset returns to the implicit active default
+
+**Step 4: Final branch landing**
+
+```bash
+git pull --rebase
+bd sync
+git push
+git status -sb
+```
+
+Expected:
+- branch is up to date with origin
+- if `bd` is unavailable in the environment, document that blocker explicitly before closing the session
