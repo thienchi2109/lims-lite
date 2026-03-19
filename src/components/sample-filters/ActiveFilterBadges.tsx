@@ -15,6 +15,7 @@ import { statusOptions } from './constants'
 type ActiveFilterBadgesProps = {
     specialties: LabSpecialty[]
     selectedSpecialtyIds: string[]
+    scope: 'active' | 'all'
     status: SampleStatus | 'all'
     receiverId: string
     receiverOptions: Array<{ id: string; name: string }>
@@ -30,6 +31,7 @@ type ActiveFilterBadgesProps = {
 export function ActiveFilterBadges({
     specialties,
     selectedSpecialtyIds,
+    scope,
     status,
     receiverId,
     receiverOptions,
@@ -41,13 +43,22 @@ export function ActiveFilterBadges({
     onClearDates,
     onResetAll,
 }: ActiveFilterBadgesProps) {
-    const hasActiveFilters = status !== 'all' || receiverId !== '' || fromDate || toDate || selectedSpecialtyIds.length > 0
+    const isActiveScope = scope === 'active' && status === 'all'
+    const hasActiveFilters = isActiveScope || status !== 'all' || receiverId !== '' || fromDate || toDate || selectedSpecialtyIds.length > 0
 
     if (!hasActiveFilters) return null
 
     return (
         <div className="flex flex-wrap gap-2 items-center pt-1">
             <span className="text-xs font-medium text-slate-500 mr-1">Đang lọc:</span>
+
+            {isActiveScope && (
+                <Badge variant="outline" className="h-7 gap-1 bg-white dark:bg-slate-900 border-dashed border-emerald-300 dark:border-emerald-800 pl-2 pr-2">
+                    <span className="font-medium text-emerald-700 dark:text-emerald-400">
+                        Mặc định ẩn mẫu hoàn thành
+                    </span>
+                </Badge>
+            )}
 
             {/* Specialty Badges */}
             {selectedSpecialtyIds.map(id => {

@@ -7,6 +7,7 @@ import { SEARCH_DEBOUNCE_MS } from './constants'
 
 export type FilterState = {
     search: string
+    scope: 'active' | 'all'
     status: SampleStatus | 'all'
     fromDate: string
     toDate: string
@@ -16,6 +17,7 @@ export type FilterState = {
 
 export type FilterHandlers = {
     setSearch: (value: string) => void
+    setScope: (value: 'active' | 'all') => void
     setStatus: (value: SampleStatus | 'all') => void
     setDateRange: (range: 'today' | 'yesterday' | 'week' | 'month') => void
     setFromDate: (value: string) => void
@@ -56,6 +58,7 @@ export function useFilterParams({
         const params = new URLSearchParams(searchParamsString)
         return {
             search: params.get('search') || '',
+            scope: params.get('scope') === 'all' ? 'all' : 'active',
             status: (params.get('status') as SampleStatus) || 'all',
             fromDate: params.get('fromDate') || '',
             toDate: params.get('toDate') || '',
@@ -115,6 +118,10 @@ export function useFilterParams({
     const handlers: FilterHandlers = useMemo(() => ({
         setSearch: setSearchValue,
 
+        setScope: (value: 'active' | 'all') => {
+            updateUrl({ scope: value === 'all' ? value : null })
+        },
+
         setStatus: (value: SampleStatus | 'all') => {
             updateUrl({ status: value === 'all' ? null : value })
         },
@@ -171,6 +178,7 @@ export function useFilterParams({
         resetFilters: () => {
             const params = new URLSearchParams(searchParamsString)
             params.delete('search')
+            params.delete('scope')
             params.delete('status')
             params.delete('fromDate')
             params.delete('toDate')

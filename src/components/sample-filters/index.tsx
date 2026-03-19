@@ -54,7 +54,7 @@ export function SampleFilters({
             {/* Top Toolbar Row */}
             <div className="flex flex-col lg:flex-row gap-3 w-full">
                 {/* Search Bar */}
-                <div className="relative flex-1">
+                <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70 pointer-events-none" />
                     <Input
                         ref={searchInputRef}
@@ -78,6 +78,16 @@ export function SampleFilters({
 
                 {/* Right Actions */}
                 <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                        type="button"
+                        variant={filters.scope === 'all' ? 'secondary' : 'outline'}
+                        onClick={() => handlers.setScope('all')}
+                        className="h-10 gap-2 font-normal"
+                        aria-pressed={filters.scope === 'all'}
+                    >
+                        <span>Hiển thị tất cả</span>
+                    </Button>
+
                     <FilterPopover
                         isOpen={isFilterOpen}
                         onOpenChange={setIsFilterOpen}
@@ -135,6 +145,7 @@ export function SampleFilters({
             <ActiveFilterBadges
                 specialties={specialties}
                 selectedSpecialtyIds={filters.selectedSpecialtyIds}
+                scope={filters.scope}
                 status={filters.status}
                 receiverId={filters.receiverId}
                 receiverOptions={receiverOptions}
