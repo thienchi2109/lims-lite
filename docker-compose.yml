@@ -146,6 +146,11 @@ services:
       KONG_PLUGINS: request-transformer,cors,key-auth,acl
       KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
       KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
+    healthcheck:
+      test: [ "CMD-SHELL", "kong health" ]
+      interval: 10s
+      timeout: 10s
+      retries: 10
     ports:
       - "8000:8000"
     volumes:
@@ -207,10 +212,12 @@ services:
     container_name: lims-app
     build:
       context: .
+      target: runner
       args:
         # Empty URL forces client to use window.location.origin (Tunnel URL)
         NEXT_PUBLIC_SUPABASE_URL: ""
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${ANON_KEY}
+    init: true
     restart: unless-stopped
     environment:
       # Internal URL for Server Actions/SSR
@@ -221,7 +228,22 @@ services:
       # JWT secret for token signing/verification (CoA access, etc.)
       JWT_SECRET: ${JWT_SECRET}
     depends_on:
-      - kong
+      kong:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - const net=require('node:net');const socket=net.connect(process.env.PORT||3000,'127.0.0.1');const fail=()=>process.exit(1);socket.setTimeout(5000);socket.on('connect',()=>{socket.end();process.exit(0)});socket.on('timeout',fail);socket.on('error',fail)
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    mem_limit: 1g
+    mem_reservation: 512m
+    cpus: 1.0
+    stop_grace_period: 30s
     networks:
       - default
 
@@ -232,8 +254,10 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - app
-      - kong
+      app:
+        condition: service_healthy
+      kong:
+        condition: service_healthy
     networks:
       - default
 
