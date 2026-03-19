@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { useId, useState } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { invalidateSampleQueries, approvalKeys, rejectionKeys } from '@/types/query-keys'
 import { discardSampleClient } from '@/lib/api-client'
@@ -19,9 +19,9 @@ interface DiscardSampleDialogProps {
 
 export function DiscardSampleDialog({ sampleId, open, onOpenChange }: DiscardSampleDialogProps) {
     const router = useRouter()
-    const searchParams = useSearchParams()
     const pathname = usePathname()
     const queryClient = useQueryClient()
+    const reasonId = useId()
     const [reason, setReason] = useState('')
     const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -40,7 +40,7 @@ export function DiscardSampleDialog({ sampleId, open, onOpenChange }: DiscardSam
                 toast.success('Đã loại bỏ mẫu')
 
                 // Update URL params to sort by updated_at DESC and navigate to page 1
-                const params = new URLSearchParams(searchParams?.toString() ?? '')
+                const params = new URLSearchParams(window.location.search)
                 params.set('sortBy', 'updated_at')
                 params.set('sortOrder', 'desc')
                 params.set('sampleId', sampleId)
@@ -58,9 +58,9 @@ export function DiscardSampleDialog({ sampleId, open, onOpenChange }: DiscardSam
         } catch (error) {
             toast.error('Có lỗi xảy ra')
             console.error(error)
-        } finally {
-            setIsSubmitting(false)
         }
+
+        setIsSubmitting(false)
     }
 
     return (
@@ -69,14 +69,15 @@ export function DiscardSampleDialog({ sampleId, open, onOpenChange }: DiscardSam
                 <DialogHeader>
                     <DialogTitle>Loại bỏ mẫu</DialogTitle>
                     <DialogDescription>
-                        Mẫu sẽ chuyển sang trạng thái "Loại bỏ" và không thể tiếp tục xử lý. Hành động này không thể hoàn tác.
+                        Mẫu sẽ chuyển sang trạng thái &quot;Loại bỏ&quot; và không thể tiếp tục xử lý. Hành động này không thể hoàn tác.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
-                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                    <label htmlFor={reasonId} className="mb-2 block text-sm font-medium text-slate-700">
                         Lý do loại bỏ <span className="text-red-500">*</span>
                     </label>
                     <Textarea
+                        id={reasonId}
                         value={reason}
                         onChange={(e) => setReason(e.target.value)}
                         placeholder="Nhập lý do loại bỏ..."
