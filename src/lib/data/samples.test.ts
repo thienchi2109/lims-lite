@@ -1,17 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockCreateClient = vi.fn()
-const mockFrom = vi.fn()
-const mockSelect = vi.fn()
-const mockIs = vi.fn()
-const mockEq = vi.fn()
-const mockNeq = vi.fn()
-const mockOr = vi.fn()
-const mockGte = vi.fn()
-const mockLte = vi.fn()
-const mockOrder = vi.fn()
-const mockRange = vi.fn()
-const mockIn = vi.fn()
 const mockRpc = vi.fn()
 const mockGetUser = vi.fn()
 
@@ -21,43 +10,31 @@ vi.mock('@/lib/supabase/server', () => ({
 
 import { fetchSamples } from './samples'
 
-function buildQueryResult() {
-    const result = Promise.resolve({
-        data: [],
-        error: null,
-        count: 0,
-    })
+const TEST_RECEIVER_ID = '11111111-1111-4111-8111-111111111111'
+const TEST_SPECIALTY_ID_1 = '22222222-2222-4222-8222-222222222222'
+const TEST_SPECIALTY_ID_2 = '33333333-3333-4333-8333-333333333333'
 
-    const query: any = {
-        is: mockIs,
-        eq: mockEq,
-        neq: mockNeq,
-        or: mockOr,
-        gte: mockGte,
-        lte: mockLte,
-        order: mockOrder,
-        range: mockRange,
-        in: mockIn,
-        then: result.then.bind(result),
-        catch: result.catch.bind(result),
-        finally: result.finally.bind(result),
+function buildSampleRow() {
+    return {
+        id: '44444444-4444-4444-8444-444444444444',
+        sample_id: 'S-0001',
+        client_id: '55555555-5555-4555-8555-555555555555',
+        client_name: 'Bệnh nhân A',
+        type: 'Máu',
+        status: 'received',
+        received_at: '2026-03-19T09:00:00.000Z',
+        received_by: TEST_RECEIVER_ID,
+        received_by_name: 'Nguyễn Văn A',
+        created_at: '2026-03-19T09:00:00.000Z',
+        updated_at: '2026-03-19T10:00:00.000Z',
+        deleted_at: null,
+        rejection_reason: null,
+        rejected_at: null,
+        rejected_by: null,
     }
-
-    mockIs.mockReturnValue(query)
-    mockEq.mockReturnValue(query)
-    mockNeq.mockReturnValue(query)
-    mockOr.mockReturnValue(query)
-    mockGte.mockReturnValue(query)
-    mockLte.mockReturnValue(query)
-    mockOrder.mockReturnValue(query)
-    mockRange.mockReturnValue(query)
-    mockIn.mockReturnValue(query)
-    mockRpc.mockResolvedValue({ data: [], error: null })
-
-    return query
 }
 
-describe('fetchSamples scope filtering', () => {
+describe('fetchSamples query optimization', () => {
     beforeEach(() => {
         vi.clearAllMocks()
 
@@ -65,58 +42,100 @@ describe('fetchSamples scope filtering', () => {
             data: { user: { id: 'user-1' } },
         })
 
-        const query = buildQueryResult()
-
-        mockSelect.mockReturnValue(query)
-        mockFrom.mockImplementation((table: string) => {
-            if (table === 'samples') {
-                return { select: mockSelect }
-            }
-
-            if (table === 'users') {
-                return {
-                    select: vi.fn(() => ({
-                        ilike: vi.fn().mockResolvedValue({ data: [], error: null }),
-                    })),
-                }
-            }
-
-            throw new Error(`Unexpected table: ${table}`)
+        mockRpc.mockResolvedValue({
+            data: {
+                rows: [],
+                total_count: 0,
+            },
+            error: null,
         })
 
         mockCreateClient.mockResolvedValue({
             auth: {
                 getUser: mockGetUser,
             },
-            from: mockFrom,
             rpc: mockRpc,
         })
     })
 
-    it('excludes completed samples by default when scope is missing', async () => {
+    it('calls the paginated samples RPC with active-scope defaults', async () => {
         await fetchSamples({ page: 1, pageSize: 20 })
 
-        expect(mockNeq).toHaveBeenCalledWith('status', 'completed')
-        expect(mockEq).not.toHaveBeenCalledWith('status', expect.anything())
+        expect(mockRpc).toHaveBeenCalledWith('get_samples_page', {
+            p_search: null,
+            p_scope: 'active',
+            p_status: null,
+            p_from_date: null,
+            p_to_date: null,
+            p_receiver_id: null,
+            p_specialty_ids: null,
+            p_sort_by: 'updated_at',
+            p_sort_order: 'desc',
+            p_page: 1,
+            p_page_size: 20,
+        })
     })
 
-    it('does not exclude completed samples when scope is all', async () => {
-        await fetchSamples({ page: 1, pageSize: 20, scope: 'all' })
+    it('filters invalid specialty ids before calling the RPC', async () => {
+        await fetchSamples({
+            page: 2,
+            pageSize: 10,
+            receiverId: TEST_RECEIVER_ID,
+            specialtyIds: `${TEST_SPECIALTY_ID_1},not-a-uuid,${TEST_SPECIALTY_ID_2}`,
+            sortBy: 'received_at',
+            sortOrder: 'asc',
+        })
 
-        expect(mockNeq).not.toHaveBeenCalledWith('status', 'completed')
+        expect(mockRpc).toHaveBeenCalledWith('get_samples_page', {
+            p_search: null,
+            p_scope: 'active',
+            p_status: null,
+            p_from_date: null,
+            p_to_date: null,
+            p_receiver_id: TEST_RECEIVER_ID,
+            p_specialty_ids: [TEST_SPECIALTY_ID_1, TEST_SPECIALTY_ID_2],
+            p_sort_by: 'received_at',
+            p_sort_order: 'asc',
+            p_page: 2,
+            p_page_size: 10,
+        })
     })
 
-    it('lets an explicit completed status override active scope', async () => {
-        await fetchSamples({ page: 1, pageSize: 20, scope: 'active', status: 'completed' })
+    it('falls back to updated_at for unsupported sort columns and maps rpc rows', async () => {
+        mockRpc.mockResolvedValueOnce({
+            data: {
+                rows: [buildSampleRow()],
+                total_count: 1,
+            },
+            error: null,
+        })
 
-        expect(mockEq).toHaveBeenCalledWith('status', 'completed')
-        expect(mockNeq).not.toHaveBeenCalledWith('status', 'completed')
-    })
+        const result = await fetchSamples({
+            page: 1,
+            pageSize: 20,
+            sortBy: 'sample_id',
+            search: 'S-0001',
+        })
 
-    it('keeps completed samples visible when scope is all and status is completed', async () => {
-        await fetchSamples({ page: 1, pageSize: 20, scope: 'all', status: 'completed' })
-
-        expect(mockEq).toHaveBeenCalledWith('status', 'completed')
-        expect(mockNeq).not.toHaveBeenCalledWith('status', 'completed')
+        expect(mockRpc).toHaveBeenCalledWith('get_samples_page', {
+            p_search: 'S-0001',
+            p_scope: 'active',
+            p_status: null,
+            p_from_date: null,
+            p_to_date: null,
+            p_receiver_id: null,
+            p_specialty_ids: null,
+            p_sort_by: 'updated_at',
+            p_sort_order: 'desc',
+            p_page: 1,
+            p_page_size: 20,
+        })
+        expect(result).toEqual({
+            data: [buildSampleRow()],
+            count: 1,
+            page: 1,
+            pageSize: 20,
+            totalPages: 1,
+        })
     })
 })
