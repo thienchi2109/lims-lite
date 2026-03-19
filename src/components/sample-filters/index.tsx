@@ -81,7 +81,7 @@ export function SampleFilters({
                     <Button
                         type="button"
                         variant={filters.scope === 'all' ? 'secondary' : 'outline'}
-                        onClick={() => handlers.setScope('all')}
+                        onClick={() => handlers.setScope(filters.scope === 'all' ? 'active' : 'all')}
                         className="h-10 gap-2 font-normal"
                         aria-pressed={filters.scope === 'all'}
                     >

@@ -92,4 +92,39 @@ describe('SampleFilters scope toolbar', () => {
         expect(screen.getByRole('button', { name: 'Hiển thị tất cả' })).toBeDefined()
         expect(screen.queryByText('Mặc định ẩn mẫu hoàn thành')).toBeNull()
     })
+
+    it('switches back to the active default when the toolbar toggle is clicked from all scope', () => {
+        const setScope = vi.fn()
+
+        mockUseFilterParams.mockReturnValue({
+            filters: {
+                search: 'ABC',
+                scope: 'all',
+                status: 'completed',
+                fromDate: '2026-01-01',
+                toDate: '',
+                receiverId: '11111111-1111-4111-8111-111111111111',
+                selectedSpecialtyIds: [],
+            },
+            handlers: {
+                ...defaultHandlers,
+                setScope,
+            },
+            sort: {
+                sortBy: 'updated_at',
+                sortOrder: 'desc',
+                pageSize: 20,
+                currentSortValue: 'updated_at-desc',
+                setSortValue: vi.fn(),
+                setPageSize: vi.fn(),
+            },
+            activeFiltersCount: 3,
+        })
+
+        render(<SampleFilters specialties={[]} receiverOptions={[]} />)
+
+        screen.getByRole('button', { name: 'Hiển thị tất cả' }).click()
+
+        expect(setScope).toHaveBeenCalledWith('active')
+    })
 })

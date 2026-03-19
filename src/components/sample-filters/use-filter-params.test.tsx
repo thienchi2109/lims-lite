@@ -46,7 +46,9 @@ describe('useFilterParams scope state', () => {
     })
 
     it('clears scope from the URL when switched back to the active default', () => {
-        mockSearchParams = new URLSearchParams('scope=all&sortBy=received_at&sortOrder=asc&pageSize=50')
+        mockSearchParams = new URLSearchParams(
+            'scope=all&status=completed&search=ABC&fromDate=2026-01-01&toDate=2026-01-31&receiverId=11111111-1111-4111-8111-111111111111&specialtyIds=22222222-2222-4222-8222-222222222222&sortBy=received_at&sortOrder=asc&pageSize=50',
+        )
 
         const { result, rerender } = renderHook(() => useFilterParams())
 
@@ -57,6 +59,12 @@ describe('useFilterParams scope state', () => {
         })
 
         expect(mockReplace.mock.calls.at(-1)?.[0]).not.toContain('scope=')
+        expect(mockReplace.mock.calls.at(-1)?.[0]).toContain('status=completed')
+        expect(mockReplace.mock.calls.at(-1)?.[0]).toContain('search=ABC')
+        expect(mockReplace.mock.calls.at(-1)?.[0]).toContain('fromDate=2026-01-01')
+        expect(mockReplace.mock.calls.at(-1)?.[0]).toContain('toDate=2026-01-31')
+        expect(mockReplace.mock.calls.at(-1)?.[0]).toContain('receiverId=11111111-1111-4111-8111-111111111111')
+        expect(mockReplace.mock.calls.at(-1)?.[0]).toContain('specialtyIds=22222222-2222-4222-8222-222222222222')
 
         rerender()
 
