@@ -71,6 +71,40 @@ describe('useFilterParams scope state', () => {
         expect(result.current.filters.scope).toBe('active')
     })
 
+    it('keeps a remembered all-scope selection when status is temporarily overridden and cleared', () => {
+        mockSearchParams = new URLSearchParams('scope=all&sortBy=received_at&sortOrder=asc&pageSize=50&page=3')
+
+        const { result, rerender } = renderHook(() => useFilterParams())
+
+        expect(result.current.filters.scope).toBe('all')
+        expect(result.current.filters.status).toBe('all')
+
+        act(() => {
+            result.current.handlers.setStatus('completed')
+        })
+
+        expect(mockReplace.mock.calls.at(-1)?.[0]).toContain('scope=all')
+        expect(mockReplace.mock.calls.at(-1)?.[0]).toContain('status=completed')
+
+        rerender()
+
+        expect(result.current.filters.scope).toBe('all')
+        expect(result.current.filters.status).toBe('completed')
+
+        act(() => {
+            result.current.handlers.setStatus('all')
+        })
+
+        expect(mockReplace.mock.calls.at(-1)?.[0]).toContain('scope=all')
+        expect(mockReplace.mock.calls.at(-1)?.[0]).not.toContain('status=')
+        expect(mockReplace.mock.calls.at(-1)?.[0]).toContain('page=1')
+
+        rerender()
+
+        expect(result.current.filters.scope).toBe('all')
+        expect(result.current.filters.status).toBe('all')
+    })
+
     it('removes scope during reset while preserving sort and page size', () => {
         mockSearchParams = new URLSearchParams(
             'scope=all&status=completed&search=ABC&fromDate=2026-01-01&toDate=2026-01-31&receiverId=11111111-1111-4111-8111-111111111111&specialtyIds=22222222-2222-4222-8222-222222222222&sortBy=received_at&sortOrder=asc&pageSize=50&page=3',

@@ -112,4 +112,11 @@ describe('fetchSamples scope filtering', () => {
         expect(mockEq).toHaveBeenCalledWith('status', 'completed')
         expect(mockNeq).not.toHaveBeenCalledWith('status', 'completed')
     })
+
+    it('keeps completed samples visible when scope is all and status is completed', async () => {
+        await fetchSamples({ page: 1, pageSize: 20, scope: 'all', status: 'completed' })
+
+        expect(mockEq).toHaveBeenCalledWith('status', 'completed')
+        expect(mockNeq).not.toHaveBeenCalledWith('status', 'completed')
+    })
 })
