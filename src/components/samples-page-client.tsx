@@ -38,6 +38,7 @@ export function SamplesPageClient({
 
     // Parse URL params
     const searchTerm = searchParams.get('search') || ''
+    const scope = searchParams.get('scope') === 'all' ? 'all' : 'active'
     const statusParam = searchParams.get('status') || 'all'
     const validStatuses: SampleStatus[] = ['received', 'assigned', 'in_progress', 'review', 'completed', 'discarded']
     const status = validStatuses.includes(statusParam as SampleStatus)
@@ -72,6 +73,7 @@ export function SamplesPageClient({
             page,
             pageSize,
             search: searchTerm || undefined,
+            scope,
             status,
             fromDate: fromDate || undefined,
             toDate: toDate || undefined,

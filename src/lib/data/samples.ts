@@ -34,6 +34,7 @@ export async function fetchSamples(params: SampleListParams) {
         ...params,
         receiverId,
     })
+    const resolvedScope = validatedParams.scope ?? 'active'
 
     // Build query
     let query = supabase.from('samples').select('*', { count: 'exact' }).is('deleted_at', null)
@@ -41,6 +42,8 @@ export async function fetchSamples(params: SampleListParams) {
     // Apply status filter
     if (validatedParams.status) {
         query = query.eq('status', validatedParams.status)
+    } else if (resolvedScope === 'active') {
+        query = query.neq('status', 'completed')
     }
 
     // Apply receiver filter

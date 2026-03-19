@@ -189,6 +189,7 @@ export const AssignTestsSchema = z.object({
 export type AssignTests = z.infer<typeof AssignTestsSchema>
 
 export const SampleListParamsSchema = PaginationSchema.extend({
+    scope: z.enum(['active', 'all']).optional(),
     status: SampleStatus.optional(),
     fromDate: z.string().optional(),
     toDate: z.string().optional(),
