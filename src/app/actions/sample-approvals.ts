@@ -1,8 +1,8 @@
 'use server'
 
 /**
- * Sample Approvals - Manager workflow and approval operations
- * Functions: getSamplesWithTab, getSamplesForApprovalCount, submitSampleForReview, rejectSample, discardSample
+ * Sample Approvals - Analyst and manager sample workflow actions
+ * Functions: getSamplesWithTab, getSamplesForApprovalCount, getRejectedSamplesCount, submitSampleForReview, rejectSample, discardSample
  */
 
 import { createClient } from '@/lib/supabase/server'
@@ -124,6 +124,36 @@ export async function getSamplesForApprovalCount() {
     } catch (error) {
         console.error('Error in getSamplesForApprovalCount:', error)
         return { error: error instanceof Error ? error.message : 'Failed to count samples for approval' }
+    }
+}
+
+/**
+ * Gets the count of rejected samples visible to the current analyst.
+ */
+export async function getRejectedSamplesCount() {
+    try {
+        const auth = await requireRole('analyst')
+        if (isAuthError(auth)) return auth
+
+        const supabase = await createClient()
+
+        const { count, error } = await supabase
+            .from('samples')
+            .select('id', { count: 'exact', head: true })
+            .eq('status', 'in_progress')
+            .eq('received_by', auth.id)
+            .not('rejected_at', 'is', null)
+            .is('deleted_at', null)
+
+        if (error) {
+            console.error('Error counting rejected samples:', error)
+            return { error: error.message }
+        }
+
+        return { data: count ?? 0 }
+    } catch (error) {
+        console.error('Error in getRejectedSamplesCount:', error)
+        return { error: error instanceof Error ? error.message : 'Failed to count rejected samples' }
     }
 }
 

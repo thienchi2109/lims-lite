@@ -85,6 +85,14 @@ export const approvalKeys = {
 }
 
 /**
+ * Query key factory for rejection notifications
+ */
+export const rejectionKeys = {
+    all: ['rejections'] as const,
+    count: ['rejections', 'count'] as const,
+}
+
+/**
  * Query key factory for user signatures
  *
  * Hierarchical structure:

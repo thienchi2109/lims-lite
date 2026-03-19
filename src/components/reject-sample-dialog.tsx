@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
-import { invalidateSampleQueries, approvalKeys } from '@/types/query-keys'
+import { invalidateSampleQueries, approvalKeys, rejectionKeys } from '@/types/query-keys'
 import { rejectSampleClient } from '@/lib/api-client'
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -20,6 +20,7 @@ interface RejectSampleDialogProps {
 export function RejectSampleDialog({ sampleId, open, onOpenChange }: RejectSampleDialogProps) {
     const router = useRouter()
     const queryClient = useQueryClient()
+    const reasonId = useId()
     const [reason, setReason] = useState('')
     const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -40,6 +41,7 @@ export function RejectSampleDialog({ sampleId, open, onOpenChange }: RejectSampl
                 // Invalidate queries
                 await invalidateSampleQueries(queryClient, sampleId)
                 queryClient.invalidateQueries({ queryKey: approvalKeys.count })
+                queryClient.invalidateQueries({ queryKey: rejectionKeys.count })
 
                 router.refresh()
                 onOpenChange(false)
@@ -48,9 +50,9 @@ export function RejectSampleDialog({ sampleId, open, onOpenChange }: RejectSampl
         } catch (error) {
             toast.error('Có lỗi xảy ra')
             console.error(error)
-        } finally {
-            setIsSubmitting(false)
         }
+
+        setIsSubmitting(false)
     }
 
     return (
@@ -59,14 +61,15 @@ export function RejectSampleDialog({ sampleId, open, onOpenChange }: RejectSampl
                 <DialogHeader>
                     <DialogTitle>Từ chối mẫu</DialogTitle>
                     <DialogDescription>
-                        Mẫu sẽ được trả lại trạng thái "Đang thực hiện" để Analyst chỉnh sửa.
+                        Mẫu sẽ được trả lại trạng thái &quot;Đang thực hiện&quot; để Analyst chỉnh sửa.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
-                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                    <label htmlFor={reasonId} className="mb-2 block text-sm font-medium text-slate-700">
                         Lý do từ chối <span className="text-red-500">*</span>
                     </label>
                     <Textarea
+                        id={reasonId}
                         value={reason}
                         onChange={(e) => setReason(e.target.value)}
                         placeholder="Nhập lý do từ chối..."

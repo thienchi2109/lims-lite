@@ -14,6 +14,8 @@ import { useQuery } from '@tanstack/react-query'
 import { approvalKeys } from '@/types/query-keys'
 import { fetchSamplesForApprovalCountClient } from '@/lib/api-client'
 
+const COUNT_REFRESH_INTERVAL_MS = 30 * 1000
+
 export function useApprovalCount() {
     return useQuery({
         queryKey: approvalKeys.count,
@@ -27,10 +29,14 @@ export function useApprovalCount() {
             return result.data ?? 0
         },
         // 30 second stale time - reasonable for badge count
-        staleTime: 30 * 1000,
+        staleTime: COUNT_REFRESH_INTERVAL_MS,
+        // Always refetch on mount so dashboard badges recover immediately after navigation
+        refetchOnMount: 'always',
         // Refetch when user returns to tab
         refetchOnWindowFocus: true,
         // Refetch after network reconnect
         refetchOnReconnect: true,
+        // Poll lightly so other users' work appears without a manual refresh
+        refetchInterval: COUNT_REFRESH_INTERVAL_MS,
     })
 }
