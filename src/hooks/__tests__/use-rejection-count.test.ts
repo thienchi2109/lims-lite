@@ -2,8 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createElement, type ReactNode } from 'react'
-import { rejectionKeys } from '@/types/query-keys'
-
 vi.mock('@/lib/api-client', () => ({
     fetchRejectedSamplesCountClient: vi.fn(),
 }))
@@ -61,16 +59,15 @@ describe('useRejectionCount', () => {
         expect(result.current.error).toBeInstanceOf(Error)
     })
 
-    it('refetches on remount after the rejection count query was invalidated while unmounted', async () => {
+    it('refetches on remount even when the cached count is still fresh', async () => {
         mockFetchRejectedSamplesCountClient.mockResolvedValue({ data: 3 })
 
-        const { Wrapper, queryClient } = createWrapper()
+        const { Wrapper } = createWrapper()
         const firstMount = renderHook(() => useRejectionCount(), { wrapper: Wrapper })
 
         await waitFor(() => expect(mockFetchRejectedSamplesCountClient).toHaveBeenCalledTimes(1))
 
         firstMount.unmount()
-        await queryClient.invalidateQueries({ queryKey: rejectionKeys.count })
 
         renderHook(() => useRejectionCount(), { wrapper: Wrapper })
 

@@ -2,8 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createElement, type ReactNode } from 'react'
-import { approvalKeys } from '@/types/query-keys'
-
 vi.mock('@/lib/api-client', () => ({
     fetchSamplesForApprovalCountClient: vi.fn(),
 }))
@@ -41,16 +39,15 @@ describe('useApprovalCount', () => {
         vi.useRealTimers()
     })
 
-    it('refetches on remount after the approval count query was invalidated while unmounted', async () => {
+    it('refetches on remount even when the cached count is still fresh', async () => {
         mockFetchSamplesForApprovalCountClient.mockResolvedValue({ data: 2 })
 
-        const { Wrapper, queryClient } = createWrapper()
+        const { Wrapper } = createWrapper()
         const firstMount = renderHook(() => useApprovalCount(), { wrapper: Wrapper })
 
         await waitFor(() => expect(mockFetchSamplesForApprovalCountClient).toHaveBeenCalledTimes(1))
 
         firstMount.unmount()
-        await queryClient.invalidateQueries({ queryKey: approvalKeys.count })
 
         renderHook(() => useApprovalCount(), { wrapper: Wrapper })
 

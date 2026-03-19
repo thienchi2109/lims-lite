@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 
@@ -5,12 +6,12 @@ const mockInvalidateQueries = vi.fn()
 const mockPush = vi.fn()
 
 vi.mock('@/components/ui/dialog', () => ({
-    Dialog: ({ children }: { children: any }) => <>{children}</>,
-    DialogContent: ({ children }: { children: any }) => <>{children}</>,
-    DialogHeader: ({ children }: { children: any }) => <>{children}</>,
-    DialogFooter: ({ children }: { children: any }) => <>{children}</>,
-    DialogTitle: ({ children }: { children: any }) => <>{children}</>,
-    DialogDescription: ({ children }: { children: any }) => <>{children}</>,
+    Dialog: ({ children, open }: { children?: ReactNode; open?: boolean }) => (open ? <>{children}</> : null),
+    DialogContent: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    DialogHeader: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    DialogFooter: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    DialogTitle: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    DialogDescription: ({ children }: { children?: ReactNode }) => <>{children}</>,
 }))
 
 vi.mock('@tanstack/react-query', () => ({
@@ -52,7 +53,14 @@ describe('DiscardSampleDialog rejection invalidation', () => {
     it('invalidates approval and rejection counts after a successful discard', async () => {
         mockDiscardSampleClient.mockResolvedValue({ success: true })
 
-        render(<DiscardSampleDialog sampleId="sample-1" open onOpenChange={vi.fn()} />)
+        const onOpenChange = vi.fn()
+        const { rerender } = render(
+            <DiscardSampleDialog sampleId="sample-1" open={false} onOpenChange={onOpenChange} />,
+        )
+
+        expect(screen.queryByRole('button', { name: 'Xác nhận loại bỏ' })).toBeNull()
+
+        rerender(<DiscardSampleDialog sampleId="sample-1" open onOpenChange={onOpenChange} />)
 
         fireEvent.change(screen.getByPlaceholderText('Nhập lý do loại bỏ...'), {
             target: { value: 'Discard reason' },
