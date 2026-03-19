@@ -4,6 +4,12 @@ The current unified samples workspace parses filters from the URL and sends them
 
 The system already has a clear domain status model (`received`, `assigned`, `in_progress`, `review`, `completed`, `discarded`) and a Vietnamese filter UI. The design needs to improve the default query behavior without corrupting that domain model or surprising users who explicitly filter by status.
 
+Current implementation notes that affect this design:
+- `SamplesPageClient` currently treats a missing `status` as "fetch all statuses".
+- `use-filter-params.ts` currently has no concept of list scope.
+- `ActiveFilterBadges.tsx` currently renders nothing when there are no explicit filters, so it cannot yet explain an implicit default scope.
+- I could not find direct automated coverage around this `/samples` filter-state flow, so verification needs to include focused regression coverage, not only manual checks.
+
 ## Goals / Non-Goals
 
 - **Goals:**
@@ -46,9 +52,21 @@ Examples:
 
 The `Hiển thị tất cả` control should live in the visible samples toolbar rather than inside the advanced filter popover. This is a top-level fetch mode, not a secondary filter.
 
-### Decision 5: Reset filters returns to the active default
+### Decision 5: Keep the scope control visible while explicit status is selected
+
+When the user selects a concrete status, that explicit status should still win over scope for the actual query result. However, the top-level scope control should remain visible and URL-backed so the remembered dataset mode survives refresh/share/bookmark behavior and becomes active again once the explicit status filter is cleared.
+
+This avoids hiding important state while still keeping the precedence rules simple:
+- `scope=all&status=completed` still shows only completed rows
+- clearing `status` from that URL returns the workspace to `scope=all`
+
+### Decision 6: Reset filters returns to the active default
 
 Resetting filters should remove search and secondary filters, clear explicit status filters, reset pagination, and return the workspace to its default active scope.
+
+### Decision 7: Show the active-scope hint in the active-filter row
+
+The workspace should communicate the default active scope through the active-filter row rather than helper text buried elsewhere. The hint should appear only when active scope is actually effective, meaning `scope` resolves to `active` and no concrete `status` filter is selected.
 
 ## Risks / Trade-offs
 
@@ -56,7 +74,7 @@ Resetting filters should remove search and secondary filters, clear explicit sta
   - Mitigation: use a visible `Hiển thị tất cả` control and a small status badge/message indicating that completed samples are hidden by default.
 
 - The interaction between `scope` and `status` can become confusing if both are simultaneously editable.
-  - Mitigation: explicit status selection overrides scope; the UI should hide or disable the scope toggle while a specific status filter is active, or otherwise explain the override clearly.
+  - Mitigation: explicit status selection overrides scope, but the scope control remains visible and URL-backed so the remembered scope is not hidden from the user.
 
 - Query performance gains depend on the actual proportion of completed rows and existing indexes.
   - Mitigation: keep this proposal scoped to behavior and UX first; implementation can validate observed gains with production-like data later.
@@ -66,9 +84,9 @@ Resetting filters should remove search and secondary filters, clear explicit sta
 1. Extend the sample list parameter schema to accept the new `scope` value.
 2. Update samples filter state and toolbar UI to expose `Hiển thị tất cả`.
 3. Apply the active-scope default in `fetchSamples` only when `status` is not explicitly selected.
-4. Add verification for URL behavior, query precedence, and default reset behavior.
+4. Add focused regression coverage for URL behavior, query precedence, and default reset behavior.
 
-## Open Questions
+## Resolved Implementation Choices
 
-- Whether the UI should hide or disable the scope toggle when a concrete `status` is selected, versus keeping it visible with helper text.
-- Whether the active-scope hint should appear as a badge in the active filter row or as inline helper text near the toggle.
+- Keep the scope control visible while a concrete `status` filter is active; explicit `status` still overrides the query result.
+- Show the active-scope hint in the active-filter row instead of inline helper text near the toolbar control.

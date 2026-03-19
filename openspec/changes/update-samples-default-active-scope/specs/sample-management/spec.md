@@ -10,6 +10,7 @@ The system SHALL default the unified `/samples` workspace to an active-samples s
 - **WHEN** the samples list query is executed
 - **THEN** the system SHALL exclude samples whose status is `completed`
 - **AND** the visible workspace SHALL remain focused on active operational samples
+- **AND** the workspace SHALL indicate that completed samples are hidden by default
 
 #### Scenario: User explicitly fetches all samples
 
@@ -24,6 +25,7 @@ The system SHALL default the unified `/samples` workspace to an active-samples s
 - **WHEN** the user explicitly filters by a concrete status such as `completed` or `review`
 - **THEN** the system SHALL honor the explicit status filter
 - **AND** the default active-scope exclusion SHALL NOT block the requested status results
+- **AND** the user's remembered scope selection SHALL remain URL-backed so clearing the explicit status filter returns the workspace to that scope
 
 #### Scenario: Reset returns to active default
 
