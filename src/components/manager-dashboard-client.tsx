@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { FlaskConical, CheckCircle2, ClipboardList, User, QrCode, BarChart3, ShieldCheck } from 'lucide-react'
+import { DashboardAlertBanner } from '@/components/dashboard-alert-banner'
 import { useApprovalCount } from '@/hooks/use-approval-count'
 
 interface ManagerDashboardClientProps {
@@ -81,12 +82,20 @@ export function ManagerDashboardClient({ user }: ManagerDashboardClientProps) {
                     Xin chào, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">{user.full_name}</span>
                 </h1>
                 <p className="text-slate-500 dark:text-slate-400 text-base max-w-2xl">
-                    Chào mừng trở lại hệ thống CDC LIMS-Lite. Bạn có <span className="font-semibold text-slate-900 dark:text-white">{pendingCount} mẫu</span> đang chờ phê duyệt.
+                    Chào mừng trở lại hệ thống CDC LIMS-Lite. Hãy theo dõi các tác vụ phê duyệt và quản trị bên dưới.
                 </p>
             </div>
 
+            <DashboardAlertBanner
+                count={pendingCount}
+                variant="warning"
+                message="Bạn có {count} mẫu đang chờ phê duyệt"
+                linkText="Mở hàng đợi"
+                linkHref="/manager/approvals"
+            />
+
             {/* Dashboard Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-8">
                 {menuItems.map((item) => (
                     <Link
                         key={item.href}
