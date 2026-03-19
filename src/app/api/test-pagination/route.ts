@@ -14,8 +14,8 @@ export async function GET(request: Request) {
         if (type === 'assays') {
             result = await getAssayDefinitions({ page, pageSize, search })
         } else if (type === 'samples') {
-            // Mocking SampleListParams
-            result = await fetchSamples({ page, pageSize, search, sortOrder: 'desc' })
+            // Keep pagination checks on the full sample dataset.
+            result = await fetchSamples({ page, pageSize, search, sortOrder: 'desc', scope: 'all' })
         } else {
             return NextResponse.json({ error: 'Invalid type. Use "assays" or "samples"' }, { status: 400 })
         }
