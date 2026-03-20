@@ -38,53 +38,48 @@ describe('getKPIMetrics', () => {
     mockRpc.mockResolvedValue({ data: null, error: null })
   })
 
-  it('should fetch KPI metrics with valid date range', async () => {
+  it('uses the consolidated KPI RPC exactly once and keeps the KPI contract intact', async () => {
     const dateRange: DateRange = {
       start: '2024-12-01T00:00:00Z',
       end: '2024-12-20T23:59:59Z',
     }
 
-    // Mock RPC responses
-    mockRpc
-      .mockResolvedValueOnce({
-        data: { avg_tat_hours: 48.5, median_tat_hours: 45.0, sample_count: 100, on_time_count: 85 },
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: [
-          { status: 'received', count: 20 },
-          { status: 'in_progress', count: 30 },
-        ],
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: { pending_count: 15, avg_wait_hours: 12.0, overdue_count: 2 },
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: { error_rate: 2.5, total_modifications: 10, total_results: 400 },
-        error: null,
-      })
+    mockRpc.mockResolvedValueOnce({
+      data: [
+        {
+          avg_tat_hours: 48.5,
+          median_tat_hours: 45.0,
+          sample_count: 100,
+          on_time_count: 85,
+          status_breakdown: [
+            { status: 'received', count: 20 },
+            { status: 'in_progress', count: 30 },
+          ],
+          pending_count: 15,
+          avg_wait_hours: 12.0,
+          overdue_count: 2,
+          error_rate: 2.5,
+          total_modifications: 10,
+          total_results: 400,
+        },
+      ],
+      error: null,
+    })
 
-    const result = await getKPIMetrics(dateRange)
+    const resultPromise = getKPIMetrics(dateRange)
+    await Promise.resolve()
 
-    // Verify all RPC functions were called
-    expect(mockRpc).toHaveBeenCalledWith('calculate_average_tat', {
+    expect(mockRpc).toHaveBeenCalledTimes(1)
+    expect(mockRpc).toHaveBeenNthCalledWith(1, 'get_kpi_metrics', {
       start_date: dateRange.start,
       end_date: dateRange.end,
     })
-    expect(mockRpc).toHaveBeenCalledWith('get_samples_by_status', {
-      start_date: dateRange.start,
-      end_date: dateRange.end,
-    })
-    expect(mockRpc).toHaveBeenCalledWith('get_approval_queue_metrics', {
-      start_date: dateRange.start,
-      end_date: dateRange.end,
-    })
-    expect(mockRpc).toHaveBeenCalledWith('get_error_rate_metrics', {
-      start_date: dateRange.start,
-      end_date: dateRange.end,
-    })
+    expect(mockRpc).not.toHaveBeenCalledWith('calculate_average_tat', expect.anything())
+    expect(mockRpc).not.toHaveBeenCalledWith('get_samples_by_status', expect.anything())
+    expect(mockRpc).not.toHaveBeenCalledWith('get_approval_queue_metrics', expect.anything())
+    expect(mockRpc).not.toHaveBeenCalledWith('get_error_rate_metrics', expect.anything())
+
+    const result = await resultPromise
 
     // Verify result structure
     expect(result).toBeDefined()
