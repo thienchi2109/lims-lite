@@ -23,9 +23,16 @@ export interface TestResult {
     lab_specialty_name: string | null
 }
 
+export type GenerateCoAFailureCode = 'ALREADY_READY'
+
 export type GenerateCoAResult =
     | { success: true; coaId: string; filePath: string }
-    | { success: false; error: string }
+    | {
+          success: false
+          error: string
+          code?: GenerateCoAFailureCode
+          shouldRecordFailure?: boolean
+      }
 
 export type ValidationResult = {
     valid: boolean

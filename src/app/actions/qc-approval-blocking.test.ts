@@ -29,6 +29,8 @@ function createChainableMock() {
         eq: vi.fn(() => chain),
         in: vi.fn(() => chain),
         neq: vi.fn(() => chain),
+        is: vi.fn(() => chain),
+        maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
         single: vi.fn(() => Promise.resolve({ data: null, error: null })),
     }
     return chain

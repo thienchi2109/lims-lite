@@ -26,7 +26,7 @@ interface RawSample {
     updated_at: string | null
     received_by_user: { full_name: string } | null
     results: RawSampleResult[]
-    coa_reports: { status: CoAReportStatus; deleted_at: string | null }[] | null
+    coa_reports: { status: CoAReportStatus; error_message: string | null; deleted_at: string | null }[] | null
 }
 
 /**
@@ -52,7 +52,7 @@ function transformSamplesWithCounts(samples: RawSample[]) {
             entered_count: results.filter((r) => r.status === 'entered').length,
             approved_count: results.filter((r) => r.status === 'approved').length,
             coa_reports: activeCoaReports.length > 0 
-                ? activeCoaReports.map(({ status }) => ({ status }))
+                ? activeCoaReports.map(({ status, error_message }) => ({ status, error_message }))
                 : null,
         }
     })
@@ -81,7 +81,7 @@ export async function getSamplesWithTab(tab: ApprovalTab) {
                 updated_at,
                 received_by_user:users!samples_received_by_fkey(full_name),
                 results(id, status),
-                coa_reports!left(status, deleted_at)
+                coa_reports!left(status, error_message, deleted_at)
             `)
             .eq('status', tab)
             .is('deleted_at', null)

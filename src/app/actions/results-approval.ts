@@ -144,9 +144,13 @@ export async function approveResults(data: ApproveResults) {
             // Failures are recorded in coa_reports so Manager can see and retry
             if (newStatus === 'completed') {
                 const completedSampleId = sampleIds[0]
-                generateCoA(completedSampleId)
+                await markCoAGenerationPending(completedSampleId)
+                void generateCoA(completedSampleId)
                     .then(async (result) => {
                         if (!result.success) {
+                            if (!shouldRecordAutoCoAFailure(result)) {
+                                return
+                            }
                             console.error('Auto CoA generation failed for sample', completedSampleId, result.error)
                             await recordCoAFailure(completedSampleId, result.error)
                         }
@@ -185,12 +189,15 @@ async function recordCoAFailure(sampleId: string, errorMessage: string): Promise
 
         const { data: existing } = await supabase
             .from('coa_reports')
-            .select('id')
+            .select('id, status')
             .eq('sample_id', sampleId)
             .is('deleted_at', null)
             .maybeSingle()
 
         if (existing) {
+            if (existing.status === 'ready') {
+                return
+            }
             await supabase
                 .from('coa_reports')
                 .update({ status: 'failed' as const, error_message: errorMessage })
@@ -209,6 +216,61 @@ async function recordCoAFailure(sampleId: string, errorMessage: string): Promise
         }
     } catch (dbErr) {
         console.error('Failed to record CoA failure status for sample', sampleId, dbErr)
+    }
+}
+
+/**
+ * Avoid downgrading a valid ready CoA for business outcomes
+ * (e.g. "already ready"). Only technical generation failures should be
+ * persisted as failed.
+ */
+function shouldRecordAutoCoAFailure(
+    result: Exclude<Awaited<ReturnType<typeof generateCoA>>, { success: true }>
+): boolean {
+    return result.shouldRecordFailure !== false && result.code !== 'ALREADY_READY'
+}
+
+/**
+ * Persist a pending marker before background CoA generation starts.
+ * This keeps manager UI observable even if background execution is interrupted.
+ */
+async function markCoAGenerationPending(sampleId: string): Promise<void> {
+    try {
+        const supabase = await createClient()
+        const { data: existing } = await supabase
+            .from('coa_reports')
+            .select('id, status')
+            .eq('sample_id', sampleId)
+            .is('deleted_at', null)
+            .maybeSingle()
+
+        if (existing) {
+            if (existing.status === 'ready') {
+                return
+            }
+
+            await supabase
+                .from('coa_reports')
+                .update({
+                    status: 'pending' as const,
+                    error_message: null,
+                })
+                .eq('id', existing.id)
+            return
+        }
+
+        await supabase
+            .from('coa_reports')
+            .insert({
+                sample_id: sampleId,
+                file_path: '',
+                file_hash: '',
+                version: 1,
+                status: 'pending' as const,
+                error_message: null,
+            })
+    } catch (dbErr) {
+        console.error('Failed to mark CoA generation pending for sample', sampleId, dbErr)
     }
 }
 
