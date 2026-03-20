@@ -1,3 +1,8 @@
+import {
+  KPI_RPC_NAME,
+  mapConsolidatedKpiMetrics,
+  normalizeRpcError,
+} from '@/lib/kpi-metrics'
 import { createClient } from '@/lib/supabase/server'
 import type {
   DateRange,
@@ -18,102 +23,18 @@ import { DateRangeSchema } from '@/types'
  * @returns KPIMetrics object with all 5 KPI metrics
  */
 export async function fetchKPIData(dateRange: DateRange): Promise<KPIMetrics> {
-  // Validate input
   const validated = DateRangeSchema.parse(dateRange)
-
   const supabase = await createClient()
+  const { data, error } = await supabase.rpc(KPI_RPC_NAME, {
+    start_date: validated.start,
+    end_date: validated.end,
+  })
 
-  // Fetch all metrics in parallel (performance optimization)
-  const [
-    { data: tatData, error: tatError },
-    { data: statusData, error: statusError },
-    { data: approvalData, error: approvalError },
-    { data: errorData, error: errorError },
-  ] = await Promise.all([
-    supabase.rpc('calculate_average_tat', {
-      start_date: validated.start,
-      end_date: validated.end,
-    }),
-    supabase.rpc('get_samples_by_status', {
-      start_date: validated.start,
-      end_date: validated.end,
-    }),
-    supabase.rpc('get_approval_queue_metrics', {
-      start_date: validated.start,
-      end_date: validated.end,
-    }),
-    supabase.rpc('get_error_rate_metrics', {
-      start_date: validated.start,
-      end_date: validated.end,
-    }),
-  ])
-
-  if (tatError) {
-    console.error('Error fetching TAT metrics:', tatError)
-    throw new Error(`Failed to fetch TAT metrics: ${tatError.message}`)
+  if (error) {
+    throw normalizeRpcError(error, KPI_RPC_NAME)
   }
 
-  if (statusError) {
-    console.error('Error fetching status distribution:', statusError)
-    throw new Error(`Failed to fetch status distribution: ${statusError.message}`)
-  }
-
-  if (approvalError) {
-    console.error('Error fetching approval metrics:', approvalError)
-    throw new Error(`Failed to fetch approval metrics: ${approvalError.message}`)
-  }
-
-  if (errorError) {
-    console.error('Error fetching error rate:', errorError)
-    throw new Error(`Failed to fetch error rate: ${errorError.message}`)
-  }
-
-  // Calculate WIP (received + assigned + in_progress + review)
-  const wipCount = statusData
-    ?.filter((s: { status: string }) =>
-      ['received', 'assigned', 'in_progress', 'review'].includes(s.status)
-    )
-    .reduce((sum: number, s: { count: number | bigint }) => sum + Number(s.count), 0) || 0
-
-  // Calculate on-time delivery rate
-  const tatRecord = tatData?.[0]
-  const onTimeRate = tatRecord
-    ? (Number(tatRecord.on_time_count) / Number(tatRecord.sample_count)) * 100
-    : 0
-
-  return {
-    avgTAT: {
-      value: Number(tatRecord?.avg_tat_hours || 0),
-      unit: 'hours',
-      trend: 0, // TODO: Compare with previous period
-      previousValue: 0,
-    },
-    wipCount: {
-      value: wipCount,
-      breakdown: statusData?.map((s: { status: string; count: number | bigint }) => ({
-        status: s.status,
-        count: Number(s.count),
-      })) || [],
-    },
-    pendingApprovals: {
-      count: Number(approvalData?.[0]?.pending_count || 0),
-      avgWaitHours: Number(approvalData?.[0]?.avg_wait_hours || 0),
-      overdueCount: Number(approvalData?.[0]?.overdue_count || 0),
-      isAlert: Number(approvalData?.[0]?.pending_count || 0) > 20 ||
-        Number(approvalData?.[0]?.avg_wait_hours || 0) > 24,
-    },
-    onTimeRate: {
-      value: onTimeRate,
-      trend: 0, // TODO: Compare with previous period
-      color: onTimeRate >= 90 ? 'green' : onTimeRate >= 80 ? 'yellow' : 'red',
-    },
-    errorRate: {
-      value: Number(errorData?.[0]?.error_rate || 0),
-      totalModifications: Number(errorData?.[0]?.total_modifications || 0),
-      totalResults: Number(errorData?.[0]?.total_results || 0),
-      trend: 0, // TODO: Compare with previous period
-    },
-  }
+  return mapConsolidatedKpiMetrics(data)
 }
 
 /**
