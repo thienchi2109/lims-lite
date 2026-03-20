@@ -285,7 +285,7 @@ describe('Error Handling', () => {
     await expect(getKPIMetrics(dateRange)).rejects.toThrow()
   })
 
-  it('should handle malformed RPC responses', async () => {
+  it('should throw on malformed RPC responses', async () => {
     const dateRange: DateRange = {
       start: '2024-12-01T00:00:00Z',
       end: '2024-12-20T23:59:59Z',
@@ -293,11 +293,11 @@ describe('Error Handling', () => {
 
     mockConsolidatedKpiResponse([
       {
-        avg_tat_hours: null,
+        avg_tat_hours: 'not-a-number',
         median_tat_hours: 0,
         sample_count: 0,
         on_time_count: 0,
-        status_breakdown: [],
+        status_breakdown: {},
         pending_count: 0,
         avg_wait_hours: 0,
         overdue_count: 0,
@@ -307,12 +307,8 @@ describe('Error Handling', () => {
       },
     ])
 
-    const result = await getKPIMetrics(dateRange)
-
-    // Should handle missing fields gracefully
-    expect(result).toBeDefined()
+    await expect(getKPIMetrics(dateRange)).rejects.toThrow('Malformed KPI metrics payload')
     expectConsolidatedKpiRpcCall(dateRange)
-    expect(result.avgTAT.value).toBeDefined()
   })
 
   it('should validate Zod schema for date range', async () => {

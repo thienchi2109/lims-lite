@@ -1,5 +1,10 @@
 'use server'
 
+import {
+  KPI_RPC_NAME,
+  mapConsolidatedKpiMetrics,
+  normalizeRpcError,
+} from '@/lib/kpi-metrics'
 import { createClient } from '@/lib/supabase/server'
 import type {
   DateRange,
@@ -17,147 +22,24 @@ import { DateRangeSchema } from '@/types'
 import { z } from 'zod'
 import * as XLSX from 'xlsx'
 
-type RpcRecord = Record<string, unknown>
-
-function getFirstRecord<T extends RpcRecord>(data: T | T[] | null | undefined): T | null {
-  if (Array.isArray(data)) {
-    return data[0] ?? null
-  }
-
-  return data ?? null
-}
-
-function getRecordList<T extends RpcRecord>(data: T[] | T | null | undefined): T[] {
-  if (Array.isArray(data)) {
-    return data
-  }
-
-  return []
-}
-
-function normalizeRpcError(error: unknown, rpcName: string): Error {
-  if (error instanceof Error) {
-    return error
-  }
-
-  if (error && typeof error === 'object' && 'message' in error) {
-    const message = typeof error.message === 'string'
-      ? error.message
-      : `KPI metrics RPC failed: ${rpcName}`
-    const normalizedError = new Error(message)
-
-    if ('code' in error && typeof error.code === 'string') {
-      ;(normalizedError as Error & { code?: string }).code = error.code
-    }
-
-    return normalizedError
-  }
-
-  return new Error(`KPI metrics RPC failed: ${rpcName}`)
-}
-
 /**
  * Fetches all 5 KPI metrics for the dashboard
  * Returns: Average TAT, WIP count, pending approvals, on-time rate, error rate
  */
 export async function getKPIMetrics(dateRange: DateRange): Promise<KPIMetrics> {
   try {
-    // Validate input
     const validated = DateRangeSchema.parse(dateRange)
-
     const supabase = await createClient()
+    const { data, error } = await supabase.rpc(KPI_RPC_NAME, {
+      start_date: validated.start,
+      end_date: validated.end,
+    })
 
-    // Fetch all metrics in parallel (performance optimization)
-    const [
-      { data: tatData, error: tatError },
-      { data: statusData, error: statusError },
-      { data: approvalData, error: approvalError },
-      { data: errorData, error: errorError },
-    ] = await Promise.all([
-      supabase.rpc('calculate_average_tat', {
-        start_date: validated.start,
-        end_date: validated.end,
-      }),
-      supabase.rpc('get_samples_by_status', {
-        start_date: validated.start,
-        end_date: validated.end,
-      }),
-      supabase.rpc('get_approval_queue_metrics', {
-        start_date: validated.start,
-        end_date: validated.end,
-      }),
-      supabase.rpc('get_error_rate_metrics', {
-        start_date: validated.start,
-        end_date: validated.end,
-      }),
-    ])
-
-    const tatRecord = tatError ? null : getFirstRecord(tatData)
-    const statusRecords = statusError ? [] : getRecordList(statusData)
-    const approvalRecord = approvalError ? null : getFirstRecord(approvalData)
-    const errorRecord = errorError ? null : getFirstRecord(errorData)
-
-    const rpcFailures = [
-      { rpcName: 'calculate_average_tat', error: tatError },
-      { rpcName: 'get_samples_by_status', error: statusError },
-      { rpcName: 'get_approval_queue_metrics', error: approvalError },
-      { rpcName: 'get_error_rate_metrics', error: errorError },
-    ].filter((failure) => failure.error !== null)
-
-    if (rpcFailures.length > 0) {
-      rpcFailures.forEach(({ rpcName, error }) => {
-        console.error(`KPI metrics RPC failed: ${rpcName}`, error)
-      })
-
-      const firstFailure = rpcFailures[0]
-      throw normalizeRpcError(firstFailure.error, firstFailure.rpcName)
+    if (error) {
+      throw normalizeRpcError(error, KPI_RPC_NAME)
     }
 
-    // Calculate WIP (received + assigned + in_progress + review)
-    const wipCount = statusRecords
-      .filter((s: { status: string }) =>
-        ['received', 'assigned', 'in_progress', 'review'].includes(s.status)
-      )
-      .reduce((sum: number, s: { count: number | bigint }) => sum + Number(s.count), 0)
-
-    // Calculate on-time delivery rate
-    const onTimeRate = tatRecord && Number(tatRecord.sample_count) > 0
-      ? (Number(tatRecord.on_time_count) / Number(tatRecord.sample_count)) * 100
-      : 0
-
-    return {
-      avgTAT: {
-        value: Number(tatRecord?.avg_tat_hours || 0),
-        unit: 'hours',
-        trend: 0, // TODO: Compare with previous period
-        previousValue: 0,
-      },
-      wipCount: {
-        value: wipCount,
-        breakdown: statusRecords.map((s: { status: string; count: number | bigint }) => ({
-          status: s.status,
-          count: Number(s.count),
-        })),
-      },
-      pendingApprovals: {
-        count: Number(approvalRecord?.pending_count || 0),
-        avgWaitHours: Number(approvalRecord?.avg_wait_hours || 0),
-        overdueCount: Number(approvalRecord?.overdue_count || 0),
-        isAlert: Number(approvalRecord?.pending_count || 0) > 20 ||
-          Number(approvalRecord?.avg_wait_hours || 0) > 24,
-      },
-      onTimeRate: {
-        value: onTimeRate,
-        trend: 0, // TODO: Compare with previous period
-        color: onTimeRate >= 90 ? 'green' : onTimeRate >= 80 ? 'yellow' : 'red',
-      },
-      errorRate: {
-        value: Number(errorRecord?.error_rate || 0),
-        totalModifications: Number(errorRecord?.total_modifications || 0),
-        totalResults: Number(errorRecord?.total_results || 0),
-        trend: 0, // TODO: Compare with previous period
-      },
-    }
+    return mapConsolidatedKpiMetrics(data)
   } catch (error) {
     console.error('Error fetching KPI metrics:', error)
     throw error

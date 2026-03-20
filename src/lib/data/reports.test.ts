@@ -137,4 +137,30 @@ describe('fetchKPIData', () => {
 
     expectConsolidatedKpiRpcCall(dateRange)
   })
+
+  it('throws when the consolidated KPI payload is malformed', async () => {
+    const dateRange: DateRange = {
+      start: '2024-12-01T00:00:00Z',
+      end: '2024-12-20T23:59:59Z',
+    }
+
+    mockConsolidatedKpiResponse([
+      {
+        avg_tat_hours: 48.5,
+        sample_count: 'bad-number',
+        on_time_count: 85,
+        status_breakdown: 'bad-breakdown',
+        pending_count: 15,
+        avg_wait_hours: 12,
+        overdue_count: 2,
+        error_rate: 2.5,
+        total_modifications: 10,
+        total_results: 400,
+      },
+    ])
+
+    await expect(fetchKPIData(dateRange)).rejects.toThrow('Malformed KPI metrics payload')
+
+    expectConsolidatedKpiRpcCall(dateRange)
+  })
 })
