@@ -187,23 +187,29 @@ async function recordCoAFailure(sampleId: string, errorMessage: string): Promise
     try {
         const supabase = await createClient()
 
-        const { data: existing } = await supabase
+        const { data: existing, error: fetchError } = await supabase
             .from('coa_reports')
             .select('id, status')
             .eq('sample_id', sampleId)
             .is('deleted_at', null)
             .maybeSingle()
+        if (fetchError) {
+            throw fetchError
+        }
 
         if (existing) {
             if (existing.status === 'ready') {
                 return
             }
-            await supabase
+            const { error: updateError } = await supabase
                 .from('coa_reports')
                 .update({ status: 'failed' as const, error_message: errorMessage })
                 .eq('id', existing.id)
+            if (updateError) {
+                throw updateError
+            }
         } else {
-            await supabase
+            const { error: insertError } = await supabase
                 .from('coa_reports')
                 .insert({
                     sample_id: sampleId,
@@ -213,6 +219,9 @@ async function recordCoAFailure(sampleId: string, errorMessage: string): Promise
                     status: 'failed' as const,
                     error_message: errorMessage,
                 })
+            if (insertError) {
+                throw insertError
+            }
         }
     } catch (dbErr) {
         console.error('Failed to record CoA failure status for sample', sampleId, dbErr)
@@ -237,29 +246,35 @@ function shouldRecordAutoCoAFailure(
 async function markCoAGenerationPending(sampleId: string): Promise<void> {
     try {
         const supabase = await createClient()
-        const { data: existing } = await supabase
+        const { data: existing, error: fetchError } = await supabase
             .from('coa_reports')
             .select('id, status')
             .eq('sample_id', sampleId)
             .is('deleted_at', null)
             .maybeSingle()
+        if (fetchError) {
+            throw fetchError
+        }
 
         if (existing) {
             if (existing.status === 'ready') {
                 return
             }
 
-            await supabase
+            const { error: updateError } = await supabase
                 .from('coa_reports')
                 .update({
                     status: 'pending' as const,
                     error_message: null,
                 })
                 .eq('id', existing.id)
+            if (updateError) {
+                throw updateError
+            }
             return
         }
 
-        await supabase
+        const { error: insertError } = await supabase
             .from('coa_reports')
             .insert({
                 sample_id: sampleId,
@@ -269,6 +284,9 @@ async function markCoAGenerationPending(sampleId: string): Promise<void> {
                 status: 'pending' as const,
                 error_message: null,
             })
+        if (insertError) {
+            throw insertError
+        }
     } catch (dbErr) {
         console.error('Failed to mark CoA generation pending for sample', sampleId, dbErr)
     }
