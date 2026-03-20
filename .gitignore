@@ -54,6 +54,7 @@ __pycache__/
 VPS keys
 # Exception: migrations should be version controlled
 !supabase/migrations/*.sql
+!tests/*.sql
 nul
 
 # bv (beads viewer) local config and caches
