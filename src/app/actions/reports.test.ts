@@ -111,42 +111,21 @@ describe('getKPIMetrics', () => {
       end: '2024-12-20T23:59:59Z',
     }
 
-    // Mock multiple RPC errors so every swallowed failure must be logged.
-    mockRpc
-      .mockResolvedValueOnce({
-        data: null,
-        error: { message: 'RPC function not found' },
-      })
-      .mockResolvedValueOnce({
-        data: [],
-        error: { message: 'Status RPC failed' },
-      })
-      .mockResolvedValueOnce({
-        data: null,
-        error: { message: 'Approval RPC failed' },
-      })
-      .mockResolvedValueOnce({
-        data: null,
-        error: { message: 'Error-rate RPC failed' },
-      })
+    mockRpc.mockResolvedValueOnce({
+      data: null,
+      error: { message: 'RPC function not found' },
+    })
 
     await expect(getKPIMetrics(dateRange)).rejects.toThrow('RPC function not found')
 
+    expect(mockRpc).toHaveBeenCalledTimes(1)
+    expect(mockRpc).toHaveBeenCalledWith('get_kpi_metrics', {
+      start_date: dateRange.start,
+      end_date: dateRange.end,
+    })
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      'KPI metrics RPC failed: calculate_average_tat',
+      'Error fetching KPI metrics:',
       expect.objectContaining({ message: 'RPC function not found' }),
-    )
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      'KPI metrics RPC failed: get_samples_by_status',
-      expect.objectContaining({ message: 'Status RPC failed' }),
-    )
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      'KPI metrics RPC failed: get_approval_queue_metrics',
-      expect.objectContaining({ message: 'Approval RPC failed' }),
-    )
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      'KPI metrics RPC failed: get_error_rate_metrics',
-      expect.objectContaining({ message: 'Error-rate RPC failed' }),
     )
   })
 
@@ -156,27 +135,32 @@ describe('getKPIMetrics', () => {
       end: '2024-12-02T00:00:00Z',
     }
 
-    // Mock empty responses (no samples in this date range)
-    mockRpc
-      .mockResolvedValueOnce({
-        data: { avg_tat_hours: 0, median_tat_hours: 0, sample_count: 0, on_time_count: 0 },
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: [], // No samples by status
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: { pending_count: 0, avg_wait_hours: 0, overdue_count: 0 },
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: { error_rate: 0, total_modifications: 0, total_results: 0 },
-        error: null,
-      })
+    mockRpc.mockResolvedValueOnce({
+      data: [
+        {
+          avg_tat_hours: 0,
+          median_tat_hours: 0,
+          sample_count: 0,
+          on_time_count: 0,
+          status_breakdown: [],
+          pending_count: 0,
+          avg_wait_hours: 0,
+          overdue_count: 0,
+          error_rate: 0,
+          total_modifications: 0,
+          total_results: 0,
+        },
+      ],
+      error: null,
+    })
 
     const result = await getKPIMetrics(dateRange)
 
+    expect(mockRpc).toHaveBeenCalledTimes(1)
+    expect(mockRpc).toHaveBeenCalledWith('get_kpi_metrics', {
+      start_date: dateRange.start,
+      end_date: dateRange.end,
+    })
     expect(result.avgTAT.value).toBe(0)
     expect(result.wipCount.value).toBe(0)
     expect(result.pendingApprovals.count).toBe(0)
@@ -190,27 +174,32 @@ describe('getKPIMetrics', () => {
       end: '2024-12-20T23:59:59Z',
     }
 
-    // Mock data: 85 out of 100 samples on-time
-    mockRpc
-      .mockResolvedValueOnce({
-        data: { avg_tat_hours: 48.5, median_tat_hours: 45.0, sample_count: 100, on_time_count: 85 },
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: [{ status: 'completed', count: 100 }],
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: { pending_count: 0, avg_wait_hours: 0, overdue_count: 0 },
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: { error_rate: 2.5, total_modifications: 10, total_results: 400 },
-        error: null,
-      })
+    mockRpc.mockResolvedValueOnce({
+      data: [
+        {
+          avg_tat_hours: 48.5,
+          median_tat_hours: 45.0,
+          sample_count: 100,
+          on_time_count: 85,
+          status_breakdown: [{ status: 'completed', count: 100 }],
+          pending_count: 0,
+          avg_wait_hours: 0,
+          overdue_count: 0,
+          error_rate: 2.5,
+          total_modifications: 10,
+          total_results: 400,
+        },
+      ],
+      error: null,
+    })
 
     const result = await getKPIMetrics(dateRange)
 
+    expect(mockRpc).toHaveBeenCalledTimes(1)
+    expect(mockRpc).toHaveBeenCalledWith('get_kpi_metrics', {
+      start_date: dateRange.start,
+      end_date: dateRange.end,
+    })
     // On-time rate should be 85% (85/100 * 100)
     expect(result.onTimeRate.value).toBe(85)
   })
@@ -222,28 +211,32 @@ describe('getKPIMetrics', () => {
       end: '2024-12-01T00:00:00Z',
     }
 
-    // The function should still call RPC (validation happens at business logic level)
-    // But results might be empty or unexpected
-    mockRpc
-      .mockResolvedValueOnce({
-        data: { avg_tat_hours: 0, median_tat_hours: 0, sample_count: 0, on_time_count: 0 },
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: [],
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: { pending_count: 0, avg_wait_hours: 0, overdue_count: 0 },
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: { error_rate: 0, total_modifications: 0, total_results: 0 },
-        error: null,
-      })
+    mockRpc.mockResolvedValueOnce({
+      data: [
+        {
+          avg_tat_hours: 0,
+          median_tat_hours: 0,
+          sample_count: 0,
+          on_time_count: 0,
+          status_breakdown: [],
+          pending_count: 0,
+          avg_wait_hours: 0,
+          overdue_count: 0,
+          error_rate: 0,
+          total_modifications: 0,
+          total_results: 0,
+        },
+      ],
+      error: null,
+    })
 
     const result = await getKPIMetrics(invalidDateRange)
 
+    expect(mockRpc).toHaveBeenCalledTimes(1)
+    expect(mockRpc).toHaveBeenCalledWith('get_kpi_metrics', {
+      start_date: invalidDateRange.start,
+      end_date: invalidDateRange.end,
+    })
     // Should handle gracefully (empty results)
     expect(result.avgTAT.value).toBe(0)
     expect(result.wipCount.value).toBe(0)
@@ -260,27 +253,32 @@ describe('RLS Compliance', () => {
       end: '2024-12-20T23:59:59Z',
     }
 
-    // Mock successful RPC calls (RLS is enforced at database level)
-    mockRpc
-      .mockResolvedValueOnce({
-        data: { avg_tat_hours: 48.5, median_tat_hours: 45.0, sample_count: 100, on_time_count: 85 },
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: [{ status: 'received', count: 20 }],
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: { pending_count: 15, avg_wait_hours: 12.0, overdue_count: 2 },
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: { error_rate: 2.5, total_modifications: 10, total_results: 400 },
-        error: null,
-      })
+    mockRpc.mockResolvedValueOnce({
+      data: [
+        {
+          avg_tat_hours: 48.5,
+          median_tat_hours: 45.0,
+          sample_count: 100,
+          on_time_count: 85,
+          status_breakdown: [{ status: 'received', count: 20 }],
+          pending_count: 15,
+          avg_wait_hours: 12.0,
+          overdue_count: 2,
+          error_rate: 2.5,
+          total_modifications: 10,
+          total_results: 400,
+        },
+      ],
+      error: null,
+    })
 
     const result = await getKPIMetrics(dateRange)
 
+    expect(mockRpc).toHaveBeenCalledTimes(1)
+    expect(mockRpc).toHaveBeenCalledWith('get_kpi_metrics', {
+      start_date: dateRange.start,
+      end_date: dateRange.end,
+    })
     // Verify data is returned (RLS allows access)
     expect(result).toBeDefined()
     expect(result.avgTAT.value).toBe(48.5)
@@ -296,26 +294,18 @@ describe('RLS Compliance', () => {
       end: '2024-12-20T23:59:59Z',
     }
 
-    // Mock RLS violation error from database
-    mockRpc
-      .mockResolvedValueOnce({
-        data: null,
-        error: { message: 'new row violates row-level security policy', code: '42501' },
-      })
-      .mockResolvedValueOnce({
-        data: [],
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: { pending_count: 0, avg_wait_hours: 0, overdue_count: 0 },
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: { error_rate: 0, total_modifications: 0, total_results: 0 },
-        error: null,
-      })
+    mockRpc.mockResolvedValueOnce({
+      data: null,
+      error: { message: 'new row violates row-level security policy', code: '42501' },
+    })
 
     await expect(getKPIMetrics(dateRange)).rejects.toThrow('row-level security policy')
+
+    expect(mockRpc).toHaveBeenCalledTimes(1)
+    expect(mockRpc).toHaveBeenCalledWith('get_kpi_metrics', {
+      start_date: dateRange.start,
+      end_date: dateRange.end,
+    })
   })
 })
 
@@ -338,29 +328,34 @@ describe('Error Handling', () => {
       end: '2024-12-20T23:59:59Z',
     }
 
-    // Mock malformed response (missing required fields)
-    mockRpc
-      .mockResolvedValueOnce({
-        data: { avg_tat_hours: null }, // Missing other fields
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: [],
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: { pending_count: 0, avg_wait_hours: 0, overdue_count: 0 },
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: { error_rate: 0, total_modifications: 0, total_results: 0 },
-        error: null,
-      })
+    mockRpc.mockResolvedValueOnce({
+      data: [
+        {
+          avg_tat_hours: null,
+          median_tat_hours: 0,
+          sample_count: 0,
+          on_time_count: 0,
+          status_breakdown: [],
+          pending_count: 0,
+          avg_wait_hours: 0,
+          overdue_count: 0,
+          error_rate: 0,
+          total_modifications: 0,
+          total_results: 0,
+        },
+      ],
+      error: null,
+    })
 
     const result = await getKPIMetrics(dateRange)
 
     // Should handle missing fields gracefully
     expect(result).toBeDefined()
+    expect(mockRpc).toHaveBeenCalledTimes(1)
+    expect(mockRpc).toHaveBeenCalledWith('get_kpi_metrics', {
+      start_date: dateRange.start,
+      end_date: dateRange.end,
+    })
     expect(result.avgTAT.value).toBeDefined()
   })
 
@@ -380,27 +375,17 @@ describe('Error Handling', () => {
       end: '2024-12-20T23:59:59Z',
     }
 
-    // Mock timeout error
     mockRpc.mockResolvedValueOnce({
       data: null,
       error: { message: 'canceling statement due to statement timeout', code: '57014' },
     })
 
-    // Other RPCs succeed
-    mockRpc
-      .mockResolvedValueOnce({
-        data: [],
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: { pending_count: 0, avg_wait_hours: 0, overdue_count: 0 },
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: { error_rate: 0, total_modifications: 0, total_results: 0 },
-        error: null,
-      })
-
     await expect(getKPIMetrics(dateRange)).rejects.toThrow('statement timeout')
+
+    expect(mockRpc).toHaveBeenCalledTimes(1)
+    expect(mockRpc).toHaveBeenCalledWith('get_kpi_metrics', {
+      start_date: dateRange.start,
+      end_date: dateRange.end,
+    })
   })
 })
