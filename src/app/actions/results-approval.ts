@@ -140,13 +140,24 @@ export async function approveResults(data: ApproveResults) {
                 .eq('id', sampleIds[0])
 
             // Auto-generate CoA when sample is completed (all results approved)
-            // The database trigger creates a 'pending' CoA record, this call generates the actual HTML
+            // Fire-and-forget: don't block the approval response
+            // Failures are recorded in coa_reports so Manager can see and retry
             if (newStatus === 'completed') {
-                // Fire and forget - don't block the approval response
-                // Errors are logged but don't fail the approval
-                generateCoA(sampleIds[0]).catch((err) => {
-                    console.error('Auto CoA generation failed for sample', sampleIds[0], err)
-                })
+                const completedSampleId = sampleIds[0]
+                generateCoA(completedSampleId)
+                    .then(async (result) => {
+                        if (!result.success) {
+                            console.error('Auto CoA generation failed for sample', completedSampleId, result.error)
+                            await recordCoAFailure(completedSampleId, result.error)
+                        }
+                    })
+                    .catch(async (err) => {
+                        console.error('Auto CoA generation crashed for sample', completedSampleId, err)
+                        await recordCoAFailure(
+                            completedSampleId,
+                            err instanceof Error ? err.message : 'Lỗi không xác định khi tạo CoA'
+                        )
+                    })
             }
         }
 
@@ -161,6 +172,43 @@ export async function approveResults(data: ApproveResults) {
             return { error: 'Invalid input data' }
         }
         return { error: error instanceof Error ? error.message : 'Failed to approve results' }
+    }
+}
+
+/**
+ * Records a CoA generation failure in coa_reports so the UI can surface it.
+ * Creates a new 'failed' record or updates an existing one.
+ */
+async function recordCoAFailure(sampleId: string, errorMessage: string): Promise<void> {
+    try {
+        const supabase = await createClient()
+
+        const { data: existing } = await supabase
+            .from('coa_reports')
+            .select('id')
+            .eq('sample_id', sampleId)
+            .is('deleted_at', null)
+            .maybeSingle()
+
+        if (existing) {
+            await supabase
+                .from('coa_reports')
+                .update({ status: 'failed' as const, error_message: errorMessage })
+                .eq('id', existing.id)
+        } else {
+            await supabase
+                .from('coa_reports')
+                .insert({
+                    sample_id: sampleId,
+                    file_path: '',
+                    file_hash: '',
+                    version: 1,
+                    status: 'failed' as const,
+                    error_message: errorMessage,
+                })
+        }
+    } catch (dbErr) {
+        console.error('Failed to record CoA failure status for sample', sampleId, dbErr)
     }
 }
 
