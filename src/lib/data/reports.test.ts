@@ -15,6 +15,24 @@ vi.mock('@/lib/supabase/server', () => ({
 
 import { fetchKPIData } from './reports'
 
+const KPI_RPC_NAME = 'get_kpi_metrics'
+
+function mockConsolidatedKpiResponse(data: unknown, error: unknown = null) {
+  mockRpc.mockResolvedValueOnce({ data, error })
+}
+
+function expectConsolidatedKpiRpcCall(dateRange: DateRange) {
+  expect(mockRpc).toHaveBeenCalledTimes(1)
+  expect(mockRpc).toHaveBeenCalledWith(KPI_RPC_NAME, {
+    start_date: dateRange.start,
+    end_date: dateRange.end,
+  })
+  expect(mockRpc).not.toHaveBeenCalledWith('calculate_average_tat', expect.anything())
+  expect(mockRpc).not.toHaveBeenCalledWith('get_samples_by_status', expect.anything())
+  expect(mockRpc).not.toHaveBeenCalledWith('get_approval_queue_metrics', expect.anything())
+  expect(mockRpc).not.toHaveBeenCalledWith('get_error_rate_metrics', expect.anything())
+}
+
 describe('fetchKPIData', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -27,46 +45,31 @@ describe('fetchKPIData', () => {
       end: '2024-12-20T23:59:59Z',
     }
 
-    mockRpc.mockResolvedValueOnce({
-      data: [
-        {
-          avg_tat_hours: 48.5,
-          median_tat_hours: 45,
-          sample_count: 100,
-          on_time_count: 85,
-          status_breakdown: [
-            { status: 'received', count: 20 },
-            { status: 'assigned', count: 10 },
-            { status: 'in_progress', count: 15 },
-            { status: 'review', count: 5 },
-            { status: 'completed', count: 50 },
-          ],
-          pending_count: 15,
-          avg_wait_hours: 12,
-          overdue_count: 2,
-          error_rate: 2.5,
-          total_modifications: 10,
-          total_results: 400,
-        },
-      ],
-      error: null,
-    })
+    mockConsolidatedKpiResponse([
+      {
+        avg_tat_hours: 48.5,
+        median_tat_hours: 45,
+        sample_count: 100,
+        on_time_count: 85,
+        status_breakdown: [
+          { status: 'received', count: 20 },
+          { status: 'assigned', count: 10 },
+          { status: 'in_progress', count: 15 },
+          { status: 'review', count: 5 },
+          { status: 'completed', count: 50 },
+        ],
+        pending_count: 15,
+        avg_wait_hours: 12,
+        overdue_count: 2,
+        error_rate: 2.5,
+        total_modifications: 10,
+        total_results: 400,
+      },
+    ])
 
-    const resultPromise = fetchKPIData(dateRange)
-    void resultPromise.catch(() => undefined)
-    await Promise.resolve()
+    const result = await fetchKPIData(dateRange)
 
-    expect(mockRpc).toHaveBeenCalledTimes(1)
-    expect(mockRpc).toHaveBeenNthCalledWith(1, 'get_kpi_metrics', {
-      start_date: dateRange.start,
-      end_date: dateRange.end,
-    })
-    expect(mockRpc).not.toHaveBeenCalledWith('calculate_average_tat', expect.anything())
-    expect(mockRpc).not.toHaveBeenCalledWith('get_samples_by_status', expect.anything())
-    expect(mockRpc).not.toHaveBeenCalledWith('get_approval_queue_metrics', expect.anything())
-    expect(mockRpc).not.toHaveBeenCalledWith('get_error_rate_metrics', expect.anything())
-
-    const result = await resultPromise
+    expectConsolidatedKpiRpcCall(dateRange)
 
     expect(result.avgTAT.value).toBe(48.5)
     expect(result.wipCount.value).toBe(50)
@@ -98,26 +101,11 @@ describe('fetchKPIData', () => {
       end: '2024-12-02T00:00:00Z',
     }
 
-    mockRpc.mockResolvedValueOnce({
-      data: [],
-      error: null,
-    })
+    mockConsolidatedKpiResponse([])
 
-    const resultPromise = fetchKPIData(dateRange)
-    void resultPromise.catch(() => undefined)
-    await Promise.resolve()
+    const result = await fetchKPIData(dateRange)
 
-    expect(mockRpc).toHaveBeenCalledTimes(1)
-    expect(mockRpc).toHaveBeenNthCalledWith(1, 'get_kpi_metrics', {
-      start_date: dateRange.start,
-      end_date: dateRange.end,
-    })
-    expect(mockRpc).not.toHaveBeenCalledWith('calculate_average_tat', expect.anything())
-    expect(mockRpc).not.toHaveBeenCalledWith('get_samples_by_status', expect.anything())
-    expect(mockRpc).not.toHaveBeenCalledWith('get_approval_queue_metrics', expect.anything())
-    expect(mockRpc).not.toHaveBeenCalledWith('get_error_rate_metrics', expect.anything())
-
-    const result = await resultPromise
+    expectConsolidatedKpiRpcCall(dateRange)
 
     expect(result.avgTAT.value).toBe(0)
     expect(result.wipCount.value).toBe(0)
@@ -143,25 +131,10 @@ describe('fetchKPIData', () => {
       end: '2024-12-20T23:59:59Z',
     }
 
-    mockRpc.mockResolvedValueOnce({
-      data: null,
-      error: { message: 'RPC function not found' },
-    })
+    mockConsolidatedKpiResponse(null, { message: 'RPC function not found' })
 
-    const resultPromise = fetchKPIData(dateRange)
-    void resultPromise.catch(() => undefined)
-    await Promise.resolve()
+    await expect(fetchKPIData(dateRange)).rejects.toThrow('RPC function not found')
 
-    expect(mockRpc).toHaveBeenCalledTimes(1)
-    expect(mockRpc).toHaveBeenNthCalledWith(1, 'get_kpi_metrics', {
-      start_date: dateRange.start,
-      end_date: dateRange.end,
-    })
-    expect(mockRpc).not.toHaveBeenCalledWith('calculate_average_tat', expect.anything())
-    expect(mockRpc).not.toHaveBeenCalledWith('get_samples_by_status', expect.anything())
-    expect(mockRpc).not.toHaveBeenCalledWith('get_approval_queue_metrics', expect.anything())
-    expect(mockRpc).not.toHaveBeenCalledWith('get_error_rate_metrics', expect.anything())
-
-    await expect(resultPromise).rejects.toThrow('RPC function not found')
+    expectConsolidatedKpiRpcCall(dateRange)
   })
 })
