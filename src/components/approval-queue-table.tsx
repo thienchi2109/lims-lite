@@ -124,9 +124,11 @@ export function ApprovalQueueTable({ data, selectedSampleId }: ApprovalQueueTabl
                                     <Button
                                         variant="ghost"
                                         size="icon"
+                                        aria-label="Xem chi tiết và phê duyệt"
                                         onClick={(e) => {
                                             e.stopPropagation()
                                             handleRowClick(row.original)
+                                            e.currentTarget.blur()
                                         }}
                                         className="h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950"
                                     >

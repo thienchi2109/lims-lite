@@ -8,7 +8,7 @@
  * Used by page.tsx alongside the existing desktop layout via CSS breakpoints.
  */
 
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
@@ -36,7 +36,9 @@ export function ApprovalMobileLayout({
     const searchParams = useSearchParams()
     const pathname = usePathname()
 
-    const isDrawerOpen = selectedSample !== null
+    const [closedSampleId, setClosedSampleId] = useState<string | null>(null)
+
+    const isDrawerOpen = selectedSample !== null && selectedSample.id !== closedSampleId
 
     const handleTabChange = useCallback(
         (newTab: string) => {
@@ -50,18 +52,23 @@ export function ApprovalMobileLayout({
 
     const handleSelectSample = useCallback(
         (sampleId: string) => {
+            if (sampleId === closedSampleId) {
+                setClosedSampleId(null)
+            }
+
             const params = new URLSearchParams(searchParams.toString())
             params.set('sampleId', sampleId)
             router.replace(`${pathname}?${params.toString()}`)
         },
-        [router, searchParams, pathname],
+        [router, searchParams, pathname, closedSampleId],
     )
 
     const handleCloseDrawer = useCallback(() => {
+        setClosedSampleId(selectedSample?.id ?? null)
         const params = new URLSearchParams(searchParams.toString())
         params.delete('sampleId')
         router.replace(`${pathname}?${params.toString()}`)
-    }, [router, searchParams, pathname])
+    }, [router, searchParams, pathname, selectedSample?.id])
 
     return (
         <>
