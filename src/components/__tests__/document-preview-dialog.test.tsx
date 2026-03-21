@@ -103,6 +103,7 @@ describe('DocumentPreviewDialog', () => {
     const iframe = screen.getByTitle('Phiếu kết quả')
 
     expect(screen.getByTestId('document-preview-dialog').className).toContain('max-w-[1480px]')
+    expect(screen.getByTestId('document-preview-dialog').className).toContain('sm:max-w-[1480px]')
     expect(screen.getByTestId('document-preview-shell').className).toContain('h-[min(90vh,1040px)]')
     expect(parseFloat(frame.style.width)).toBeLessThan(920)
     expect(parseFloat(frame.style.height)).toBeLessThan(1260)
