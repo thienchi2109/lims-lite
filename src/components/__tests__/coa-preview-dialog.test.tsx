@@ -73,6 +73,43 @@ describe('CoAPreviewDialog', () => {
     expect(onUnauthorized).toHaveBeenCalledTimes(1)
   })
 
+  it('does not refetch when the unauthorized callback identity changes', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('<html><body><main>CoA stable</main></body></html>', {
+        status: 200,
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+        },
+      }) as Response,
+    )
+
+    const { rerender } = render(
+      <CoAPreviewDialog
+        open
+        onOpenChange={vi.fn()}
+        sampleId="sample-1"
+        title="Phiếu kết quả"
+        route="client"
+        onUnauthorized={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1))
+
+    rerender(
+      <CoAPreviewDialog
+        open
+        onOpenChange={vi.fn()}
+        sampleId="sample-1"
+        title="Phiếu kết quả"
+        route="client"
+        onUnauthorized={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1))
+  })
+
   it('does not invoke unauthorized recovery for a permission denial', async () => {
     const onUnauthorized = vi.fn()
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(

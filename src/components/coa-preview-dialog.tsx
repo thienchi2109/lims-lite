@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { DocumentPreviewDialog } from '@/components/document-preview-dialog'
 
@@ -67,8 +67,13 @@ export function CoAPreviewDialog({
   const [error, setError] = useState<string | null>(null)
   const [retryToken, setRetryToken] = useState(0)
   const [showUnauthorizedAction, setShowUnauthorizedAction] = useState(false)
+  const onUnauthorizedRef = useRef(onUnauthorized)
 
   const documentUrl = buildCoAPreviewUrl(route, sampleId)
+
+  useEffect(() => {
+    onUnauthorizedRef.current = onUnauthorized
+  }, [onUnauthorized])
 
   useEffect(() => {
     if (!open) {
@@ -134,7 +139,7 @@ export function CoAPreviewDialog({
     return () => {
       controller.abort()
     }
-  }, [documentUrl, onUnauthorized, open, retryToken])
+  }, [documentUrl, open, retryToken])
 
   return (
     <DocumentPreviewDialog
@@ -148,7 +153,13 @@ export function CoAPreviewDialog({
       documentUrl={documentUrl}
       onRetry={() => setRetryToken((value) => value + 1)}
       errorActionLabel={showUnauthorizedAction ? 'Đăng nhập lại' : undefined}
-      onErrorAction={showUnauthorizedAction ? onUnauthorized : undefined}
+      onErrorAction={
+        showUnauthorizedAction
+          ? () => {
+              onUnauthorizedRef.current?.()
+            }
+          : undefined
+      }
     />
   )
 }
