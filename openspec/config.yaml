@@ -1,0 +1,26 @@
+schema: spec-driven
+
+context: |
+  Project: CDC-LIMS, a single-tenant laboratory information management system that replaces spreadsheet workflows with auditable, 21 CFR Part 11-aware operations.
+  Users: Analysts enter and scan results; managers assign assays, approve results, manage users, and generate certificates of analysis.
+  Tech stack: Next.js 16 App Router, React 19, strict TypeScript, Tailwind CSS v4, Supabase self-hosted (Postgres/Auth/RLS/Storage), TanStack Table, react-hook-form, and zod.
+  Architecture:
+  - Role-based dashboard routes live under `src/app/(dashboard)/analyst` and `src/app/(dashboard)/manager`.
+  - Mutations use Server Actions under `src/app/actions`; client-side mutations should go through `src/lib/api-client.ts`.
+  - Supabase clients live in `src/lib/supabase`; respect RLS for all data access.
+  - Core entities include users, methods, assay_definitions, samples, results, and audit_logs; use `deleted_at` for soft deletion.
+  Constraints:
+  - All UI copy must be Vietnamese.
+  - No hard deletes; use soft delete or void patterns only.
+  - All mutations must remain auditable, and schema changes must preserve RLS plus immutable audit logs.
+  - Do not bypass permissions in application code; enforce them in Server Actions and let RLS remain the final gate.
+  Database workflow: keep SQL migrations in `supabase/migrations/`; never use Supabase Studio for schema changes. For RLS policy migrations, `DROP POLICY IF EXISTS` before `CREATE POLICY`, include explicit role checks, document security impact, and run `run_security_tests()` after applying the migration.
+  Testing: prefer `npm run lint` and `npm run typecheck` for app changes. SQL regression coverage lives in `tests/` and should run against the Docker-backed local database when database behavior changes.
+  Git workflow: use conventional commits and create OpenSpec change proposals before implementing new capabilities, breaking changes, architecture shifts, or significant security/performance work.
+
+rules:
+  proposal:
+    - Call out compliance, audit-log, and RLS impact for database or workflow changes.
+    - Note Vietnamese-localization impact for UI changes.
+  tasks:
+    - Include concrete verification steps such as lint, typecheck, app tests, or migration security checks as appropriate.
