@@ -194,10 +194,7 @@ describe('ApprovalTabsClient', () => {
 
         fireEvent.click(screen.getAllByTestId('select-sample-2')[0])
 
-        expect(mockReplace).not.toHaveBeenCalledWith(
-            expect.stringContaining('sampleId=sample-2'),
-            expect.anything(),
-        )
+        expect(mockReplace).not.toHaveBeenCalled()
         expect(mockRefresh).not.toHaveBeenCalled()
         expect(window.history.replaceState).toHaveBeenCalledWith(
             null,
