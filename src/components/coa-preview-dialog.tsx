@@ -25,7 +25,7 @@ function buildCoAPreviewUrl(route: CoAPreviewRoute, sampleId: string): string {
 }
 
 function isUnauthorizedStatus(status: number): boolean {
-  return status === 401 || status === 403
+  return status === 401
 }
 
 function getErrorMessageFromStatus(status: number): string {
@@ -52,15 +52,6 @@ async function readFailureMessage(response: Response): Promise<string> {
     } catch {
       return getErrorMessageFromStatus(response.status)
     }
-  }
-
-  try {
-    const text = await response.text()
-    if (text.trim()) {
-      return text.trim()
-    }
-  } catch {
-    return getErrorMessageFromStatus(response.status)
   }
 
   return getErrorMessageFromStatus(response.status)

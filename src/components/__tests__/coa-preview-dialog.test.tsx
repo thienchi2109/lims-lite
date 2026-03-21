@@ -63,6 +63,32 @@ describe('CoAPreviewDialog', () => {
     expect(screen.getByText('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại')).toBeDefined()
   })
 
+  it('does not invoke unauthorized recovery for a permission denial', async () => {
+    const onUnauthorized = vi.fn()
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      Response.json(
+        { error: 'Bạn không có quyền truy cập tài liệu này.' },
+        { status: 403 },
+      ) as Response,
+    )
+
+    render(
+      <CoAPreviewDialog
+        open
+        onOpenChange={vi.fn()}
+        sampleId="sample-1"
+        title="Phiếu kết quả"
+        route="staff"
+        onUnauthorized={onUnauthorized}
+      />,
+    )
+
+    await waitFor(() =>
+      expect(screen.getByText('Bạn không có quyền truy cập tài liệu này.')).toBeDefined(),
+    )
+    expect(onUnauthorized).not.toHaveBeenCalled()
+  })
+
   it('shows a localized failure message and allows retry', async () => {
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
@@ -100,5 +126,31 @@ describe('CoAPreviewDialog', () => {
     await waitFor(() =>
       expect(screen.getByTitle('Phiếu kết quả').getAttribute('srcdoc')).toContain('CoA retry'),
     )
+  })
+
+  it('falls back to a localized status message for non-json failures', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('<html><body>Access denied</body></html>', {
+        status: 500,
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+        },
+      }) as Response,
+    )
+
+    render(
+      <CoAPreviewDialog
+        open
+        onOpenChange={vi.fn()}
+        sampleId="sample-1"
+        title="Phiếu kết quả"
+        route="client"
+      />,
+    )
+
+    await waitFor(() =>
+      expect(screen.getByText('Không thể tải tài liệu xem trước. Vui lòng thử lại.')).toBeDefined(),
+    )
+    expect(screen.queryByText('Access denied')).toBeNull()
   })
 })

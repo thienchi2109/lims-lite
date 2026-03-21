@@ -47,11 +47,13 @@ describe('DocumentPreviewDialog', () => {
     )
 
     const iframe = screen.getByTitle('Phiếu kết quả')
+    const focusSpy = vi.fn()
+    const printSpy = vi.fn()
     Object.defineProperty(iframe, 'contentWindow', {
       configurable: true,
       value: {
-        focus: vi.fn(),
-        print: vi.fn(),
+        focus: focusSpy,
+        print: printSpy,
       },
     })
 
@@ -60,6 +62,8 @@ describe('DocumentPreviewDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'In tài liệu' }))
     fireEvent.click(screen.getByRole('button', { name: 'Mở trong tab mới' }))
 
+    expect(focusSpy).toHaveBeenCalledTimes(1)
+    expect(printSpy).toHaveBeenCalledTimes(1)
     expect(openSpy).toHaveBeenCalledWith(
       '/api/coa/view?sample_id=sample-1',
       '_blank',
