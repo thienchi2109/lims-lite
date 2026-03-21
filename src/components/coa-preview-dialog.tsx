@@ -70,6 +70,7 @@ export function CoAPreviewDialog({
   const onUnauthorizedRef = useRef(onUnauthorized)
 
   const documentUrl = buildCoAPreviewUrl(route, sampleId)
+  const hasUnauthorizedRecovery = showUnauthorizedAction && Boolean(onUnauthorized)
 
   useEffect(() => {
     onUnauthorizedRef.current = onUnauthorized
@@ -152,9 +153,9 @@ export function CoAPreviewDialog({
       html={html}
       documentUrl={documentUrl}
       onRetry={() => setRetryToken((value) => value + 1)}
-      errorActionLabel={showUnauthorizedAction ? 'Đăng nhập lại' : undefined}
+      errorActionLabel={hasUnauthorizedRecovery ? 'Đăng nhập lại' : undefined}
       onErrorAction={
-        showUnauthorizedAction
+        hasUnauthorizedRecovery
           ? () => {
               onUnauthorizedRef.current?.()
             }

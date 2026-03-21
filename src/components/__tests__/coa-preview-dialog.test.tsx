@@ -136,6 +136,32 @@ describe('CoAPreviewDialog', () => {
     expect(onUnauthorized).not.toHaveBeenCalled()
   })
 
+  it('hides the relogin action when no unauthorized handler is provided', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      Response.json(
+        { error: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại' },
+        { status: 401 },
+      ) as Response,
+    )
+
+    render(
+      <CoAPreviewDialog
+        open
+        onOpenChange={vi.fn()}
+        sampleId="sample-1"
+        title="Phiếu kết quả"
+        route="staff"
+      />,
+    )
+
+    await waitFor(() =>
+      expect(
+        screen.getByText('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại'),
+      ).toBeDefined(),
+    )
+    expect(screen.queryByRole('button', { name: 'Đăng nhập lại' })).toBeNull()
+  })
+
   it('shows a localized failure message and allows retry', async () => {
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
