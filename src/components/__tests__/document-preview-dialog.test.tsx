@@ -6,6 +6,11 @@ import { DocumentPreviewDialog } from '../document-preview-dialog'
 describe('DocumentPreviewDialog', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 1280,
+    })
   })
 
   it('shows loading state with the document title and subtitle', () => {
@@ -73,6 +78,52 @@ describe('DocumentPreviewDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Đóng' }))
     expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it('uses a wider preview shell on desktop and keeps the document at full scale', () => {
+    render(
+      <DocumentPreviewDialog
+        open
+        onOpenChange={vi.fn()}
+        title="Phiếu kết quả"
+        loading={false}
+        error={null}
+        html="<html><body><h1>CoA</h1></body></html>"
+        documentUrl="/api/coa/view?sample_id=sample-1"
+        onRetry={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByTestId('document-preview-dialog').className).toContain('max-w-[1480px]')
+    expect(screen.getByTestId('document-preview-shell').className).toContain('h-[min(90vh,1040px)]')
+    expect(screen.getByTitle('Phiếu kết quả').style.transform).toBe('scale(1)')
+  })
+
+  it('scales the preview down to fit narrow mobile screens without changing print actions', () => {
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 390,
+    })
+
+    render(
+      <DocumentPreviewDialog
+        open
+        onOpenChange={vi.fn()}
+        title="Phiếu kết quả"
+        loading={false}
+        error={null}
+        html="<html><body><h1>CoA</h1></body></html>"
+        documentUrl="/api/coa/view?sample_id=sample-1"
+        onRetry={vi.fn()}
+      />,
+    )
+
+    const frame = screen.getByTestId('document-preview-frame')
+    const iframe = screen.getByTitle('Phiếu kết quả')
+
+    expect(parseFloat(frame.style.width)).toBeLessThan(390)
+    expect(iframe.style.transform).not.toBe('scale(1)')
   })
 
   it('shows error state with retry and fallback actions', () => {
