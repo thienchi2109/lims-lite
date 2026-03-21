@@ -4,7 +4,7 @@
 
 SET search_path TO public;
 
-CREATE INDEX IF NOT EXISTS idx_samples_status_updated_at_not_deleted
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_samples_status_updated_at_not_deleted
 ON samples(status, updated_at DESC)
 WHERE deleted_at IS NULL;
 

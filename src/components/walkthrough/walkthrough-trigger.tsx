@@ -58,7 +58,7 @@ export function WalkthroughTrigger({
             clearTimeout(showTimeout)
             clearTimeout(hideTimeout)
         }
-    }, [isReady, autoShowTooltip, tooltipDuration, isTourCompleted])
+    }, [isReady, showTooltip, autoShowTooltip, tooltipDuration, isTourCompleted])
 
     if (!isReady) {
         return null

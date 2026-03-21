@@ -54,6 +54,7 @@ export function ApprovalTabsClient({
     const [activeSample, setActiveSample] = useState<SampleWithUser | null>(initialSample)
     const [activeResults, setActiveResults] = useState<ResultWithAssay[]>(initialResults)
     const [isLoadingSample, setIsLoadingSample] = useState(false)
+    const [sampleLoadError, setSampleLoadError] = useState<string | null>(null)
     const tabRef = useRef(tab)
     const sampleRequestIdRef = useRef(0)
 
@@ -68,9 +69,11 @@ export function ApprovalTabsClient({
     }, [reviewCount])
 
     useEffect(() => {
+        sampleRequestIdRef.current += 1
         setActiveSampleId(selectedSampleId ?? initialSample?.id ?? null)
         setActiveSample(initialSample)
         setActiveResults(initialResults)
+        setSampleLoadError(null)
         setIsLoadingSample(false)
     }, [initialResults, initialSample, selectedSampleId])
 
@@ -156,6 +159,7 @@ export function ApprovalTabsClient({
             setActiveSampleId(nextSampleId)
             setActiveSample(null)
             setActiveResults([])
+            setSampleLoadError(null)
             setIsLoadingSample(true)
             window.history.replaceState(null, '', buildQueueUrl(tab, nextSampleId))
 
@@ -182,6 +186,7 @@ export function ApprovalTabsClient({
                 console.error('Failed to load approval sample detail:', error)
                 setActiveSample(null)
                 setActiveResults([])
+                setSampleLoadError('Không thể tải chi tiết mẫu. Vui lòng thử lại.')
             } finally {
                 if (sampleRequestIdRef.current === requestId) {
                     setIsLoadingSample(false)
@@ -209,6 +214,7 @@ export function ApprovalTabsClient({
                     sample={activeSample}
                     results={activeResults}
                     isLoadingSample={isLoadingSample}
+                    loadErrorMessage={sampleLoadError}
                 />
             </div>
         </div>

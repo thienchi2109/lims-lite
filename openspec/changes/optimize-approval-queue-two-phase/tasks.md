@@ -1,21 +1,21 @@
 ## 0. TDD Guardrails
 
-- [ ] 0.1 Không viết hoặc giữ production code cho mỗi slice trước khi test của slice đó fail vì đúng lý do kỳ vọng.
-- [ ] 0.2 Nếu test mới pass ngay lần đầu, phải siết assertion cho đến khi có trạng thái RED hợp lệ.
-- [ ] 0.3 Mỗi phase phải hoàn thành RED → GREEN → REFACTOR trước khi chuyển phase kế tiếp.
+- [x] 0.1 Không viết hoặc giữ production code cho mỗi slice trước khi test của slice đó fail vì đúng lý do kỳ vọng.
+- [x] 0.2 Nếu test mới pass ngay lần đầu, phải siết assertion cho đến khi có trạng thái RED hợp lệ.
+- [x] 0.3 Mỗi phase phải hoàn thành RED → GREEN → REFACTOR trước khi chuyển phase kế tiếp.
 
 ## 1. Phase 1 RED: Khóa hành vi tương tác queue/detail
 
-- [ ] 1.1 Thêm/điều chỉnh test để chứng minh đổi mẫu trong Approval Queue không kéo theo reload full queue dataset.
-- [ ] 1.2 Thêm regression test cho deep-link `sampleId` để đảm bảo mở chi tiết đúng mà không refetch dư.
-- [ ] 1.3 Chạy test mục tiêu của approval components và xác nhận fail vì data-path hiện tại còn ghép queue/detail.
+- [x] 1.1 Thêm/điều chỉnh test để chứng minh đổi mẫu trong Approval Queue không kéo theo reload full queue dataset.
+- [x] 1.2 Thêm regression test cho deep-link `sampleId` để đảm bảo mở chi tiết đúng mà không refetch dư.
+- [x] 1.3 Chạy test mục tiêu của approval components và xác nhận fail vì data-path hiện tại còn ghép queue/detail.
 
 ## 2. Phase 1 GREEN: Tách data-path queue và detail (quick win)
 
-- [ ] 2.1 Refactor `src/app/(dashboard)/manager/approvals/page.tsx` để giảm truy vấn detail phụ thuộc vào render toàn trang.
-- [ ] 2.2 Refactor `src/components/approval-queue-table.tsx` và/hoặc `src/components/approval-mobile-layout.tsx` để selection detail không buộc reload full queue.
-- [ ] 2.3 Giữ nguyên semantics nghiệp vụ approve/cancel/reject/discard và copy tiếng Việt.
-- [ ] 2.4 Chạy lại test mục tiêu và xác nhận GREEN.
+- [x] 2.1 Refactor `src/app/(dashboard)/manager/approvals/page.tsx` để giảm truy vấn detail phụ thuộc vào render toàn trang.
+- [x] 2.2 Refactor `src/components/approval-queue-table.tsx` và/hoặc `src/components/approval-mobile-layout.tsx` để selection detail không buộc reload full queue.
+- [x] 2.3 Giữ nguyên semantics nghiệp vụ approve/cancel/reject/discard và copy tiếng Việt.
+- [x] 2.4 Chạy lại test mục tiêu và xác nhận GREEN.
 
 ## 3. Phase 1 GREEN: Tối ưu index cho pattern queue
 
@@ -27,9 +27,9 @@
 ## 4. Phase 1 REFACTOR + Verification
 
 - [ ] 4.1 Dọn code trùng lặp ở approval queue/detail sau khi GREEN, không đổi hành vi.
-- [ ] 4.2 Chạy `npm run typecheck`.
-- [ ] 4.3 Chạy test liên quan approval queue/detail.
-- [ ] 4.4 Chạy `npx -y react-doctor@latest . --verbose --diff` và lưu kết quả.
+- [x] 4.2 Chạy `npm run typecheck`.
+- [x] 4.3 Chạy test liên quan approval queue/detail.
+- [x] 4.4 Chạy `npx -y react-doctor@latest . --verbose --diff` và lưu kết quả.
 
 ## 5. Phase 2 RED: Khóa contract server-side pagination
 
@@ -60,8 +60,8 @@
 
 ## 9. Dispatch Packets Cho Subagents
 
-- [ ] 9.1 Chuẩn bị Packet A (UI Interaction Worker): ownership `src/components/approval-queue-table.tsx`, `src/components/approval-mobile-layout.tsx`, test UI liên quan.
-- [ ] 9.2 Chuẩn bị Packet B (Server Data Worker): ownership `src/app/actions/sample-approvals.ts`, typings/query-keys liên quan approval pagination contract.
-- [ ] 9.3 Chuẩn bị Packet C (DB Worker): ownership migration SQL index + RPC pagination và checklist `run_security_tests()`.
-- [ ] 9.4 Chuẩn bị Packet D (Integration/Verification Worker): ownership test integration + react-doctor + typecheck evidence.
-- [ ] 9.5 Mỗi packet phải có lệnh RED test trước khi code, lệnh GREEN sau code, và danh sách file được phép sửa (disjoint write scope).
+- [x] 9.1 Chuẩn bị Packet A (UI Interaction Worker): ownership `src/components/approval-queue-table.tsx`, `src/components/approval-mobile-layout.tsx`, test UI liên quan.
+- [x] 9.2 Chuẩn bị Packet B (Server Data Worker): ownership `src/app/actions/sample-approvals.ts`, typings/query-keys liên quan approval pagination contract.
+- [x] 9.3 Chuẩn bị Packet C (DB Worker): ownership migration SQL index + RPC pagination và checklist `run_security_tests()`.
+- [x] 9.4 Chuẩn bị Packet D (Integration/Verification Worker): ownership test integration + react-doctor + typecheck evidence.
+- [x] 9.5 Mỗi packet phải có lệnh RED test trước khi code, lệnh GREEN sau code, và danh sách file được phép sửa (disjoint write scope).

@@ -74,9 +74,10 @@ vi.mock('@/components/approval-queue-table', () => ({
 }))
 
 vi.mock('@/components/approval-bottom-row', () => ({
-    ApprovalBottomRow: ({ sample, results, isLoadingSample }: any) => (
+    ApprovalBottomRow: ({ sample, results, isLoadingSample, loadErrorMessage }: any) => (
         <div>
             <div data-testid="bottom-row-loading">{String(Boolean(isLoadingSample))}</div>
+            <div data-testid="bottom-row-error">{loadErrorMessage ?? ''}</div>
             <div data-testid="bottom-row-sample">{sample?.sample_id ?? 'none'}</div>
             <div data-testid="bottom-row-results">{results.map((result: any) => result.id).join(',')}</div>
         </div>
@@ -123,6 +124,18 @@ const initialSample = {
 } as SampleWithUser
 
 const initialResults = [{ id: 'result-1' }] as ResultWithAssay[]
+
+function deferredPromise<T>() {
+    let resolve!: (value: T) => void
+    let reject!: (reason?: unknown) => void
+
+    const promise = new Promise<T>((res, rej) => {
+        resolve = res
+        reject = rej
+    })
+
+    return { promise, resolve, reject }
+}
 
 describe('ApprovalTabsClient', () => {
     const originalReplaceState = window.history.replaceState
@@ -199,5 +212,75 @@ describe('ApprovalTabsClient', () => {
         expect(screen.getByTestId('bottom-row-results').textContent).toBe('result-2')
         expect(mockFetchSampleDetail).toHaveBeenCalledWith('sample-2')
         expect(mockFetchSampleResultsClient).toHaveBeenCalledWith('sample-2')
+    })
+
+    it('ignores stale responses when server-provided selection resyncs while a request is in-flight', async () => {
+        const sampleDeferred = deferredPromise<{ id: string; sample_id: string }>()
+        const resultsDeferred = deferredPromise<{ data: Array<{ id: string }> }>()
+
+        mockFetchSampleDetail.mockReturnValue(sampleDeferred.promise)
+        mockFetchSampleResultsClient.mockReturnValue(resultsDeferred.promise)
+
+        const { rerender } = render(
+            <ApprovalTabsClient
+                tab="review"
+                samples={samples}
+                reviewCount={1}
+                selectedSampleId="sample-1"
+                initialSample={initialSample}
+                initialResults={initialResults}
+            />,
+        )
+
+        fireEvent.click(screen.getAllByTestId('select-sample-2')[0])
+
+        await waitFor(() => {
+            expect(screen.getByTestId('bottom-row-loading').textContent).toBe('true')
+        })
+
+        rerender(
+            <ApprovalTabsClient
+                tab="review"
+                samples={samples}
+                reviewCount={1}
+                selectedSampleId="sample-1"
+                initialSample={{ ...initialSample }}
+                initialResults={[...initialResults]}
+            />,
+        )
+
+        sampleDeferred.resolve({ id: 'sample-2', sample_id: 'CDC-XN-0002' })
+        resultsDeferred.resolve({ data: [{ id: 'result-2' }] })
+
+        await waitFor(() => {
+            expect(screen.getByTestId('bottom-row-loading').textContent).toBe('false')
+        })
+
+        expect(screen.getByTestId('bottom-row-sample').textContent).toBe('CDC-XN-0001')
+        expect(screen.getByTestId('bottom-row-results').textContent).toBe('result-1')
+    })
+
+    it('surfaces an explicit error state when detail fetch fails', async () => {
+        mockFetchSampleDetail.mockRejectedValue(new Error('network failed'))
+        mockFetchSampleResultsClient.mockResolvedValue({ data: [] })
+
+        render(
+            <ApprovalTabsClient
+                tab="review"
+                samples={samples}
+                reviewCount={1}
+                selectedSampleId="sample-1"
+                initialSample={initialSample}
+                initialResults={initialResults}
+            />,
+        )
+
+        fireEvent.click(screen.getAllByTestId('select-sample-2')[0])
+
+        await waitFor(() => {
+            expect(screen.getByTestId('bottom-row-error').textContent).toBe(
+                'Không thể tải chi tiết mẫu. Vui lòng thử lại.',
+            )
+        })
     })
 })
