@@ -129,7 +129,7 @@ export function DocumentPreviewDialog({
       <DialogContent
         showCloseButton={false}
         data-testid="document-preview-dialog"
-        className="max-h-[calc(100vh-1rem)] w-[calc(100vw-1rem)] md:w-[calc(100vw-3rem)] max-w-[1480px] sm:max-w-[1480px] overflow-hidden border-slate-200 bg-white p-0 shadow-2xl"
+        className="top-2 max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-[1480px] translate-y-0 overflow-hidden border-slate-200 bg-white p-0 shadow-2xl sm:top-[50%] sm:max-h-[calc(100vh-1rem)] sm:max-w-[1480px] sm:translate-y-[-50%] md:w-[calc(100vw-3rem)]"
       >
         <DialogHeader className="sr-only">
           <DialogTitle>{title}</DialogTitle>

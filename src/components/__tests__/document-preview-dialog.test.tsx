@@ -168,6 +168,35 @@ describe('DocumentPreviewDialog', () => {
     expect(closeButton.className).toContain('mr-1')
   })
 
+  it('anchors the mobile dialog to the visible viewport instead of vertically centering it', () => {
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 390,
+    })
+
+    render(
+      <DocumentPreviewDialog
+        open
+        onOpenChange={vi.fn()}
+        title="Phiếu kết quả"
+        loading={false}
+        error={null}
+        html="<html><body><h1>CoA</h1></body></html>"
+        documentUrl="/api/coa/view?sample_id=sample-1"
+        onRetry={vi.fn()}
+      />,
+    )
+
+    const dialog = screen.getByTestId('document-preview-dialog')
+
+    expect(dialog.className).toContain('top-2')
+    expect(dialog.className).toContain('translate-y-0')
+    expect(dialog.className).toContain('max-h-[calc(100dvh-1rem)]')
+    expect(dialog.className).toContain('sm:top-[50%]')
+    expect(dialog.className).toContain('sm:translate-y-[-50%]')
+  })
+
   it('shows error state with retry and fallback actions', () => {
     const onRetry = vi.fn()
     render(
