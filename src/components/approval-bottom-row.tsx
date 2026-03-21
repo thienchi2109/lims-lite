@@ -5,15 +5,29 @@ import { SampleDetailPanel } from '@/components/sample-detail-panel'
 import { AssignedTestsPanel } from '@/components/assigned-tests-panel'
 import { ApprovalActions } from '@/components/approval-actions'
 import { AlertCircle } from 'lucide-react'
-import { useRouter } from 'next/navigation'
 
 interface ApprovalBottomRowProps {
     sample: SampleWithUser | null
     results: ResultWithAssay[]
+    isLoadingSample?: boolean
 }
 
-export function ApprovalBottomRow({ sample, results }: ApprovalBottomRowProps) {
-    const router = useRouter()
+export function ApprovalBottomRow({
+    sample,
+    results,
+    isLoadingSample = false,
+}: ApprovalBottomRowProps) {
+    if (isLoadingSample) {
+        return (
+            <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50/50 p-8 dark:border-slate-800 dark:bg-slate-900/50">
+                <div className="text-center">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                        Đang tải chi tiết mẫu...
+                    </p>
+                </div>
+            </div>
+        )
+    }
 
     if (!sample) {
         return (

@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, act } from '@testing-library/react'
+import { render, act } from '@testing-library/react'
 import { fireEvent } from '@testing-library/react'
 
 const mockReplace = vi.fn()
@@ -97,5 +98,21 @@ describe('ApprovalQueueTable', () => {
             expect.stringContaining('sampleId=sample-1'),
             { scroll: false },
         )
+    })
+
+    it('uses local selection callback without triggering queue navigation when provided', async () => {
+        const onSelectSample = vi.fn()
+        const { container } = render(
+            <ApprovalQueueTable
+                data={mockData}
+                selectedSampleId={null}
+                onSelectSample={onSelectSample}
+            />,
+        )
+
+        fireEvent.click(container.querySelector('[data-testid="row-sample-1"]') as HTMLTableRowElement)
+
+        expect(onSelectSample).toHaveBeenCalledWith('sample-1')
+        expect(mockReplace).not.toHaveBeenCalled()
     })
 })
