@@ -18,6 +18,8 @@ interface WalkthroughTriggerProps {
     autoShowTooltip?: boolean
     /** Duration in ms to show tooltip (default: 5000) */
     tooltipDuration?: number
+    /** Show hover/focus tooltip around the button */
+    showTooltip?: boolean
 }
 
 /**
@@ -30,6 +32,7 @@ export function WalkthroughTrigger({
     className,
     autoShowTooltip = true,
     tooltipDuration = 5000,
+    showTooltip = true,
 }: WalkthroughTriggerProps) {
     const { startTour, isReady, tourStatus } = useWalkthrough()
     const [isTooltipOpen, setIsTooltipOpen] = useState(false)
@@ -39,7 +42,7 @@ export function WalkthroughTrigger({
 
     // Auto-show tooltip on mount if tour not completed
     useEffect(() => {
-        if (!isReady || !autoShowTooltip || isTourCompleted) return
+        if (!isReady || !showTooltip || !autoShowTooltip || isTourCompleted) return
 
         // Small delay to let the page render first
         const showTimeout = setTimeout(() => {
@@ -61,25 +64,33 @@ export function WalkthroughTrigger({
         return null
     }
 
+    const triggerButton = (
+        <Button
+            variant="outline"
+            size="sm"
+            className={`gap-1.5 border-sky-200 bg-sky-50 text-sky-600 hover:bg-sky-100 hover:border-sky-300 hover:text-sky-700 transition-all ${
+                !isTourCompleted ? 'animate-pulse' : ''
+            } ${className ?? ''}`}
+            onClick={() => {
+                setIsTooltipOpen(false)
+                startTour(tourId)
+            }}
+            aria-label="Xem hướng dẫn"
+        >
+            <HelpCircle className="h-4 w-4" />
+            <span className="text-xs font-medium">Hướng dẫn</span>
+        </Button>
+    )
+
+    if (!showTooltip) {
+        return triggerButton
+    }
+
     return (
         <TooltipProvider>
             <Tooltip open={isTooltipOpen} onOpenChange={setIsTooltipOpen}>
                 <TooltipTrigger asChild>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className={`gap-1.5 border-sky-200 bg-sky-50 text-sky-600 hover:bg-sky-100 hover:border-sky-300 hover:text-sky-700 transition-all ${
-                            !isTourCompleted ? 'animate-pulse' : ''
-                        } ${className ?? ''}`}
-                        onClick={() => {
-                            setIsTooltipOpen(false)
-                            startTour(tourId)
-                        }}
-                        aria-label="Xem hướng dẫn"
-                    >
-                        <HelpCircle className="h-4 w-4" />
-                        <span className="text-xs font-medium">Hướng dẫn</span>
-                    </Button>
+                    {triggerButton}
                 </TooltipTrigger>
                 <TooltipContent
                     side="bottom"

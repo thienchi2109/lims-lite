@@ -101,7 +101,11 @@ export function AssignedTestsToolbar({
                 )}
 
                 <span className="hidden sm:inline-flex">
-                    <WalkthroughTrigger tourId={walkthroughTourId} />
+                    <WalkthroughTrigger
+                        tourId={walkthroughTourId}
+                        autoShowTooltip={false}
+                        showTooltip={false}
+                    />
                 </span>
             </div>
 
