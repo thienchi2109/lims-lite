@@ -8,6 +8,7 @@
  */
 
 import type { CoAData } from '@/types'
+import { escapeHtml } from './escape'
 import { getStylesheet, renderWatermark } from './styles'
 import { renderHeader } from './header'
 import { renderPatientInfo } from './patient-info'
@@ -30,7 +31,7 @@ export { renderMetadata } from './metadata'
  * Production-ready Vietnamese CDC lab CoA format with blue theme
  */
 export function renderCoATemplate(coaData: CoAData): string {
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${coaData.sample.sample_id_display}&margin=0`
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(coaData.sample.sample_id_display)}&margin=0`
     const logoUrl = "https://i.postimg.cc/8zFZ52j1/cdc-logo-150.png"
     const dateStr = coaData.approvalDate
 
@@ -51,7 +52,7 @@ export function renderCoATemplate(coaData: CoAData): string {
 
 <head>
     <meta charset="UTF-8">
-    <title>Kết quả xét nghiệm - ${coaData.sample.sample_id_display}</title>
+    <title>Kết quả xét nghiệm - ${escapeHtml(coaData.sample.sample_id_display)}</title>
     <style>
         ${getStylesheet()}
     </style>

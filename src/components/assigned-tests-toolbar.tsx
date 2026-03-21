@@ -33,7 +33,6 @@ import { cn } from '@/lib/utils'
 
 interface AssignedTestsToolbarProps {
     resultsCount: number
-    sampleId: string
     sampleStatus: SampleStatus | null
     coaStatus: CoAReportStatus | null
     canSubmitForReview: boolean
@@ -45,13 +44,13 @@ interface AssignedTestsToolbarProps {
     onGenerateCoA: () => void
     onSubmitForReview: () => void
     onOpenAssignment: () => void
+    onPreviewCoA: () => void
     onPrintCoABody: () => void
     userRole?: 'analyst' | 'manager'
 }
 
 export function AssignedTestsToolbar({
     resultsCount,
-    sampleId,
     sampleStatus,
     coaStatus,
     canSubmitForReview,
@@ -63,12 +62,14 @@ export function AssignedTestsToolbar({
     onGenerateCoA,
     onSubmitForReview,
     onOpenAssignment,
+    onPreviewCoA,
     onPrintCoABody,
     userRole,
 }: AssignedTestsToolbarProps) {
     // Determine QC page link based on user role
     const qcHref = userRole === 'manager' ? '/manager/quality-control' : '/analyst/qc-entry'
     const walkthroughTourId = sampleStatus === 'completed' && coaStatus !== 'ready' ? 'coa' : 'results'
+    const isReadyCoA = sampleStatus === 'completed' && coaStatus === 'ready'
     const { startTour, isReady: isWalkthroughReady } = useWalkthrough()
 
     return (
@@ -179,7 +180,7 @@ export function AssignedTestsToolbar({
                                 </TooltipContent>
                             </Tooltip>
                         ) : (
-                            coaStatus === 'ready' && (
+                            isReadyCoA && (
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <Button
@@ -194,11 +195,7 @@ export function AssignedTestsToolbar({
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                        <DropdownMenuItem
-                                            onClick={() =>
-                                                window.open(`/api/coa/view?sample_id=${sampleId}`, '_blank')
-                                            }
-                                        >
+                                        <DropdownMenuItem onClick={onPreviewCoA}>
                                             <ExternalLink className="mr-2 h-4 w-4" />
                                             Xem CoA đầy đủ
                                         </DropdownMenuItem>
@@ -276,6 +273,18 @@ export function AssignedTestsToolbar({
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                        {isReadyCoA && (
+                            <>
+                                <DropdownMenuItem onClick={onPreviewCoA}>
+                                    <ExternalLink className="mr-2 h-4 w-4" />
+                                    Xem CoA đầy đủ
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={onPrintCoABody}>
+                                    <Printer className="mr-2 h-4 w-4" />
+                                    Chỉ in bảng kết quả
+                                </DropdownMenuItem>
+                            </>
+                        )}
                         <DropdownMenuItem onClick={onPrint} disabled={resultsCount === 0}>
                             <Printer className="mr-2 h-4 w-4" />
                             In Phiếu chỉ định

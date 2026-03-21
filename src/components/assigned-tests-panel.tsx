@@ -40,6 +40,7 @@ import { useAssignedTestsData } from '@/hooks/use-assigned-tests-data'
 import { useCoaActions } from '@/hooks/use-coa-actions'
 import { usePrintHandlers } from '@/hooks/use-print-handlers'
 import { QCRowIndicator } from '@/components/qc/qc-row-indicator'
+import { CoAPreviewDialog } from '@/components/coa-preview-dialog'
 
 interface AssignedTestsPanelProps {
     sampleId: string
@@ -48,6 +49,7 @@ interface AssignedTestsPanelProps {
 }
 
 const DEFAULT_SPECIALTIES: LabSpecialty[] = []
+const COA_PREVIEW_TITLE = 'Phiếu Kết Quả Phân Tích'
 
 export function AssignedTestsPanel({
     sampleId,
@@ -69,6 +71,7 @@ export function AssignedTestsPanel({
     const [showSubmitDialog, setShowSubmitDialog] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [showAssignmentDialog, setShowAssignmentDialog] = useState(false)
+    const [previewSampleId, setPreviewSampleId] = useState<string | null>(null)
 
     // Signature status hook
     const { hasSignature, isLoading: signatureLoading } = useSignatureStatus()
@@ -85,6 +88,16 @@ export function AssignedTestsPanel({
         },
         [router, queryClient]
     )
+
+    const handleOpenCoAPreview = useCallback(() => {
+        setPreviewSampleId(sampleId)
+    }, [sampleId])
+
+    const handleCloseCoAPreview = useCallback((open: boolean) => {
+        if (!open) {
+            setPreviewSampleId(null)
+        }
+    }, [])
 
     // Results editor hook
     const editor = useResultsEditor({
@@ -162,7 +175,6 @@ export function AssignedTestsPanel({
         <div className="relative flex h-full flex-col">
             <AssignedTestsToolbar
                 resultsCount={results.length}
-                sampleId={sampleId}
                 sampleStatus={sampleStatus}
                 coaStatus={coaStatus}
                 canSubmitForReview={allResultsEntered}
@@ -174,6 +186,7 @@ export function AssignedTestsPanel({
                 onGenerateCoA={handleGenerateCoA}
                 onSubmitForReview={() => setShowSubmitDialog(true)}
                 onOpenAssignment={() => setShowAssignmentDialog(true)}
+                onPreviewCoA={handleOpenCoAPreview}
                 onPrintCoABody={handlePrintCoABody}
                 userRole={userRole}
             />
@@ -334,6 +347,14 @@ export function AssignedTestsPanel({
                     />
                 </DialogContent>
             </Dialog>
+
+            <CoAPreviewDialog
+                open={Boolean(previewSampleId)}
+                onOpenChange={handleCloseCoAPreview}
+                sampleId={previewSampleId ?? ''}
+                title={COA_PREVIEW_TITLE}
+                route="staff"
+            />
         </div>
     )
 }

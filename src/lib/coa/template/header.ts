@@ -5,6 +5,7 @@
  */
 
 import type { CoAData } from '@/types'
+import { escapeHtml } from './escape'
 
 /**
  * Render header section with logo, organization info, and QR code
@@ -24,8 +25,8 @@ export function renderHeader(coaData: CoAData, logoUrl: string, qrCodeUrl: strin
                 <div class="form-name-en">ANALYSIS RESULTS</div>
             </div>
             <div class="header-right">
-                <img src="${qrCodeUrl}" class="qr-img" alt="QR Code" />
-                <div class="sample-id-box">${coaData.sample.sample_id_display}</div>
+                <img src="${escapeHtml(qrCodeUrl)}" class="qr-img" alt="QR Code" />
+                <div class="sample-id-box">${escapeHtml(coaData.sample.sample_id_display)}</div>
             </div>
         </div>
     `

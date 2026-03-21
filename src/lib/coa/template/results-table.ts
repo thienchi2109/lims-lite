@@ -5,6 +5,7 @@
  */
 
 import type { TestResult } from '../helpers'
+import { escapeHtml } from './escape'
 
 /**
  * Render test results table with blue header and light-red specialty groups
@@ -40,7 +41,7 @@ export function renderResultsTable(results: TestResult[]): string {
             if (groupName !== 'KHÁC' && groupName !== 'N/A') {
                 groupHtml += `
                     <tr class="res-group-header">
-                        <td colspan="6">${groupName}</td>
+                        <td colspan="6">${escapeHtml(groupName)}</td>
                     </tr>
                 `
             }
@@ -50,12 +51,12 @@ export function renderResultsTable(results: TestResult[]): string {
                 const totalIndex = results.indexOf(result) + 1
                 return `
                     <tr>
-                        <td style="text-align: center;">${totalIndex}</td>
-                        <td class="res-name">${result.assay_name}</td>
-                        <td class="res-value">${result.value || '-'}</td>
-                        <td class="res-unit">${result.unit || ''}</td>
-                        <td class="res-range">${result.normal_range || ''}</td>
-                        <td class="res-method">${result.method_name || ''}</td>
+                        <td style="text-align: center;">${escapeHtml(String(totalIndex))}</td>
+                        <td class="res-name">${escapeHtml(result.assay_name)}</td>
+                        <td class="res-value">${escapeHtml(result.value || '-')}</td>
+                        <td class="res-unit">${escapeHtml(result.unit || '')}</td>
+                        <td class="res-range">${escapeHtml(result.normal_range || '')}</td>
+                        <td class="res-method">${escapeHtml(result.method_name || '')}</td>
                     </tr>
                 `
             }).join('')

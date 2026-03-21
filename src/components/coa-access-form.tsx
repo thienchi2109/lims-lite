@@ -1,15 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2, FileText, CheckCircle, XCircle, AlertCircle, LogOut, Phone, Download, Search } from 'lucide-react'
+import { Loader2, XCircle, LogOut, Phone, Search, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { CoAPreviewDialog } from '@/components/coa-preview-dialog'
+import { CoAAccessSampleCard } from '@/components/coa-access-sample-card'
 import type { CoAAuthResponse, CoASampleInfo } from '@/types'
 
 // ============================================================================
@@ -33,6 +35,10 @@ export function CoAAccessForm() {
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [authResponse, setAuthResponse] = useState<CoAAuthResponse | null>(null)
+    const [previewSample, setPreviewSample] = useState<{
+        sampleId: string
+        sampleIdDisplay: string
+    } | null>(null)
 
     const {
         register,
@@ -84,29 +90,30 @@ export function CoAAccessForm() {
     }
 
     // ========================================================================
-    // DOWNLOAD HANDLER
+    // PREVIEW HANDLERS
     // ========================================================================
 
-    const handleDownload = (sampleId: string, sampleIdDisplay: string) => {
-        const downloadUrl = `/api/coa/download?sample_id=${sampleId}`
+    const handlePreviewOpen = (sampleId: string, sampleIdDisplay: string) => {
+        setPreviewSample({ sampleId, sampleIdDisplay })
+    }
 
-        // Open in new tab (signed URL will redirect to file)
-        const newTab = window.open(downloadUrl, '_blank', 'noopener')
-        if (!newTab) {
-            setError('Trình duyệt đã chặn cửa sổ mới. Vui lòng cho phép popup và thử lại.')
+    const handlePreviewOpenChange = (open: boolean) => {
+        if (!open) {
+            setPreviewSample(null)
         }
     }
 
-    // ========================================================================
-    // LOGOUT HANDLER
-    // ========================================================================
-
-    const handleLogout = () => {
+    const handleLogout = useCallback(() => {
         void fetch('/api/coa/logout', { method: 'POST' })
+        setPreviewSample(null)
         setAuthResponse(null)
         setError(null)
         reset()
-    }
+    }, [reset])
+
+    const handleUnauthorizedPreviewRecovery = useCallback(() => {
+        handleLogout()
+    }, [handleLogout])
 
     // ========================================================================
     // RENDER: AUTHENTICATED VIEW (Samples List)
@@ -114,7 +121,8 @@ export function CoAAccessForm() {
 
     if (authResponse && authResponse.success) {
         return (
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xl shadow-slate-200/50 ring-1 ring-slate-100 flex flex-col animate-in fade-in zoom-in-95 duration-300">
+            <>
+                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xl shadow-slate-200/50 ring-1 ring-slate-100 flex flex-col animate-in fade-in zoom-in-95 duration-300">
                 {/* Header */}
                 <div className="bg-slate-50/50 px-6 py-5 border-b border-slate-100 shrink-0 flex items-center justify-between">
                     <div>
@@ -147,10 +155,10 @@ export function CoAAccessForm() {
                         {authResponse.samples && authResponse.samples.length > 0 ? (
                             <div className="space-y-4">
                                 {authResponse.samples.map((sample: CoASampleInfo) => (
-                                    <SampleCard
+                                    <CoAAccessSampleCard
                                         key={sample.id}
                                         sample={sample}
-                                        onDownload={handleDownload}
+                                        onPreview={handlePreviewOpen}
                                     />
                                 ))}
                             </div>
@@ -167,7 +175,20 @@ export function CoAAccessForm() {
                         )}
                     </div>
                 </ScrollArea>
-            </div>
+                </div>
+
+                <CoAPreviewDialog
+                    open={Boolean(previewSample)}
+                    onOpenChange={handlePreviewOpenChange}
+                    sampleId={previewSample?.sampleId ?? ''}
+                    title="Phiếu Kết Quả Phân Tích"
+                    subtitle={
+                        previewSample ? `Mã số mẫu: ${previewSample.sampleIdDisplay}` : undefined
+                    }
+                    route="client"
+                    onUnauthorized={handleUnauthorizedPreviewRecovery}
+                />
+            </>
         )
     }
 
@@ -260,136 +281,6 @@ export function CoAAccessForm() {
                 <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400 font-medium">
                     <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
                     Được bảo mật bởi CDC LIMS
-                </div>
-            </div>
-        </div>
-    )
-}
-
-// ============================================================================
-// SAMPLE CARD COMPONENT
-// ============================================================================
-
-interface SampleCardProps {
-    sample: CoASampleInfo
-    onDownload: (sampleId: string, sampleIdDisplay: string) => void
-}
-
-function SampleCard({ sample, onDownload }: SampleCardProps) {
-    const formatDate = (dateString: string | null) => {
-        if (!dateString) return 'N/A'
-        const date = new Date(dateString)
-        return new Intl.DateTimeFormat('vi-VN', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-        }).format(date)
-    }
-
-    return (
-        <div className="group relative bg-white border border-slate-200 rounded-xl p-5 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-100/50 transition-all duration-300 cursor-default">
-
-            {/* Status Indicator Bar */}
-            <div className={`absolute left-0 top-4 bottom-4 w-1 rounded-r-full transition-colors ${sample.has_coa ? 'bg-green-500' : 'bg-amber-400'}`} />
-
-            <div className="flex flex-col gap-4 pl-3">
-                {/* Header Row */}
-                <div className="flex items-start justify-between gap-3">
-                    <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-bold text-slate-900 text-lg tracking-tight">
-                                {sample.sample_id_display}
-                            </h3>
-                            {sample.has_coa ? (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-50 text-green-700 text-[10px] font-bold uppercase border border-green-200">
-                                    <CheckCircle className="w-3 h-3" /> Hoàn thành
-                                </span>
-                            ) : (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold uppercase border border-amber-200">
-                                    <Loader2 className="w-3 h-3 animate-spin" /> Đang xử lý
-                                </span>
-                            )}
-                        </div>
-                        <p className="text-sm text-slate-600 font-medium">
-                            {sample.sample_type || 'Mẫu xét nghiệm'}
-                        </p>
-                    </div>
-
-                    {/* Action Button for Desktop (hidden on mobile, shown in separate row) */}
-                    <div className="hidden sm:block">
-                        {sample.has_coa && (
-                            <Button
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    onDownload(sample.id, sample.sample_id_display)
-                                }}
-                                size="sm"
-                                className="bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm hover:shadow-blue-200 transition-all"
-                            >
-                                <Download className="mr-2 h-4 w-4" />
-                                Tải Kết Quả
-                            </Button>
-                        )}
-                    </div>
-                </div>
-
-                {/* Details Grid */}
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2 pt-2 border-t border-slate-100">
-                    <div>
-                        <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Ngày nhận mẫu</span>
-                        <div className="text-sm font-semibold text-slate-700">
-                            {formatDate(sample.received_date)}
-                        </div>
-                    </div>
-                    <div>
-                        {sample.has_coa && sample.approved_at ? (
-                            <>
-                                <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Ngày trả kết quả</span>
-                                <div className="text-sm font-semibold text-slate-700">
-                                    {formatDate(sample.approved_at)}
-                                </div>
-                            </>
-                        ) : (
-                            // Fallback or empty if no date yet
-                            sample.has_coa ? (
-                                <>
-                                    <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Trạng thái</span>
-                                    <div className="text-sm font-semibold text-slate-700">
-                                        Đang cập nhật
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Trạng thái</span>
-                                    <div className="text-sm font-semibold text-slate-700">
-                                        Đang phân tích
-                                    </div>
-                                </>
-                            )
-                        )}
-                    </div>
-                </div>
-
-                {/* Mobile Action Button */}
-                <div className="sm:hidden mt-2">
-                    {sample.has_coa ? (
-                        <Button
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                onDownload(sample.id, sample.sample_id_display)
-                            }}
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                            <Download className="mr-2 h-4 w-4" />
-                            Tải Kết Quả
-                        </Button>
-                    ) : (
-                        <div className="w-full text-center text-xs text-amber-600 font-medium bg-amber-50 py-2 rounded border border-amber-100">
-                            Kết quả đang được xử lý
-                        </div>
-                    )}
                 </div>
             </div>
         </div>
