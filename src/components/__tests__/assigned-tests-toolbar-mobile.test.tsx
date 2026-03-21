@@ -3,8 +3,9 @@
  * Verifies that secondary actions collapse into a "⋯" dropdown on mobile.
  */
 
+import { Children, isValidElement } from 'react'
 import { beforeEach, describe, it, expect, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 
 const mockStartTour = vi.hoisted(() => vi.fn())
 
@@ -26,13 +27,42 @@ vi.mock('@/components/ui/tooltip', () => ({
     TooltipContent: ({ children }: any) => <span>{children}</span>,
     TooltipTrigger: ({ children }: any) => <>{children}</>,
 }))
+const hasDescendantDataTestId = (node: any, testId: string): boolean =>
+    Children.toArray(node).some((child) => {
+        if (!isValidElement(child)) {
+            return false
+        }
+
+        if (child.props?.['data-testid'] === testId) {
+            return true
+        }
+
+        return hasDescendantDataTestId(child.props?.children, testId)
+    })
+
+const MockDropdownMenuTrigger = vi.hoisted(() => {
+    return ({ children }: any) => <>{children}</>
+})
+
 vi.mock('@/components/ui/dropdown-menu', () => ({
-    DropdownMenu: ({ children }: any) => <div data-testid="dropdown-menu">{children}</div>,
-    DropdownMenuContent: ({ children }: any) => <div data-testid="dropdown-content">{children}</div>,
+    DropdownMenu: ({ children }: any) => {
+        const menuTrigger = Children.toArray(children).find(
+            (child) => isValidElement(child) && child.type === MockDropdownMenuTrigger,
+        )
+        const menuVariant =
+            isValidElement(menuTrigger) && hasDescendantDataTestId(menuTrigger.props.children, 'mobile-overflow-menu')
+                ? 'mobile'
+                : 'desktop'
+
+        return <div data-testid={`${menuVariant}-dropdown-menu`}>{children}</div>
+    },
+    DropdownMenuContent: ({ children }: any) => <div>{children}</div>,
     DropdownMenuItem: ({ children, onClick }: any) => (
-        <button data-testid="dropdown-item" onClick={onClick}>{children}</button>
+        <button data-testid="dropdown-item" onClick={onClick}>
+            {children}
+        </button>
     ),
-    DropdownMenuTrigger: ({ children }: any) => <>{children}</>,
+    DropdownMenuTrigger: MockDropdownMenuTrigger,
 }))
 vi.mock('next/link', () => ({
     default: ({ children, href }: any) => <a href={href}>{children}</a>,
@@ -109,12 +139,13 @@ describe('AssignedTestsToolbar mobile overflow', () => {
             />,
         )
 
-        expect(screen.getByTestId('mobile-overflow-menu')).toBeDefined()
-        expect(screen.getAllByText('Xem CoA đầy đủ').length).toBeGreaterThan(0)
-        expect(screen.getAllByText('Chỉ in bảng kết quả').length).toBeGreaterThan(0)
+        const mobileMenu = screen.getByTestId('mobile-dropdown-menu')
+        expect(within(mobileMenu).getByTestId('mobile-overflow-menu')).toBeDefined()
+        expect(within(mobileMenu).getByRole('button', { name: 'Xem CoA đầy đủ' })).toBeDefined()
+        expect(within(mobileMenu).getByRole('button', { name: 'Chỉ in bảng kết quả' })).toBeDefined()
 
-        fireEvent.click(screen.getAllByText('Xem CoA đầy đủ')[0])
-        fireEvent.click(screen.getAllByText('Chỉ in bảng kết quả')[0])
+        fireEvent.click(within(mobileMenu).getByRole('button', { name: 'Xem CoA đầy đủ' }))
+        fireEvent.click(within(mobileMenu).getByRole('button', { name: 'Chỉ in bảng kết quả' }))
 
         expect(defaultProps.onPreviewCoA).toHaveBeenCalledTimes(1)
         expect(defaultProps.onPrintCoABody).toHaveBeenCalledTimes(1)
@@ -129,7 +160,8 @@ describe('AssignedTestsToolbar mobile overflow', () => {
             />,
         )
 
-        expect(screen.queryByText('Xem CoA đầy đủ')).toBeNull()
-        expect(screen.queryByText('Chỉ in bảng kết quả')).toBeNull()
+        const mobileMenu = screen.getByTestId('mobile-dropdown-menu')
+        expect(within(mobileMenu).queryByRole('button', { name: 'Xem CoA đầy đủ' })).toBeNull()
+        expect(within(mobileMenu).queryByRole('button', { name: 'Chỉ in bảng kết quả' })).toBeNull()
     })
 })

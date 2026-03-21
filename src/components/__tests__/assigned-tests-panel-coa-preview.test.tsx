@@ -2,8 +2,6 @@ import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 
-const mockFetchTests = vi.fn()
-const mockHandlePrint = vi.fn()
 const mockHandlePrintCoABody = vi.fn()
 const mockDialogProps: Array<Record<string, unknown>> = []
 
@@ -40,7 +38,7 @@ vi.mock('@/hooks/use-assigned-tests-data', () => ({
         qcStatuses: {},
         coaStatus: 'ready',
         setCoaStatus: vi.fn(),
-        fetchTests: mockFetchTests,
+        fetchTests: vi.fn(),
     }),
 }))
 
@@ -78,7 +76,7 @@ vi.mock('@/hooks/use-coa-actions', () => ({
 
 vi.mock('@/hooks/use-print-handlers', () => ({
     usePrintHandlers: () => ({
-        handlePrint: mockHandlePrint,
+        handlePrint: vi.fn(),
         handlePrintCoABody: mockHandlePrintCoABody,
     }),
 }))

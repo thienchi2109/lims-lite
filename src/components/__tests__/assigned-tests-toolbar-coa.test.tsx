@@ -2,8 +2,9 @@
  * Tests for AssignedTestsToolbar desktop ready-CoA behavior.
  */
 
+import { Children, isValidElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 
 const mockStartTour = vi.hoisted(() => vi.fn())
 
@@ -24,13 +25,42 @@ vi.mock('@/components/ui/tooltip', () => ({
     TooltipContent: ({ children }: any) => <span>{children}</span>,
     TooltipTrigger: ({ children }: any) => <>{children}</>,
 }))
+const hasDescendantDataTestId = (node: any, testId: string): boolean =>
+    Children.toArray(node).some((child) => {
+        if (!isValidElement(child)) {
+            return false
+        }
+
+        if (child.props?.['data-testid'] === testId) {
+            return true
+        }
+
+        return hasDescendantDataTestId(child.props?.children, testId)
+    })
+
+const MockDropdownMenuTrigger = vi.hoisted(() => {
+    return ({ children }: any) => <>{children}</>
+})
+
 vi.mock('@/components/ui/dropdown-menu', () => ({
-    DropdownMenu: ({ children }: any) => <div data-testid="dropdown-menu">{children}</div>,
-    DropdownMenuContent: ({ children }: any) => <div data-testid="dropdown-content">{children}</div>,
+    DropdownMenu: ({ children }: any) => {
+        const menuTrigger = Children.toArray(children).find(
+            (child) => isValidElement(child) && child.type === MockDropdownMenuTrigger,
+        )
+        const menuVariant =
+            isValidElement(menuTrigger) && hasDescendantDataTestId(menuTrigger.props.children, 'mobile-overflow-menu')
+                ? 'mobile'
+                : 'desktop'
+
+        return <div data-testid={`${menuVariant}-dropdown-menu`}>{children}</div>
+    },
+    DropdownMenuContent: ({ children }: any) => <div>{children}</div>,
     DropdownMenuItem: ({ children, onClick }: any) => (
-        <button data-testid="dropdown-item" onClick={onClick}>{children}</button>
+        <button data-testid="dropdown-item" onClick={onClick}>
+            {children}
+        </button>
     ),
-    DropdownMenuTrigger: ({ children }: any) => <>{children}</>,
+    DropdownMenuTrigger: MockDropdownMenuTrigger,
 }))
 vi.mock('next/link', () => ({
     default: ({ children, href }: any) => <a href={href}>{children}</a>,
@@ -67,9 +97,10 @@ describe('AssignedTestsToolbar CoA desktop actions', () => {
             />,
         )
 
-        expect(screen.getByTitle('Phiếu kết quả (CoA)')).toBeDefined()
-        fireEvent.click(screen.getAllByText('Xem CoA đầy đủ')[0])
-        fireEvent.click(screen.getAllByText('Chỉ in bảng kết quả')[0])
+        const desktopMenu = screen.getByTestId('desktop-dropdown-menu')
+        expect(within(desktopMenu).getByTitle('Phiếu kết quả (CoA)')).toBeDefined()
+        fireEvent.click(within(desktopMenu).getByRole('button', { name: 'Xem CoA đầy đủ' }))
+        fireEvent.click(within(desktopMenu).getByRole('button', { name: 'Chỉ in bảng kết quả' }))
 
         expect(onPreviewCoA).toHaveBeenCalledTimes(1)
         expect(onPrintCoABody).toHaveBeenCalledTimes(1)
