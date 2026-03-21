@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -103,17 +103,17 @@ export function CoAAccessForm() {
         }
     }
 
-    const handleLogout = () => {
+    const handleLogout = useCallback(() => {
         void fetch('/api/coa/logout', { method: 'POST' })
         setPreviewSample(null)
         setAuthResponse(null)
         setError(null)
         reset()
-    }
+    }, [reset])
 
-    const handleUnauthorizedPreviewRecovery = () => {
+    const handleUnauthorizedPreviewRecovery = useCallback(() => {
         handleLogout()
-    }
+    }, [handleLogout])
 
     // ========================================================================
     // RENDER: AUTHENTICATED VIEW (Samples List)
