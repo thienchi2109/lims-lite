@@ -136,7 +136,7 @@ export function DocumentPreviewDialog({
           <DialogDescription>{subtitle ?? 'Xem trước tài liệu điện tử'}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-800 px-5 py-4 text-white">
+        <div className="relative z-10 flex items-start justify-between gap-4 border-b border-slate-200 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-800 px-5 py-4 text-white">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200/80">
               Xem trước tài liệu
@@ -151,7 +151,7 @@ export function DocumentPreviewDialog({
             type="button"
             variant="ghost"
             size="icon"
-            className="shrink-0 text-slate-200 hover:bg-white/10 hover:text-white"
+            className="relative z-10 mr-1 h-10 w-10 shrink-0 touch-manipulation text-slate-200 hover:bg-white/10 hover:text-white md:mr-0 md:h-9 md:w-9"
             onClick={() => onOpenChange(false)}
             aria-label="Đóng"
           >

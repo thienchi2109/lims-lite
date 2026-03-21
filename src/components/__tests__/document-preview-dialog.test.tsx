@@ -139,6 +139,35 @@ describe('DocumentPreviewDialog', () => {
     expect(iframe.style.transform).not.toBe('scale(1)')
   })
 
+  it('keeps the mobile close button inside the tappable header area', () => {
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 390,
+    })
+
+    render(
+      <DocumentPreviewDialog
+        open
+        onOpenChange={vi.fn()}
+        title="Phiếu kết quả"
+        loading={false}
+        error={null}
+        html="<html><body><h1>CoA</h1></body></html>"
+        documentUrl="/api/coa/view?sample_id=sample-1"
+        onRetry={vi.fn()}
+      />,
+    )
+
+    const closeButton = screen.getByRole('button', { name: 'Đóng' })
+    const header = closeButton.parentElement
+
+    expect(header?.className).toContain('relative')
+    expect(header?.className).toContain('z-10')
+    expect(closeButton.className).toContain('touch-manipulation')
+    expect(closeButton.className).toContain('mr-1')
+  })
+
   it('shows error state with retry and fallback actions', () => {
     const onRetry = vi.fn()
     render(
