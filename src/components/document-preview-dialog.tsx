@@ -24,6 +24,8 @@ interface DocumentPreviewDialogProps {
   html: string | null
   documentUrl: string
   onRetry: () => void
+  errorActionLabel?: string
+  onErrorAction?: () => void
 }
 
 export function DocumentPreviewDialog({
@@ -36,6 +38,8 @@ export function DocumentPreviewDialog({
   html,
   documentUrl,
   onRetry,
+  errorActionLabel,
+  onErrorAction,
 }: DocumentPreviewDialogProps) {
   const iframeRef = React.useRef<HTMLIFrameElement | null>(null)
 
@@ -133,6 +137,17 @@ export function DocumentPreviewDialog({
                 >
                   <RefreshCw className="h-4 w-4" />
                   Thử lại
+                </Button>
+              ) : null}
+
+              {error && errorActionLabel && onErrorAction ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={onErrorAction}
+                  className="h-9 gap-2"
+                >
+                  {errorActionLabel}
                 </Button>
               ) : null}
             </div>

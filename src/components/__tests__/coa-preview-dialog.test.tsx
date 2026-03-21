@@ -59,8 +59,18 @@ describe('CoAPreviewDialog', () => {
       />,
     )
 
-    await waitFor(() => expect(onUnauthorized).toHaveBeenCalledTimes(1))
-    expect(screen.getByText('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại')).toBeDefined()
+    await waitFor(() =>
+      expect(
+        screen.getByText('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại'),
+      ).toBeDefined(),
+    )
+    expect(screen.getByRole('button', { name: 'Đăng nhập lại' })).toBeDefined()
+
+    await act(async () => {
+      screen.getByRole('button', { name: 'Đăng nhập lại' }).click()
+    })
+
+    expect(onUnauthorized).toHaveBeenCalledTimes(1)
   })
 
   it('does not invoke unauthorized recovery for a permission denial', async () => {

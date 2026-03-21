@@ -24,10 +24,6 @@ function buildCoAPreviewUrl(route: CoAPreviewRoute, sampleId: string): string {
   return `${endpoint}?sample_id=${encodeURIComponent(sampleId)}`
 }
 
-function isUnauthorizedStatus(status: number): boolean {
-  return status === 401
-}
-
 function getErrorMessageFromStatus(status: number): string {
   if (status === 401) {
     return DEFAULT_UNAUTHORIZED_ERROR
@@ -70,6 +66,7 @@ export function CoAPreviewDialog({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [retryToken, setRetryToken] = useState(0)
+  const [showUnauthorizedAction, setShowUnauthorizedAction] = useState(false)
 
   const documentUrl = buildCoAPreviewUrl(route, sampleId)
 
@@ -78,6 +75,7 @@ export function CoAPreviewDialog({
       setHtml(null)
       setError(null)
       setLoading(false)
+      setShowUnauthorizedAction(false)
       return
     }
 
@@ -86,6 +84,7 @@ export function CoAPreviewDialog({
     setLoading(true)
     setError(null)
     setHtml(null)
+    setShowUnauthorizedAction(false)
 
     const loadDocument = async () => {
       try {
@@ -97,15 +96,14 @@ export function CoAPreviewDialog({
 
         if (!response.ok) {
           const failureMessage = await readFailureMessage(response)
-          if (isUnauthorizedStatus(response.status)) {
-            onUnauthorized?.()
-          }
+          setShowUnauthorizedAction(response.status === 401)
           setError(failureMessage)
           return
         }
 
         const contentType = response.headers.get('content-type') || ''
         if (!contentType.includes('text/html')) {
+          setShowUnauthorizedAction(false)
           setError(DEFAULT_PREVIEW_ERROR)
           return
         }
@@ -122,6 +120,7 @@ export function CoAPreviewDialog({
         }
 
         console.error(fetchError)
+        setShowUnauthorizedAction(false)
         setError(DEFAULT_PREVIEW_ERROR)
       } finally {
         if (!controller.signal.aborted) {
@@ -148,6 +147,8 @@ export function CoAPreviewDialog({
       html={html}
       documentUrl={documentUrl}
       onRetry={() => setRetryToken((value) => value + 1)}
+      errorActionLabel={showUnauthorizedAction ? 'Đăng nhập lại' : undefined}
+      onErrorAction={showUnauthorizedAction ? onUnauthorized : undefined}
     />
   )
 }
