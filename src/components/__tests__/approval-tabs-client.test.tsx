@@ -280,4 +280,45 @@ describe('ApprovalTabsClient', () => {
             )
         })
     })
+
+    it('preserves client-selected detail when server refresh returns stale empty selection props', async () => {
+        mockFetchSampleDetail.mockResolvedValue({
+            id: 'sample-2',
+            sample_id: 'CDC-XN-0002',
+        })
+        mockFetchSampleResultsClient.mockResolvedValue({
+            data: [{ id: 'result-2' }],
+        })
+
+        const { rerender } = render(
+            <ApprovalTabsClient
+                tab="review"
+                samples={samples}
+                reviewCount={1}
+                selectedSampleId={undefined}
+                initialSample={null}
+                initialResults={[]}
+            />,
+        )
+
+        fireEvent.click(screen.getByTestId('select-sample-2'))
+
+        await waitFor(() => {
+            expect(screen.getByTestId('bottom-row-sample').textContent).toBe('CDC-XN-0002')
+        })
+
+        rerender(
+            <ApprovalTabsClient
+                tab="review"
+                samples={samples}
+                reviewCount={1}
+                selectedSampleId={undefined}
+                initialSample={null}
+                initialResults={[]}
+            />,
+        )
+
+        expect(screen.getByTestId('bottom-row-sample').textContent).toBe('CDC-XN-0002')
+        expect(screen.getByTestId('bottom-row-results').textContent).toBe('result-2')
+    })
 })

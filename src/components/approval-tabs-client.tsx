@@ -57,6 +57,8 @@ export function ApprovalTabsClient({
     const [sampleLoadError, setSampleLoadError] = useState<string | null>(null)
     const tabRef = useRef(tab)
     const sampleRequestIdRef = useRef(0)
+    const isClientSelectionRef = useRef(false)
+    const serverSampleId = selectedSampleId ?? initialSample?.id ?? null
 
     useFaviconBadge(liveReviewCount)
 
@@ -69,13 +71,18 @@ export function ApprovalTabsClient({
     }, [reviewCount])
 
     useEffect(() => {
+        if (isClientSelectionRef.current && !serverSampleId) {
+            return
+        }
+
         sampleRequestIdRef.current += 1
-        setActiveSampleId(selectedSampleId ?? initialSample?.id ?? null)
+        setActiveSampleId(serverSampleId)
         setActiveSample(initialSample)
         setActiveResults(initialResults)
         setSampleLoadError(null)
         setIsLoadingSample(false)
-    }, [initialResults, initialSample, selectedSampleId])
+        isClientSelectionRef.current = false
+    }, [initialResults, initialSample, serverSampleId])
 
     useEffect(() => {
         const supabase = createClient()
@@ -147,6 +154,7 @@ export function ApprovalTabsClient({
     )
 
     const handleTabChange = (newTab: string) => {
+        isClientSelectionRef.current = false
         router.replace(buildQueueUrl(newTab, activeSampleId))
     }
 
@@ -156,6 +164,7 @@ export function ApprovalTabsClient({
                 return
             }
 
+            isClientSelectionRef.current = true
             setActiveSampleId(nextSampleId)
             setActiveSample(null)
             setActiveResults([])
