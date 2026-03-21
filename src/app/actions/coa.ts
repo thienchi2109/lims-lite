@@ -247,10 +247,13 @@ export async function generateCoA(
             return { success: false, error: 'Lỗi khi kiểm tra CoA hiện có' }
         }
 
-        // If CoA exists and is ready, return error (already generated)
+        // If CoA exists and is ready, return non-technical business failure
+        // so callers can avoid downgrading ready -> failed.
         if (existingCoa && existingCoa.status === 'ready') {
             return {
                 success: false,
+                code: 'ALREADY_READY',
+                shouldRecordFailure: false,
                 error: 'CoA đã được tạo cho mẫu này. Sử dụng chức năng tạo lại CoA nếu cần cập nhật.'
             }
         }

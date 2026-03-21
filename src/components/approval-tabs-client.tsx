@@ -23,7 +23,7 @@ interface ApprovalQueueSample {
     entered_count: number
     approved_count: number
     pending_count: number
-    coa_reports?: Array<{ status: CoAReportStatus }> | null
+    coa_reports?: Array<{ status: CoAReportStatus; error_message?: string | null }> | null
 }
 
 interface ApprovalTabsClientProps {

@@ -24,7 +24,7 @@ export interface ApprovalCardSample {
     approved_count: number
     pending_count: number
     updated_at: string | null
-    coa_reports?: Array<{ status: CoAReportStatus }> | null
+    coa_reports?: Array<{ status: CoAReportStatus; error_message?: string | null }> | null
 }
 
 interface ApprovalSampleCardProps {

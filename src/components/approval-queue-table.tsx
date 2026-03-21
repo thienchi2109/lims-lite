@@ -39,7 +39,7 @@ interface ApprovalQueueSample extends SampleGridRow {
     entered_count: number
     approved_count: number
     pending_count: number
-    coa_reports?: Array<{ status: CoAReportStatus }> | null
+    coa_reports?: Array<{ status: CoAReportStatus; error_message?: string | null }> | null
 }
 
 interface ApprovalQueueTableProps {
@@ -82,7 +82,10 @@ export function ApprovalQueueTable({ data, selectedSampleId }: ApprovalQueueTabl
             id: 'coa_status',
             header: GRID_LABELS.columns.coa,
             cell: ({ row }) => (
-                <CoAStatusCell status={row.original.coa_reports?.[0]?.status} />
+                <CoAStatusCell
+                    status={row.original.coa_reports?.[0]?.status}
+                    errorMessage={row.original.coa_reports?.[0]?.error_message}
+                />
             ),
         },
         {
