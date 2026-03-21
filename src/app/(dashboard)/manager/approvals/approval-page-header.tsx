@@ -21,7 +21,7 @@ export function ApprovalPageHeader({ samplesCount, tab }: ApprovalPageHeaderProp
                     </Button>
                 </Link>
                 <span className="hidden sm:inline-flex">
-                    <WalkthroughTrigger tourId="approval" />
+                    <WalkthroughTrigger tourId="approval" autoShowTooltip={false} />
                 </span>
             </div>
             <div className="whitespace-nowrap text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400">
