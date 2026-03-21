@@ -69,6 +69,7 @@ export function AssignedTestsToolbar({
     // Determine QC page link based on user role
     const qcHref = userRole === 'manager' ? '/manager/quality-control' : '/analyst/qc-entry'
     const walkthroughTourId = sampleStatus === 'completed' && coaStatus !== 'ready' ? 'coa' : 'results'
+    const isReadyCoA = sampleStatus === 'completed' && coaStatus === 'ready'
     const { startTour, isReady: isWalkthroughReady } = useWalkthrough()
 
     return (
@@ -179,7 +180,7 @@ export function AssignedTestsToolbar({
                                 </TooltipContent>
                             </Tooltip>
                         ) : (
-                            coaStatus === 'ready' && (
+                            isReadyCoA && (
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <Button
@@ -272,17 +273,21 @@ export function AssignedTestsToolbar({
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={onPreviewCoA}>
-                            <ExternalLink className="mr-2 h-4 w-4" />
-                            Xem CoA đầy đủ
-                        </DropdownMenuItem>
+                        {isReadyCoA && (
+                            <>
+                                <DropdownMenuItem onClick={onPreviewCoA}>
+                                    <ExternalLink className="mr-2 h-4 w-4" />
+                                    Xem CoA đầy đủ
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={onPrintCoABody}>
+                                    <Printer className="mr-2 h-4 w-4" />
+                                    Chỉ in bảng kết quả
+                                </DropdownMenuItem>
+                            </>
+                        )}
                         <DropdownMenuItem onClick={onPrint} disabled={resultsCount === 0}>
                             <Printer className="mr-2 h-4 w-4" />
                             In Phiếu chỉ định
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={onPrintCoABody}>
-                            <Printer className="mr-2 h-4 w-4" />
-                            Chỉ in bảng kết quả
                         </DropdownMenuItem>
                         {isWalkthroughReady && (
                             <DropdownMenuItem onClick={() => startTour(walkthroughTourId)}>

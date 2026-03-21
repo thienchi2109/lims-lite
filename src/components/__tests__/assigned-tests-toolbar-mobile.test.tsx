@@ -119,4 +119,17 @@ describe('AssignedTestsToolbar mobile overflow', () => {
         expect(defaultProps.onPreviewCoA).toHaveBeenCalledTimes(1)
         expect(defaultProps.onPrintCoABody).toHaveBeenCalledTimes(1)
     })
+
+    it('hides mobile CoA actions until the sample is completed and CoA is ready', () => {
+        render(
+            <AssignedTestsToolbar
+                {...defaultProps}
+                sampleStatus="review"
+                coaStatus="ready"
+            />,
+        )
+
+        expect(screen.queryByText('Xem CoA đầy đủ')).toBeNull()
+        expect(screen.queryByText('Chỉ in bảng kết quả')).toBeNull()
+    })
 })
