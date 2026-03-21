@@ -22,6 +22,7 @@ import {
     CheckCircle,
     Printer,
     FileText,
+    FileSearch,
     RefreshCw,
     ExternalLink,
     Activity,
@@ -83,7 +84,7 @@ export function AssignedTestsToolbar({
                 </div>
                 <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-slate-800 dark:text-slate-200">
-                        Chỉ định xét nghiệm
+                        Xét nghiệm
                     </h3>
                     <Badge
                         variant="secondary"
@@ -127,25 +128,27 @@ export function AssignedTestsToolbar({
                     </Tooltip>
                 </span>
 
-                {/* IQC Button - Internal Quality Control */}
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button
-                            size="sm"
-                            className={cn(
-                                "h-8 gap-1.5 text-white shadow-md transition-all hover:scale-105 hover:shadow-lg",
-                                "bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 shadow-amber-500/20"
-                            )}
-                            asChild
-                        >
-                            <Link href={qcHref}>
-                                <Activity className="h-4 w-4" />
-                                <span className="hidden sm:inline text-xs font-medium">IQC</span>
-                            </Link>
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Kiểm soát chất lượng nội bộ</TooltipContent>
-                </Tooltip>
+                {/* IQC Button - desktop only; mobile uses overflow menu */}
+                <span data-testid="desktop-iqc-trigger" className="hidden sm:inline-flex">
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                size="sm"
+                                className={cn(
+                                    "h-8 gap-1.5 text-white shadow-md transition-all hover:scale-105 hover:shadow-lg",
+                                    "bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 shadow-amber-500/20"
+                                )}
+                                asChild
+                            >
+                                <Link href={qcHref}>
+                                    <Activity className="h-4 w-4" />
+                                    <span className="text-xs font-medium">IQC</span>
+                                </Link>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Kiểm soát chất lượng nội bộ</TooltipContent>
+                    </Tooltip>
+                </span>
 
                 {/* CoA Generation/View Button - Only for completed samples */}
                 {sampleStatus === 'completed' && (
@@ -187,16 +190,16 @@ export function AssignedTestsToolbar({
                                             id="tour-coa-view"
                                             variant="ghost"
                                             size="icon"
-                                            className="h-8 w-8 text-blue-600 transition-transform hover:scale-105 hover:bg-blue-50 hover:text-blue-700 dark:text-blue-500 dark:hover:bg-blue-900/20"
+                                            className="h-10 w-10 text-blue-600 transition-transform hover:scale-105 hover:bg-blue-50 hover:text-blue-700 dark:text-blue-500 dark:hover:bg-blue-900/20 sm:h-8 sm:w-8"
                                             title="Phiếu kết quả (CoA)"
                                         >
-                                            <ExternalLink className="h-4 w-4" />
+                                            <FileSearch className="h-4 w-4" />
                                             <span className="sr-only">Phiếu kết quả (CoA)</span>
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuItem onClick={onPreviewCoA}>
-                                            <ExternalLink className="mr-2 h-4 w-4" />
+                                            <FileSearch className="mr-2 h-4 w-4" />
                                             Xem CoA đầy đủ
                                         </DropdownMenuItem>
                                         <DropdownMenuItem onClick={onPrintCoABody}>
@@ -259,7 +262,7 @@ export function AssignedTestsToolbar({
                     </Tooltip>
                 </span>
 
-                {/* Mobile overflow menu — collapses Print, Hướng dẫn, Add Test */}
+                {/* Mobile overflow menu — collapses secondary actions on small screens */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button
@@ -273,21 +276,15 @@ export function AssignedTestsToolbar({
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                        {isReadyCoA && (
-                            <>
-                                <DropdownMenuItem onClick={onPreviewCoA}>
-                                    <ExternalLink className="mr-2 h-4 w-4" />
-                                    Xem CoA đầy đủ
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={onPrintCoABody}>
-                                    <Printer className="mr-2 h-4 w-4" />
-                                    Chỉ in bảng kết quả
-                                </DropdownMenuItem>
-                            </>
-                        )}
                         <DropdownMenuItem onClick={onPrint} disabled={resultsCount === 0}>
                             <Printer className="mr-2 h-4 w-4" />
                             In Phiếu chỉ định
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                            <Link href={qcHref}>
+                                <Activity className="mr-2 h-4 w-4" />
+                                IQC
+                            </Link>
                         </DropdownMenuItem>
                         {isWalkthroughReady && (
                             <DropdownMenuItem onClick={() => startTour(walkthroughTourId)}>

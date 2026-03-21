@@ -57,11 +57,12 @@ vi.mock('@/components/ui/dropdown-menu', () => ({
         return <div data-testid={`${menuVariant}-dropdown-menu`}>{children}</div>
     },
     DropdownMenuContent: ({ children }: any) => <div>{children}</div>,
-    DropdownMenuItem: ({ children, onClick }: any) => (
-        <button data-testid="dropdown-item" onClick={onClick}>
-            {children}
-        </button>
-    ),
+    DropdownMenuItem: ({ children, onClick, asChild, disabled, className }: any) =>
+        asChild ? children : (
+            <button data-testid="dropdown-item" onClick={onClick} disabled={disabled} className={className}>
+                {children}
+            </button>
+        ),
     DropdownMenuTrigger: MockDropdownMenuTrigger,
 }))
 vi.mock('next/link', () => ({
@@ -130,7 +131,25 @@ describe('AssignedTestsToolbar mobile overflow', () => {
         expect(screen.getByText('3')).toBeDefined()
     })
 
-    it('exposes ready CoA actions in the mobile overflow menu', () => {
+    it('uses the shorter toolbar title', () => {
+        render(<AssignedTestsToolbar {...defaultProps} />)
+
+        expect(screen.getByRole('heading', { name: 'Xét nghiệm' })).toBeDefined()
+        expect(screen.queryByRole('heading', { name: 'Chỉ định xét nghiệm' })).toBeNull()
+    })
+
+    it('moves the IQC shortcut into the mobile overflow menu', () => {
+        render(<AssignedTestsToolbar {...defaultProps} />)
+
+        const desktopIqcTrigger = screen.getByTestId('desktop-iqc-trigger')
+        const mobileMenu = screen.getByTestId('mobile-dropdown-menu')
+
+        expect(desktopIqcTrigger.className).toContain('hidden')
+        expect(desktopIqcTrigger.className).toContain('sm:inline-flex')
+        expect(within(mobileMenu).getByRole('link', { name: 'IQC' })).toBeDefined()
+    })
+
+    it('keeps the mobile overflow menu free of duplicate ready CoA actions', () => {
         render(
             <AssignedTestsToolbar
                 {...defaultProps}
@@ -141,17 +160,11 @@ describe('AssignedTestsToolbar mobile overflow', () => {
 
         const mobileMenu = screen.getByTestId('mobile-dropdown-menu')
         expect(within(mobileMenu).getByTestId('mobile-overflow-menu')).toBeDefined()
-        expect(within(mobileMenu).getByRole('button', { name: 'Xem CoA đầy đủ' })).toBeDefined()
-        expect(within(mobileMenu).getByRole('button', { name: 'Chỉ in bảng kết quả' })).toBeDefined()
-
-        fireEvent.click(within(mobileMenu).getByRole('button', { name: 'Xem CoA đầy đủ' }))
-        fireEvent.click(within(mobileMenu).getByRole('button', { name: 'Chỉ in bảng kết quả' }))
-
-        expect(defaultProps.onPreviewCoA).toHaveBeenCalledTimes(1)
-        expect(defaultProps.onPrintCoABody).toHaveBeenCalledTimes(1)
+        expect(within(mobileMenu).queryByRole('button', { name: 'Xem CoA đầy đủ' })).toBeNull()
+        expect(within(mobileMenu).queryByRole('button', { name: 'Chỉ in bảng kết quả' })).toBeNull()
     })
 
-    it('hides mobile CoA actions until the sample is completed and CoA is ready', () => {
+    it('keeps mobile overflow free of CoA actions before the CoA is ready', () => {
         render(
             <AssignedTestsToolbar
                 {...defaultProps}

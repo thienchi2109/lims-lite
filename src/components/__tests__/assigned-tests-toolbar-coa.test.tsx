@@ -55,11 +55,12 @@ vi.mock('@/components/ui/dropdown-menu', () => ({
         return <div data-testid={`${menuVariant}-dropdown-menu`}>{children}</div>
     },
     DropdownMenuContent: ({ children }: any) => <div>{children}</div>,
-    DropdownMenuItem: ({ children, onClick }: any) => (
-        <button data-testid="dropdown-item" onClick={onClick}>
-            {children}
-        </button>
-    ),
+    DropdownMenuItem: ({ children, onClick, asChild, disabled, className }: any) =>
+        asChild ? children : (
+            <button data-testid="dropdown-item" onClick={onClick} disabled={disabled} className={className}>
+                {children}
+            </button>
+        ),
     DropdownMenuTrigger: MockDropdownMenuTrigger,
 }))
 vi.mock('next/link', () => ({
@@ -98,7 +99,14 @@ describe('AssignedTestsToolbar CoA desktop actions', () => {
         )
 
         const desktopMenu = screen.getByTestId('desktop-dropdown-menu')
-        expect(within(desktopMenu).getByTitle('Phiếu kết quả (CoA)')).toBeDefined()
+        const coaTrigger = within(desktopMenu).getByTitle('Phiếu kết quả (CoA)')
+
+        expect(coaTrigger).toBeDefined()
+        expect(coaTrigger.className).toContain('h-10')
+        expect(coaTrigger.className).toContain('w-10')
+        expect(coaTrigger.className).toContain('sm:h-8')
+        expect(coaTrigger.className).toContain('sm:w-8')
+
         fireEvent.click(within(desktopMenu).getByRole('button', { name: 'Xem CoA đầy đủ' }))
         fireEvent.click(within(desktopMenu).getByRole('button', { name: 'Chỉ in bảng kết quả' }))
 
