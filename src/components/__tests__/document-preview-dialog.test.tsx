@@ -6,6 +6,16 @@ import { DocumentPreviewDialog } from '../document-preview-dialog'
 describe('DocumentPreviewDialog', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 1280,
+    })
+    Object.defineProperty(window, 'innerHeight', {
+      configurable: true,
+      writable: true,
+      value: 960,
+    })
   })
 
   it('shows loading state with the document title and subtitle', () => {
@@ -73,6 +83,58 @@ describe('DocumentPreviewDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Đóng' }))
     expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it('fits the entire CoA page inside the desktop preview shell', () => {
+    render(
+      <DocumentPreviewDialog
+        open
+        onOpenChange={vi.fn()}
+        title="Phiếu kết quả"
+        loading={false}
+        error={null}
+        html="<html><body><h1>CoA</h1></body></html>"
+        documentUrl="/api/coa/view?sample_id=sample-1"
+        onRetry={vi.fn()}
+      />,
+    )
+
+    const frame = screen.getByTestId('document-preview-frame')
+    const iframe = screen.getByTitle('Phiếu kết quả')
+
+    expect(screen.getByTestId('document-preview-dialog').className).toContain('max-w-[1480px]')
+    expect(screen.getByTestId('document-preview-dialog').className).toContain('sm:max-w-[1480px]')
+    expect(screen.getByTestId('document-preview-shell').className).toContain('h-[min(90vh,1040px)]')
+    expect(parseFloat(frame.style.width)).toBeLessThan(920)
+    expect(parseFloat(frame.style.height)).toBeLessThan(1260)
+    expect(iframe.style.transform).not.toBe('scale(1)')
+  })
+
+  it('scales the preview down to fit narrow mobile screens without changing print actions', () => {
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 390,
+    })
+
+    render(
+      <DocumentPreviewDialog
+        open
+        onOpenChange={vi.fn()}
+        title="Phiếu kết quả"
+        loading={false}
+        error={null}
+        html="<html><body><h1>CoA</h1></body></html>"
+        documentUrl="/api/coa/view?sample_id=sample-1"
+        onRetry={vi.fn()}
+      />,
+    )
+
+    const frame = screen.getByTestId('document-preview-frame')
+    const iframe = screen.getByTitle('Phiếu kết quả')
+
+    expect(parseFloat(frame.style.width)).toBeLessThan(390)
+    expect(iframe.style.transform).not.toBe('scale(1)')
   })
 
   it('shows error state with retry and fallback actions', () => {

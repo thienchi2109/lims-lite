@@ -14,6 +14,13 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 
+const PREVIEW_DOCUMENT_WIDTH = 920
+const PREVIEW_DOCUMENT_HEIGHT = 1260
+const PREVIEW_MOBILE_HORIZONTAL_PADDING = 24
+const PREVIEW_MOBILE_VERTICAL_PADDING = 32
+const PREVIEW_DESKTOP_HORIZONTAL_PADDING = 56
+const PREVIEW_DESKTOP_VERTICAL_PADDING = 56
+
 interface DocumentPreviewDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -42,6 +49,64 @@ export function DocumentPreviewDialog({
   onErrorAction,
 }: DocumentPreviewDialogProps) {
   const iframeRef = React.useRef<HTMLIFrameElement | null>(null)
+  const viewportRef = React.useRef<HTMLDivElement | null>(null)
+  const [viewportSize, setViewportSize] = React.useState(() => ({
+    height: typeof window === 'undefined' ? PREVIEW_DOCUMENT_HEIGHT : window.innerHeight,
+    width: typeof window === 'undefined' ? PREVIEW_DOCUMENT_WIDTH : window.innerWidth,
+  }))
+  const viewportWidth = viewportSize.width
+  const viewportHeight = viewportSize.height
+
+  const isDesktopViewport = viewportWidth >= 768
+  const previewHorizontalPadding = isDesktopViewport
+    ? PREVIEW_DESKTOP_HORIZONTAL_PADDING
+    : PREVIEW_MOBILE_HORIZONTAL_PADDING
+  const previewVerticalPadding = isDesktopViewport
+    ? PREVIEW_DESKTOP_VERTICAL_PADDING
+    : PREVIEW_MOBILE_VERTICAL_PADDING
+  const availableWidth = Math.max(240, viewportWidth - previewHorizontalPadding)
+  const availableHeight = Math.max(320, viewportHeight - previewVerticalPadding)
+  const previewScale = Math.min(
+    1,
+    availableWidth / PREVIEW_DOCUMENT_WIDTH,
+    availableHeight / PREVIEW_DOCUMENT_HEIGHT,
+  )
+  const frameWidth = PREVIEW_DOCUMENT_WIDTH * previewScale
+  const frameHeight = PREVIEW_DOCUMENT_HEIGHT * previewScale
+
+  React.useEffect(() => {
+    if (!open) {
+      return
+    }
+
+    const measureViewport = () => {
+      const nextHeight = viewportRef.current?.clientHeight || window.innerHeight
+      const nextWidth = viewportRef.current?.clientWidth || window.innerWidth
+
+      setViewportSize({
+        height: nextHeight,
+        width: nextWidth,
+      })
+    }
+
+    measureViewport()
+
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined' && viewportRef.current
+        ? new ResizeObserver(measureViewport)
+        : null
+
+    if (resizeObserver && viewportRef.current) {
+      resizeObserver.observe(viewportRef.current)
+    }
+
+    window.addEventListener('resize', measureViewport)
+
+    return () => {
+      resizeObserver?.disconnect()
+      window.removeEventListener('resize', measureViewport)
+    }
+  }, [open])
 
   const handlePrint = () => {
     const frameWindow = iframeRef.current?.contentWindow
@@ -63,7 +128,8 @@ export function DocumentPreviewDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="max-h-[calc(100vh-1rem)] w-[calc(100vw-1rem)] max-w-[1120px] overflow-hidden border-slate-200 bg-white p-0 shadow-2xl"
+        data-testid="document-preview-dialog"
+        className="max-h-[calc(100vh-1rem)] w-[calc(100vw-1rem)] md:w-[calc(100vw-3rem)] max-w-[1480px] sm:max-w-[1480px] overflow-hidden border-slate-200 bg-white p-0 shadow-2xl"
       >
         <DialogHeader className="sr-only">
           <DialogTitle>{title}</DialogTitle>
@@ -93,7 +159,10 @@ export function DocumentPreviewDialog({
           </Button>
         </div>
 
-        <div className="flex h-[min(82vh,840px)] flex-col bg-slate-50">
+        <div
+          data-testid="document-preview-shell"
+          className="flex h-[min(90vh,1040px)] flex-col bg-slate-50"
+        >
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white/90 px-5 py-3">
             <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
               <span className={cn(
@@ -153,7 +222,10 @@ export function DocumentPreviewDialog({
             </div>
           </div>
 
-          <div className="flex-1 overflow-hidden bg-white">
+          <div
+            ref={viewportRef}
+            className="flex-1 overflow-hidden bg-white"
+          >
             {loading ? (
               <div className="flex h-full items-center justify-center px-6">
                 <div className="flex flex-col items-center gap-4 text-center">
@@ -181,13 +253,27 @@ export function DocumentPreviewDialog({
                 </Alert>
               </div>
             ) : html ? (
-              <iframe
-                ref={iframeRef}
-                title={title}
-                srcDoc={html}
-                sandbox="allow-same-origin allow-modals"
-                className="h-full w-full border-0 bg-white"
-              />
+              <div className="flex h-full items-start justify-center overflow-auto bg-slate-200/60 px-3 py-4 md:items-center md:px-6 md:py-5">
+                <div
+                  data-testid="document-preview-frame"
+                  className="mx-auto overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.16)]"
+                  style={{ height: `${frameHeight}px`, width: `${frameWidth}px` }}
+                >
+                  <iframe
+                    ref={iframeRef}
+                    title={title}
+                    srcDoc={html}
+                    sandbox="allow-same-origin allow-modals"
+                    className="block border-0 bg-white"
+                    style={{
+                      height: `${PREVIEW_DOCUMENT_HEIGHT}px`,
+                      transform: `scale(${previewScale})`,
+                      transformOrigin: 'top left',
+                      width: `${PREVIEW_DOCUMENT_WIDTH}px`,
+                    }}
+                  />
+                </div>
+              </div>
             ) : (
               <div className="flex h-full items-center justify-center px-6">
                 <p className="text-sm text-slate-500">Không có nội dung để hiển thị.</p>
