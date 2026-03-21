@@ -44,10 +44,15 @@ interface ApprovalQueueSample extends SampleGridRow {
 
 interface ApprovalQueueTableProps {
     data: ApprovalQueueSample[]
-    selectedSampleId?: string
+    selectedSampleId?: string | null
+    onSelectSample?: (sampleId: string) => void
 }
 
-export function ApprovalQueueTable({ data, selectedSampleId }: ApprovalQueueTableProps) {
+export function ApprovalQueueTable({
+    data,
+    selectedSampleId,
+    onSelectSample,
+}: ApprovalQueueTableProps) {
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
@@ -57,6 +62,11 @@ export function ApprovalQueueTable({ data, selectedSampleId }: ApprovalQueueTabl
     const [pageSize, setPageSize] = useState(20)
 
     const handleRowClick = (row: ApprovalQueueSample) => {
+        if (onSelectSample) {
+            onSelectSample(row.id)
+            return
+        }
+
         const params = new URLSearchParams(searchParams.toString())
         params.set('sampleId', row.id)
         router.replace(`${pathname}?${params.toString()}`, { scroll: false })
