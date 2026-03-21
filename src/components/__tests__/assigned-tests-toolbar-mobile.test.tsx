@@ -3,8 +3,8 @@
  * Verifies that secondary actions collapse into a "⋯" dropdown on mobile.
  */
 
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { beforeEach, describe, it, expect, vi } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
 
 const mockStartTour = vi.hoisted(() => vi.fn())
 
@@ -42,7 +42,6 @@ import { AssignedTestsToolbar } from '../assigned-tests-toolbar'
 
 const defaultProps = {
     resultsCount: 3,
-    sampleId: 'sample-1',
     sampleStatus: 'review' as const,
     coaStatus: null,
     canSubmitForReview: false,
@@ -54,11 +53,16 @@ const defaultProps = {
     onGenerateCoA: vi.fn(),
     onSubmitForReview: vi.fn(),
     onOpenAssignment: vi.fn(),
+    onPreviewCoA: vi.fn(),
     onPrintCoABody: vi.fn(),
     userRole: 'manager' as const,
 }
 
 describe('AssignedTestsToolbar mobile overflow', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+    })
+
     it('renders a mobile overflow menu button', () => {
         render(<AssignedTestsToolbar {...defaultProps} />)
 
@@ -94,5 +98,25 @@ describe('AssignedTestsToolbar mobile overflow', () => {
         render(<AssignedTestsToolbar {...defaultProps} />)
 
         expect(screen.getByText('3')).toBeDefined()
+    })
+
+    it('exposes ready CoA actions in the mobile overflow menu', () => {
+        render(
+            <AssignedTestsToolbar
+                {...defaultProps}
+                sampleStatus="completed"
+                coaStatus="ready"
+            />,
+        )
+
+        expect(screen.getByTestId('mobile-overflow-menu')).toBeDefined()
+        expect(screen.getAllByText('Xem CoA đầy đủ').length).toBeGreaterThan(0)
+        expect(screen.getAllByText('Chỉ in bảng kết quả').length).toBeGreaterThan(0)
+
+        fireEvent.click(screen.getAllByText('Xem CoA đầy đủ')[0])
+        fireEvent.click(screen.getAllByText('Chỉ in bảng kết quả')[0])
+
+        expect(defaultProps.onPreviewCoA).toHaveBeenCalledTimes(1)
+        expect(defaultProps.onPrintCoABody).toHaveBeenCalledTimes(1)
     })
 })
