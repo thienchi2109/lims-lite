@@ -11,6 +11,11 @@ describe('DocumentPreviewDialog', () => {
       writable: true,
       value: 1280,
     })
+    Object.defineProperty(window, 'innerHeight', {
+      configurable: true,
+      writable: true,
+      value: 960,
+    })
   })
 
   it('shows loading state with the document title and subtitle', () => {
@@ -80,7 +85,7 @@ describe('DocumentPreviewDialog', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false)
   })
 
-  it('uses a wider preview shell on desktop and keeps the document at full scale', () => {
+  it('fits the entire CoA page inside the desktop preview shell', () => {
     render(
       <DocumentPreviewDialog
         open
@@ -94,9 +99,14 @@ describe('DocumentPreviewDialog', () => {
       />,
     )
 
+    const frame = screen.getByTestId('document-preview-frame')
+    const iframe = screen.getByTitle('Phiếu kết quả')
+
     expect(screen.getByTestId('document-preview-dialog').className).toContain('max-w-[1480px]')
     expect(screen.getByTestId('document-preview-shell').className).toContain('h-[min(90vh,1040px)]')
-    expect(screen.getByTitle('Phiếu kết quả').style.transform).toBe('scale(1)')
+    expect(parseFloat(frame.style.width)).toBeLessThan(920)
+    expect(parseFloat(frame.style.height)).toBeLessThan(1260)
+    expect(iframe.style.transform).not.toBe('scale(1)')
   })
 
   it('scales the preview down to fit narrow mobile screens without changing print actions', () => {

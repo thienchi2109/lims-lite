@@ -16,7 +16,10 @@ import { cn } from '@/lib/utils'
 
 const PREVIEW_DOCUMENT_WIDTH = 920
 const PREVIEW_DOCUMENT_HEIGHT = 1260
-const PREVIEW_FRAME_GUTTER = 32
+const PREVIEW_MOBILE_HORIZONTAL_PADDING = 24
+const PREVIEW_MOBILE_VERTICAL_PADDING = 32
+const PREVIEW_DESKTOP_HORIZONTAL_PADDING = 56
+const PREVIEW_DESKTOP_VERTICAL_PADDING = 56
 
 interface DocumentPreviewDialogProps {
   open: boolean
@@ -47,27 +50,27 @@ export function DocumentPreviewDialog({
 }: DocumentPreviewDialogProps) {
   const iframeRef = React.useRef<HTMLIFrameElement | null>(null)
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
-  const [viewportWidth, setViewportWidth] = React.useState(() =>
-    typeof window === 'undefined' ? PREVIEW_DOCUMENT_WIDTH : window.innerWidth,
+  const [viewportSize, setViewportSize] = React.useState(() => ({
+    height: typeof window === 'undefined' ? PREVIEW_DOCUMENT_HEIGHT : window.innerHeight,
+    width: typeof window === 'undefined' ? PREVIEW_DOCUMENT_WIDTH : window.innerWidth,
+  }))
+  const viewportWidth = viewportSize.width
+  const viewportHeight = viewportSize.height
+
+  const isDesktopViewport = viewportWidth >= 768
+  const previewHorizontalPadding = isDesktopViewport
+    ? PREVIEW_DESKTOP_HORIZONTAL_PADDING
+    : PREVIEW_MOBILE_HORIZONTAL_PADDING
+  const previewVerticalPadding = isDesktopViewport
+    ? PREVIEW_DESKTOP_VERTICAL_PADDING
+    : PREVIEW_MOBILE_VERTICAL_PADDING
+  const availableWidth = Math.max(240, viewportWidth - previewHorizontalPadding)
+  const availableHeight = Math.max(320, viewportHeight - previewVerticalPadding)
+  const previewScale = Math.min(
+    1,
+    availableWidth / PREVIEW_DOCUMENT_WIDTH,
+    availableHeight / PREVIEW_DOCUMENT_HEIGHT,
   )
-
-  const handlePrint = () => {
-    const frameWindow = iframeRef.current?.contentWindow
-    if (!frameWindow) {
-      return
-    }
-
-    frameWindow.focus()
-    frameWindow.print()
-  }
-
-  const handleOpenInNewTab = () => {
-    window.open(documentUrl, '_blank', 'noopener,noreferrer')
-  }
-
-  const hasReadyDocument = Boolean(html && !loading && !error)
-  const availableWidth = Math.max(320, viewportWidth - PREVIEW_FRAME_GUTTER)
-  const previewScale = Math.min(1, availableWidth / PREVIEW_DOCUMENT_WIDTH)
   const frameWidth = PREVIEW_DOCUMENT_WIDTH * previewScale
   const frameHeight = PREVIEW_DOCUMENT_HEIGHT * previewScale
 
@@ -77,8 +80,13 @@ export function DocumentPreviewDialog({
     }
 
     const measureViewport = () => {
+      const nextHeight = viewportRef.current?.clientHeight || window.innerHeight
       const nextWidth = viewportRef.current?.clientWidth || window.innerWidth
-      setViewportWidth(nextWidth)
+
+      setViewportSize({
+        height: nextHeight,
+        width: nextWidth,
+      })
     }
 
     measureViewport()
@@ -99,6 +107,22 @@ export function DocumentPreviewDialog({
       window.removeEventListener('resize', measureViewport)
     }
   }, [open])
+
+  const handlePrint = () => {
+    const frameWindow = iframeRef.current?.contentWindow
+    if (!frameWindow) {
+      return
+    }
+
+    frameWindow.focus()
+    frameWindow.print()
+  }
+
+  const handleOpenInNewTab = () => {
+    window.open(documentUrl, '_blank', 'noopener,noreferrer')
+  }
+
+  const hasReadyDocument = Boolean(html && !loading && !error)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -229,7 +253,7 @@ export function DocumentPreviewDialog({
                 </Alert>
               </div>
             ) : html ? (
-              <div className="h-full overflow-auto bg-slate-200/60 px-3 py-4 md:px-6 md:py-5">
+              <div className="flex h-full items-start justify-center overflow-auto bg-slate-200/60 px-3 py-4 md:items-center md:px-6 md:py-5">
                 <div
                   data-testid="document-preview-frame"
                   className="mx-auto overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.16)]"
