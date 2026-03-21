@@ -19,10 +19,10 @@
 
 ## 3. Phase 1 GREEN: Tối ưu index cho pattern queue
 
-- [ ] 3.1 Tạo migration thêm composite partial index `samples(status, updated_at DESC) WHERE deleted_at IS NULL`.
-- [ ] 3.2 Ghi rõ security impact trong migration (read-performance only, không đổi RLS policy semantics).
-- [ ] 3.3 Apply migration qua Docker flow chuẩn của dự án.
-- [ ] 3.4 Chạy `SELECT * FROM run_security_tests();` sau khi apply migration.
+- [x] 3.1 Tạo migration thêm composite partial index `samples(status, updated_at DESC) WHERE deleted_at IS NULL`.
+- [x] 3.2 Ghi rõ security impact trong migration (read-performance only, không đổi RLS policy semantics).
+- [x] 3.3 Apply migration qua Docker flow chuẩn của dự án.
+- [x] 3.4 Chạy `SELECT * FROM run_security_tests();` sau khi apply migration.
 
 ## 4. Phase 1 REFACTOR + Verification
 
