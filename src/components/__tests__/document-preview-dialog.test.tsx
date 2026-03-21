@@ -47,6 +47,7 @@ describe('DocumentPreviewDialog', () => {
     )
 
     const iframe = screen.getByTitle('Phiếu kết quả')
+    expect(iframe.getAttribute('sandbox')).toBe('allow-same-origin allow-modals')
     const focusSpy = vi.fn()
     const printSpy = vi.fn()
     Object.defineProperty(iframe, 'contentWindow', {

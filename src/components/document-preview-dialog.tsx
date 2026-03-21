@@ -185,6 +185,7 @@ export function DocumentPreviewDialog({
                 ref={iframeRef}
                 title={title}
                 srcDoc={html}
+                sandbox="allow-same-origin allow-modals"
                 className="h-full w-full border-0 bg-white"
               />
             ) : (
