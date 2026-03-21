@@ -101,10 +101,12 @@ describe('DocumentPreviewDialog', () => {
 
     const frame = screen.getByTestId('document-preview-frame')
     const iframe = screen.getByTitle('Phiếu kết quả')
+    const viewport = frame.parentElement
 
     expect(screen.getByTestId('document-preview-dialog').className).toContain('max-w-[1480px]')
     expect(screen.getByTestId('document-preview-dialog').className).toContain('sm:max-w-[1480px]')
     expect(screen.getByTestId('document-preview-shell').className).toContain('h-[min(90vh,1040px)]')
+    expect(viewport?.className).not.toContain('md:items-center')
     expect(parseFloat(frame.style.width)).toBeLessThan(920)
     expect(parseFloat(frame.style.height)).toBeLessThan(1260)
     expect(iframe.style.transform).not.toBe('scale(1)')

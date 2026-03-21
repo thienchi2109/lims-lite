@@ -253,7 +253,7 @@ export function DocumentPreviewDialog({
                 </Alert>
               </div>
             ) : html ? (
-              <div className="flex h-full items-start justify-center overflow-auto bg-slate-200/60 px-3 py-4 md:items-center md:px-6 md:py-5">
+              <div className="flex h-full items-start justify-center overflow-auto bg-slate-200/60 px-3 py-4 md:px-6 md:py-5">
                 <div
                   data-testid="document-preview-frame"
                   className="mx-auto overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.16)]"
