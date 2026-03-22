@@ -38,6 +38,50 @@ interface ApprovalTabsClientProps {
     initialResults: ResultWithAssay[]
 }
 
+interface ApprovalQueueContentProps {
+    samples: ApprovalQueueSample[]
+    selectedSampleId: string | null
+    onSelectSample: (sampleId: string) => void
+    sample: SampleWithUser | null
+    results: ResultWithAssay[]
+    isLoadingSample: boolean
+    sampleLoadError: string | null
+}
+
+function ApprovalQueueContent({
+    samples,
+    selectedSampleId,
+    onSelectSample,
+    sample,
+    results,
+    isLoadingSample,
+    sampleLoadError,
+}: ApprovalQueueContentProps) {
+    return (
+        <div className="flex flex-1 min-h-0 flex-col gap-2">
+            <div
+                id="tour-approval-queue"
+                className="h-[50vh] min-h-[400px] shrink-0 flex flex-col"
+            >
+                <ApprovalQueueTable
+                    data={samples}
+                    selectedSampleId={selectedSampleId}
+                    onSelectSample={onSelectSample}
+                />
+            </div>
+
+            <div id="tour-approval-detail" className="flex-1 min-h-0 border-t pt-4">
+                <ApprovalBottomRow
+                    sample={sample}
+                    results={results}
+                    isLoadingSample={isLoadingSample}
+                    loadErrorMessage={sampleLoadError}
+                />
+            </div>
+        </div>
+    )
+}
+
 export function ApprovalTabsClient({
     tab,
     samples,
@@ -102,9 +146,9 @@ export function ApprovalTabsClient({
                 }
             } catch {
                 // ignore; keep last known count
-            } finally {
-                isFetching = false
             }
+
+            isFetching = false
         }
 
         const scheduleUpdate = () => {
@@ -174,6 +218,11 @@ export function ApprovalTabsClient({
 
             const requestId = sampleRequestIdRef.current + 1
             sampleRequestIdRef.current = requestId
+            const finalizeRequest = () => {
+                if (sampleRequestIdRef.current === requestId) {
+                    setIsLoadingSample(false)
+                }
+            }
 
             try {
                 const [sampleData, resultsResponse] = await Promise.all([
@@ -187,6 +236,7 @@ export function ApprovalTabsClient({
 
                 setActiveSample(sampleData)
                 setActiveResults(resultsResponse?.data ?? [])
+                finalizeRequest()
             } catch (error) {
                 if (sampleRequestIdRef.current !== requestId) {
                     return
@@ -196,37 +246,10 @@ export function ApprovalTabsClient({
                 setActiveSample(null)
                 setActiveResults([])
                 setSampleLoadError('Không thể tải chi tiết mẫu. Vui lòng thử lại.')
-            } finally {
-                if (sampleRequestIdRef.current === requestId) {
-                    setIsLoadingSample(false)
-                }
+                finalizeRequest()
             }
         },
         [activeSampleId, buildQueueUrl, tab],
-    )
-
-    const renderQueueContent = () => (
-        <div className="flex flex-1 min-h-0 flex-col gap-2">
-            <div
-                id="tour-approval-queue"
-                className="h-[50vh] min-h-[400px] shrink-0 flex flex-col"
-            >
-                <ApprovalQueueTable
-                    data={samples}
-                    selectedSampleId={activeSampleId}
-                    onSelectSample={handleSelectSample}
-                />
-            </div>
-
-            <div id="tour-approval-detail" className="flex-1 min-h-0 border-t pt-4">
-                <ApprovalBottomRow
-                    sample={activeSample}
-                    results={activeResults}
-                    isLoadingSample={isLoadingSample}
-                    loadErrorMessage={sampleLoadError}
-                />
-            </div>
-        </div>
     )
 
     return (
@@ -257,11 +280,27 @@ export function ApprovalTabsClient({
             </TabsList>
 
             <TabsContent value="review" className="flex-1 min-h-0 mt-0">
-                {renderQueueContent()}
+                <ApprovalQueueContent
+                    samples={samples}
+                    selectedSampleId={activeSampleId}
+                    onSelectSample={handleSelectSample}
+                    sample={activeSample}
+                    results={activeResults}
+                    isLoadingSample={isLoadingSample}
+                    sampleLoadError={sampleLoadError}
+                />
             </TabsContent>
 
             <TabsContent value="completed" className="flex-1 min-h-0 mt-0">
-                {renderQueueContent()}
+                <ApprovalQueueContent
+                    samples={samples}
+                    selectedSampleId={activeSampleId}
+                    onSelectSample={handleSelectSample}
+                    sample={activeSample}
+                    results={activeResults}
+                    isLoadingSample={isLoadingSample}
+                    sampleLoadError={sampleLoadError}
+                />
             </TabsContent>
         </Tabs>
     )

@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getSamplesForApprovalCount, getSamplesWithTab } from '@/app/actions/sample-approvals'
@@ -84,14 +85,16 @@ export default async function ApprovalsPage({ searchParams }: ApprovalsPageProps
                             Lỗi khi tải hàng đợi phê duyệt: {error}
                         </div>
                     ) : (
-                        <ApprovalTabsClient
-                            tab={tab}
-                            samples={samples || []}
-                            reviewCount={reviewCount}
-                            selectedSampleId={selectedSample?.id}
-                            initialSample={selectedSample}
-                            initialResults={results}
-                        />
+                        <Suspense fallback={<ApprovalQueueFallback />}>
+                            <ApprovalTabsClient
+                                tab={tab}
+                                samples={samples || []}
+                                reviewCount={reviewCount}
+                                selectedSampleId={selectedSample?.id}
+                                initialSample={selectedSample}
+                                initialResults={results}
+                            />
+                        </Suspense>
                     )}
                 </div>
 
@@ -103,13 +106,15 @@ export default async function ApprovalsPage({ searchParams }: ApprovalsPageProps
                                 Lỗi khi tải hàng đợi phê duyệt: {error}
                             </div>
                         ) : (
-                            <ApprovalMobileLayout
-                                samples={samples || []}
-                                selectedSample={selectedSample}
-                                results={results}
-                                tab={tab}
-                                reviewCount={reviewCount}
-                            />
+                            <Suspense fallback={<ApprovalQueueFallback />}>
+                                <ApprovalMobileLayout
+                                    samples={samples || []}
+                                    selectedSample={selectedSample}
+                                    results={results}
+                                    tab={tab}
+                                    reviewCount={reviewCount}
+                                />
+                            </Suspense>
                         )}
                     </div>
                 </MobileOnly>
@@ -117,4 +122,12 @@ export default async function ApprovalsPage({ searchParams }: ApprovalsPageProps
         </div>
     )
 
+}
+
+function ApprovalQueueFallback() {
+    return (
+        <div className="text-center py-8 text-slate-500 bg-white dark:bg-slate-900 rounded-lg border">
+            Đang tải hàng đợi phê duyệt...
+        </div>
+    )
 }
