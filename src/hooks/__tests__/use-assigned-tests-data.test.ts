@@ -214,7 +214,7 @@ describe('useAssignedTestsData', () => {
         })
 
         expect(result.current.coaStatus).toBe('ready')
-        expect(mockCoAStatus).toHaveBeenCalledTimes(1)
+        await waitFor(() => expect(mockCoAStatus).toHaveBeenCalledTimes(1))
     })
 
     it('ignores stale CoA responses from the previous sample', async () => {
