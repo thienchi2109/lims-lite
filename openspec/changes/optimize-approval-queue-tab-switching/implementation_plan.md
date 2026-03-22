@@ -21,6 +21,7 @@ Mục tiêu: giảm lag khi switch giữa `review` và `completed` bằng TanSta
 - **DoD:**
   - không bypass `api-client`
   - key shape future-proof cho `page/pageSize/sort`
+  - shared contract phải định nghĩa rõ rule clear `sampleId` khi sample không thuộc active tab
   - desktop/mobile cùng consume shared tab-state contract này, không copy logic
   - không đổi semantics RLS/auth hiện tại
 
@@ -37,6 +38,7 @@ Mục tiêu: giảm lag khi switch giữa `review` và `completed` bằng TanSta
   - deep-link tab sync giữ đúng URL behavior
 - **DoD:**
   - chỉ consume shared contract từ Packet A, không tự tạo query/tab-state helper mới
+  - khi đổi tab sang queue không chứa sample hiện tại, desktop phải clear `sampleId` và detail state theo shared contract
   - không làm hỏng selected sample/detail semantics đã có
   - error state vẫn là tiếng Việt
 
@@ -53,6 +55,7 @@ Mục tiêu: giảm lag khi switch giữa `review` và `completed` bằng TanSta
   - không leak selected detail sai tab
 - **DoD:**
   - chỉ consume shared contract từ Packet A, không fork logic URL sync/query state
+  - khi đổi tab sang queue không chứa sample hiện tại, mobile phải clear `sampleId` và detail state theo shared contract
   - UX mobile drawer vẫn đóng/mở đúng như fix hiện tại
 
 ## Packet D - Integration & Verification Worker
@@ -68,6 +71,7 @@ Mục tiêu: giảm lag khi switch giữa `review` và `completed` bằng TanSta
   - `npx -y react-doctor@latest . --verbose --diff`
 - **DoD:**
   - có bằng chứng RED/GREEN cho từng packet
+  - page wiring chứng minh chỉ một viewport-active owner mount queue query/tab-sync side effects tại một thời điểm
   - checks cuối cùng pass hoặc có note rõ ràng về baseline còn lại
 
 ## Dispatch Order
@@ -83,3 +87,4 @@ Mục tiêu: giảm lag khi switch giữa `review` và `completed` bằng TanSta
 - Mọi claim `DONE` phải kèm command đã chạy và kết quả tóm tắt.
 - Spec compliance review phải xảy ra trước code-quality review cho từng packet.
 - Không chấp nhận duplicated tab-switch logic giữa desktop/mobile; mọi shared behavior phải nằm ở Packet A contract.
+- Không chấp nhận hidden layout cùng mount queue query/prefetch/URL-sync side effects; nếu cần responsive split thì side effects phải có owner duy nhất.

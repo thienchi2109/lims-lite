@@ -58,14 +58,28 @@ Change này là follow-on riêng cho lag khi switch tab. Nó không thay thế c
 - **Alternative đã cân nhắc:**
   - Cho phép desktop/mobile tự triển khai cùng spec rồi “sync bằng review”: nhanh ngắn hạn nhưng gần như chắc chắn tạo drift logic và duplication.
 
-### Decision 6: Prefetch tab đối diện, nhưng chỉ ở mức adjacent tab
+### Decision 6: Cross-tab selection semantics phải clear `sampleId` khi sample không còn thuộc tab mới
+
+- **Chọn:** shared tab contract phải kiểm tra sample đang chọn có tồn tại trong queue của tab mới hay không; nếu không tồn tại thì phải clear `sampleId`, clear detail state liên quan, và áp dụng giống nhau trên desktop/mobile.
+- **Vì sao:** hiện desktop giữ `sampleId` khi đổi tab còn mobile xóa nó, nên spec hiện tại chưa đủ chặt để tránh drift. Với queue tách theo tab, giữ selection của sample không thuộc tab mới sẽ tạo URL/detail state mâu thuẫn với list đang hiển thị.
+- **Alternative đã cân nhắc:**
+  - Giữ selected detail tới khi user tự bỏ chọn: giảm số lần clear state nhưng làm URL và detail panel có thể tham chiếu sample ngoài active queue, khó hiểu và khó test hơn.
+
+### Decision 7: Chỉ một viewport-specific owner được phép chạy queue query + tab-sync side effects tại một thời điểm
+
+- **Chọn:** page wiring phải đảm bảo chỉ layout đang active theo viewport được mount phần logic sử dụng shared approval queue contract, hoặc phải đẩy side effects lên một owner chung duy nhất; hidden layout không được tiếp tục mount hook/query/prefetch logic riêng.
+- **Vì sao:** trang hiện có cả desktop layout và mobile layout cùng tồn tại theo breakpoint. Nếu cả hai cùng consume shared TanStack Query contract, quick win này có thể biến thành duplicate fetch/prefetch và tranh chấp URL sync.
+- **Alternative đã cân nhắc:**
+  - Tin vào việc TanStack Query dedupe hoàn toàn khi cả hai layout cùng mount: không đủ chặt vì URL sync, effect timing, và prefetch intent vẫn có thể chạy hai lần.
+
+### Decision 8: Prefetch tab đối diện, nhưng chỉ ở mức adjacent tab
 
 - **Chọn:** prefetch tab còn lại sau initial load hoặc theo user intent (focus/hover), và dùng `placeholderData` để giữ UI ổn định khi refetch.
 - **Vì sao:** đáp ứng mục tiêu perceived performance mà không mở rộng network cost sang detail prefetch hoặc eager fetch mọi biến thể.
 - **Alternative đã cân nhắc:**
   - Eager load cả hai tab ngay khi mount: đơn giản hơn nhưng tăng payload tức thời và không cần thiết với user chỉ xem một tab.
 
-### Decision 7: Change này giữ scope riêng với pagination/RPC follow-up
+### Decision 9: Change này giữ scope riêng với pagination/RPC follow-up
 
 - **Chọn:** chỉ xử lý tab-switch caching/prefetch trong change này, còn server-side pagination tiếp tục ở change `optimize-approval-queue-two-phase`.
 - **Vì sao:** tách perceived-latency fix nhanh khỏi structural DB/query refactor lớn hơn.
@@ -83,22 +97,27 @@ Change này là follow-on riêng cho lag khi switch tab. Nó không thay thế c
 - **[Risk]** Queue data path mới có thể chồng chéo với follow-up pagination work.  
   **→ Mitigation:** chuẩn hóa query key shape theo hướng có thể mở rộng sang `page/pageSize/sort` thay vì hardcode key một lần nữa.
 
+- **[Risk]** `sampleId` có thể còn trên URL dù sample không thuộc active tab, làm detail state lệch khỏi queue list.  
+  **→ Mitigation:** chốt semantics clear selection khi tab mới không chứa sample đó, và khóa bằng tests cho desktop/mobile + deep-link refresh.
+
 - **[Risk]** Mobile và desktop có thể diverge nếu mỗi layout tự quản lý tab/query riêng.  
   **→ Mitigation:** shared hook/query contract + shared URL sync helper là bắt buộc; packet desktop/mobile không được tạo state machine tab switching riêng.
+
+- **[Risk]** Hidden layout vẫn mount contract mới và phát sinh duplicate fetch/prefetch hoặc double URL sync.  
+  **→ Mitigation:** page-level owner rule phải được test; chỉ viewport-active layout được phép mount queue-side effects, hoặc side effects được nâng lên owner chung duy nhất.
 
 - **[Risk]** Shared abstraction có thể bị over-engineer so với scope quick win.  
   **→ Mitigation:** chỉ trích xuất đúng 2 thứ dùng chung thật sự là query contract và tab URL sync helper; không tạo framework approval mới.
 
 ## Migration Plan
 
-1. Viết RED tests cho tab switching, cache reuse, prefetch, và URL sync.
-2. Thêm client action wrapper + hook `useApprovalQueue` + shared tab URL sync helper.
-3. Refactor desktop/mobile approval tabs sang path mới bằng shared contract.
+1. Viết RED tests cho tab switching, cache reuse, prefetch, URL sync, `sampleId` clearing semantics, và viewport-owner rule.
+2. Thêm client action wrapper + hook `useApprovalQueue` + shared tab URL sync helper/state contract.
+3. Refactor desktop/mobile approval tabs sang path mới bằng shared contract và page wiring không mount duplicate queue side effects.
 4. Chạy targeted tests, `npm run typecheck`, `react-doctor`, và smoke test `/manager/approvals`.
 
 **Rollback:** revert hook/client-action/UI integration về path server-driven hiện tại; không có migration DB để rollback.
 
 ## Open Questions
 
-- Khi switch sang tab mà sample đang chọn không tồn tại trong tab mới, có nên clear selection ngay hay giữ selected detail tới khi user chọn lại?
 - Stale time tối ưu cho approval queue nên là bao nhiêu để cân bằng perceived speed và freshness trong môi trường manager thực tế?
