@@ -2,10 +2,15 @@
 
 Trang `/manager/approvals?tab=completed` đang chậm dần theo số lượng mẫu đã duyệt vì luồng hiện tại tải toàn bộ danh sách rồi mới phân trang ở client, đồng thời việc đổi mẫu còn có chi phí render/fetch vượt nhu cầu của thao tác xem chi tiết. Điều này tạo cảm giác lag khi thao tác liên tục và làm tăng tải database/app server theo thời gian.
 
+Quan sát hiện tại cho thấy độ trễ khi đổi mẫu không chỉ đến từ queue list:
+- desktop đang fetch `sample detail` và `results` theo click, rồi `AssignedTestsPanel` lại fetch `results` lần nữa cho cùng sample
+- tab `completed` còn phát sinh thêm fetch enrichment như CoA/QC sau khi đã có core detail
+- mobile vẫn route-driven cho sample selection nên chưa hưởng cùng cache-first path như desktop tab switching
+
 ## What Changes
 
 - Triển khai tối ưu theo 2 phase cho Approval Queue:
-  - **Phase 1 (Quick Win):** giảm độ trễ tương tác khi đổi mẫu, giảm truy vấn dư thừa ở luồng xem chi tiết, thêm index hỗ trợ sort/filter chính của queue.
+  - **Phase 1 (Quick Win):** giảm độ trễ tương tác khi đổi mẫu bằng shared detail query theo `sampleId`, loại bỏ duplicate `results` fetch giữa detail/action panels, giữ detail cũ trong khi sample mới đang tải, tách enrichment riêng của `completed` khỏi critical path, và đưa mobile selection về cùng cache-first contract.
   - **Phase 2 (Structural):** chuyển queue sang phân trang server-side thật sự, gom dữ liệu hàng đợi vào RPC chuyên dụng trả về dữ liệu đã tổng hợp theo trang.
 - Chuẩn hóa chiến lược TDD cho cả 2 phase (RED → GREEN → REFACTOR) với regression test cho các hành vi hiệu năng quan trọng.
 - Chuẩn bị task breakdown theo phạm vi độc lập để dispatch cho nhiều subagents mà không đụng chồng file.
@@ -29,6 +34,8 @@ Trang `/manager/approvals?tab=completed` đang chậm dần theo số lượng m
   - `src/components/approval-queue-table.tsx`
   - `src/components/approval-bottom-row.tsx`
   - `src/components/approval-mobile-layout.tsx`
+  - `src/hooks/use-sample-detail.ts`
+  - `src/hooks/use-assigned-tests-data.ts`
   - `src/app/actions/sample-approvals.ts`
   - `src/types/query-keys.ts`
 - **Database / migration:**

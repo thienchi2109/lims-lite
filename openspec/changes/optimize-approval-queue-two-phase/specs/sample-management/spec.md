@@ -27,11 +27,37 @@ The system SHALL treat queue-list retrieval and sample-detail retrieval as separ
 - **THEN** the system SHALL fetch only the selected sample detail payload needed for the detail panel
 - **AND** the system SHALL NOT re-fetch the entire queue dataset for the active tab
 
+#### Scenario: Core detail payload is fetched once per selected sample
+
+- **WHEN** an authenticated manager selects a sample to open detail
+- **THEN** the system SHALL use one shared core-detail data source for `sample detail` and `results`
+- **AND** detail, assigned-tests, and approval-action panels SHALL reuse that shared payload
+- **AND** the system SHALL NOT issue duplicate `results` fetches for the same sample just because multiple panels mount
+
+#### Scenario: Switching samples keeps previous detail visible during transition
+
+- **WHEN** an authenticated manager selects sample B while sample A detail is visible
+- **THEN** the system SHALL keep sample A detail visible until sample B core detail is ready or errors
+- **AND** the UI SHALL show a loading transition without blanking the entire detail region first
+
+#### Scenario: Completed-tab enrichments do not block first detail render
+
+- **WHEN** an authenticated manager selects a sample in `/manager/approvals?tab=completed`
+- **THEN** the system SHALL render the core sample detail as soon as `sample detail` and `results` are available
+- **AND** any completed-only enrichments such as CoA/QC status SHALL load independently
+- **AND** those enrichments SHALL NOT force a second fetch of the same core `results` payload
+
 #### Scenario: Manager opens queue with sample deep-link
 
 - **WHEN** an authenticated manager opens `/manager/approvals` with a `sampleId` query parameter
 - **THEN** the system SHALL render the queue list for the active tab
 - **AND** the system SHALL fetch the targeted sample detail for the detail panel without forcing a full queue reload per sample switch
+
+#### Scenario: Mobile uses the same cache-first selection contract
+
+- **WHEN** an authenticated manager selects a sample on the mobile approval layout
+- **THEN** the system SHALL reuse the same cache-first core detail contract as desktop
+- **AND** the selection SHALL NOT depend on a route refresh just to render the next detail payload
 
 ### Requirement: Queue pagination backend SHALL preserve authorization and audit constraints
 

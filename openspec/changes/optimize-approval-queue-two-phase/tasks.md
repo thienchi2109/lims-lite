@@ -8,14 +8,19 @@
 
 - [x] 1.1 Thêm/điều chỉnh test để chứng minh đổi mẫu trong Approval Queue không kéo theo reload full queue dataset.
 - [x] 1.2 Thêm regression test cho deep-link `sampleId` để đảm bảo mở chi tiết đúng mà không refetch dư.
-- [x] 1.3 Chạy test mục tiêu của approval components và xác nhận fail vì data-path hiện tại còn ghép queue/detail.
+- [ ] 1.3 Thêm test chứng minh một lần chọn mẫu không được tạo duplicate `results` fetch giữa core detail path và `AssignedTestsPanel`.
+- [ ] 1.4 Thêm test cho UX transition: đổi mẫu không blank toàn bộ detail panel trước khi sample mới sẵn sàng.
+- [ ] 1.5 Thêm test mobile chứng minh mở sample detail không còn phụ thuộc route-driven refresh.
+- [x] 1.6 Chạy test mục tiêu của approval components và xác nhận fail vì data-path hiện tại còn ghép queue/detail.
 
 ## 2. Phase 1 GREEN: Tách data-path queue và detail (quick win)
 
-- [x] 2.1 Refactor `src/app/(dashboard)/manager/approvals/page.tsx` để giảm truy vấn detail phụ thuộc vào render toàn trang.
-- [x] 2.2 Refactor `src/components/approval-queue-table.tsx` và/hoặc `src/components/approval-mobile-layout.tsx` để selection detail không buộc reload full queue.
-- [x] 2.3 Giữ nguyên semantics nghiệp vụ approve/cancel/reject/discard và copy tiếng Việt.
-- [x] 2.4 Chạy lại test mục tiêu và xác nhận GREEN.
+- [ ] 2.1 Tạo shared core detail query theo `sampleId` cho `sample detail + results`, tái sử dụng giữa `ApprovalTabsClient`, `ApprovalBottomRow`, `AssignedTestsPanel`, và `ApprovalActions`.
+- [ ] 2.2 Refactor desktop selection path để bỏ duplicate `results` fetch và giữ previous detail trong lúc sample mới đang tải.
+- [ ] 2.3 Refactor `src/components/approval-mobile-layout.tsx` để mobile selection dùng cùng cache-first detail contract thay vì route-driven refresh.
+- [ ] 2.4 Tách enrichment riêng của `completed` (CoA/QC/client detail nếu cần) khỏi core detail path để không chặn first detail render.
+- [ ] 2.5 Giữ nguyên semantics nghiệp vụ approve/cancel/reject/discard và copy tiếng Việt.
+- [ ] 2.6 Chạy lại test mục tiêu và xác nhận GREEN.
 
 ## 3. Phase 1 GREEN: Tối ưu index cho pattern queue
 
@@ -26,10 +31,10 @@
 
 ## 4. Phase 1 REFACTOR + Verification
 
-- [ ] 4.1 Dọn code trùng lặp ở approval queue/detail sau khi GREEN, không đổi hành vi.
-- [x] 4.2 Chạy `npm run typecheck`.
-- [x] 4.3 Chạy test liên quan approval queue/detail.
-- [x] 4.4 Chạy `npx -y react-doctor@latest . --verbose --diff` và lưu kết quả.
+- [ ] 4.1 Dọn code trùng lặp ở approval queue/detail sau khi GREEN, đặc biệt các effect fetch `results`/CoA/QC trùng lặp.
+- [ ] 4.2 Chạy `npm run typecheck`.
+- [ ] 4.3 Chạy test liên quan approval queue/detail.
+- [ ] 4.4 Chạy `npx -y react-doctor@latest . --verbose --diff` và lưu kết quả.
 
 ## 5. Phase 2 RED: Khóa contract server-side pagination
 
@@ -60,8 +65,9 @@
 
 ## 9. Dispatch Packets Cho Subagents
 
-- [x] 9.1 Chuẩn bị Packet A (UI Interaction Worker): ownership `src/components/approval-queue-table.tsx`, `src/components/approval-mobile-layout.tsx`, test UI liên quan.
-- [x] 9.2 Chuẩn bị Packet B (Server Data Worker): ownership `src/app/actions/sample-approvals.ts`, typings/query-keys liên quan approval pagination contract.
-- [x] 9.3 Chuẩn bị Packet C (DB Worker): ownership migration SQL index + RPC pagination và checklist `run_security_tests()`.
-- [x] 9.4 Chuẩn bị Packet D (Integration/Verification Worker): ownership test integration + react-doctor + typecheck evidence.
-- [x] 9.5 Mỗi packet phải có lệnh RED test trước khi code, lệnh GREEN sau code, và danh sách file được phép sửa (disjoint write scope).
+- [ ] 9.1 Chuẩn bị Packet A (Shared Detail Worker): ownership `src/components/approval-tabs-client.tsx`, `src/components/approval-bottom-row.tsx`, `src/hooks/use-sample-detail.ts`, `src/hooks/use-assigned-tests-data.ts`, tests detail path liên quan.
+- [ ] 9.2 Chuẩn bị Packet B (Mobile Interaction Worker): ownership `src/components/approval-mobile-layout.tsx` và mobile tests liên quan.
+- [ ] 9.3 Chuẩn bị Packet C (Server Data Worker): ownership `src/app/actions/sample-approvals.ts`, typings/query-keys liên quan approval pagination contract.
+- [ ] 9.4 Chuẩn bị Packet D (DB Worker): ownership migration SQL index + RPC pagination và checklist `run_security_tests()`.
+- [ ] 9.5 Chuẩn bị Packet E (Integration/Verification Worker): ownership test integration + react-doctor + typecheck evidence.
+- [x] 9.6 Mỗi packet phải có lệnh RED test trước khi code, lệnh GREEN sau code, và danh sách file được phép sửa (disjoint write scope).

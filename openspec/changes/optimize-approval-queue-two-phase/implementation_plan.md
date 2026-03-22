@@ -2,24 +2,41 @@
 
 Mục tiêu: tách work theo write-scope độc lập để chạy song song an toàn.
 
-## Packet A - UI Interaction Worker (Phase 1)
+## Packet A - Shared Detail Worker (Phase 1)
 
-- **Goal:** loại bỏ full queue reload khi chỉ đổi sample detail.
+- **Goal:** gom core detail path theo `sampleId`, bỏ duplicate `results` fetch, và giữ previous detail trong lúc sample mới đang tải.
 - **Owned files:**
-  - `src/components/approval-queue-table.tsx`
-  - `src/components/approval-mobile-layout.tsx`
-  - `src/components/__tests__/approval-mobile-layout.test.tsx`
-  - `src/components/__tests__/approval-queue-table.test.tsx`
+  - `src/components/approval-tabs-client.tsx`
+  - `src/components/approval-bottom-row.tsx`
+  - `src/hooks/use-sample-detail.ts`
+  - `src/hooks/use-assigned-tests-data.ts`
+  - desktop/detail tests liên quan approval
 - **RED command:**
-  - `npx vitest run src/components/__tests__/approval-mobile-layout.test.tsx src/components/__tests__/approval-queue-table.test.tsx`
+  - targeted vitest suites cho approval detail path (desktop)
 - **GREEN expectation:**
-  - test mới fail trước vì queue/detail còn ghép data-path
-  - pass sau khi refactor interaction path
+  - test mới fail trước vì core detail/results còn fetch trùng
+  - pass sau khi mọi panel dùng chung detail source
 - **DoD:**
   - đổi sample không trigger full list fetch cho active tab
-  - row selection + mobile drawer behavior giữ nguyên UX hiện hành
+  - một lần chọn sample không fetch `results` trùng giữa panel
+  - previous detail không bị blank toàn phần trước khi sample mới xong
 
-## Packet B - Server Data Worker (Phase 2 prep + integration)
+## Packet B - Mobile Interaction Worker (Phase 1)
+
+- **Goal:** đưa mobile selection sang cùng cache-first detail contract.
+- **Owned files:**
+  - `src/components/approval-mobile-layout.tsx`
+  - `src/components/__tests__/approval-mobile-layout.test.tsx`
+- **RED command:**
+  - `npx vitest run src/components/__tests__/approval-mobile-layout.test.tsx`
+- **GREEN expectation:**
+  - test mới fail trước vì mobile còn phụ thuộc route-driven refresh
+  - pass sau khi mobile detail path dùng cùng shared contract
+- **DoD:**
+  - đổi sample trên mobile không cần route refresh để render detail mới
+  - deep-link ban đầu vẫn giữ semantics hiện có
+
+## Packet C - Server Data Worker (Phase 2 prep + integration)
 
 - **Goal:** chuẩn hóa contract queue page (rows + totalCount + sort/page params).
 - **Owned files:**
@@ -34,7 +51,7 @@ Mục tiêu: tách work theo write-scope độc lập để chạy song song an 
   - tab `review/completed` dùng cùng contract phân trang
   - xử lý lỗi nhất quán với hiện trạng
 
-## Packet C - DB Worker (Migrations + Security)
+## Packet D - DB Worker (Migrations + Security)
 
 - **Goal:** thêm index và RPC pagination read-only.
 - **Owned files:**
@@ -53,7 +70,7 @@ Mục tiêu: tách work theo write-scope độc lập để chạy song song an 
   - không nới lỏng RLS
   - security impact được ghi trong migration
 
-## Packet D - Integration & Verification Worker
+## Packet E - Integration & Verification Worker
 
 - **Goal:** xác nhận end-to-end behavior + quality gates.
 - **Owned files:**
@@ -69,9 +86,9 @@ Mục tiêu: tách work theo write-scope độc lập để chạy song song an 
 
 ## Dispatch Order
 
-1. Packet A + Packet C chạy song song (không đụng file nhau).
-2. Packet B bắt đầu khi Packet C có RPC contract ổn định.
-3. Packet D chạy sau khi A/B/C merge vào branch tích hợp.
+1. Packet A + Packet B + Packet D có thể chạy song song vì write-scope tách nhau.
+2. Packet C bắt đầu khi Packet D có RPC contract ổn định.
+3. Packet E chạy sau khi A/B/C/D merge vào branch tích hợp.
 
 ## Coordination Rules
 
