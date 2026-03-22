@@ -59,6 +59,31 @@ describe('useAssignedTestsData', () => {
         expect(result.current.error).toBeNull()
     })
 
+    it('reuses initial core results without issuing a duplicate results fetch on mount', async () => {
+        const initialResults = [
+            {
+                id: 'r1',
+                assay_id: 'a1',
+                assay_name: 'Creatinine',
+                sample_status: 'completed',
+            },
+        ] as any
+
+        const { result } = renderHook(() =>
+            useAssignedTestsData('sample-1', {
+                initialResults,
+            }),
+        )
+
+        expect(mockFetch).not.toHaveBeenCalled()
+        expect(result.current.loading).toBe(false)
+        expect(result.current.results).toEqual(initialResults)
+        expect(result.current.sampleStatus).toBe('completed')
+
+        await waitFor(() => expect(mockCoAStatus).toHaveBeenCalledWith('sample-1'))
+        expect(mockFetch).not.toHaveBeenCalled()
+    })
+
     it('sets sampleStatus from the first result', async () => {
         mockFetch.mockResolvedValue({
             data: [{ id: 'r1', assay_id: 'a1', sample_status: 'in_progress' }],
@@ -151,6 +176,45 @@ describe('useAssignedTestsData', () => {
         })
 
         await waitFor(() => expect(result.current.loading).toBe(false))
+    })
+
+    it('preserves coaStatus when the same sample receives refreshed seeded results', async () => {
+        const initialResults = [
+            {
+                id: 'r-A',
+                assay_id: 'a1',
+                assay_name: 'Creatinine',
+                sample_status: 'completed',
+            },
+        ] as any
+
+        mockCoAStatus.mockResolvedValueOnce({ status: 'ready' })
+        mockQCStatus.mockReturnValue(new Promise(() => {}) as any)
+
+        const { result, rerender } = renderHook(
+            ({ id, seededResults }) =>
+                useAssignedTestsData(id, {
+                    initialResults: seededResults,
+                }),
+            {
+                initialProps: {
+                    id: 'sample-A',
+                    seededResults: initialResults,
+                },
+            },
+        )
+
+        await waitFor(() => expect(result.current.coaStatus).toBe('ready'))
+
+        act(() => {
+            rerender({
+                id: 'sample-A',
+                seededResults: initialResults.map((result: any) => ({ ...result })),
+            })
+        })
+
+        expect(result.current.coaStatus).toBe('ready')
+        await waitFor(() => expect(mockCoAStatus).toHaveBeenCalledTimes(1))
     })
 
     it('ignores stale CoA responses from the previous sample', async () => {

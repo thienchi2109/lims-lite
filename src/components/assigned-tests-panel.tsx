@@ -41,11 +41,13 @@ import { useCoaActions } from '@/hooks/use-coa-actions'
 import { usePrintHandlers } from '@/hooks/use-print-handlers'
 import { QCRowIndicator } from '@/components/qc/qc-row-indicator'
 import { CoAPreviewDialog } from '@/components/coa-preview-dialog'
+import type { ResultWithAssay } from '@/types'
 
 interface AssignedTestsPanelProps {
     sampleId: string
     specialties?: LabSpecialty[]
     userRole?: 'analyst' | 'manager'
+    initialResults?: ResultWithAssay[]
 }
 
 const DEFAULT_SPECIALTIES: LabSpecialty[] = []
@@ -55,25 +57,20 @@ export function AssignedTestsPanel({
     sampleId,
     specialties = DEFAULT_SPECIALTIES,
     userRole,
+    initialResults,
 }: AssignedTestsPanelProps) {
     const router = useRouter()
     const queryClient = useQueryClient()
-
-    // Extracted hooks
     const {
         results, loading, error, sampleStatus,
         qcStatuses, coaStatus, setCoaStatus, fetchTests,
-    } = useAssignedTestsData(sampleId)
+    } = useAssignedTestsData(sampleId, { initialResults })
     const { isGeneratingCoA, handleGenerateCoA } = useCoaActions(sampleId, setCoaStatus)
     const { handlePrint, handlePrintCoABody } = usePrintHandlers(sampleId, results)
-
-    // Dialog state
     const [showSubmitDialog, setShowSubmitDialog] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [showAssignmentDialog, setShowAssignmentDialog] = useState(false)
     const [previewSampleId, setPreviewSampleId] = useState<string | null>(null)
-
-    // Signature status hook
     const { hasSignature, isLoading: signatureLoading } = useSignatureStatus()
 
     const handleRefocus = useCallback(
@@ -86,20 +83,14 @@ export function AssignedTestsPanel({
             router.push(`?${params.toString()}`)
             queryClient.invalidateQueries({ queryKey: sampleKeys.all })
         },
-        [router, queryClient]
+        [router, queryClient],
     )
 
-    const handleOpenCoAPreview = useCallback(() => {
-        setPreviewSampleId(sampleId)
-    }, [sampleId])
-
+    const handleOpenCoAPreview = useCallback(() => setPreviewSampleId(sampleId), [sampleId])
     const handleCloseCoAPreview = useCallback((open: boolean) => {
-        if (!open) {
-            setPreviewSampleId(null)
-        }
+        if (!open) setPreviewSampleId(null)
     }, [])
 
-    // Results editor hook
     const editor = useResultsEditor({
         results,
         sampleId,
@@ -108,8 +99,6 @@ export function AssignedTestsPanel({
             handleRefocus(sampleId)
         },
     })
-
-    // Unsaved changes guard (Ctrl+S and beforeunload)
     useUnsavedChangesGuard({
         hasUnsavedChanges: editor.pendingCount > 0,
         onSave: editor.handleSave,
@@ -264,7 +253,6 @@ export function AssignedTestsPanel({
                     </CardContent>
                 </Card>
             </div>
-
             <div id="tour-batch-save">
                 <BatchSaveToolbar
                     pendingCount={editor.pendingCount}
@@ -284,7 +272,6 @@ export function AssignedTestsPanel({
                             &quot;Chờ duyệt&quot; và bạn sẽ không thể chỉnh sửa kết quả cho đến khi quản lý phản hồi.
                         </DialogDescription>
                     </DialogHeader>
-
                     {!signatureLoading && !hasSignature && (
                         <Alert variant="destructive" className="my-4">
                             <AlertTriangle className="h-4 w-4" aria-hidden="true" />
@@ -303,7 +290,6 @@ export function AssignedTestsPanel({
                             </AlertDescription>
                         </Alert>
                     )}
-
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setShowSubmitDialog(false)} disabled={isSubmitting}>
                             Hủy
@@ -332,7 +318,6 @@ export function AssignedTestsPanel({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-
             <Dialog open={showAssignmentDialog} onOpenChange={setShowAssignmentDialog}>
                 <DialogContent className="max-w-[90vw] overflow-hidden border-none bg-transparent p-0 shadow-none sm:max-w-[1200px]">
                     <DialogTitle className="sr-only">Chỉ định xét nghiệm</DialogTitle>
@@ -347,7 +332,6 @@ export function AssignedTestsPanel({
                     />
                 </DialogContent>
             </Dialog>
-
             <CoAPreviewDialog
                 open={Boolean(previewSampleId)}
                 onOpenChange={handleCloseCoAPreview}

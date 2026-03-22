@@ -29,6 +29,8 @@ interface ApprovalMobileDetailProps {
     results: ResultWithAssay[]
     open: boolean
     onClose: () => void
+    isLoadingSample?: boolean
+    loadErrorMessage?: string | null
 }
 
 export function ApprovalMobileDetail({
@@ -36,9 +38,10 @@ export function ApprovalMobileDetail({
     results,
     open,
     onClose,
+    isLoadingSample = false,
+    loadErrorMessage = null,
 }: ApprovalMobileDetailProps) {
-    // Don't render drawer at all if no sample
-    if (!sample) return null
+    if (!open) return null
 
     return (
         <Drawer open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -46,7 +49,7 @@ export function ApprovalMobileDetail({
                 {/* Drawer Header */}
                 <DrawerHeader className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 shrink-0">
                     <DrawerTitle className="font-mono text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
-                        {sample.sample_id}
+                        {sample?.sample_id ?? 'Đang tải...'}
                     </DrawerTitle>
                     <DrawerClose asChild>
                         <button
@@ -60,16 +63,40 @@ export function ApprovalMobileDetail({
 
                 {/* Scrollable content */}
                 <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4">
-                    {/* Sample info */}
-                    <SampleDetailPanel sample={sample} />
+                    {loadErrorMessage && (
+                        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-200">
+                            {loadErrorMessage}
+                        </div>
+                    )}
 
-                    {/* Test results */}
-                    <AssignedTestsPanel sampleId={sample.id} userRole="manager" />
+                    {/* Sample info */}
+                    {sample ? (
+                        <>
+                            <SampleDetailPanel sample={sample} />
+
+                            {/* Test results */}
+                            <AssignedTestsPanel
+                                sampleId={sample.id}
+                                userRole="manager"
+                                initialResults={results}
+                            />
+                        </>
+                    ) : (
+                        <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/50 px-4 py-10 text-center text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-400">
+                            Đang tải chi tiết mẫu...
+                        </div>
+                    )}
                 </div>
 
                 {/* Sticky footer with compact approval actions */}
                 <div className="shrink-0 border-t border-slate-200 dark:border-slate-800 px-4 py-3 bg-white dark:bg-slate-950">
-                    <ApprovalActions sampleId={sample.id} results={results} compact />
+                    {sample ? (
+                        <ApprovalActions sampleId={sample.id} results={results} compact />
+                    ) : (
+                        <div className="text-sm text-slate-500 dark:text-slate-400">
+                            {isLoadingSample ? 'Đang tải thao tác mẫu...' : 'Chưa có mẫu được chọn'}
+                        </div>
+                    )}
                 </div>
             </DrawerContent>
         </Drawer>

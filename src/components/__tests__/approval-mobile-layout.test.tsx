@@ -4,9 +4,13 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 
 const mockUseApprovalQueue = vi.fn()
+const mockFetchSampleDetail = vi.fn()
+const mockFetchSampleResultsClient = vi.fn()
 
 // Mock child components for isolation
 vi.mock('@/components/approval-mobile-list', () => ({
@@ -65,6 +69,14 @@ vi.mock('@/hooks/use-approval-queue', () => ({
     useApprovalQueue: (...args: unknown[]) => mockUseApprovalQueue(...args),
 }))
 
+vi.mock('@/hooks/use-sample-detail', () => ({
+    fetchSampleDetail: (...args: unknown[]) => mockFetchSampleDetail(...args),
+}))
+
+vi.mock('@/lib/api-client', () => ({
+    fetchSampleResultsClient: (...args: unknown[]) => mockFetchSampleResultsClient(...args),
+}))
+
 // Mock next/navigation
 const mockReplace = vi.fn()
 let mockSearchParams = new URLSearchParams()
@@ -121,8 +133,28 @@ const mockResults: ResultWithAssay[] = [
 const originalReplaceState = window.history.replaceState.bind(window.history)
 let historyReplaceSpy: ReturnType<typeof vi.spyOn> | null = null
 
+function renderWithQueryClient(ui: ReactNode) {
+    const queryClient = new QueryClient({
+        defaultOptions: {
+            queries: {
+                retry: false,
+            },
+        },
+    })
+
+    return render(ui, {
+        wrapper: ({ children }) => (
+            <QueryClientProvider client={queryClient}>
+                {children}
+            </QueryClientProvider>
+        ),
+    })
+}
+
 beforeEach(() => {
     mockReplace.mockClear()
+    mockFetchSampleDetail.mockReset()
+    mockFetchSampleResultsClient.mockReset()
     mockSearchParams = new URLSearchParams()
     originalReplaceState(null, '', '/manager/approvals')
     historyReplaceSpy = vi.spyOn(window.history, 'replaceState').mockImplementation((...args) => {
@@ -142,7 +174,7 @@ afterEach(() => {
 
 describe('ApprovalMobileLayout', () => {
     it('renders the mobile list with samples', () => {
-        render(
+        renderWithQueryClient(
             <ApprovalMobileLayout
                 samples={mockSamples}
                 selectedSample={null}
@@ -158,7 +190,7 @@ describe('ApprovalMobileLayout', () => {
     })
 
     it('renders tab switcher with review and completed tabs', () => {
-        render(
+        renderWithQueryClient(
             <ApprovalMobileLayout
                 samples={mockSamples}
                 selectedSample={null}
@@ -174,7 +206,7 @@ describe('ApprovalMobileLayout', () => {
     })
 
     it('does not show detail drawer when no sample is selected', () => {
-        render(
+        renderWithQueryClient(
             <ApprovalMobileLayout
                 samples={mockSamples}
                 selectedSample={null}
@@ -190,7 +222,7 @@ describe('ApprovalMobileLayout', () => {
     it('shows detail drawer when a sample is selected', () => {
         originalReplaceState(null, '', '/manager/approvals?tab=review&sampleId=uuid-1')
 
-        render(
+        renderWithQueryClient(
             <ApprovalMobileLayout
                 samples={mockSamples}
                 selectedSample={mockSelectedSample}
@@ -206,7 +238,7 @@ describe('ApprovalMobileLayout', () => {
     it('closes the detail drawer immediately when the close button is pressed', () => {
         originalReplaceState(null, '', '/manager/approvals?tab=review&sampleId=uuid-1')
 
-        render(
+        renderWithQueryClient(
             <ApprovalMobileLayout
                 samples={mockSamples}
                 selectedSample={mockSelectedSample}
@@ -220,12 +252,16 @@ describe('ApprovalMobileLayout', () => {
 
         fireEvent.click(screen.getByTestId('close-drawer'))
 
-        expect(mockReplace).toHaveBeenCalled()
+        expect(mockReplace).not.toHaveBeenCalled()
+        expect(historyReplaceSpy?.mock.calls.at(-1)?.[2]).toBe('/manager/approvals?tab=review')
         expect(screen.queryByTestId('mobile-detail')).toBeNull()
     })
 
-    it('updates URL and shows drawer after rerender with selected sample', () => {
-        const { rerender } = render(
+    it('loads and shows drawer client-side when a sample is selected', async () => {
+        mockFetchSampleDetail.mockResolvedValueOnce(mockSelectedSample)
+        mockFetchSampleResultsClient.mockResolvedValueOnce({ data: mockResults })
+
+        renderWithQueryClient(
             <ApprovalMobileLayout
                 samples={mockSamples}
                 selectedSample={null}
@@ -235,31 +271,22 @@ describe('ApprovalMobileLayout', () => {
             />,
         )
 
-        // Tap first card — triggers URL update
         fireEvent.click(screen.getByTestId('card-uuid-1'))
-        expect(mockReplace).toHaveBeenCalledWith(
-            expect.stringContaining('sampleId=uuid-1'),
-        )
-        originalReplaceState(null, '', '/manager/approvals?tab=review&sampleId=uuid-1')
 
-        // Simulate server round-trip: parent re-renders with selectedSample
-        rerender(
-            <ApprovalMobileLayout
-                samples={mockSamples}
-                selectedSample={mockSelectedSample}
-                results={mockResults}
-                tab="review"
-                reviewCount={2}
-            />,
-        )
+        expect(mockReplace).not.toHaveBeenCalled()
+        expect(historyReplaceSpy?.mock.calls.at(-1)?.[2]).toContain('sampleId=uuid-1')
+        await waitFor(() => {
+            expect(mockFetchSampleDetail).toHaveBeenCalledWith('uuid-1')
+            expect(mockFetchSampleResultsClient).toHaveBeenCalledWith('uuid-1')
+        })
 
-        // Now the drawer should actually render
-        expect(screen.getByTestId('mobile-detail')).toBeDefined()
-        expect(screen.getByTestId('mobile-detail').textContent).toContain('CDC-XN-0001')
+        await waitFor(() => {
+            expect(screen.getByTestId('mobile-detail').textContent).toContain('CDC-XN-0001')
+        })
     })
 
     it('navigates to completed tab when clicking tab trigger', () => {
-        render(
+        renderWithQueryClient(
             <ApprovalMobileLayout
                 samples={mockSamples}
                 selectedSample={null}
@@ -279,7 +306,7 @@ describe('ApprovalMobileLayout', () => {
         originalReplaceState(null, '', '/manager/approvals?tab=review&sampleId=uuid-1')
         historyReplaceSpy?.mockClear()
 
-        render(
+        renderWithQueryClient(
             <ApprovalMobileLayout
                 samples={mockSamples}
                 selectedSample={mockSelectedSample}
@@ -295,11 +322,13 @@ describe('ApprovalMobileLayout', () => {
         expect(calledUrl).not.toContain('sampleId')
     })
 
-    it('keeps the active tab in the URL when selecting a sample after a local tab switch', () => {
+    it('keeps the active tab in the URL when selecting a sample after a local tab switch', async () => {
         originalReplaceState(null, '', '/manager/approvals?tab=review')
         historyReplaceSpy?.mockClear()
+        mockFetchSampleDetail.mockResolvedValueOnce(mockSelectedSample)
+        mockFetchSampleResultsClient.mockResolvedValueOnce({ data: mockResults })
 
-        render(
+        renderWithQueryClient(
             <ApprovalMobileLayout
                 samples={mockSamples}
                 selectedSample={null}
@@ -312,7 +341,11 @@ describe('ApprovalMobileLayout', () => {
         fireEvent.click(screen.getByTestId('tab-completed'))
         fireEvent.click(screen.getByTestId('card-uuid-1'))
 
-        const lastCalledUrl = mockReplace.mock.calls.at(-1)?.[0] as string
+        await waitFor(() => {
+            expect(mockFetchSampleDetail).toHaveBeenCalledWith('uuid-1')
+        })
+
+        const lastCalledUrl = historyReplaceSpy?.mock.calls.at(-1)?.[2] as string
         expect(lastCalledUrl).toContain('tab=completed')
         expect(lastCalledUrl).toContain('sampleId=uuid-1')
     })
@@ -324,7 +357,7 @@ describe('ApprovalMobileLayout', () => {
             isError: true,
         })
 
-        render(
+        renderWithQueryClient(
             <ApprovalMobileLayout
                 samples={mockSamples}
                 selectedSample={null}
@@ -341,7 +374,7 @@ describe('ApprovalMobileLayout', () => {
     it('reads the current URL on mount so breakpoint swaps do not reopen stale mobile detail', () => {
         originalReplaceState(null, '', '/manager/approvals?tab=completed')
 
-        render(
+        renderWithQueryClient(
             <ApprovalMobileLayout
                 samples={mockSamples}
                 selectedSample={mockSelectedSample}

@@ -143,8 +143,8 @@ describe('ApprovalMobileDetail', () => {
         expect(headerMatch).toBeDefined()
     })
 
-    it('renders nothing when sample is null even if open', () => {
-        const { container } = render(
+    it('renders a loading drawer when the selection is open but sample data is still pending', () => {
+        render(
             <ApprovalMobileDetail
                 sample={null}
                 results={[]}
@@ -153,7 +153,10 @@ describe('ApprovalMobileDetail', () => {
             />,
         )
 
-        expect(screen.queryByTestId('drawer')).toBeNull()
+        expect(screen.getByTestId('drawer')).toBeDefined()
+        expect(screen.getByText('Đang tải...')).toBeDefined()
+        expect(screen.getByText('Đang tải chi tiết mẫu...')).toBeDefined()
+        expect(screen.queryByTestId('sample-detail-panel')).toBeNull()
     })
 
     it('calls onClose when close button is clicked', () => {

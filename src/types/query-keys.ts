@@ -82,6 +82,7 @@ export const approvalKeys = {
     all: ['approvals'] as const,
     count: ['approvals', 'count'] as const,
     list: (params: { tab: ApprovalTab }) => ['approvals', 'list', params] as const,
+    detail: (sampleId: string) => ['approvals', 'detail', sampleId] as const,
 }
 
 /**
@@ -205,6 +206,9 @@ export async function invalidateSampleQueries(
 
             // Match results for this sample: ['results', sampleId]
             if (includeResults && key[0] === 'results' && key[1] === sampleId) return true
+
+            // Match shared approval detail cache: ['approvals', 'detail', sampleId]
+            if (key[0] === 'approvals' && key[1] === 'detail' && key[2] === sampleId) return true
 
             // Match tests for this sample: ['sample-tests', sampleId]
             if (includeTests && key[0] === 'sample-tests' && key[1] === sampleId) return true

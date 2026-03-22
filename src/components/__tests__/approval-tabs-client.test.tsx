@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 
 const mockReplace = vi.fn()
 const mockRefresh = vi.fn()
@@ -158,6 +160,29 @@ const initialSample = {
 } as SampleWithUser
 
 const initialResults = [{ id: 'result-1' }] as ResultWithAssay[]
+const updatedServerSample = {
+    id: 'sample-2',
+    sample_id: 'CDC-XN-0002',
+} as SampleWithUser
+const updatedServerResults = [{ id: 'result-2' }] as ResultWithAssay[]
+
+function renderWithQueryClient(ui: ReactNode) {
+    const queryClient = new QueryClient({
+        defaultOptions: {
+            queries: {
+                retry: false,
+            },
+        },
+    })
+
+    return render(ui, {
+        wrapper: ({ children }) => (
+            <QueryClientProvider client={queryClient}>
+                {children}
+            </QueryClientProvider>
+        ),
+    })
+}
 
 function deferredPromise<T>() {
     let resolve!: (value: T) => void
@@ -201,7 +226,7 @@ describe('ApprovalTabsClient', () => {
     })
 
     it('renders the deep-linked sample detail on first load', () => {
-        render(
+        renderWithQueryClient(
             <ApprovalTabsClient
                 tab="review"
                 samples={samples}
@@ -226,7 +251,7 @@ describe('ApprovalTabsClient', () => {
             data: [{ id: 'result-2' }],
         })
 
-        render(
+        renderWithQueryClient(
             <ApprovalTabsClient
                 tab="review"
                 samples={samples}
@@ -256,6 +281,41 @@ describe('ApprovalTabsClient', () => {
         expect(mockFetchSampleResultsClient).toHaveBeenCalledWith('sample-2')
     })
 
+    it('keeps rendering the previous detail while the next sample is still loading', async () => {
+        const sampleDeferred = deferredPromise<{ id: string; sample_id: string }>()
+        const resultsDeferred = deferredPromise<{ data: Array<{ id: string }> }>()
+
+        mockFetchSampleDetail.mockReturnValue(sampleDeferred.promise)
+        mockFetchSampleResultsClient.mockReturnValue(resultsDeferred.promise)
+
+        renderWithQueryClient(
+            <ApprovalTabsClient
+                tab="review"
+                samples={samples}
+                reviewCount={1}
+                selectedSampleId="sample-1"
+                initialSample={initialSample}
+                initialResults={initialResults}
+            />,
+        )
+
+        fireEvent.click(screen.getAllByTestId('select-sample-2')[0])
+
+        await waitFor(() => {
+            expect(screen.getByTestId('bottom-row-loading').textContent).toBe('true')
+        })
+
+        expect(screen.getByTestId('bottom-row-sample').textContent).toBe('CDC-XN-0001')
+        expect(screen.getByTestId('bottom-row-results').textContent).toBe('result-1')
+
+        sampleDeferred.resolve({ id: 'sample-2', sample_id: 'CDC-XN-0002' })
+        resultsDeferred.resolve({ data: [{ id: 'result-2' }] })
+
+        await waitFor(() => {
+            expect(screen.getByTestId('bottom-row-sample').textContent).toBe('CDC-XN-0002')
+        })
+    })
+
     it('preserves the client-selected detail when stale server props rerender while a request is in-flight', async () => {
         const sampleDeferred = deferredPromise<{ id: string; sample_id: string }>()
         const resultsDeferred = deferredPromise<{ data: Array<{ id: string }> }>()
@@ -263,7 +323,7 @@ describe('ApprovalTabsClient', () => {
         mockFetchSampleDetail.mockReturnValue(sampleDeferred.promise)
         mockFetchSampleResultsClient.mockReturnValue(resultsDeferred.promise)
 
-        const { rerender } = render(
+        const { rerender } = renderWithQueryClient(
             <ApprovalTabsClient
                 tab="review"
                 samples={samples}
@@ -306,7 +366,7 @@ describe('ApprovalTabsClient', () => {
         mockFetchSampleDetail.mockRejectedValue(new Error('network failed'))
         mockFetchSampleResultsClient.mockResolvedValue({ data: [] })
 
-        render(
+        renderWithQueryClient(
             <ApprovalTabsClient
                 tab="review"
                 samples={samples}
@@ -337,7 +397,7 @@ describe('ApprovalTabsClient', () => {
             .mockResolvedValueOnce({ data: [] })
             .mockResolvedValueOnce({ data: [{ id: 'result-2' }] })
 
-        render(
+        renderWithQueryClient(
             <ApprovalTabsClient
                 tab="review"
                 samples={samples}
@@ -367,6 +427,39 @@ describe('ApprovalTabsClient', () => {
         expect(mockFetchSampleResultsClient).toHaveBeenCalledTimes(2)
     })
 
+    it('syncs the detail panel when the server selection changes to match the current URL', async () => {
+        const { rerender } = renderWithQueryClient(
+            <ApprovalTabsClient
+                tab="review"
+                samples={samples}
+                reviewCount={1}
+                selectedSampleId="sample-1"
+                initialSample={initialSample}
+                initialResults={initialResults}
+            />,
+        )
+
+        originalReplaceState(null, '', '/manager/approvals?tab=review&sampleId=sample-2')
+
+        rerender(
+            <ApprovalTabsClient
+                tab="review"
+                samples={samples}
+                reviewCount={1}
+                selectedSampleId="sample-2"
+                initialSample={updatedServerSample}
+                initialResults={updatedServerResults}
+            />,
+        )
+
+        await waitFor(() => {
+            expect(screen.getAllByTestId('selected-sample-id')[0].textContent).toBe('sample-2')
+        })
+
+        expect(screen.getByTestId('bottom-row-sample').textContent).toBe('CDC-XN-0002')
+        expect(screen.getByTestId('bottom-row-results').textContent).toBe('result-2')
+    })
+
     it('preserves client-selected detail when server refresh returns stale empty selection props', async () => {
         originalReplaceState(null, '', '/manager/approvals?tab=review')
         mockFetchSampleDetail.mockResolvedValue({
@@ -377,7 +470,7 @@ describe('ApprovalTabsClient', () => {
             data: [{ id: 'result-2' }],
         })
 
-        const { rerender } = render(
+        const { rerender } = renderWithQueryClient(
             <ApprovalTabsClient
                 tab="review"
                 samples={samples}
@@ -410,7 +503,7 @@ describe('ApprovalTabsClient', () => {
     })
 
     it('switches tabs with local URL sync and clears stale sample selection', () => {
-        render(
+        renderWithQueryClient(
             <ApprovalTabsClient
                 tab="review"
                 samples={samples}
@@ -445,7 +538,7 @@ describe('ApprovalTabsClient', () => {
             isError: true,
         })
 
-        render(
+        renderWithQueryClient(
             <ApprovalTabsClient
                 tab="review"
                 samples={samples}
@@ -463,7 +556,7 @@ describe('ApprovalTabsClient', () => {
     it('reads the current URL on mount so breakpoint swaps do not restore stale tab and sample props', () => {
         originalReplaceState(null, '', '/manager/approvals?tab=completed')
 
-        render(
+        renderWithQueryClient(
             <ApprovalTabsClient
                 tab="review"
                 samples={samples}
