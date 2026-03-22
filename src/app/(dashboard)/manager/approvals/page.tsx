@@ -9,6 +9,7 @@ import type { ResultWithAssay } from '@/types'
 import { ApprovalTabsClient } from '@/components/approval-tabs-client'
 import { ApprovalMobileLayout } from '@/components/approval-mobile-layout'
 import { ApprovalLayoutSwitcher } from '@/components/approval-layout-switcher'
+import { ApprovalPageHeader } from '@/components/approval-page-header'
 import { resolveApprovalDeepLink } from '@/lib/approval-queue-url'
 
 interface ApprovalsPageProps {
@@ -89,6 +90,12 @@ export default async function ApprovalsPage({ searchParams }: ApprovalsPageProps
 
             <main className="flex-1 flex flex-col min-h-0 p-2 sm:px-4 gap-2">
                 <ApprovalLayoutSwitcher
+                    initial={
+                        <ApprovalInitialView
+                            tab={tab}
+                            samplesCount={queueSamples.length}
+                        />
+                    }
                     desktop={
                         <div className="flex flex-col flex-1 min-h-0">
                             {error ? (
@@ -133,6 +140,21 @@ export default async function ApprovalsPage({ searchParams }: ApprovalsPageProps
         </div>
     )
 
+}
+
+function ApprovalInitialView({
+    tab,
+    samplesCount,
+}: {
+    tab: 'review' | 'completed'
+    samplesCount: number
+}) {
+    return (
+        <div className="flex flex-1 min-h-0 flex-col gap-2">
+            <ApprovalPageHeader samplesCount={samplesCount} tab={tab} />
+            <ApprovalQueueFallback />
+        </div>
+    )
 }
 
 function ApprovalQueueFallback() {

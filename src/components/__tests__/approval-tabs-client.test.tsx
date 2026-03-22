@@ -326,6 +326,47 @@ describe('ApprovalTabsClient', () => {
         })
     })
 
+    it('retries the same sample after a detail fetch failure', async () => {
+        mockFetchSampleDetail
+            .mockRejectedValueOnce(new Error('network failed'))
+            .mockResolvedValueOnce({
+                id: 'sample-2',
+                sample_id: 'CDC-XN-0002',
+            })
+        mockFetchSampleResultsClient
+            .mockResolvedValueOnce({ data: [] })
+            .mockResolvedValueOnce({ data: [{ id: 'result-2' }] })
+
+        render(
+            <ApprovalTabsClient
+                tab="review"
+                samples={samples}
+                reviewCount={1}
+                selectedSampleId="sample-1"
+                initialSample={initialSample}
+                initialResults={initialResults}
+            />,
+        )
+
+        fireEvent.click(screen.getAllByTestId('select-sample-2')[0])
+
+        await waitFor(() => {
+            expect(screen.getByTestId('bottom-row-error').textContent).toBe(
+                'Không thể tải chi tiết mẫu. Vui lòng thử lại.',
+            )
+        })
+
+        fireEvent.click(screen.getAllByTestId('select-sample-2')[0])
+
+        await waitFor(() => {
+            expect(screen.getByTestId('bottom-row-sample').textContent).toBe('CDC-XN-0002')
+        })
+
+        expect(screen.getByTestId('bottom-row-error').textContent).toBe('')
+        expect(mockFetchSampleDetail).toHaveBeenCalledTimes(2)
+        expect(mockFetchSampleResultsClient).toHaveBeenCalledTimes(2)
+    })
+
     it('preserves client-selected detail when server refresh returns stale empty selection props', async () => {
         originalReplaceState(null, '', '/manager/approvals?tab=review')
         mockFetchSampleDetail.mockResolvedValue({

@@ -199,7 +199,7 @@ export function ApprovalTabsClient({
 
     const handleSelectSample = useCallback(
         async (nextSampleId: string) => {
-            if (nextSampleId === urlSampleId) {
+            if (nextSampleId === urlSampleId && !sampleLoadError) {
                 return
             }
 
@@ -250,7 +250,7 @@ export function ApprovalTabsClient({
                 finalizeRequest()
             }
         },
-        [activeTab, pathname, setUrlSampleId, urlSampleId],
+        [activeTab, pathname, sampleLoadError, setUrlSampleId, urlSampleId],
     )
 
     const queueContent = approvalQueue.isError ? (

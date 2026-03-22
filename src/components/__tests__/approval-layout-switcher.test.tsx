@@ -1,15 +1,10 @@
+import { useEffect } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { renderToStaticMarkup } from 'react-dom/server'
-
-vi.mock('@/hooks/use-media-query', () => ({
-    useMediaQuery: vi.fn(),
-}))
-
-import { useMediaQuery } from '@/hooks/use-media-query'
 import { ApprovalLayoutSwitcher } from '../approval-layout-switcher'
 
-const mockUseMediaQuery = vi.mocked(useMediaQuery)
+let matchMediaMatches = false
 
 function DesktopProbe() {
     return <div data-testid="desktop-probe">desktop</div>
@@ -19,13 +14,41 @@ function MobileProbe() {
     return <div data-testid="mobile-probe">mobile</div>
 }
 
+function createOwnerProbe(testId: string, onMount: () => void) {
+    return function OwnerProbe() {
+        useEffect(() => {
+            onMount()
+        }, [])
+
+        return <div data-testid={testId}>{testId}</div>
+    }
+}
+
 afterEach(() => {
     vi.clearAllMocks()
+    vi.unstubAllGlobals()
 })
+
+function installMatchMedia() {
+    vi.stubGlobal(
+        'matchMedia',
+        vi.fn().mockImplementation((query: string) => ({
+            matches: matchMediaMatches,
+            media: query,
+            onchange: null,
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+            addListener: vi.fn(),
+            removeListener: vi.fn(),
+            dispatchEvent: vi.fn(),
+        })),
+    )
+}
 
 describe('ApprovalLayoutSwitcher', () => {
     it('mounts only the desktop layout at desktop breakpoint', () => {
-        mockUseMediaQuery.mockReturnValue(true)
+        matchMediaMatches = true
+        installMatchMedia()
 
         render(
             <ApprovalLayoutSwitcher
@@ -39,7 +62,8 @@ describe('ApprovalLayoutSwitcher', () => {
     })
 
     it('mounts only the mobile layout below the desktop breakpoint', () => {
-        mockUseMediaQuery.mockReturnValue(false)
+        matchMediaMatches = false
+        installMatchMedia()
 
         render(
             <ApprovalLayoutSwitcher
@@ -52,17 +76,38 @@ describe('ApprovalLayoutSwitcher', () => {
         expect(screen.queryByTestId('desktop-probe')).toBeNull()
     })
 
-    it('renders the desktop fallback during server render instead of a blank shell', () => {
-        mockUseMediaQuery.mockReturnValue(false)
-
+    it('renders the inert initial fallback during server render instead of a blank shell', () => {
         const markup = renderToStaticMarkup(
             <ApprovalLayoutSwitcher
                 desktop={<DesktopProbe />}
                 mobile={<MobileProbe />}
+                initial={<div data-testid="initial-probe">initial</div>}
             />,
         )
 
-        expect(markup).toContain('desktop-probe')
+        expect(markup).toContain('initial-probe')
         expect(markup).not.toContain('mobile-probe')
+    })
+
+    it('does not mount the desktop owner on mobile before switching to the active layout', () => {
+        matchMediaMatches = false
+        installMatchMedia()
+        const desktopMountSpy = vi.fn()
+        const mobileMountSpy = vi.fn()
+        const DesktopOwnerProbe = createOwnerProbe('desktop-owner-probe', desktopMountSpy)
+        const MobileOwnerProbe = createOwnerProbe('mobile-owner-probe', mobileMountSpy)
+
+        render(
+            <ApprovalLayoutSwitcher
+                desktop={<DesktopOwnerProbe />}
+                mobile={<MobileOwnerProbe />}
+                initial={<div data-testid="initial-probe">initial</div>}
+            />,
+        )
+
+        expect(screen.getByTestId('mobile-owner-probe')).toBeDefined()
+        expect(screen.queryByTestId('desktop-owner-probe')).toBeNull()
+        expect(desktopMountSpy).not.toHaveBeenCalled()
+        expect(mobileMountSpy).toHaveBeenCalledTimes(1)
     })
 })

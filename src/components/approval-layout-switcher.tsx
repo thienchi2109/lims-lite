@@ -1,28 +1,38 @@
 'use client'
 
-import { useEffect, useState, type ReactNode } from 'react'
-import { useMediaQuery } from '@/hooks/use-media-query'
+import { useSyncExternalStore, type ReactNode } from 'react'
 
 interface ApprovalLayoutSwitcherProps {
     desktop: ReactNode
     mobile: ReactNode
+    initial?: ReactNode
     breakpoint?: number
 }
 
 export function ApprovalLayoutSwitcher({
     desktop,
     mobile,
+    initial,
     breakpoint = 1280,
 }: ApprovalLayoutSwitcherProps) {
-    const isDesktop = useMediaQuery(`(min-width: ${breakpoint}px)`)
-    const [hasMounted, setHasMounted] = useState(false)
+    const mediaQuery = `(min-width: ${breakpoint}px)`
+    const isDesktop = useSyncExternalStore(
+        (onStoreChange) => {
+            const queryList = window.matchMedia(mediaQuery)
+            const handleChange = () => onStoreChange()
 
-    useEffect(() => {
-        setHasMounted(true)
-    }, [])
+            queryList.addEventListener('change', handleChange)
 
-    if (!hasMounted) {
-        return <>{desktop}</>
+            return () => {
+                queryList.removeEventListener('change', handleChange)
+            }
+        },
+        () => window.matchMedia(mediaQuery).matches,
+        () => null,
+    )
+
+    if (isDesktop === null) {
+        return <>{initial ?? null}</>
     }
 
     return <>{isDesktop ? desktop : mobile}</>
