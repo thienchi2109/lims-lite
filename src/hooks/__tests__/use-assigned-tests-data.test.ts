@@ -81,6 +81,7 @@ describe('useAssignedTestsData', () => {
         expect(result.current.sampleStatus).toBe('completed')
 
         await waitFor(() => expect(mockCoAStatus).toHaveBeenCalledWith('sample-1'))
+        expect(mockFetch).not.toHaveBeenCalled()
     })
 
     it('sets sampleStatus from the first result', async () => {

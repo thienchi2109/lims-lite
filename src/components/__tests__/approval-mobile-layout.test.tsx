@@ -275,8 +275,10 @@ describe('ApprovalMobileLayout', () => {
 
         expect(mockReplace).not.toHaveBeenCalled()
         expect(historyReplaceSpy?.mock.calls.at(-1)?.[2]).toContain('sampleId=uuid-1')
-        expect(mockFetchSampleDetail).toHaveBeenCalledWith('uuid-1')
-        expect(mockFetchSampleResultsClient).toHaveBeenCalledWith('uuid-1')
+        await waitFor(() => {
+            expect(mockFetchSampleDetail).toHaveBeenCalledWith('uuid-1')
+            expect(mockFetchSampleResultsClient).toHaveBeenCalledWith('uuid-1')
+        })
 
         await waitFor(() => {
             expect(screen.getByTestId('mobile-detail').textContent).toContain('CDC-XN-0001')

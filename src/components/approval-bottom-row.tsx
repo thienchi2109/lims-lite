@@ -78,7 +78,7 @@ export function ApprovalBottomRow({
             </div>
 
             {isLoadingSample && (
-                <div className="pointer-events-none absolute inset-0 flex items-start justify-center rounded-lg bg-white/60 px-4 py-8 dark:bg-slate-950/60">
+                <div className="absolute inset-0 z-10 flex items-start justify-center rounded-lg bg-white/60 px-4 py-8 dark:bg-slate-950/60">
                     <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
                         Đang tải chi tiết mẫu...
                     </div>

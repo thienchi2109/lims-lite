@@ -160,6 +160,11 @@ const initialSample = {
 } as SampleWithUser
 
 const initialResults = [{ id: 'result-1' }] as ResultWithAssay[]
+const updatedServerSample = {
+    id: 'sample-2',
+    sample_id: 'CDC-XN-0002',
+} as SampleWithUser
+const updatedServerResults = [{ id: 'result-2' }] as ResultWithAssay[]
 
 function renderWithQueryClient(ui: ReactNode) {
     const queryClient = new QueryClient({
@@ -420,6 +425,39 @@ describe('ApprovalTabsClient', () => {
         expect(screen.getByTestId('bottom-row-error').textContent).toBe('')
         expect(mockFetchSampleDetail).toHaveBeenCalledTimes(2)
         expect(mockFetchSampleResultsClient).toHaveBeenCalledTimes(2)
+    })
+
+    it('syncs the detail panel when the server selection changes to match the current URL', async () => {
+        const { rerender } = renderWithQueryClient(
+            <ApprovalTabsClient
+                tab="review"
+                samples={samples}
+                reviewCount={1}
+                selectedSampleId="sample-1"
+                initialSample={initialSample}
+                initialResults={initialResults}
+            />,
+        )
+
+        originalReplaceState(null, '', '/manager/approvals?tab=review&sampleId=sample-2')
+
+        rerender(
+            <ApprovalTabsClient
+                tab="review"
+                samples={samples}
+                reviewCount={1}
+                selectedSampleId="sample-2"
+                initialSample={updatedServerSample}
+                initialResults={updatedServerResults}
+            />,
+        )
+
+        await waitFor(() => {
+            expect(screen.getAllByTestId('selected-sample-id')[0].textContent).toBe('sample-2')
+        })
+
+        expect(screen.getByTestId('bottom-row-sample').textContent).toBe('CDC-XN-0002')
+        expect(screen.getByTestId('bottom-row-results').textContent).toBe('result-2')
     })
 
     it('preserves client-selected detail when server refresh returns stale empty selection props', async () => {

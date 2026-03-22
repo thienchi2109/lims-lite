@@ -8,7 +8,7 @@
  * Used by page.tsx alongside the existing desktop layout via CSS breakpoints.
  */
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
@@ -54,6 +54,7 @@ export function ApprovalMobileLayout({
     const [isLoadingSample, setIsLoadingSample] = useState(false)
     const [sampleLoadError, setSampleLoadError] = useState<string | null>(null)
     const sampleRequestIdRef = useRef(0)
+    const isClientSelectionRef = useRef(false)
     const { getCachedSampleCore, loadSampleCore } = useApprovalSampleCoreCache({
         sampleId: serverSampleId,
         initialSample: selectedSample,
@@ -83,12 +84,37 @@ export function ApprovalMobileLayout({
         [],
     )
 
+    useEffect(() => {
+        const serverSelectionMatchesUrl = urlSampleId === serverSampleId
+        if (isClientSelectionRef.current && !serverSelectionMatchesUrl) {
+            return
+        }
+
+        sampleRequestIdRef.current += 1
+        applyActiveDetail(
+            hasServerSelection && selectedSample
+                ? { sample: selectedSample, results }
+                : null,
+        )
+        setSampleLoadError(null)
+        setIsLoadingSample(false)
+        isClientSelectionRef.current = false
+    }, [
+        applyActiveDetail,
+        hasServerSelection,
+        results,
+        selectedSample,
+        serverSampleId,
+        urlSampleId,
+    ])
+
     const handleTabChange = useCallback(
         (newTab: string) => {
             const nextTab = newTab as ApprovalTab
             setActiveTab(nextTab)
             setUrlSampleId(null)
             setClosedSampleId(activeSample?.id ?? null)
+            isClientSelectionRef.current = false
             sampleRequestIdRef.current += 1
             applyActiveDetail(null)
             setSampleLoadError(null)
@@ -113,6 +139,7 @@ export function ApprovalMobileLayout({
                 setClosedSampleId(null)
             }
 
+            isClientSelectionRef.current = true
             setUrlSampleId(sampleId)
             setSampleLoadError(null)
 
@@ -170,6 +197,7 @@ export function ApprovalMobileLayout({
     )
 
     const handleCloseDrawer = useCallback(() => {
+        isClientSelectionRef.current = false
         sampleRequestIdRef.current += 1
         setUrlSampleId(null)
         setClosedSampleId(activeSample?.id ?? urlSampleId)

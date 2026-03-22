@@ -98,6 +98,7 @@ export function ApprovalTabsClient({
     const [sampleLoadError, setSampleLoadError] = useState<string | null>(null)
     const tabRef = useRef<ApprovalTab>(tab)
     const sampleRequestIdRef = useRef(0)
+    const isClientSelectionRef = useRef(false)
     const { getCachedSampleCore, loadSampleCore } = useApprovalSampleCoreCache({
         sampleId: serverSampleId,
         initialSample,
@@ -123,6 +124,30 @@ export function ApprovalTabsClient({
     useEffect(() => {
         tabRef.current = activeTab
     }, [activeTab])
+
+    useEffect(() => {
+        const serverSelectionMatchesUrl = urlSampleId === serverSampleId
+        if (isClientSelectionRef.current && !serverSelectionMatchesUrl) {
+            return
+        }
+
+        sampleRequestIdRef.current += 1
+        applyActiveDetail(
+            hasServerSelection && initialSample
+                ? { sample: initialSample, results: initialResults }
+                : null,
+        )
+        setSampleLoadError(null)
+        setIsLoadingSample(false)
+        isClientSelectionRef.current = false
+    }, [
+        applyActiveDetail,
+        hasServerSelection,
+        initialResults,
+        initialSample,
+        serverSampleId,
+        urlSampleId,
+    ])
 
     useEffect(() => {
         const supabase = createClient()
@@ -180,6 +205,7 @@ export function ApprovalTabsClient({
         const nextTab = newTab as ApprovalTab
         setActiveTab(nextTab)
         setUrlSampleId(null)
+        isClientSelectionRef.current = false
         sampleRequestIdRef.current += 1
         applyActiveDetail(null)
         setSampleLoadError(null)
@@ -200,6 +226,7 @@ export function ApprovalTabsClient({
                 return
             }
 
+            isClientSelectionRef.current = true
             setUrlSampleId(nextSampleId)
             setSampleLoadError(null)
             replaceApprovalQueueUrl(
