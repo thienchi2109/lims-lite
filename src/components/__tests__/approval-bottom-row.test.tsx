@@ -41,4 +41,24 @@ describe('ApprovalBottomRow', () => {
         expect(overlay?.className).toContain('absolute')
         expect(overlay?.className).not.toContain('pointer-events-none')
     })
+
+    it('keeps approval actions in a fixed footer while the assigned tests panel uses the remaining height', () => {
+        render(
+            <ApprovalBottomRow
+                sample={sample}
+                results={[]}
+            />,
+        )
+
+        const assignedTestsPanel = screen.getByTestId('assigned-tests-panel')
+        const approvalActions = screen.getByTestId('approval-actions')
+        const assignedTestsRegion = assignedTestsPanel.parentElement
+        const approvalActionsFooter = approvalActions.parentElement
+        const rightColumn = assignedTestsRegion?.parentElement
+
+        expect(assignedTestsRegion?.className).toContain('flex-1')
+        expect(assignedTestsRegion?.className).toContain('min-h-0')
+        expect(approvalActionsFooter?.className).toContain('shrink-0')
+        expect(rightColumn?.className).toContain('overflow-hidden')
+    })
 })
