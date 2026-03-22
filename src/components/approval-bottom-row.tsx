@@ -5,15 +5,49 @@ import { SampleDetailPanel } from '@/components/sample-detail-panel'
 import { AssignedTestsPanel } from '@/components/assigned-tests-panel'
 import { ApprovalActions } from '@/components/approval-actions'
 import { AlertCircle } from 'lucide-react'
-import { useRouter } from 'next/navigation'
 
 interface ApprovalBottomRowProps {
     sample: SampleWithUser | null
     results: ResultWithAssay[]
+    isLoadingSample?: boolean
+    loadErrorMessage?: string | null
 }
 
-export function ApprovalBottomRow({ sample, results }: ApprovalBottomRowProps) {
-    const router = useRouter()
+export function ApprovalBottomRow({
+    sample,
+    results,
+    isLoadingSample = false,
+    loadErrorMessage = null,
+}: ApprovalBottomRowProps) {
+    if (isLoadingSample) {
+        return (
+            <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50/50 p-8 dark:border-slate-800 dark:bg-slate-900/50">
+                <div className="text-center">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                        Đang tải chi tiết mẫu...
+                    </p>
+                </div>
+            </div>
+        )
+    }
+
+    if (loadErrorMessage) {
+        return (
+            <div className="flex h-full items-center justify-center rounded-lg border border-red-200 bg-red-50/50 p-8 dark:border-red-900/50 dark:bg-red-950/20">
+                <div className="text-center">
+                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/50">
+                        <AlertCircle className="h-6 w-6 text-red-500 dark:text-red-300" />
+                    </div>
+                    <h3 className="mb-1 text-lg font-semibold text-red-700 dark:text-red-200">
+                        Không thể tải chi tiết mẫu
+                    </h3>
+                    <p className="text-sm text-red-600 dark:text-red-300">
+                        {loadErrorMessage}
+                    </p>
+                </div>
+            </div>
+        )
+    }
 
     if (!sample) {
         return (

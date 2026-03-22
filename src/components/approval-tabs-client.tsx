@@ -1,14 +1,17 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { ApprovalQueueTable } from '@/components/approval-queue-table'
+import { ApprovalBottomRow } from '@/components/approval-bottom-row'
 import { type SampleStatus, type CoAReportStatus } from '@/types'
+import type { ResultWithAssay, SampleWithUser } from '@/types'
 import { createClient } from '@/lib/supabase/client'
-import { fetchSamplesForApprovalCountClient } from '@/lib/api-client'
+import { fetchSampleResultsClient, fetchSamplesForApprovalCountClient } from '@/lib/api-client'
 import { useFaviconBadge } from '@/hooks/use-favicon-badge'
+import { fetchSampleDetail } from '@/hooks/use-sample-detail'
 
 // Type for approval queue data (matches approval-queue-table.tsx)
 interface ApprovalQueueSample {
@@ -31,18 +34,75 @@ interface ApprovalTabsClientProps {
     samples: ApprovalQueueSample[]
     reviewCount: number
     selectedSampleId?: string
+    initialSample: SampleWithUser | null
+    initialResults: ResultWithAssay[]
+}
+
+interface ApprovalQueueContentProps {
+    samples: ApprovalQueueSample[]
+    selectedSampleId: string | null
+    onSelectSample: (sampleId: string) => void
+    sample: SampleWithUser | null
+    results: ResultWithAssay[]
+    isLoadingSample: boolean
+    sampleLoadError: string | null
+}
+
+function ApprovalQueueContent({
+    samples,
+    selectedSampleId,
+    onSelectSample,
+    sample,
+    results,
+    isLoadingSample,
+    sampleLoadError,
+}: ApprovalQueueContentProps) {
+    return (
+        <div className="flex flex-1 min-h-0 flex-col gap-2">
+            <div
+                id="tour-approval-queue"
+                className="h-[50vh] min-h-[400px] shrink-0 flex flex-col"
+            >
+                <ApprovalQueueTable
+                    data={samples}
+                    selectedSampleId={selectedSampleId}
+                    onSelectSample={onSelectSample}
+                />
+            </div>
+
+            <div id="tour-approval-detail" className="flex-1 min-h-0 border-t pt-4">
+                <ApprovalBottomRow
+                    sample={sample}
+                    results={results}
+                    isLoadingSample={isLoadingSample}
+                    loadErrorMessage={sampleLoadError}
+                />
+            </div>
+        </div>
+    )
 }
 
 export function ApprovalTabsClient({
     tab,
     samples,
     reviewCount,
-    selectedSampleId
+    selectedSampleId,
+    initialSample,
+    initialResults,
 }: ApprovalTabsClientProps) {
     const router = useRouter()
+    const pathname = usePathname()
     const searchParams = useSearchParams()
     const [liveReviewCount, setLiveReviewCount] = useState(reviewCount)
+    const [activeSampleId, setActiveSampleId] = useState<string | null>(selectedSampleId ?? initialSample?.id ?? null)
+    const [activeSample, setActiveSample] = useState<SampleWithUser | null>(initialSample)
+    const [activeResults, setActiveResults] = useState<ResultWithAssay[]>(initialResults)
+    const [isLoadingSample, setIsLoadingSample] = useState(false)
+    const [sampleLoadError, setSampleLoadError] = useState<string | null>(null)
     const tabRef = useRef(tab)
+    const sampleRequestIdRef = useRef(0)
+    const isClientSelectionRef = useRef(false)
+    const serverSampleId = selectedSampleId ?? initialSample?.id ?? null
 
     useFaviconBadge(liveReviewCount)
 
@@ -53,6 +113,20 @@ export function ApprovalTabsClient({
     useEffect(() => {
         setLiveReviewCount(reviewCount)
     }, [reviewCount])
+
+    useEffect(() => {
+        if (isClientSelectionRef.current && !serverSampleId) {
+            return
+        }
+
+        sampleRequestIdRef.current += 1
+        setActiveSampleId(serverSampleId)
+        setActiveSample(initialSample)
+        setActiveResults(initialResults)
+        setSampleLoadError(null)
+        setIsLoadingSample(false)
+        isClientSelectionRef.current = false
+    }, [initialResults, initialSample, serverSampleId])
 
     useEffect(() => {
         const supabase = createClient()
@@ -72,9 +146,9 @@ export function ApprovalTabsClient({
                 }
             } catch {
                 // ignore; keep last known count
-            } finally {
-                isFetching = false
             }
+
+            isFetching = false
         }
 
         const scheduleUpdate = () => {
@@ -106,18 +180,77 @@ export function ApprovalTabsClient({
         }
     }, [router])
 
+    const buildQueueUrl = useCallback(
+        (nextTab: string, nextSampleId: string | null) => {
+            const params = new URLSearchParams(searchParams.toString())
+            params.set('tab', nextTab)
+
+            if (nextSampleId) {
+                params.set('sampleId', nextSampleId)
+            } else {
+                params.delete('sampleId')
+            }
+
+            const query = params.toString()
+            return query ? `${pathname}?${query}` : pathname
+        },
+        [pathname, searchParams],
+    )
+
     const handleTabChange = (newTab: string) => {
-        const params = new URLSearchParams(searchParams.toString())
-        params.set('tab', newTab)
-
-        // Preserve sampleId if it exists
-        const sampleId = searchParams.get('sampleId')
-        if (sampleId) {
-            params.set('sampleId', sampleId)
-        }
-
-        router.replace(`/manager/approvals?${params.toString()}`)
+        isClientSelectionRef.current = false
+        router.replace(buildQueueUrl(newTab, activeSampleId))
     }
+
+    const handleSelectSample = useCallback(
+        async (nextSampleId: string) => {
+            if (nextSampleId === activeSampleId) {
+                return
+            }
+
+            isClientSelectionRef.current = true
+            setActiveSampleId(nextSampleId)
+            setActiveSample(null)
+            setActiveResults([])
+            setSampleLoadError(null)
+            setIsLoadingSample(true)
+            window.history.replaceState(null, '', buildQueueUrl(tab, nextSampleId))
+
+            const requestId = sampleRequestIdRef.current + 1
+            sampleRequestIdRef.current = requestId
+            const finalizeRequest = () => {
+                if (sampleRequestIdRef.current === requestId) {
+                    setIsLoadingSample(false)
+                }
+            }
+
+            try {
+                const [sampleData, resultsResponse] = await Promise.all([
+                    fetchSampleDetail(nextSampleId),
+                    fetchSampleResultsClient(nextSampleId),
+                ])
+
+                if (sampleRequestIdRef.current !== requestId) {
+                    return
+                }
+
+                setActiveSample(sampleData)
+                setActiveResults(resultsResponse?.data ?? [])
+                finalizeRequest()
+            } catch (error) {
+                if (sampleRequestIdRef.current !== requestId) {
+                    return
+                }
+
+                console.error('Failed to load approval sample detail:', error)
+                setActiveSample(null)
+                setActiveResults([])
+                setSampleLoadError('Không thể tải chi tiết mẫu. Vui lòng thử lại.')
+                finalizeRequest()
+            }
+        },
+        [activeSampleId, buildQueueUrl, tab],
+    )
 
     return (
         <Tabs
@@ -147,16 +280,26 @@ export function ApprovalTabsClient({
             </TabsList>
 
             <TabsContent value="review" className="flex-1 min-h-0 mt-0">
-                <ApprovalQueueTable
-                    data={samples}
-                    selectedSampleId={selectedSampleId}
+                <ApprovalQueueContent
+                    samples={samples}
+                    selectedSampleId={activeSampleId}
+                    onSelectSample={handleSelectSample}
+                    sample={activeSample}
+                    results={activeResults}
+                    isLoadingSample={isLoadingSample}
+                    sampleLoadError={sampleLoadError}
                 />
             </TabsContent>
 
             <TabsContent value="completed" className="flex-1 min-h-0 mt-0">
-                <ApprovalQueueTable
-                    data={samples}
-                    selectedSampleId={selectedSampleId}
+                <ApprovalQueueContent
+                    samples={samples}
+                    selectedSampleId={activeSampleId}
+                    onSelectSample={handleSelectSample}
+                    sample={activeSample}
+                    results={activeResults}
+                    isLoadingSample={isLoadingSample}
+                    sampleLoadError={sampleLoadError}
                 />
             </TabsContent>
         </Tabs>

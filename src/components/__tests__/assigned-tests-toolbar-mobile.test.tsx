@@ -14,7 +14,21 @@ vi.mock('@/components/coa-status-badge', () => ({
     CoAStatusBadge: ({ status }: any) => <span data-testid="coa-badge">{status}</span>,
 }))
 vi.mock('@/components/walkthrough', () => ({
-    WalkthroughTrigger: () => <button data-testid="walkthrough-trigger">Walkthrough Trigger</button>,
+    WalkthroughTrigger: ({
+        autoShowTooltip,
+        showTooltip,
+    }: {
+        autoShowTooltip?: boolean
+        showTooltip?: boolean
+    }) => (
+        <button
+            data-testid="walkthrough-trigger"
+            data-auto-show-tooltip={String(autoShowTooltip)}
+            data-show-tooltip={String(showTooltip)}
+        >
+            Walkthrough Trigger
+        </button>
+    ),
     useWalkthrough: () => ({
         startTour: mockStartTour,
         isReady: true,
@@ -117,6 +131,13 @@ describe('AssignedTestsToolbar mobile overflow', () => {
         // Standalone trigger is desktop-only and wrapped with mobile-hidden classes.
         const parent = walkthrough.closest('[class]')
         expect(parent?.className ?? '').toContain('hidden')
+    })
+
+    it('turns off walkthrough tooltip entirely to avoid repeated popups during sample switching', () => {
+        render(<AssignedTestsToolbar {...defaultProps} />)
+
+        expect(screen.getByTestId('walkthrough-trigger').getAttribute('data-auto-show-tooltip')).toBe('false')
+        expect(screen.getByTestId('walkthrough-trigger').getAttribute('data-show-tooltip')).toBe('false')
     })
 
     it('includes walkthrough action in mobile overflow menu', () => {

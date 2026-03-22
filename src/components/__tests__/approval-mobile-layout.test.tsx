@@ -169,6 +169,25 @@ describe('ApprovalMobileLayout', () => {
         expect(screen.getByTestId('mobile-detail')).toBeDefined()
     })
 
+    it('closes the detail drawer immediately when the close button is pressed', () => {
+        render(
+            <ApprovalMobileLayout
+                samples={mockSamples}
+                selectedSample={mockSelectedSample}
+                results={mockResults}
+                tab="review"
+                reviewCount={2}
+            />,
+        )
+
+        expect(screen.getByTestId('mobile-detail')).toBeDefined()
+
+        fireEvent.click(screen.getByTestId('close-drawer'))
+
+        expect(mockReplace).toHaveBeenCalled()
+        expect(screen.queryByTestId('mobile-detail')).toBeNull()
+    })
+
     it('updates URL and shows drawer after rerender with selected sample', () => {
         const { rerender } = render(
             <ApprovalMobileLayout

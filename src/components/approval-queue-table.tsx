@@ -44,10 +44,15 @@ interface ApprovalQueueSample extends SampleGridRow {
 
 interface ApprovalQueueTableProps {
     data: ApprovalQueueSample[]
-    selectedSampleId?: string
+    selectedSampleId?: string | null
+    onSelectSample?: (sampleId: string) => void
 }
 
-export function ApprovalQueueTable({ data, selectedSampleId }: ApprovalQueueTableProps) {
+export function ApprovalQueueTable({
+    data,
+    selectedSampleId,
+    onSelectSample,
+}: ApprovalQueueTableProps) {
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
@@ -57,6 +62,11 @@ export function ApprovalQueueTable({ data, selectedSampleId }: ApprovalQueueTabl
     const [pageSize, setPageSize] = useState(20)
 
     const handleRowClick = (row: ApprovalQueueSample) => {
+        if (onSelectSample) {
+            onSelectSample(row.id)
+            return
+        }
+
         const params = new URLSearchParams(searchParams.toString())
         params.set('sampleId', row.id)
         router.replace(`${pathname}?${params.toString()}`, { scroll: false })
@@ -124,9 +134,11 @@ export function ApprovalQueueTable({ data, selectedSampleId }: ApprovalQueueTabl
                                     <Button
                                         variant="ghost"
                                         size="icon"
+                                        aria-label="Xem chi tiết và phê duyệt"
                                         onClick={(e) => {
                                             e.stopPropagation()
                                             handleRowClick(row.original)
+                                            e.currentTarget.blur()
                                         }}
                                         className="h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950"
                                     >
