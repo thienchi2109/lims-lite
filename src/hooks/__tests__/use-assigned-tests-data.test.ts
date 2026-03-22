@@ -59,6 +59,30 @@ describe('useAssignedTestsData', () => {
         expect(result.current.error).toBeNull()
     })
 
+    it('reuses initial core results without issuing a duplicate results fetch on mount', async () => {
+        const initialResults = [
+            {
+                id: 'r1',
+                assay_id: 'a1',
+                assay_name: 'Creatinine',
+                sample_status: 'completed',
+            },
+        ] as any
+
+        const { result } = renderHook(() =>
+            useAssignedTestsData('sample-1', {
+                initialResults,
+            }),
+        )
+
+        expect(mockFetch).not.toHaveBeenCalled()
+        expect(result.current.loading).toBe(false)
+        expect(result.current.results).toEqual(initialResults)
+        expect(result.current.sampleStatus).toBe('completed')
+
+        await waitFor(() => expect(mockCoAStatus).toHaveBeenCalledWith('sample-1'))
+    })
+
     it('sets sampleStatus from the first result', async () => {
         mockFetch.mockResolvedValue({
             data: [{ id: 'r1', assay_id: 'a1', sample_status: 'in_progress' }],

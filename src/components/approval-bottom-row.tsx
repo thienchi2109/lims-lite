@@ -19,19 +19,7 @@ export function ApprovalBottomRow({
     isLoadingSample = false,
     loadErrorMessage = null,
 }: ApprovalBottomRowProps) {
-    if (isLoadingSample) {
-        return (
-            <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50/50 p-8 dark:border-slate-800 dark:bg-slate-900/50">
-                <div className="text-center">
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                        Đang tải chi tiết mẫu...
-                    </p>
-                </div>
-            </div>
-        )
-    }
-
-    if (loadErrorMessage) {
+    if (loadErrorMessage && !sample) {
         return (
             <div className="flex h-full items-center justify-center rounded-lg border border-red-200 bg-red-50/50 p-8 dark:border-red-900/50 dark:bg-red-950/20">
                 <div className="text-center">
@@ -68,14 +56,34 @@ export function ApprovalBottomRow({
     }
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
-            <div className="h-full min-h-0 overflow-y-auto">
-                <SampleDetailPanel sample={sample} />
+        <div className="relative flex h-full flex-col gap-4">
+            {loadErrorMessage && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-200">
+                    {loadErrorMessage}
+                </div>
+            )}
+
+            <div className="grid grid-cols-1 gap-6 h-full lg:grid-cols-2">
+                <div className="h-full min-h-0 overflow-y-auto">
+                    <SampleDetailPanel sample={sample} />
+                </div>
+                <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto pr-1">
+                    <AssignedTestsPanel
+                        sampleId={sample.id}
+                        userRole="manager"
+                        initialResults={results}
+                    />
+                    <ApprovalActions sampleId={sample.id} results={results} />
+                </div>
             </div>
-            <div className="h-full min-h-0 overflow-y-auto flex flex-col gap-4 pr-1">
-                <AssignedTestsPanel sampleId={sample.id} userRole="manager" />
-                <ApprovalActions sampleId={sample.id} results={results} />
-            </div>
+
+            {isLoadingSample && (
+                <div className="pointer-events-none absolute inset-0 flex items-start justify-center rounded-lg bg-white/60 px-4 py-8 dark:bg-slate-950/60">
+                    <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                        Đang tải chi tiết mẫu...
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

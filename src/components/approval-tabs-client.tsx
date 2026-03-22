@@ -8,9 +8,9 @@ import { ApprovalQueueTable } from '@/components/approval-queue-table'
 import { ApprovalBottomRow } from '@/components/approval-bottom-row'
 import type { ApprovalQueueSample, ApprovalTab, ResultWithAssay, SampleWithUser } from '@/types'
 import { createClient } from '@/lib/supabase/client'
-import { fetchSampleResultsClient, fetchSamplesForApprovalCountClient } from '@/lib/api-client'
+import { fetchSamplesForApprovalCountClient } from '@/lib/api-client'
 import { useFaviconBadge } from '@/hooks/use-favicon-badge'
-import { fetchSampleDetail } from '@/hooks/use-sample-detail'
+import { useApprovalSampleCoreCache } from '@/hooks/use-approval-sample-core'
 import { useApprovalQueue } from '@/hooks/use-approval-queue'
 import { useApprovalUrlState } from '@/hooks/use-approval-url-state'
 import { buildApprovalQueueUrl, replaceApprovalQueueUrl } from '@/lib/approval-queue-url'
@@ -80,21 +80,29 @@ export function ApprovalTabsClient({
 }: ApprovalTabsClientProps) {
     const router = useRouter()
     const pathname = usePathname()
-    const [liveReviewCount, setLiveReviewCount] = useState(reviewCount)
+    const [liveReviewCountOverride, setLiveReviewCountOverride] = useState<number | null>(null)
+    const liveReviewCount = liveReviewCountOverride ?? reviewCount
     const serverSampleId = selectedSampleId ?? initialSample?.id ?? null
     const { activeTab, setActiveTab, urlSampleId, setUrlSampleId } = useApprovalUrlState({
         tab,
         sampleId: serverSampleId,
     })
-    const serverSelectionMatchesUrl = urlSampleId === serverSampleId
     const hasServerSelection = Boolean(urlSampleId && initialSample?.id === urlSampleId)
-    const [activeSample, setActiveSample] = useState<SampleWithUser | null>(hasServerSelection ? initialSample : null)
-    const [activeResults, setActiveResults] = useState<ResultWithAssay[]>(hasServerSelection ? initialResults : [])
+    const [activeSample, setActiveSample] = useState<SampleWithUser | null>(
+        hasServerSelection ? initialSample : null,
+    )
+    const [activeResults, setActiveResults] = useState<ResultWithAssay[]>(
+        hasServerSelection ? initialResults : [],
+    )
     const [isLoadingSample, setIsLoadingSample] = useState(false)
     const [sampleLoadError, setSampleLoadError] = useState<string | null>(null)
     const tabRef = useRef<ApprovalTab>(tab)
     const sampleRequestIdRef = useRef(0)
-    const isClientSelectionRef = useRef(false)
+    const { getCachedSampleCore, loadSampleCore } = useApprovalSampleCoreCache({
+        sampleId: serverSampleId,
+        initialSample,
+        initialResults,
+    })
     const approvalQueue = useApprovalQueue({
         tab: activeTab,
         initialData: samples,
@@ -104,26 +112,17 @@ export function ApprovalTabsClient({
 
     useFaviconBadge(liveReviewCount)
 
+    const applyActiveDetail = useCallback(
+        (nextDetail: { sample: SampleWithUser; results: ResultWithAssay[] } | null) => {
+            setActiveSample(nextDetail?.sample ?? null)
+            setActiveResults(nextDetail?.results ?? [])
+        },
+        [],
+    )
+
     useEffect(() => {
         tabRef.current = activeTab
     }, [activeTab])
-
-    useEffect(() => {
-        setLiveReviewCount(reviewCount)
-    }, [reviewCount])
-
-    useEffect(() => {
-        if (isClientSelectionRef.current && !serverSelectionMatchesUrl) {
-            return
-        }
-
-        sampleRequestIdRef.current += 1
-        setActiveSample(hasServerSelection ? initialSample : null)
-        setActiveResults(hasServerSelection ? initialResults : [])
-        setSampleLoadError(null)
-        setIsLoadingSample(false)
-        isClientSelectionRef.current = false
-    }, [hasServerSelection, initialResults, initialSample, serverSelectionMatchesUrl, urlSampleId])
 
     useEffect(() => {
         const supabase = createClient()
@@ -139,7 +138,7 @@ export function ApprovalTabsClient({
                 const response = await fetchSamplesForApprovalCountClient()
                 const nextCount = typeof response?.data === 'number' ? response.data : 0
                 if (!isCancelled) {
-                    setLiveReviewCount(nextCount)
+                    setLiveReviewCountOverride(nextCount)
                 }
             } catch {
                 // ignore; keep last known count
@@ -181,10 +180,8 @@ export function ApprovalTabsClient({
         const nextTab = newTab as ApprovalTab
         setActiveTab(nextTab)
         setUrlSampleId(null)
-        isClientSelectionRef.current = false
         sampleRequestIdRef.current += 1
-        setActiveSample(null)
-        setActiveResults([])
+        applyActiveDetail(null)
         setSampleLoadError(null)
         setIsLoadingSample(false)
 
@@ -195,7 +192,7 @@ export function ApprovalTabsClient({
                 sampleId: null,
             }),
         )
-    }, [pathname, setActiveTab, setUrlSampleId])
+    }, [applyActiveDetail, pathname, setActiveTab, setUrlSampleId])
 
     const handleSelectSample = useCallback(
         async (nextSampleId: string) => {
@@ -203,12 +200,8 @@ export function ApprovalTabsClient({
                 return
             }
 
-            isClientSelectionRef.current = true
             setUrlSampleId(nextSampleId)
-            setActiveSample(null)
-            setActiveResults([])
             setSampleLoadError(null)
-            setIsLoadingSample(true)
             replaceApprovalQueueUrl(
                 buildApprovalQueueUrl({
                     pathname,
@@ -219,6 +212,14 @@ export function ApprovalTabsClient({
 
             const requestId = sampleRequestIdRef.current + 1
             sampleRequestIdRef.current = requestId
+            const cachedSampleCore = getCachedSampleCore(nextSampleId)
+
+            if (cachedSampleCore) {
+                applyActiveDetail(cachedSampleCore)
+            }
+
+            setIsLoadingSample(!cachedSampleCore)
+
             const finalizeRequest = () => {
                 if (sampleRequestIdRef.current === requestId) {
                     setIsLoadingSample(false)
@@ -226,17 +227,13 @@ export function ApprovalTabsClient({
             }
 
             try {
-                const [sampleData, resultsResponse] = await Promise.all([
-                    fetchSampleDetail(nextSampleId),
-                    fetchSampleResultsClient(nextSampleId),
-                ])
+                const sampleCore = await loadSampleCore(nextSampleId)
 
                 if (sampleRequestIdRef.current !== requestId) {
                     return
                 }
 
-                setActiveSample(sampleData)
-                setActiveResults(resultsResponse?.data ?? [])
+                applyActiveDetail(sampleCore)
                 finalizeRequest()
             } catch (error) {
                 if (sampleRequestIdRef.current !== requestId) {
@@ -244,13 +241,23 @@ export function ApprovalTabsClient({
                 }
 
                 console.error('Failed to load approval sample detail:', error)
-                setActiveSample(null)
-                setActiveResults([])
+                if (!cachedSampleCore) {
+                    applyActiveDetail(null)
+                }
                 setSampleLoadError('Không thể tải chi tiết mẫu. Vui lòng thử lại.')
                 finalizeRequest()
             }
         },
-        [activeTab, pathname, sampleLoadError, setUrlSampleId, urlSampleId],
+        [
+            activeTab,
+            applyActiveDetail,
+            getCachedSampleCore,
+            loadSampleCore,
+            pathname,
+            sampleLoadError,
+            setUrlSampleId,
+            urlSampleId,
+        ],
     )
 
     const queueContent = approvalQueue.isError ? (

@@ -15,6 +15,8 @@ import { getCoAStatus } from '@/app/actions/coa'
 import { getQCStatusForAssays, type AssayQCStatus } from '@/app/actions/qc-status'
 import type { ResultWithAssay, SampleStatus, CoAReportStatus } from '@/types'
 
+const EMPTY_RESULTS: ResultWithAssay[] = []
+
 export interface UseAssignedTestsDataReturn {
     results: ResultWithAssay[]
     loading: boolean
@@ -26,11 +28,28 @@ export interface UseAssignedTestsDataReturn {
     fetchTests: () => Promise<void>
 }
 
-export function useAssignedTestsData(sampleId: string): UseAssignedTestsDataReturn {
-    const [results, setResults] = useState<ResultWithAssay[]>([])
-    const [loading, setLoading] = useState(true)
+interface UseAssignedTestsDataOptions {
+    initialResults?: ResultWithAssay[]
+}
+
+function deriveSampleStatus(results: ResultWithAssay[]): SampleStatus | null {
+    return results.length > 0 && results[0].sample_status
+        ? (results[0].sample_status as SampleStatus)
+        : null
+}
+
+export function useAssignedTestsData(
+    sampleId: string,
+    options: UseAssignedTestsDataOptions = {},
+): UseAssignedTestsDataReturn {
+    const hasInitialResults = options.initialResults !== undefined
+    const seededResults = options.initialResults ?? EMPTY_RESULTS
+    const [results, setResults] = useState<ResultWithAssay[]>(seededResults)
+    const [loading, setLoading] = useState(!hasInitialResults)
     const [error, setError] = useState<string | null>(null)
-    const [sampleStatus, setSampleStatus] = useState<SampleStatus | null>(null)
+    const [sampleStatus, setSampleStatus] = useState<SampleStatus | null>(
+        deriveSampleStatus(seededResults),
+    )
     const [coaStatus, setCoaStatus] = useState<CoAReportStatus | null>(null)
     const [qcStatuses, setQcStatuses] = useState<Record<string, AssayQCStatus>>({})
 
@@ -64,10 +83,7 @@ export function useAssignedTestsData(sampleId: string): UseAssignedTestsDataRetu
             }
 
             const nextResults = data ?? []
-            const nextSampleStatus =
-                nextResults.length > 0 && nextResults[0].sample_status
-                    ? (nextResults[0].sample_status as SampleStatus)
-                    : null
+            const nextSampleStatus = deriveSampleStatus(nextResults)
 
             setResults(nextResults)
             setSampleStatus(nextSampleStatus)
@@ -94,14 +110,17 @@ export function useAssignedTestsData(sampleId: string): UseAssignedTestsDataRetu
 
     // Auto-fetch on sampleId change
     useEffect(() => {
-        setResults([])
-        setSampleStatus(null)
+        setResults(seededResults)
+        setSampleStatus(deriveSampleStatus(seededResults))
         setCoaStatus(null)
         setQcStatuses({})
         setError(null)
-        setLoading(true)
-        void fetchTests()
-    }, [sampleId, fetchTests])
+        setLoading(!hasInitialResults)
+
+        if (!hasInitialResults) {
+            void fetchTests()
+        }
+    }, [sampleId, fetchTests, hasInitialResults, seededResults])
 
     // Fetch CoA status when sample is completed
     useEffect(() => {
