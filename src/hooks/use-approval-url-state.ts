@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { ApprovalTab } from '@/types'
 import { resolveApprovalUrlState } from '@/lib/approval-queue-url'
 
@@ -26,20 +26,24 @@ export function useApprovalUrlState({ tab, sampleId }: UseApprovalUrlStateOption
         )
     }, [tab, sampleId])
 
+    const setActiveTab = useCallback((nextTab: ApprovalTab) => {
+        setUrlState((current) => ({
+            ...current,
+            tab: nextTab,
+        }))
+    }, [])
+
+    const setUrlSampleId = useCallback((nextSampleId: string | null) => {
+        setUrlState((current) => ({
+            ...current,
+            sampleId: nextSampleId,
+        }))
+    }, [])
+
     return {
         activeTab: urlState.tab,
         urlSampleId: urlState.sampleId,
-        setActiveTab(nextTab: ApprovalTab) {
-            setUrlState((current) => ({
-                ...current,
-                tab: nextTab,
-            }))
-        },
-        setUrlSampleId(nextSampleId: string | null) {
-            setUrlState((current) => ({
-                ...current,
-                sampleId: nextSampleId,
-            }))
-        },
+        setActiveTab,
+        setUrlSampleId,
     }
 }

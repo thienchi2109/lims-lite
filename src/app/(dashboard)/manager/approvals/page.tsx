@@ -80,6 +80,12 @@ export default async function ApprovalsPage({ searchParams }: ApprovalsPageProps
         }
     }
 
+    const approvalHeaderProps = {
+        samplesCount: queueSamples.length,
+        tab,
+    }
+    const approvalErrorMessage = error ? `Lỗi khi tải hàng đợi phê duyệt: ${error}` : null
+
     return (
         <div className="h-[calc(100vh-4rem)] flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden">
             <DashboardHeader 
@@ -91,18 +97,23 @@ export default async function ApprovalsPage({ searchParams }: ApprovalsPageProps
             <main className="flex-1 flex flex-col min-h-0 p-2 sm:px-4 gap-2">
                 <ApprovalLayoutSwitcher
                     initial={
-                        <ApprovalInitialView
-                            tab={tab}
-                            samplesCount={queueSamples.length}
-                        />
+                        approvalErrorMessage ? (
+                            <ApprovalErrorView
+                                {...approvalHeaderProps}
+                                message={approvalErrorMessage}
+                            />
+                        ) : (
+                            <ApprovalInitialView {...approvalHeaderProps} />
+                        )
                     }
                     desktop={
-                        <div className="flex flex-col flex-1 min-h-0">
-                            {error ? (
-                                <div className="text-center py-8 text-destructive bg-white dark:bg-slate-900 rounded-lg border">
-                                    Lỗi khi tải hàng đợi phê duyệt: {error}
-                                </div>
-                            ) : (
+                        approvalErrorMessage ? (
+                            <ApprovalErrorView
+                                {...approvalHeaderProps}
+                                message={approvalErrorMessage}
+                            />
+                        ) : (
+                            <div className="flex flex-col flex-1 min-h-0">
                                 <Suspense fallback={<ApprovalQueueFallback />}>
                                     <ApprovalTabsClient
                                         tab={tab}
@@ -113,16 +124,17 @@ export default async function ApprovalsPage({ searchParams }: ApprovalsPageProps
                                         initialResults={results}
                                     />
                                 </Suspense>
-                            )}
-                        </div>
+                            </div>
+                        )
                     }
                     mobile={
-                        <div className="flex-1 min-h-0 overflow-y-auto">
-                            {error ? (
-                                <div className="text-center py-8 text-destructive bg-white dark:bg-slate-900 rounded-lg border">
-                                    Lỗi khi tải hàng đợi phê duyệt: {error}
-                                </div>
-                            ) : (
+                        approvalErrorMessage ? (
+                            <ApprovalErrorView
+                                {...approvalHeaderProps}
+                                message={approvalErrorMessage}
+                            />
+                        ) : (
+                            <div className="flex-1 min-h-0 overflow-y-auto">
                                 <Suspense fallback={<ApprovalQueueFallback />}>
                                     <ApprovalMobileLayout
                                         samples={queueSamples}
@@ -132,14 +144,13 @@ export default async function ApprovalsPage({ searchParams }: ApprovalsPageProps
                                         reviewCount={reviewCount}
                                     />
                                 </Suspense>
-                            )}
-                        </div>
+                            </div>
+                        )
                     }
                 />
             </main>
         </div>
     )
-
 }
 
 function ApprovalInitialView({
@@ -153,6 +164,25 @@ function ApprovalInitialView({
         <div className="flex flex-1 min-h-0 flex-col gap-2">
             <ApprovalPageHeader samplesCount={samplesCount} tab={tab} />
             <ApprovalQueueFallback />
+        </div>
+    )
+}
+
+function ApprovalErrorView({
+    tab,
+    samplesCount,
+    message,
+}: {
+    tab: 'review' | 'completed'
+    samplesCount: number
+    message: string
+}) {
+    return (
+        <div className="flex flex-1 min-h-0 flex-col gap-2 overflow-y-auto">
+            <ApprovalPageHeader samplesCount={samplesCount} tab={tab} />
+            <div className="text-center py-8 text-destructive bg-white dark:bg-slate-900 rounded-lg border">
+                {message}
+            </div>
         </div>
     )
 }
