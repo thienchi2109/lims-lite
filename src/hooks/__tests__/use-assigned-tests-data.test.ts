@@ -178,6 +178,45 @@ describe('useAssignedTestsData', () => {
         await waitFor(() => expect(result.current.loading).toBe(false))
     })
 
+    it('preserves coaStatus when the same sample receives refreshed seeded results', async () => {
+        const initialResults = [
+            {
+                id: 'r-A',
+                assay_id: 'a1',
+                assay_name: 'Creatinine',
+                sample_status: 'completed',
+            },
+        ] as any
+
+        mockCoAStatus.mockResolvedValueOnce({ status: 'ready' })
+        mockQCStatus.mockReturnValue(new Promise(() => {}) as any)
+
+        const { result, rerender } = renderHook(
+            ({ id, seededResults }) =>
+                useAssignedTestsData(id, {
+                    initialResults: seededResults,
+                }),
+            {
+                initialProps: {
+                    id: 'sample-A',
+                    seededResults: initialResults,
+                },
+            },
+        )
+
+        await waitFor(() => expect(result.current.coaStatus).toBe('ready'))
+
+        act(() => {
+            rerender({
+                id: 'sample-A',
+                seededResults: initialResults.map((result: any) => ({ ...result })),
+            })
+        })
+
+        expect(result.current.coaStatus).toBe('ready')
+        expect(mockCoAStatus).toHaveBeenCalledTimes(1)
+    })
+
     it('ignores stale CoA responses from the previous sample', async () => {
         let resolveCoAStatus!: (value: { status: 'ready' }) => void
         const staleCoAStatus = new Promise<{ status: 'ready' }>((resolve) => {

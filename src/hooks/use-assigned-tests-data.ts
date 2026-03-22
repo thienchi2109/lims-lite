@@ -56,6 +56,7 @@ export function useAssignedTestsData(
     // Ref to guard stale callbacks
     const currentSampleIdRef = useRef(sampleId)
     currentSampleIdRef.current = sampleId
+    const previousSampleIdRef = useRef(sampleId)
     const fetchRequestIdRef = useRef(0)
     const coaRequestIdRef = useRef(0)
     const qcRequestIdRef = useRef(0)
@@ -110,10 +111,15 @@ export function useAssignedTestsData(
 
     // Auto-fetch on sampleId change
     useEffect(() => {
+        const sampleChanged = previousSampleIdRef.current !== sampleId
+        previousSampleIdRef.current = sampleId
+
         setResults(seededResults)
         setSampleStatus(deriveSampleStatus(seededResults))
-        setCoaStatus(null)
-        setQcStatuses({})
+        if (sampleChanged) {
+            setCoaStatus(null)
+            setQcStatuses({})
+        }
         setError(null)
         setLoading(!hasInitialResults)
 
