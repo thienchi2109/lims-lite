@@ -9,13 +9,7 @@ import {
     assignTests,
     getSampleTests,
 } from '@/app/actions/sample-tests'
-import {
-    getSamplesForApprovalCount,
-    getRejectedSamplesCount,
-    submitSampleForReview,
-    rejectSample,
-    discardSample,
-} from '@/app/actions/sample-approvals'
+import { getSamplesForApprovalCount, getRejectedSamplesCount, getSamplesWithTab, submitSampleForReview, rejectSample, discardSample } from '@/app/actions/sample-approvals'
 import { getResultsBySample, saveBatchResults } from '@/app/actions/results'
 import { approveResults, cancelApproval } from '@/app/actions/results-approval'
 import { getAssayDefinitions as fetchAssayDefinitions } from '@/app/actions/assay-queries'
@@ -106,6 +100,12 @@ function mapErrorToStatus(message: string) {
 
 const actionHandlers: Record<ClientActionName, ActionHandler> = {
     getSamples: async (payload) => getSamples(payload),
+    getSamplesWithTab: async (payload) => {
+        if (payload?.tab !== 'review' && payload?.tab !== 'completed') {
+            return { error: 'Approval tab không hợp lệ' }
+        }
+        return getSamplesWithTab(payload.tab)
+    },
     getSamplesForApprovalCount: async () => getSamplesForApprovalCount(),
     getRejectedSamplesCount: async () => getRejectedSamplesCount(),
     assignTests: async (payload) => assignTests(payload),

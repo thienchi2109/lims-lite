@@ -49,6 +49,7 @@ export function DiscardSampleDialog({ sampleId, open, onOpenChange }: DiscardSam
 
                 // Invalidate queries to trigger refetch
                 await invalidateSampleQueries(queryClient, sampleId)
+                queryClient.invalidateQueries({ queryKey: approvalKeys.all })
                 queryClient.invalidateQueries({ queryKey: approvalKeys.count })
                 queryClient.invalidateQueries({ queryKey: rejectionKeys.count })
 

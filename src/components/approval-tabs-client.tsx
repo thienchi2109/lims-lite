@@ -1,33 +1,21 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { ApprovalQueueTable } from '@/components/approval-queue-table'
 import { ApprovalBottomRow } from '@/components/approval-bottom-row'
-import { type SampleStatus, type CoAReportStatus } from '@/types'
-import type { ResultWithAssay, SampleWithUser } from '@/types'
+import type { ApprovalQueueSample, ApprovalTab, ResultWithAssay, SampleWithUser } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import { fetchSampleResultsClient, fetchSamplesForApprovalCountClient } from '@/lib/api-client'
 import { useFaviconBadge } from '@/hooks/use-favicon-badge'
 import { fetchSampleDetail } from '@/hooks/use-sample-detail'
-
-// Type for approval queue data (matches approval-queue-table.tsx)
-interface ApprovalQueueSample {
-    id: string
-    sample_id: string
-    client_name: string | null
-    status: SampleStatus
-    received_at: string | null
-    updated_at: string | null
-    received_by_name: string | null
-    total_tests: number
-    entered_count: number
-    approved_count: number
-    pending_count: number
-    coa_reports?: Array<{ status: CoAReportStatus; error_message?: string | null }> | null
-}
+import { useApprovalQueue } from '@/hooks/use-approval-queue'
+import { useApprovalUrlState } from '@/hooks/use-approval-url-state'
+import { buildApprovalQueueUrl, replaceApprovalQueueUrl } from '@/lib/approval-queue-url'
+import { ApprovalQueueErrorState } from '@/components/approval-queue-error-state'
+import { ApprovalPageHeader } from '@/components/approval-page-header'
 
 interface ApprovalTabsClientProps {
     tab: 'review' | 'completed'
@@ -92,41 +80,50 @@ export function ApprovalTabsClient({
 }: ApprovalTabsClientProps) {
     const router = useRouter()
     const pathname = usePathname()
-    const searchParams = useSearchParams()
     const [liveReviewCount, setLiveReviewCount] = useState(reviewCount)
-    const [activeSampleId, setActiveSampleId] = useState<string | null>(selectedSampleId ?? initialSample?.id ?? null)
-    const [activeSample, setActiveSample] = useState<SampleWithUser | null>(initialSample)
-    const [activeResults, setActiveResults] = useState<ResultWithAssay[]>(initialResults)
+    const serverSampleId = selectedSampleId ?? initialSample?.id ?? null
+    const { activeTab, setActiveTab, urlSampleId, setUrlSampleId } = useApprovalUrlState({
+        tab,
+        sampleId: serverSampleId,
+    })
+    const serverSelectionMatchesUrl = urlSampleId === serverSampleId
+    const hasServerSelection = Boolean(urlSampleId && initialSample?.id === urlSampleId)
+    const [activeSample, setActiveSample] = useState<SampleWithUser | null>(hasServerSelection ? initialSample : null)
+    const [activeResults, setActiveResults] = useState<ResultWithAssay[]>(hasServerSelection ? initialResults : [])
     const [isLoadingSample, setIsLoadingSample] = useState(false)
     const [sampleLoadError, setSampleLoadError] = useState<string | null>(null)
-    const tabRef = useRef(tab)
+    const tabRef = useRef<ApprovalTab>(tab)
     const sampleRequestIdRef = useRef(0)
     const isClientSelectionRef = useRef(false)
-    const serverSampleId = selectedSampleId ?? initialSample?.id ?? null
+    const approvalQueue = useApprovalQueue({
+        tab: activeTab,
+        initialData: samples,
+        initialDataTab: tab,
+    })
+    const queueSamples = approvalQueue.data ?? (activeTab === tab ? samples : [])
 
     useFaviconBadge(liveReviewCount)
 
     useEffect(() => {
-        tabRef.current = tab
-    }, [tab])
+        tabRef.current = activeTab
+    }, [activeTab])
 
     useEffect(() => {
         setLiveReviewCount(reviewCount)
     }, [reviewCount])
 
     useEffect(() => {
-        if (isClientSelectionRef.current && !serverSampleId) {
+        if (isClientSelectionRef.current && !serverSelectionMatchesUrl) {
             return
         }
 
         sampleRequestIdRef.current += 1
-        setActiveSampleId(serverSampleId)
-        setActiveSample(initialSample)
-        setActiveResults(initialResults)
+        setActiveSample(hasServerSelection ? initialSample : null)
+        setActiveResults(hasServerSelection ? initialResults : [])
         setSampleLoadError(null)
         setIsLoadingSample(false)
         isClientSelectionRef.current = false
-    }, [initialResults, initialSample, serverSampleId])
+    }, [hasServerSelection, initialResults, initialSample, serverSelectionMatchesUrl, urlSampleId])
 
     useEffect(() => {
         const supabase = createClient()
@@ -180,41 +177,45 @@ export function ApprovalTabsClient({
         }
     }, [router])
 
-    const buildQueueUrl = useCallback(
-        (nextTab: string, nextSampleId: string | null) => {
-            const params = new URLSearchParams(searchParams.toString())
-            params.set('tab', nextTab)
-
-            if (nextSampleId) {
-                params.set('sampleId', nextSampleId)
-            } else {
-                params.delete('sampleId')
-            }
-
-            const query = params.toString()
-            return query ? `${pathname}?${query}` : pathname
-        },
-        [pathname, searchParams],
-    )
-
-    const handleTabChange = (newTab: string) => {
+    const handleTabChange = useCallback((newTab: string) => {
+        const nextTab = newTab as ApprovalTab
+        setActiveTab(nextTab)
+        setUrlSampleId(null)
         isClientSelectionRef.current = false
-        router.replace(buildQueueUrl(newTab, activeSampleId))
-    }
+        sampleRequestIdRef.current += 1
+        setActiveSample(null)
+        setActiveResults([])
+        setSampleLoadError(null)
+        setIsLoadingSample(false)
+
+        replaceApprovalQueueUrl(
+            buildApprovalQueueUrl({
+                pathname,
+                tab: nextTab,
+                sampleId: null,
+            }),
+        )
+    }, [pathname, setActiveTab, setUrlSampleId])
 
     const handleSelectSample = useCallback(
         async (nextSampleId: string) => {
-            if (nextSampleId === activeSampleId) {
+            if (nextSampleId === urlSampleId) {
                 return
             }
 
             isClientSelectionRef.current = true
-            setActiveSampleId(nextSampleId)
+            setUrlSampleId(nextSampleId)
             setActiveSample(null)
             setActiveResults([])
             setSampleLoadError(null)
             setIsLoadingSample(true)
-            window.history.replaceState(null, '', buildQueueUrl(tab, nextSampleId))
+            replaceApprovalQueueUrl(
+                buildApprovalQueueUrl({
+                    pathname,
+                    tab: activeTab,
+                    sampleId: nextSampleId,
+                }),
+            )
 
             const requestId = sampleRequestIdRef.current + 1
             sampleRequestIdRef.current = requestId
@@ -249,59 +250,61 @@ export function ApprovalTabsClient({
                 finalizeRequest()
             }
         },
-        [activeSampleId, buildQueueUrl, tab],
+        [activeTab, pathname, setUrlSampleId, urlSampleId],
+    )
+
+    const queueContent = approvalQueue.isError ? (
+        <ApprovalQueueErrorState />
+    ) : (
+        <ApprovalQueueContent
+            samples={queueSamples}
+            selectedSampleId={urlSampleId}
+            onSelectSample={handleSelectSample}
+            sample={activeSample}
+            results={activeResults}
+            isLoadingSample={isLoadingSample}
+            sampleLoadError={sampleLoadError}
+        />
     )
 
     return (
-        <Tabs
-            id="tour-approval-tabs"
-            value={tab}
-            onValueChange={handleTabChange}
-            className="flex-1 flex flex-col min-h-0"
-        >
-            <TabsList className="w-full justify-start border-b border-slate-200 dark:border-slate-800 bg-transparent rounded-none h-auto p-0 mb-4">
-                <TabsTrigger
-                    value="review"
-                    className="relative rounded-none border-b-2 border-transparent px-4 py-3 text-sm font-medium transition-colors duration-200 data-[state=active]:border-cyan-600 data-[state=active]:text-cyan-700 data-[state=active]:font-semibold data-[state=inactive]:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900/50 data-[state=active]:bg-transparent gap-2"
-                >
-                    Chờ duyệt KQ
-                    {liveReviewCount > 0 && (
-                        <Badge className="rounded-full px-2 py-0.5 text-xs bg-red-500 text-white border-0">
-                            {liveReviewCount}
-                        </Badge>
-                    )}
-                </TabsTrigger>
-                <TabsTrigger
-                    value="completed"
-                    className="relative rounded-none border-b-2 border-transparent px-4 py-3 text-sm font-medium transition-colors duration-200 data-[state=active]:border-cyan-600 data-[state=active]:text-cyan-700 data-[state=active]:font-semibold data-[state=inactive]:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900/50 data-[state=active]:bg-transparent"
-                >
-                    Đã duyệt KQ
-                </TabsTrigger>
-            </TabsList>
+        <div className="flex flex-1 min-h-0 flex-col gap-2">
+            <ApprovalPageHeader samplesCount={queueSamples.length} tab={activeTab} />
 
-            <TabsContent value="review" className="flex-1 min-h-0 mt-0">
-                <ApprovalQueueContent
-                    samples={samples}
-                    selectedSampleId={activeSampleId}
-                    onSelectSample={handleSelectSample}
-                    sample={activeSample}
-                    results={activeResults}
-                    isLoadingSample={isLoadingSample}
-                    sampleLoadError={sampleLoadError}
-                />
-            </TabsContent>
+            <Tabs
+                id="tour-approval-tabs"
+                value={activeTab}
+                onValueChange={handleTabChange}
+                className="flex-1 flex flex-col min-h-0"
+            >
+                <TabsList className="w-full justify-start border-b border-slate-200 dark:border-slate-800 bg-transparent rounded-none h-auto p-0 mb-4">
+                    <TabsTrigger
+                        value="review"
+                        className="relative rounded-none border-b-2 border-transparent px-4 py-3 text-sm font-medium transition-colors duration-200 data-[state=active]:border-cyan-600 data-[state=active]:text-cyan-700 data-[state=active]:font-semibold data-[state=inactive]:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900/50 data-[state=active]:bg-transparent gap-2"
+                    >
+                        Chờ duyệt KQ
+                        {liveReviewCount > 0 && (
+                            <Badge className="rounded-full px-2 py-0.5 text-xs bg-red-500 text-white border-0">
+                                {liveReviewCount}
+                            </Badge>
+                        )}
+                    </TabsTrigger>
+                    <TabsTrigger
+                        value="completed"
+                        className="relative rounded-none border-b-2 border-transparent px-4 py-3 text-sm font-medium transition-colors duration-200 data-[state=active]:border-cyan-600 data-[state=active]:text-cyan-700 data-[state=active]:font-semibold data-[state=inactive]:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900/50 data-[state=active]:bg-transparent"
+                    >
+                        Đã duyệt KQ
+                    </TabsTrigger>
+                </TabsList>
 
-            <TabsContent value="completed" className="flex-1 min-h-0 mt-0">
-                <ApprovalQueueContent
-                    samples={samples}
-                    selectedSampleId={activeSampleId}
-                    onSelectSample={handleSelectSample}
-                    sample={activeSample}
-                    results={activeResults}
-                    isLoadingSample={isLoadingSample}
-                    sampleLoadError={sampleLoadError}
-                />
-            </TabsContent>
-        </Tabs>
+                <TabsContent value="review" className="flex-1 min-h-0 mt-0">
+                    {queueContent}
+                </TabsContent>
+
+                <TabsContent value="completed" className="flex-1 min-h-0 mt-0">
+                    {queueContent}
+                </TabsContent>
+            </Tabs>
+        </div>
     )
 }

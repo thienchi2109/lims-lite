@@ -124,6 +124,7 @@ export function ApprovalDialog({
                 } else {
                     toast.success(`Approved ${result.approvedCount} results`)
                     await invalidateSampleQueries(queryClient, sampleId)
+                    queryClient.invalidateQueries({ queryKey: approvalKeys.all })
                     queryClient.invalidateQueries({ queryKey: approvalKeys.count })
                     onOpenChange(false)
                     setNote('')
@@ -143,6 +144,7 @@ export function ApprovalDialog({
                 } else {
                     toast.success(`Canceled approval for ${result.canceledCount} results`)
                     await invalidateSampleQueries(queryClient, sampleId)
+                    queryClient.invalidateQueries({ queryKey: approvalKeys.all })
                     queryClient.invalidateQueries({ queryKey: approvalKeys.count })
                     onOpenChange(false)
                     setNote('')

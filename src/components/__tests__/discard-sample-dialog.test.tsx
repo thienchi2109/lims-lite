@@ -50,7 +50,7 @@ describe('DiscardSampleDialog rejection invalidation', () => {
         vi.clearAllMocks()
     })
 
-    it('invalidates approval and rejection counts after a successful discard', async () => {
+    it('invalidates approval queue caches and badge counts after a successful discard', async () => {
         mockDiscardSampleClient.mockResolvedValue({ success: true })
 
         const onOpenChange = vi.fn()
@@ -70,6 +70,7 @@ describe('DiscardSampleDialog rejection invalidation', () => {
         await waitFor(() =>
             expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: approvalKeys.count }),
         )
+        expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: approvalKeys.all })
         expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: rejectionKeys.count })
     })
 })

@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { Gender } from './core'
+import type { SampleStatus } from './core'
 import { SampleDataSchema } from './lab'
 
 // ============================================================================
@@ -35,6 +36,23 @@ export const DiscardSampleSchema = z.object({
 })
 
 export type DiscardSample = z.infer<typeof DiscardSampleSchema>
+
+export type ApprovalTab = 'review' | 'completed'
+
+export interface ApprovalQueueSample {
+    id: string
+    sample_id: string
+    client_name: string | null
+    status: SampleStatus
+    received_at: string | null
+    updated_at: string | null
+    received_by_name: string | null
+    total_tests: number
+    entered_count: number
+    approved_count: number
+    pending_count: number
+    coa_reports?: Array<{ status: CoAReportStatus; error_message?: string | null }> | null
+}
 
 // ============================================================================
 // USER SIGNATURE SCHEMAS
