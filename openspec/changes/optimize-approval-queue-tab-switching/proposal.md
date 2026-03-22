@@ -6,6 +6,7 @@ Trang `/manager/approvals` vẫn cho cảm giác lag khi đổi qua lại giữa
 
 - Chuyển approval queue list sang luồng TanStack Query với cache riêng cho từng tab `review` / `completed`.
 - Thêm client fetch path cho `getSamplesWithTab` qua `api-client` và `client-actions` để queue tab có thể tải lại mà không cần full route navigation.
+- Trích shared query contract và shared tab URL sync helper cho approval queue; desktop và mobile phải tái sử dụng cùng logic thay vì copy state machine theo từng layout.
 - Refactor desktop và mobile approval tab switching để đồng bộ URL cục bộ, render cached rows ngay khi đổi tab, và refetch background khi cần.
 - Thêm regression coverage theo TDD cho tab switch latency, URL sync, trạng thái lỗi tiếng Việt, và deep-link semantics hiện có.
 - Chuẩn bị task breakdown + dispatch packets sẵn sàng cho subagent-driven-development với write scope tách biệt theo data layer, desktop UI, mobile UI, và verification.
@@ -27,6 +28,7 @@ Trang `/manager/approvals` vẫn cho cảm giác lag khi đổi qua lại giữa
   - `src/components/approval-tabs-client.tsx`
   - `src/components/approval-mobile-layout.tsx`
   - `src/components/approval-queue-table.tsx`
+  - shared approval tab state / URL sync helper mới dưới `src/lib` hoặc `src/hooks`
   - `src/app/actions/sample-approvals.ts`
   - `src/app/api/client-actions/route.ts`
   - `src/lib/api-client.ts`

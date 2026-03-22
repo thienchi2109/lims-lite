@@ -15,15 +15,17 @@
 
 - [ ] 2.1 Expose `getSamplesWithTab` qua `src/app/api/client-actions/route.ts` và thêm wrapper `fetchApprovalQueueClient` trong `src/lib/api-client.ts`.
 - [ ] 2.2 Tạo `src/hooks/use-approval-queue.ts` và chuẩn hóa `approvalKeys.list(...)` theo query-key best practices.
-- [ ] 2.3 Cấu hình `placeholderData`, `staleTime`, và adjacent-tab prefetch phù hợp cho approval queue.
-- [ ] 2.4 Chạy lại tests data/hook liên quan và xác nhận GREEN.
+- [ ] 2.3 Trích shared tab URL sync helper/state contract dùng chung cho desktop và mobile; không được copy logic tab switching theo từng layout.
+- [ ] 2.4 Cấu hình `placeholderData`, `staleTime`, và adjacent-tab prefetch phù hợp cho approval queue.
+- [ ] 2.5 Chạy lại tests data/hook liên quan và xác nhận GREEN.
 
 ## 3. GREEN: Refactor UI tab switching sang cache-first path
 
-- [ ] 3.1 Refactor `src/components/approval-tabs-client.tsx` để dùng `useApprovalQueue` cho list data của tab hiện hành.
-- [ ] 3.2 Refactor `src/components/approval-mobile-layout.tsx` để dùng cùng contract tab switching và URL sync helper.
+- [ ] 3.1 Refactor `src/components/approval-tabs-client.tsx` để dùng `useApprovalQueue` và shared tab state contract cho list data của tab hiện hành.
+- [ ] 3.2 Refactor `src/components/approval-mobile-layout.tsx` để dùng đúng shared tab state contract thay vì state machine riêng.
 - [ ] 3.3 Đảm bảo detail panel không hiển thị stale selection khi sample không thuộc tab mới.
-- [ ] 3.4 Chạy lại desktop/mobile interaction tests và xác nhận GREEN.
+- [ ] 3.4 Soát code để không còn helper/tab-state duplication giữa desktop và mobile trước khi chốt GREEN.
+- [ ] 3.5 Chạy lại desktop/mobile interaction tests và xác nhận GREEN.
 
 ## 4. REFACTOR + Verification
 
@@ -35,8 +37,9 @@
 
 ## 5. Dispatch Packets Cho Subagent-Driven Development
 
-- [ ] 5.1 Chuẩn bị Packet A (Data Worker): ownership `src/app/actions/sample-approvals.ts`, `src/app/api/client-actions/route.ts`, `src/lib/api-client.ts`, `src/hooks/use-approval-queue.ts`, `src/types/query-keys.ts`, tests/harness data layer liên quan.
+- [ ] 5.1 Chuẩn bị Packet A (Data Worker): ownership `src/app/actions/sample-approvals.ts`, `src/app/api/client-actions/route.ts`, `src/lib/api-client.ts`, `src/hooks/use-approval-queue.ts`, shared tab URL sync helper, `src/types/query-keys.ts`, tests/harness data layer liên quan.
 - [ ] 5.2 Chuẩn bị Packet B (Desktop Worker): ownership `src/components/approval-tabs-client.tsx` và desktop tests liên quan.
 - [ ] 5.3 Chuẩn bị Packet C (Mobile Worker): ownership `src/components/approval-mobile-layout.tsx` và mobile tests liên quan.
 - [ ] 5.4 Chuẩn bị Packet D (Integration/Verification Worker): ownership `src/app/(dashboard)/manager/approvals/page.tsx`, integration tests, `react-doctor`, `typecheck`, và smoke evidence.
 - [ ] 5.5 Mỗi packet phải có RED command trước khi code, GREEN command sau khi code, file allowlist rõ ràng, và yêu cầu review theo spec compliance trước code-quality review.
+- [ ] 5.6 Packet B và C không được tự tạo helper/tab-state/query logic trùng lặp; mọi thay đổi vượt shared contract phải quay lại Packet A.

@@ -23,6 +23,12 @@ The system SHALL load manager approval queue rows for `review` and `completed` t
 - **THEN** the system SHALL hydrate the `completed` queue on initial load
 - **AND** subsequent client-side tab switches SHALL keep the `tab` query parameter synchronized with the active tab
 
+#### Scenario: Desktop and mobile preserve the same tab semantics
+
+- **WHEN** a manager switches approval queue tabs on desktop or mobile breakpoint
+- **THEN** the system SHALL apply the same rules for URL synchronization, cached queue reuse, and empty/error states
+- **AND** breakpoint changes SHALL NOT introduce a different tab selection contract for the same URL
+
 #### Scenario: Fetch failure is isolated to the active tab
 
 - **WHEN** loading the active approval tab fails

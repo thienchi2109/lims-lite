@@ -10,6 +10,7 @@ Mục tiêu: giảm lag khi switch giữa `review` và `completed` bằng TanSta
   - `src/app/api/client-actions/route.ts`
   - `src/lib/api-client.ts`
   - `src/hooks/use-approval-queue.ts`
+  - shared tab URL sync helper dưới `src/lib` hoặc `src/hooks`
   - `src/types/query-keys.ts`
   - tests/harness data layer approval liên quan
 - **RED command:**
@@ -20,6 +21,7 @@ Mục tiêu: giảm lag khi switch giữa `review` và `completed` bằng TanSta
 - **DoD:**
   - không bypass `api-client`
   - key shape future-proof cho `page/pageSize/sort`
+  - desktop/mobile cùng consume shared tab-state contract này, không copy logic
   - không đổi semantics RLS/auth hiện tại
 
 ## Packet B - Desktop Worker
@@ -34,6 +36,7 @@ Mục tiêu: giảm lag khi switch giữa `review` và `completed` bằng TanSta
   - switch tab không phụ thuộc server route navigation để hiện queue list
   - deep-link tab sync giữ đúng URL behavior
 - **DoD:**
+  - chỉ consume shared contract từ Packet A, không tự tạo query/tab-state helper mới
   - không làm hỏng selected sample/detail semantics đã có
   - error state vẫn là tiếng Việt
 
@@ -49,6 +52,7 @@ Mục tiêu: giảm lag khi switch giữa `review` và `completed` bằng TanSta
   - mobile tab switching giữ đúng URL sync
   - không leak selected detail sai tab
 - **DoD:**
+  - chỉ consume shared contract từ Packet A, không fork logic URL sync/query state
   - UX mobile drawer vẫn đóng/mở đúng như fix hiện tại
 
 ## Packet D - Integration & Verification Worker
@@ -78,3 +82,4 @@ Mục tiêu: giảm lag khi switch giữa `review` và `completed` bằng TanSta
 - Workers không được revert thay đổi của nhau.
 - Mọi claim `DONE` phải kèm command đã chạy và kết quả tóm tắt.
 - Spec compliance review phải xảy ra trước code-quality review cho từng packet.
+- Không chấp nhận duplicated tab-switch logic giữa desktop/mobile; mọi shared behavior phải nằm ở Packet A contract.

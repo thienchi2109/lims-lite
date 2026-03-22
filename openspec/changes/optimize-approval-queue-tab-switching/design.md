@@ -51,14 +51,21 @@ Change này là follow-on riêng cho lag khi switch tab. Nó không thay thế c
 - **Alternative đã cân nhắc:**
   - Giữ `router.replace(...)`: làm URL đúng nhưng không giải quyết root cause lag.
 
-### Decision 5: Prefetch tab đối diện, nhưng chỉ ở mức adjacent tab
+### Decision 5: Shared tab-state contract là bắt buộc để tránh duplication giữa desktop/mobile
+
+- **Chọn:** mọi logic quyết định `active tab`, `URL sync`, `prefetch tab đối diện`, và `clear/keep selection across tabs` phải nằm trong shared hook/helper hoặc shared utility contract; desktop và mobile chỉ được wire UI lên contract này.
+- **Vì sao:** desktop và mobile đang là hai entry points khác nhau của cùng một workflow manager approvals. Nếu mỗi layout tự cài lại state machine tab switching, change này sẽ tạo hai biến thể hành vi khó test và khó nối tiếp sang pagination phase.
+- **Alternative đã cân nhắc:**
+  - Cho phép desktop/mobile tự triển khai cùng spec rồi “sync bằng review”: nhanh ngắn hạn nhưng gần như chắc chắn tạo drift logic và duplication.
+
+### Decision 6: Prefetch tab đối diện, nhưng chỉ ở mức adjacent tab
 
 - **Chọn:** prefetch tab còn lại sau initial load hoặc theo user intent (focus/hover), và dùng `placeholderData` để giữ UI ổn định khi refetch.
 - **Vì sao:** đáp ứng mục tiêu perceived performance mà không mở rộng network cost sang detail prefetch hoặc eager fetch mọi biến thể.
 - **Alternative đã cân nhắc:**
   - Eager load cả hai tab ngay khi mount: đơn giản hơn nhưng tăng payload tức thời và không cần thiết với user chỉ xem một tab.
 
-### Decision 6: Change này giữ scope riêng với pagination/RPC follow-up
+### Decision 7: Change này giữ scope riêng với pagination/RPC follow-up
 
 - **Chọn:** chỉ xử lý tab-switch caching/prefetch trong change này, còn server-side pagination tiếp tục ở change `optimize-approval-queue-two-phase`.
 - **Vì sao:** tách perceived-latency fix nhanh khỏi structural DB/query refactor lớn hơn.
@@ -77,13 +84,16 @@ Change này là follow-on riêng cho lag khi switch tab. Nó không thay thế c
   **→ Mitigation:** chuẩn hóa query key shape theo hướng có thể mở rộng sang `page/pageSize/sort` thay vì hardcode key một lần nữa.
 
 - **[Risk]** Mobile và desktop có thể diverge nếu mỗi layout tự quản lý tab/query riêng.  
-  **→ Mitigation:** tách shared hook/query contract và giữ UI packets độc lập nhưng cùng dựa trên contract chung.
+  **→ Mitigation:** shared hook/query contract + shared URL sync helper là bắt buộc; packet desktop/mobile không được tạo state machine tab switching riêng.
+
+- **[Risk]** Shared abstraction có thể bị over-engineer so với scope quick win.  
+  **→ Mitigation:** chỉ trích xuất đúng 2 thứ dùng chung thật sự là query contract và tab URL sync helper; không tạo framework approval mới.
 
 ## Migration Plan
 
 1. Viết RED tests cho tab switching, cache reuse, prefetch, và URL sync.
-2. Thêm client action wrapper + hook `useApprovalQueue`.
-3. Refactor desktop/mobile approval tabs sang path mới.
+2. Thêm client action wrapper + hook `useApprovalQueue` + shared tab URL sync helper.
+3. Refactor desktop/mobile approval tabs sang path mới bằng shared contract.
 4. Chạy targeted tests, `npm run typecheck`, `react-doctor`, và smoke test `/manager/approvals`.
 
 **Rollback:** revert hook/client-action/UI integration về path server-driven hiện tại; không có migration DB để rollback.
