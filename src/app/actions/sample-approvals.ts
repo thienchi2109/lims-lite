@@ -8,9 +8,16 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { requireRole, isAuthError } from '@/lib/auth-helpers'
-import { RejectSampleSchema, DiscardSampleSchema, type RejectSample, type DiscardSample, type SampleStatus, type CoAReportStatus } from '@/types'
-
-type ApprovalTab = 'review' | 'completed'
+import {
+    RejectSampleSchema,
+    DiscardSampleSchema,
+    type RejectSample,
+    type DiscardSample,
+    type SampleStatus,
+    type CoAReportStatus,
+    type ApprovalTab,
+    type ApprovalQueueSample,
+} from '@/types'
 
 interface RawSampleResult {
     id: string
@@ -32,7 +39,7 @@ interface RawSample {
 /**
  * Transform raw samples with result counts
  */
-function transformSamplesWithCounts(samples: RawSample[]) {
+function transformSamplesWithCounts(samples: RawSample[]): ApprovalQueueSample[] {
     return samples.map((sample) => {
         const results = sample.results || []
         // Filter out soft-deleted CoA reports

@@ -2,6 +2,8 @@
 
 import type {
     AssignTests,
+    ApprovalQueueSample,
+    ApprovalTab,
     SampleListParams,
     UpdateSample,
     CreateSample,
@@ -102,6 +104,10 @@ async function callClientAction<T = any>(action: ClientActionName, payload?: unk
 
 export function fetchSamplesClient(params: SampleListParams) {
     return callClientAction('getSamples', params)
+}
+
+export function fetchApprovalQueueClient(tab: ApprovalTab) {
+    return callClientAction<{ data: ApprovalQueueSample[] }>('getSamplesWithTab', { tab })
 }
 
 export function fetchSamplesForApprovalCountClient() {

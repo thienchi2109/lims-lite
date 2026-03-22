@@ -20,7 +20,7 @@ vi.mock('@/components/walkthrough', () => ({
     ),
 }))
 
-import { ApprovalPageHeader } from './approval-page-header'
+import { ApprovalPageHeader } from '@/components/approval-page-header'
 
 describe('ApprovalPageHeader', () => {
     it('disables walkthrough auto-tooltip so sample selection does not re-trigger the help hint', () => {

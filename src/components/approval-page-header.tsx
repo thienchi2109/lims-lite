@@ -1,9 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import { WalkthroughTrigger } from '@/components/walkthrough'
+import { Button } from '@/components/ui/button'
 
 interface ApprovalPageHeaderProps {
     samplesCount: number

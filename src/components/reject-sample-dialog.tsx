@@ -40,6 +40,7 @@ export function RejectSampleDialog({ sampleId, open, onOpenChange }: RejectSampl
 
                 // Invalidate queries
                 await invalidateSampleQueries(queryClient, sampleId)
+                queryClient.invalidateQueries({ queryKey: approvalKeys.all })
                 queryClient.invalidateQueries({ queryKey: approvalKeys.count })
                 queryClient.invalidateQueries({ queryKey: rejectionKeys.count })
 

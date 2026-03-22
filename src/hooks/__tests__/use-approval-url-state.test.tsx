@@ -1,0 +1,39 @@
+import { act, renderHook } from '@testing-library/react'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { useApprovalUrlState } from '../use-approval-url-state'
+
+describe('useApprovalUrlState', () => {
+    beforeEach(() => {
+        window.history.replaceState(null, '', '/manager/approvals?tab=review')
+    })
+
+    it('keeps setter references stable across local state updates and prop syncs', () => {
+        const { result, rerender } = renderHook(
+            ({ tab, sampleId }: { tab: 'review' | 'completed'; sampleId?: string | null }) =>
+                useApprovalUrlState({ tab, sampleId }),
+            {
+                initialProps: {
+                    tab: 'review' as const,
+                    sampleId: null,
+                },
+            },
+        )
+
+        const initialSetActiveTab = result.current.setActiveTab
+        const initialSetUrlSampleId = result.current.setUrlSampleId
+
+        act(() => {
+            result.current.setUrlSampleId('sample-2')
+        })
+
+        expect(result.current.setActiveTab).toBe(initialSetActiveTab)
+        expect(result.current.setUrlSampleId).toBe(initialSetUrlSampleId)
+        expect(result.current.urlSampleId).toBe('sample-2')
+
+        window.history.replaceState(null, '', '/manager/approvals?tab=completed')
+        rerender({ tab: 'completed', sampleId: null })
+
+        expect(result.current.setActiveTab).toBe(initialSetActiveTab)
+        expect(result.current.setUrlSampleId).toBe(initialSetUrlSampleId)
+    })
+})

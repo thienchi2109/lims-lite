@@ -1,5 +1,6 @@
 export type ClientActionName =
     | 'getSamples'
+    | 'getSamplesWithTab'
     | 'getSamplesForApprovalCount'
     | 'assignTests'
     | 'updateSample'

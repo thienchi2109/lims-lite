@@ -5,7 +5,7 @@
  * Following TanStack Query best practices with hierarchical key structure.
  */
 
-import type { SampleListParams, QCEntryParams } from './index'
+import type { ApprovalTab, SampleListParams, QCEntryParams } from './index'
 
 /**
  * Query key factory for samples-related queries
@@ -81,7 +81,7 @@ export const clientKeys = {
 export const approvalKeys = {
     all: ['approvals'] as const,
     count: ['approvals', 'count'] as const,
-    list: (tab: string) => ['approvals', 'list', tab] as const,
+    list: (params: { tab: ApprovalTab }) => ['approvals', 'list', params] as const,
 }
 
 /**

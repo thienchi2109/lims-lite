@@ -7,9 +7,11 @@ const mockRefresh = vi.fn()
 const mockFetchSampleResultsClient = vi.fn()
 const mockFetchSampleDetail = vi.fn()
 const mockUseFaviconBadge = vi.fn()
+const mockUseApprovalQueue = vi.fn()
 
 let mockSearchParams = new URLSearchParams('tab=review&sampleId=sample-1')
 let activeTabValue = 'review'
+let tabsOnValueChange: ((value: string) => void) | null = null
 
 vi.mock('next/navigation', () => ({
     useRouter: () => ({ replace: mockReplace, refresh: mockRefresh }),
@@ -37,17 +39,26 @@ vi.mock('@/hooks/use-favicon-badge', () => ({
     useFaviconBadge: (...args: unknown[]) => mockUseFaviconBadge(...args),
 }))
 
+vi.mock('@/hooks/use-approval-queue', () => ({
+    useApprovalQueue: (...args: unknown[]) => mockUseApprovalQueue(...args),
+}))
+
 vi.mock('@/hooks/use-sample-detail', () => ({
     fetchSampleDetail: (...args: unknown[]) => mockFetchSampleDetail(...args),
 }))
 
 vi.mock('@/components/ui/tabs', () => ({
-    Tabs: ({ children, value }: any) => {
+    Tabs: ({ children, value, onValueChange }: any) => {
         activeTabValue = value
+        tabsOnValueChange = onValueChange
         return <div>{children}</div>
     },
     TabsList: ({ children }: any) => <div>{children}</div>,
-    TabsTrigger: ({ children }: any) => <button type="button">{children}</button>,
+    TabsTrigger: ({ children, value }: any) => (
+        <button type="button" onClick={() => tabsOnValueChange?.(value)}>
+            {children}
+        </button>
+    ),
     TabsContent: ({ children, value }: any) => (value === activeTabValue ? <div>{children}</div> : null),
 }))
 
@@ -81,6 +92,12 @@ vi.mock('@/components/approval-bottom-row', () => ({
             <div data-testid="bottom-row-sample">{sample?.sample_id ?? 'none'}</div>
             <div data-testid="bottom-row-results">{results.map((result: any) => result.id).join(',')}</div>
         </div>
+    ),
+}))
+
+vi.mock('@/components/approval-page-header', () => ({
+    ApprovalPageHeader: ({ samplesCount, tab }: any) => (
+        <div data-testid="approval-header">{`${samplesCount}-${tab}`}</div>
     ),
 }))
 
@@ -118,6 +135,23 @@ const samples = [
     },
 ]
 
+const completedSamples = [
+    {
+        id: 'sample-3',
+        sample_id: 'CDC-XN-9001',
+        client_name: 'Lê C',
+        status: 'completed' as const,
+        received_at: '2026-01-07T10:00:00Z',
+        updated_at: '2026-01-07T11:00:00Z',
+        received_by_name: 'KTV C',
+        total_tests: 3,
+        entered_count: 3,
+        approved_count: 3,
+        pending_count: 0,
+        coa_reports: null,
+    },
+]
+
 const initialSample = {
     id: 'sample-1',
     sample_id: 'CDC-XN-0001',
@@ -138,7 +172,8 @@ function deferredPromise<T>() {
 }
 
 describe('ApprovalTabsClient', () => {
-    const originalReplaceState = window.history.replaceState
+    const originalReplaceState = window.history.replaceState.bind(window.history)
+    let historyReplaceSpy: ReturnType<typeof vi.spyOn> | null = null
 
     beforeEach(() => {
         mockReplace.mockClear()
@@ -146,13 +181,23 @@ describe('ApprovalTabsClient', () => {
         mockFetchSampleDetail.mockReset()
         mockFetchSampleResultsClient.mockReset()
         mockUseFaviconBadge.mockClear()
+        mockUseApprovalQueue.mockImplementation(({ tab }: { tab: 'review' | 'completed' }) => ({
+            data: tab === 'review' ? samples : completedSamples,
+            isSuccess: true,
+            isError: false,
+        }))
         mockSearchParams = new URLSearchParams('tab=review&sampleId=sample-1')
         activeTabValue = 'review'
-        window.history.replaceState = vi.fn()
+        tabsOnValueChange = null
+        originalReplaceState(null, '', '/manager/approvals?tab=review&sampleId=sample-1')
+        historyReplaceSpy = vi.spyOn(window.history, 'replaceState').mockImplementation((...args) => {
+            return Reflect.apply(originalReplaceState, window.history, args)
+        })
     })
 
     afterEach(() => {
-        window.history.replaceState = originalReplaceState
+        historyReplaceSpy?.mockRestore()
+        historyReplaceSpy = null
     })
 
     it('renders the deep-linked sample detail on first load', () => {
@@ -211,7 +256,7 @@ describe('ApprovalTabsClient', () => {
         expect(mockFetchSampleResultsClient).toHaveBeenCalledWith('sample-2')
     })
 
-    it('ignores stale responses when server-provided selection resyncs while a request is in-flight', async () => {
+    it('preserves the client-selected detail when stale server props rerender while a request is in-flight', async () => {
         const sampleDeferred = deferredPromise<{ id: string; sample_id: string }>()
         const resultsDeferred = deferredPromise<{ data: Array<{ id: string }> }>()
 
@@ -253,8 +298,8 @@ describe('ApprovalTabsClient', () => {
             expect(screen.getByTestId('bottom-row-loading').textContent).toBe('false')
         })
 
-        expect(screen.getByTestId('bottom-row-sample').textContent).toBe('CDC-XN-0001')
-        expect(screen.getByTestId('bottom-row-results').textContent).toBe('result-1')
+        expect(screen.getByTestId('bottom-row-sample').textContent).toBe('CDC-XN-0002')
+        expect(screen.getByTestId('bottom-row-results').textContent).toBe('result-2')
     })
 
     it('surfaces an explicit error state when detail fetch fails', async () => {
@@ -281,7 +326,49 @@ describe('ApprovalTabsClient', () => {
         })
     })
 
+    it('retries the same sample after a detail fetch failure', async () => {
+        mockFetchSampleDetail
+            .mockRejectedValueOnce(new Error('network failed'))
+            .mockResolvedValueOnce({
+                id: 'sample-2',
+                sample_id: 'CDC-XN-0002',
+            })
+        mockFetchSampleResultsClient
+            .mockResolvedValueOnce({ data: [] })
+            .mockResolvedValueOnce({ data: [{ id: 'result-2' }] })
+
+        render(
+            <ApprovalTabsClient
+                tab="review"
+                samples={samples}
+                reviewCount={1}
+                selectedSampleId="sample-1"
+                initialSample={initialSample}
+                initialResults={initialResults}
+            />,
+        )
+
+        fireEvent.click(screen.getAllByTestId('select-sample-2')[0])
+
+        await waitFor(() => {
+            expect(screen.getByTestId('bottom-row-error').textContent).toBe(
+                'Không thể tải chi tiết mẫu. Vui lòng thử lại.',
+            )
+        })
+
+        fireEvent.click(screen.getAllByTestId('select-sample-2')[0])
+
+        await waitFor(() => {
+            expect(screen.getByTestId('bottom-row-sample').textContent).toBe('CDC-XN-0002')
+        })
+
+        expect(screen.getByTestId('bottom-row-error').textContent).toBe('')
+        expect(mockFetchSampleDetail).toHaveBeenCalledTimes(2)
+        expect(mockFetchSampleResultsClient).toHaveBeenCalledTimes(2)
+    })
+
     it('preserves client-selected detail when server refresh returns stale empty selection props', async () => {
+        originalReplaceState(null, '', '/manager/approvals?tab=review')
         mockFetchSampleDetail.mockResolvedValue({
             id: 'sample-2',
             sample_id: 'CDC-XN-0002',
@@ -320,5 +407,76 @@ describe('ApprovalTabsClient', () => {
 
         expect(screen.getByTestId('bottom-row-sample').textContent).toBe('CDC-XN-0002')
         expect(screen.getByTestId('bottom-row-results').textContent).toBe('result-2')
+    })
+
+    it('switches tabs with local URL sync and clears stale sample selection', () => {
+        render(
+            <ApprovalTabsClient
+                tab="review"
+                samples={samples}
+                reviewCount={1}
+                selectedSampleId="sample-1"
+                initialSample={initialSample}
+                initialResults={initialResults}
+            />,
+        )
+
+        fireEvent.click(screen.getByRole('button', { name: 'Đã duyệt KQ' }))
+
+        expect(mockReplace).not.toHaveBeenCalled()
+        expect(mockRefresh).not.toHaveBeenCalled()
+        expect(window.history.replaceState).toHaveBeenCalledWith(
+            null,
+            '',
+            '/manager/approvals?tab=completed',
+        )
+        expect(screen.getByTestId('bottom-row-sample').textContent).toBe('none')
+        expect(screen.getByTestId('bottom-row-results').textContent).toBe('')
+        expect(screen.getAllByTestId('selected-sample-id')[0].textContent).toBe('none')
+        expect(screen.getByTestId('select-sample-3')).toBeDefined()
+        expect(screen.queryByTestId('select-sample-1')).toBeNull()
+        expect(screen.getByTestId('approval-header').textContent).toBe('1-completed')
+    })
+
+    it('renders a Vietnamese queue error state when the active tab fetch fails', () => {
+        mockUseApprovalQueue.mockReturnValue({
+            data: undefined,
+            isSuccess: false,
+            isError: true,
+        })
+
+        render(
+            <ApprovalTabsClient
+                tab="review"
+                samples={samples}
+                reviewCount={1}
+                selectedSampleId={undefined}
+                initialSample={null}
+                initialResults={[]}
+            />,
+        )
+
+        expect(screen.getByText('Không thể tải hàng đợi phê duyệt. Vui lòng thử lại.')).toBeDefined()
+        expect(screen.queryByTestId('select-sample-1')).toBeNull()
+    })
+
+    it('reads the current URL on mount so breakpoint swaps do not restore stale tab and sample props', () => {
+        originalReplaceState(null, '', '/manager/approvals?tab=completed')
+
+        render(
+            <ApprovalTabsClient
+                tab="review"
+                samples={samples}
+                reviewCount={1}
+                selectedSampleId="sample-1"
+                initialSample={initialSample}
+                initialResults={initialResults}
+            />,
+        )
+
+        expect(screen.getByTestId('select-sample-3')).toBeDefined()
+        expect(screen.queryByTestId('select-sample-1')).toBeNull()
+        expect(screen.getByTestId('bottom-row-sample').textContent).toBe('none')
+        expect(screen.getAllByTestId('selected-sample-id')[0].textContent).toBe('none')
     })
 })
