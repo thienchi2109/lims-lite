@@ -44,6 +44,25 @@ The system SHALL protect sensitive client fields in sample detail responses when
 - **WHEN** the sample detail API is requested for a confidential-associated sample
 - **THEN** the system SHALL return full client detail fields according to existing permitted schema
 
+### Requirement: Anonymized HIV export requires dedicated authorization
+
+The system SHALL treat anonymized HIV export as a separate permission from operational confidential-data access.
+
+#### Scenario: Operational confidential access alone does not grant export permission
+
+- **GIVEN** an authenticated user with `can_access_confidential = true`
+- **AND** the same user has `can_export_hiv_anonymized = false`
+- **WHEN** the user attempts to run the anonymized HIV export
+- **THEN** the system SHALL deny the export request
+- **AND** no dataset SHALL be returned
+
+#### Scenario: Authorized export returns de-identified dataset
+
+- **GIVEN** an authenticated user with `can_export_hiv_anonymized = true`
+- **WHEN** the user runs the anonymized HIV export
+- **THEN** the system SHALL return only the approved de-identified dataset shape
+- **AND** the output SHALL omit direct operational identifiers
+
 ### Requirement: Confidential access auditability
 
 The system SHALL provide verifiable evidence for confidential access controls and usage paths.
@@ -52,12 +71,11 @@ The system SHALL provide verifiable evidence for confidential access controls an
 
 - **GIVEN** confidentiality controls are deployed
 - **WHEN** the security verification suite is executed
-- **THEN** the suite SHALL validate presence of confidentiality schema, helper function, and policy predicates
+- **THEN** the suite SHALL validate presence of confidentiality schema, helper functions, and policy predicates
 - **AND** include at least one unauthorized-negative and authorized-positive access check
 
 #### Scenario: Confidential exports are auditable
 
-- **GIVEN** a user performs an anonymized epidemiology/research export
+- **GIVEN** a user performs an anonymized epidemiology or research export
 - **WHEN** the export completes or fails
 - **THEN** the system SHALL log actor, timestamp, scope, and outcome in an audit trail
-

@@ -1,38 +1,42 @@
 ## Why
 
-CDC-LIMS currently enforces access mostly by role (`analyst`, `manager`) and authentication status. For HIV-related data, this is insufficient because:
+CDC-LIMS currently enforces access mostly by role (`analyst`, `manager`) and authentication status. For HIV-related data, that is not sufficient because:
 
-- `results` visibility is effectively broad to authenticated users.
-- `samples`/`clients` reads can expose personally identifiable information (PII) that enables HIV status inference.
-- Search and CoA access paths can amplify leakage if they do not enforce confidential-data authorization consistently.
-- There is no dedicated anonymized export flow for epidemiology/research use cases.
+- `results` visibility is still broad enough to expose confidential assay rows to authenticated staff who were never explicitly authorized for HIV data.
+- `samples` and `clients` access paths can expose PII that allows HIV status inference even when a user does not need the underlying result values.
+- Search and CoA surfaces can amplify leakage if they do not apply the same confidentiality rule set as the core database policies.
+- Research and epidemiology use cases require anonymized output with purpose-specific authorization rather than direct reuse of operational access.
 
-Based on the completed internal research and implementation plan in `docs/plans/2026-03-24-hiv-confidentiality-internal-research.md` and `docs/plans/2026-03-24-hiv-confidentiality-implementation-plan.md`, the system needs a dedicated confidentiality capability for HIV-sensitive assays and related records.
+The internal research and implementation plan in `docs/plans/2026-03-24-hiv-confidentiality-internal-research.md` and `docs/plans/2026-03-24-hiv-confidentiality-implementation-plan.md` establish a DB-first confidentiality model and identify public CoA and anonymized export as separate high-risk paths that need explicit handling.
 
 ## What Changes
 
-- **NEW CAPABILITY:** Confidential data access control for HIV-sensitive workflows:
+- **NEW CAPABILITY:** HIV confidentiality controls for sensitive assay workflows:
   - Introduce assay-level confidentiality classification (`assay_definitions.is_confidential`).
-  - Introduce user authorization flag for confidential data (`users.can_access_confidential`).
-  - Add helper policy function `user_can_access_confidential()`.
+  - Introduce explicit operational authorization for confidential data (`users.can_access_confidential`).
+  - Introduce separate authorization for anonymized HIV export (`users.can_export_hiv_anonymized`).
+  - Add helper policy functions for both authorization checks.
 
 - **RLS and data-access hardening:**
-  - Restrict `results` SELECT/INSERT/UPDATE for confidential assays to authorized personnel only.
-  - Ensure sample-detail/client data responses are confidentiality-aware and redact sensitive fields for unauthorized users.
-  - Keep enforcement at DB/RLS layer first; UI permissions remain secondary guidance.
+  - Restrict `results` SELECT/INSERT/UPDATE for confidential assays to explicitly authorized personnel only.
+  - Make sample-detail and client-facing operational responses confidentiality-aware so unauthorized users receive redacted or omitted sensitive fields.
+  - Keep enforcement DB-first; app-layer checks exist for defense in depth and user-safe responses, not as the primary gate.
 
 - **Workflow and surface consistency:**
-  - Preserve analyst workflow for authorized staff (view/enter/submit review on HIV samples).
-  - Enforce confidential authorization on manager approval path for confidential results.
-  - Make search functions confidentiality-aware so they do not reveal restricted data.
-  - Harden CoA access for confidential samples (authorization checks and scoped access).
+  - Preserve analyst workflow for authorized staff working on confidential HIV samples.
+  - Require confidential authorization for manager approval of confidential results.
+  - Make search functions confidentiality-aware so they do not reveal restricted data through result snippets, counts, or client matches.
+  - Restrict staff CoA access for confidential samples to staff with confidential authorization.
+  - Exclude confidential HIV CoAs from the public `/coa/access` flow in MVP until a stronger client verification mechanism exists.
 
-- **Research/epidemiology compliance path:**
-  - Add dedicated anonymized export mechanism (no direct operational table export).
-  - Apply pseudonymization/generalization and suppression constraints to reduce re-identification risk.
+- **Research and epidemiology compliance path:**
+  - Add a dedicated anonymized export path instead of permitting direct operational-table export.
+  - Require purpose-specific export authorization, separate from operational confidential access.
+  - Apply pseudonymization, generalization, suppression, and audit logging to reduce re-identification risk.
 
 - **Verification uplift:**
-  - Extend security verification tests (`run_security_tests`) with confidentiality-specific assertions and negative/positive access cases.
+  - Extend `run_security_tests()` with confidentiality-specific schema and RLS assertions.
+  - Add negative and positive integration coverage for confidential results, redacted sample detail, search behavior, CoA access, and anonymized export.
 
 ## Impact
 
@@ -42,41 +46,48 @@ Based on the completed internal research and implementation plan in `docs/plans/
 - **MODIFIED:** `specs/assay-management/spec.md`
 - **MODIFIED:** `specs/sample-management/spec.md`
 - **MODIFIED:** `specs/search-capability/spec.md`
+- **MODIFIED:** `specs/coa-preview/spec.md`
 
 ### Affected code (expected)
 
-- `supabase/migrations/` (new confidentiality schema + RLS + security tests)
-- `src/types/core.ts`, `src/types/lab.ts` (new confidential flags)
+- `supabase/migrations/` for new confidentiality columns, helper functions, export authorization, RLS updates, and security verification tests
+- `src/types/core.ts`, `src/types/lab.ts` for confidentiality and export flags
 - `src/app/actions/assay-mutations.ts`, `src/app/actions/users.ts`, `src/app/actions/results-approval.ts`
-- `src/app/actions/samples.ts`, `src/app/api/samples/[id]/route.ts` (PII redaction path)
-- `supabase/migrations/075_create_search_functions.sql` and related search actions (confidential-aware search behavior)
-- `src/app/api/coa/authenticate/route.ts`, `src/app/api/coa/download/route.ts`, `src/app/api/coa/view/route.ts`
+- `src/app/actions/samples.ts`, `src/app/api/samples/[id]/route.ts` for confidentiality-safe sample detail responses
+- `supabase/migrations/075_create_search_functions.sql` and related search actions for confidentiality-safe search behavior
+- `src/app/api/coa/authenticate/route.ts`, `src/app/api/coa/download/route.ts`, `src/app/api/coa/view/route.ts` for confidential CoA restrictions
+- export RPC or route handlers plus audit logging for anonymized HIV data access
 
 ### Behavior changes
 
-- Unauthorized staff will no longer see confidential HIV results.
-- Unauthorized staff will receive redacted/limited sensitive client fields in confidential contexts.
-- Authorized analysts can continue HIV workflows (enter results, submit for review); managers still perform final approval.
-- Research/epidemiology export must use anonymized pipeline instead of direct operational data access.
+- Unauthorized staff will no longer see or mutate confidential HIV results.
+- Unauthorized staff will receive redacted or omitted client PII in confidential sample contexts.
+- Managers will need explicit confidential authorization to approve confidential results.
+- Staff without confidential authorization will be blocked from confidential CoA preview or download flows.
+- The public CoA portal will not expose confidential HIV CoAs in this MVP.
+- Anonymized HIV export will require a separate authorization from operational confidential access.
 
 ### Migration and rollout
 
-1. Add schema flags and helper function.
-2. Update RLS for confidential enforcement.
-3. Backfill HIV assay classification.
-4. Update app/action/search/CoA enforcement layers.
-5. Add anonymized export path.
-6. Run confidentiality regression/security checks before rollout.
+1. Add confidentiality and export-authorization schema fields plus helper functions.
+2. Grant the required user flags before enabling confidentiality on production assays.
+3. Update `results` RLS and verification tests.
+4. Backfill HIV assay definitions to `is_confidential = true`.
+5. Update app-layer sample, search, approval, and CoA handling to match the DB rules.
+6. Add the anonymized export path and audit trail.
+7. Run confidentiality regression and security checks before rollout.
 
 ### Risks
 
-- Operational lockout if confidentiality flags are enabled before user authorization is granted.
-- Performance impact from additional RLS predicates if indexes are not aligned.
-- Data leakage risk remains if any admin-bypass endpoint misses confidential checks.
+- Operational lockout if confidential assays are enabled before the correct users receive confidential access.
+- Research teams could be blocked if export authorization is not provisioned separately from operational access.
+- Additional RLS predicates may affect query latency if supporting indexes are missing.
+- Existing public CoA expectations will change for confidential HIV samples until a stronger verification flow is introduced.
+- Admin-bypass endpoints remain a leakage risk unless every path applies the same confidential checks.
 
 ### Non-goals
 
-- Replacing existing role model (`analyst`/`manager`) with a new RBAC system.
-- Introducing hard delete patterns for confidential records.
-- Building external legal citation system in this change.
-
+- Replacing the existing role model (`analyst`/`manager`) with a full RBAC or ABAC redesign.
+- Introducing public step-up verification for confidential HIV CoAs in this change.
+- Allowing direct research access to operational HIV tables.
+- Introducing hard deletes for confidential records.
