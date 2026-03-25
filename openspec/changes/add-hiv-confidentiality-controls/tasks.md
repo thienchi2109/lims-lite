@@ -12,15 +12,15 @@
 
 ## Batch 1: Confidential Schema and Authorization Helpers
 ### RED
-- [ ] 1.1 Add failing SQL security tests for `assay_definitions.is_confidential`
-- [ ] 1.2 Add failing SQL security tests for `users.can_access_confidential`
-- [ ] 1.3 Add failing SQL security tests for `user_can_access_confidential()`
+- [x] 1.1 Add failing SQL security tests for `assay_definitions.is_confidential`
+- [x] 1.2 Add failing SQL security tests for `users.can_access_confidential`
+- [x] 1.3 Add failing SQL security tests for `user_can_access_confidential()`
 ### GREEN
-- [ ] 1.4 Add `assay_definitions.is_confidential`, `users.can_access_confidential`, and `user_can_access_confidential()` in a migration
-- [ ] 1.5 Add indexes to support confidential policy predicates and confidential-assay lookups
-- [ ] 1.6 Re-run the schema and helper tests until they pass
+- [x] 1.4 Add `assay_definitions.is_confidential`, `users.can_access_confidential`, and `user_can_access_confidential()` in a migration
+- [x] 1.5 Add indexes to support confidential policy predicates and confidential-assay lookups
+- [x] 1.6 Re-run the schema and helper tests until they pass
 ### REFACTOR
-- [ ] 1.7 Clean up migration naming, comments, and helper function structure without changing behavior
+- [x] 1.7 Clean up migration naming, comments, and helper function structure without changing behavior
 
 ## Batch 2: `results` RLS Enforcement
 ### RED
