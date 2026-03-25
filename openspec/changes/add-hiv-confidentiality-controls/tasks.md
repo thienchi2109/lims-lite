@@ -42,15 +42,17 @@
 ### RED
 - [ ] 3.1 Add failing TypeScript or integration tests for schemas carrying `is_confidential` and `can_access_confidential`
 - [ ] 3.2 Add a failing test proving manager approval of confidential results is not yet guarded correctly
-- [ ] 3.3 Add a failing test proving authorized analysts must retain confidential HIV workflow capability
+- [ ] 3.3 Add a failing test proving managers without confidential authorization can still see confidential items in approval queues or approval counts
+- [ ] 3.4 Add a failing test proving authorized analysts must retain confidential HIV workflow capability
 ### GREEN
-- [ ] 3.4 Extend TypeScript and Zod schemas with the new confidentiality fields
-- [ ] 3.5 Update assay management actions to read and write `is_confidential`
-- [ ] 3.6 Update user management actions to read and write `can_access_confidential`
-- [ ] 3.7 Enforce confidential checks in manager result approval flow (`approveResults`)
-- [ ] 3.8 Re-run the focused tests until the new types and approval behavior pass
+- [ ] 3.5 Extend TypeScript and Zod schemas with the new confidentiality fields
+- [ ] 3.6 Update assay management actions to read and write `is_confidential`
+- [ ] 3.7 Update user management actions to read and write `can_access_confidential`
+- [ ] 3.8 Enforce confidential checks in manager result approval flow (`approveResults`)
+- [ ] 3.9 Filter confidential items out of unauthorized approval queues, pending-approval lists, and approval counts
+- [ ] 3.10 Re-run the focused tests until the new types and approval behavior pass
 ### REFACTOR
-- [ ] 3.9 Simplify shared authorization checks or schema helpers after green
+- [ ] 3.11 Simplify shared authorization checks or schema helpers after green
 
 ## Batch 4: Sample Concealment in Lists and Detail
 ### RED

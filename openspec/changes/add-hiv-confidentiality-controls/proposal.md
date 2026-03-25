@@ -23,7 +23,7 @@ The internal research and implementation plan in `docs/plans/2026-03-24-hiv-conf
 
 - **Workflow and surface consistency:**
   - Preserve analyst workflow for authorized staff working on confidential HIV samples.
-  - Require confidential authorization for manager approval of confidential results.
+  - Require confidential authorization for manager approval of confidential results and hide confidential items from unauthorized approval queues.
   - Make search functions confidentiality-aware so they do not reveal restricted data through result snippets, counts, client matches, sample identifiers, or exact-identifier lookups.
   - Restrict staff CoA access for confidential samples to staff with confidential authorization.
   - Exclude confidential HIV CoAs from the public `/coa/access` flow in MVP until a stronger client verification mechanism exists.
@@ -55,7 +55,7 @@ The internal research and implementation plan in `docs/plans/2026-03-24-hiv-conf
 
 - Unauthorized staff will no longer see or mutate confidential HIV results.
 - Unauthorized staff will not be able to discover or confirm confidential-associated samples through sample lists, detail routes, exact lookups, search, or CoA paths.
-- Managers will need explicit confidential authorization to approve confidential results.
+- Managers without confidential authorization will not see confidential items in approval queues and will not be able to approve confidential results.
 - Staff without confidential authorization will be blocked from confidential CoA preview or download flows.
 - The public CoA portal will not expose confidential HIV CoAs in this MVP.
 

@@ -36,6 +36,14 @@ The system SHALL hide confidential-associated samples from operational sample li
 
 The system SHALL require confidential authorization for manager approval actions involving confidential assay results.
 
+#### Scenario: Manager without confidential authorization cannot see confidential approval work
+
+- **GIVEN** an authenticated manager without `can_access_confidential = true`
+- **AND** one or more submitted results waiting for approval are linked to confidential assays
+- **WHEN** the manager loads an approval queue, pending-approval list, or approval count endpoint
+- **THEN** the system SHALL exclude those confidential items from the response
+- **AND** the UI and API SHALL NOT reveal that confidential approval work was hidden
+
 #### Scenario: Manager without confidential authorization cannot approve confidential results
 
 - **GIVEN** an authenticated manager without `can_access_confidential = true`
@@ -48,5 +56,6 @@ The system SHALL require confidential authorization for manager approval actions
 
 - **GIVEN** an authenticated manager with `can_access_confidential = true`
 - **AND** target results satisfy existing workflow preconditions
-- **WHEN** the manager approves confidential results
-- **THEN** the system SHALL process approval using existing approval flow semantics
+- **WHEN** the manager loads the approval queue and approves confidential results
+- **THEN** the system SHALL include those confidential items in the permitted approval workflow
+- **AND** the system SHALL process approval using existing approval flow semantics
