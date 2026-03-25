@@ -5,7 +5,7 @@ CDC-LIMS currently relies on role-based access plus broad authenticated reads fo
 - `results` access is not scoped to explicitly authorized HIV staff.
 - Sample detail and client responses can expose PII that implies HIV status even when result values are hidden.
 - Search and CoA routes can bypass the intent of the data model if they do not reuse the same confidentiality rule.
-- Research and epidemiology access needs de-identified output plus purpose-specific authorization, not a reuse of operational permissions.
+- Research and epidemiology access still needs de-identified output, but this MVP does not need a second user-permission flag just for export.
 
 This change is cross-cutting: it affects schema, RLS, application guards, search behavior, CoA flows, and verification. It also needs a rollout order that avoids locking out authorized staff.
 
@@ -14,7 +14,6 @@ This change is cross-cutting: it affects schema, RLS, application guards, search
 **Goals:**
 
 - Add an explicit assay-level confidentiality marker that downstream policies can evaluate consistently.
-- Separate operational confidential-data access from anonymized HIV export authorization.
 - Make `results` RLS the authoritative gate for confidential HIV data.
 - Redact or omit sensitive PII in sample-related responses when the caller lacks confidential authorization.
 - Apply the same confidentiality rule set to search and CoA surfaces.
@@ -40,16 +39,20 @@ Alternative considered:
 
 - Sample-level confidentiality flag: rejected because it is easier to misclassify mixed-workflow samples and duplicates logic already implied by assigned assays.
 
-### 2. Use two explicit user authorizations instead of one
+### 2. Use a single explicit confidential-data authorization
 
-Add both `users.can_access_confidential` and `users.can_export_hiv_anonymized`, with helper functions for each.
+Use only `users.can_access_confidential`, with one helper function `user_can_access_confidential()`.
 
-Operational access and research export serve different purposes. A single flag would let staff who need to work with HIV results automatically export de-identified datasets, which weakens least privilege and makes future audit reasoning harder.
+In this repo, `role` already decides what type of action a user may perform, while confidential access decides whether those role-based actions may target HIV-sensitive records. Reusing one flag keeps the model small and matches the user's operational expectation: if a manager or analyst is authorized for confidential HIV data, they can perform the already-permitted confidential workflows without a second admin step.
+
+Trade-off accepted:
+
+- Authorized users who can access confidential HIV data will also be able to run the anonymized export path if that path remains in scope.
 
 Alternative considered:
 
-- Single `can_access_confidential` flag for all paths: rejected because it conflates operational care workflow with secondary-use export.
-- Grant table only: deferred. A full grant-history model is useful later, but the two-flag MVP fits the current user table and is faster to roll out.
+- Separate `can_export_hiv_anonymized` flag: rejected as unnecessary complexity for this MVP.
+- Grant table only: deferred. A full grant-history model is still useful later if the organization needs finer approval evidence.
 
 ### 3. Keep RLS authoritative and use app-layer projections for safe responses
 
@@ -74,9 +77,9 @@ Alternative considered:
 
 ### 5. Build anonymized export as a dedicated path, not a filtered reuse of operational queries
 
-The export should be a dedicated view or RPC that emits only the approved de-identified dataset, backed by explicit authorization and audit logging.
+The export should still be a dedicated view or RPC that emits only the approved de-identified dataset, backed by `can_access_confidential` checks and audit logging.
 
-This preserves separation of purpose and reduces the risk that future operational schema changes accidentally leak identifiers into research output.
+This keeps de-identification mandatory even though the authorization model is simplified to one user flag.
 
 Alternative considered:
 
@@ -91,17 +94,17 @@ This change touches multiple access paths, so schema verification alone is not e
 ## Risks / Trade-offs
 
 - [Operational lockout] -> Grant `can_access_confidential` before backfilling or enabling confidential assays in production, and include that order in the rollout runbook.
-- [Export workflow disruption] -> Grant `can_export_hiv_anonymized` explicitly for research users before enabling the new export path.
+- [Broader export access] -> Accept that confidential-data authorization also unlocks anonymized export in MVP, and rely on audit logging plus role checks to manage exposure.
 - [RLS performance overhead] -> Add supporting indexes for confidential predicates and confirm query plans in staging after migration.
 - [Public CoA behavior change] -> Communicate that confidential HIV CoAs are staff-only in MVP and track stronger public verification as follow-up work.
 - [Projection drift] -> Keep redaction logic centralized so sample detail and search surfaces do not diverge in what they hide.
 
 ## Migration Plan
 
-1. Add schema fields and helper functions for confidential access and anonymized export authorization.
+1. Add schema field and helper function for confidential access.
 2. Update `results` RLS policies and extend `run_security_tests()` for confidential scenarios.
 3. Backfill existing HIV assay definitions to `is_confidential = true`.
-4. Update TypeScript types and server actions to read and write the new flags safely.
+4. Update TypeScript types and server actions to read and write the new confidentiality field safely.
 5. Apply confidentiality-safe sample detail, search, and CoA behavior.
 6. Add the anonymized export path and its audit trail.
 7. Validate staging rollout using the order above, then promote to production.
@@ -110,10 +113,10 @@ Rollback strategy:
 
 - Remove confidential assay backfills before relaxing policies if emergency rollback is needed.
 - Recreate previous `results` policies after dropping new confidentiality predicates.
-- Disable the export path before removing its authorization flag and helper function.
+- Disable the export path before relaxing the confidential authorization check if rollback is needed.
 - Preserve audit evidence; do not hard-delete any log data during rollback.
 
 ## Open Questions
 
 - Should the follow-up public verification flow for confidential CoAs use OTP, DOB plus phone, national ID fragment, or a different identity proofing step?
-- Does the organization need grant-history evidence (`confidential_access_grants`) in MVP, or is a boolean-plus-audit-trail rollout sufficient for the first release?
+- Does the organization need grant-history evidence (`confidential_access_grants`) later, or is a single boolean plus audit trail sufficient for the first release?

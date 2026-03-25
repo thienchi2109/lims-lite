@@ -15,15 +15,13 @@
 ### RED
 - [ ] 1.1 Add failing SQL security tests for `assay_definitions.is_confidential`
 - [ ] 1.2 Add failing SQL security tests for `users.can_access_confidential`
-- [ ] 1.3 Add failing SQL security tests for `users.can_export_hiv_anonymized`
-- [ ] 1.4 Add failing SQL security tests for `user_can_access_confidential()`
-- [ ] 1.5 Add failing SQL security tests for `user_can_export_hiv_anonymized()`
+- [ ] 1.3 Add failing SQL security tests for `user_can_access_confidential()`
 ### GREEN
-- [ ] 1.6 Add the three schema fields and two helper functions in a migration
-- [ ] 1.7 Add indexes to support confidential policy predicates and confidential-assay lookups
-- [ ] 1.8 Re-run the schema and helper tests until they pass
+- [ ] 1.4 Add `assay_definitions.is_confidential`, `users.can_access_confidential`, and `user_can_access_confidential()` in a migration
+- [ ] 1.5 Add indexes to support confidential policy predicates and confidential-assay lookups
+- [ ] 1.6 Re-run the schema and helper tests until they pass
 ### REFACTOR
-- [ ] 1.9 Clean up migration naming, comments, and helper function structure without changing behavior
+- [ ] 1.7 Clean up migration naming, comments, and helper function structure without changing behavior
 
 ## Batch 2: `results` RLS Enforcement
 ### RED
@@ -43,13 +41,13 @@
 
 ## Batch 3: Types, User Management, and Approval Guards
 ### RED
-- [ ] 3.1 Add failing TypeScript or integration tests for schemas carrying `is_confidential`, `can_access_confidential`, and `can_export_hiv_anonymized`
+- [ ] 3.1 Add failing TypeScript or integration tests for schemas carrying `is_confidential` and `can_access_confidential`
 - [ ] 3.2 Add a failing test proving manager approval of confidential results is not yet guarded correctly
 - [ ] 3.3 Add a failing test proving authorized analysts must retain confidential HIV workflow capability
 ### GREEN
 - [ ] 3.4 Extend TypeScript and Zod schemas with the new confidentiality fields
 - [ ] 3.5 Update assay management actions to read and write `is_confidential`
-- [ ] 3.6 Update user management actions to read and write both confidentiality-related user flags
+- [ ] 3.6 Update user management actions to read and write `can_access_confidential`
 - [ ] 3.7 Enforce confidential checks in manager result approval flow (`approveResults`)
 - [ ] 3.8 Re-run the focused tests until the new types and approval behavior pass
 ### REFACTOR
@@ -92,13 +90,13 @@
 
 ## Batch 7: Anonymized Export for Research and Epidemiology
 ### RED
-- [ ] 7.1 Add a failing test proving operational confidential access alone can reach the export path
+- [ ] 7.1 Add a failing test proving a user without `can_access_confidential` can still reach the export path
 - [ ] 7.2 Add a failing test proving direct identifiers are still present in export output
 - [ ] 7.3 Add a failing test proving suppression or generalization rules are not yet enforced
 - [ ] 7.4 Add a failing test proving export audit logging is missing or incomplete
 ### GREEN
 - [ ] 7.5 Create a dedicated anonymized export path (view or RPC), not direct operational-table export
-- [ ] 7.6 Restrict anonymized export execution to users with `can_export_hiv_anonymized = true`
+- [ ] 7.6 Restrict anonymized export execution to users with `can_access_confidential = true`
 - [ ] 7.7 Remove direct identifiers and apply a stable pseudonymization strategy
 - [ ] 7.8 Apply generalization and suppression rules for re-identification control
 - [ ] 7.9 Audit-log all anonymized export operations
@@ -118,7 +116,6 @@
 
 ## Batch 9: Rollout and Operational Safety
 - [ ] 9.1 Prepare runbook: grant confidential access before enabling assay confidentiality
-- [ ] 9.2 Prepare runbook: grant export authorization before enabling anonymized HIV export
-- [ ] 9.3 Validate migration sequencing in staging
-- [ ] 9.4 Validate audit observability for confidential and anonymized access
-- [ ] 9.5 Communicate role and permission implications to manager users
+- [ ] 9.2 Validate migration sequencing in staging
+- [ ] 9.3 Validate audit observability for confidential and anonymized access
+- [ ] 9.4 Communicate role and permission implications to manager users
