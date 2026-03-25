@@ -106,7 +106,8 @@ export async function fetchSamples(params: SampleListParams) {
             samples.map((sample) => sample.id),
         )
     } catch (error) {
-        return { error: error instanceof Error ? error.message : 'Failed to fetch samples' }
+        console.error('Error verifying confidential sample associations:', error)
+        return { error: 'Không thể tải danh sách mẫu' }
     }
 
     if (confidentialSampleIds.data.size > 0) {

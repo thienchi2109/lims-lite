@@ -18,11 +18,7 @@ export async function GET(_request: Request, context: RouteContext) {
     const result = await getSample(sampleId)
 
     if ('error' in result) {
-        if (result.error === 'Unauthorized' || result.error === SAMPLE_NOT_FOUND_ERROR) {
-            return NextResponse.json({ error: SAMPLE_NOT_FOUND_ERROR }, { status: 404 })
-        }
-
-        return NextResponse.json({ error: result.error }, { status: 404 })
+        return NextResponse.json({ error: SAMPLE_NOT_FOUND_ERROR }, { status: 404 })
     }
 
     return NextResponse.json({ data: result.data })

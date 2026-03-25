@@ -46,6 +46,6 @@ describe('getConfidentialAssociatedSampleIds', () => {
 
         await expect(
             getConfidentialAssociatedSampleIds(['11111111-1111-4111-8111-111111111111']),
-        ).rejects.toThrow('admin query failed')
+        ).rejects.toThrow('Failed to evaluate confidential sample association')
     })
 })

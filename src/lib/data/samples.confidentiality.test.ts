@@ -188,6 +188,39 @@ describe('fetchSamples confidentiality concealment', () => {
         })
     })
 
+    it('returns a generic list error when confidential association lookup fails', async () => {
+        mockCreateAdminClient.mockReturnValueOnce({
+            from: (table: string) => {
+                if (table === 'results') {
+                    return createThenableQuery({
+                        data: null,
+                        error: {
+                            message: 'admin query failed',
+                        },
+                    })
+                }
+
+                throw new Error(`Unexpected admin table: ${table}`)
+            },
+        })
+
+        mockRpc.mockResolvedValueOnce({
+            data: {
+                rows: [
+                    buildSampleRow(),
+                ],
+                total_count: 1,
+            },
+            error: null,
+        })
+
+        const result = await fetchSamples({ page: 1, pageSize: 20 })
+
+        expect(result).toEqual({
+            error: 'Không thể tải danh sách mẫu',
+        })
+    })
+
     it('preserves confidential-associated sample visibility for authorized users', async () => {
         mockCreateClient.mockResolvedValueOnce({
             auth: {

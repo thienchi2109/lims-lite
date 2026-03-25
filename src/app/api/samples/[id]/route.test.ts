@@ -40,6 +40,26 @@ describe('sample detail route confidentiality responses', () => {
         })
     })
 
+    it('normalizes internal detail lookup errors to the same not-found response', async () => {
+        mockGetSample.mockResolvedValue({
+            error: 'Failed to evaluate confidential sample association',
+        })
+
+        const response = await GET(
+            new Request('http://localhost/api/samples/sample-1'),
+            { params: Promise.resolve({ id: 'sample-1' }) },
+        )
+
+        expect(response).toEqual({
+            body: {
+                error: 'Không tìm thấy mẫu',
+            },
+            init: {
+                status: 404,
+            },
+        })
+    })
+
     it('keeps successful sample detail responses unchanged', async () => {
         mockGetSample.mockResolvedValue({
             data: {

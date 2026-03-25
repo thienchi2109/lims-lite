@@ -1,6 +1,7 @@
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 
 export const SAMPLE_NOT_FOUND_ERROR = 'Không tìm thấy mẫu'
+export const CONFIDENTIAL_ASSOCIATION_CHECK_FAILED_ERROR = 'Failed to evaluate confidential sample association'
 
 type ConfidentialAccessClient = Awaited<ReturnType<typeof createClient>>
 
@@ -54,7 +55,7 @@ export async function getConfidentialAssociatedSampleIds(sampleIds: string[]): P
 
     if (error) {
         console.error('Error fetching confidential-associated sample ids:', error)
-        throw new Error(error.message)
+        throw new Error(CONFIDENTIAL_ASSOCIATION_CHECK_FAILED_ERROR)
     }
 
     return {
