@@ -18,6 +18,7 @@ interface AssayDefinition {
     specialty_order: number | null
     units: string | null
     validation_rules: Record<string, unknown>
+    is_confidential: boolean
     methods: AssayMethod[]
     created_at: string
     updated_at: string
@@ -73,6 +74,7 @@ export async function getAssayDefinitions(params?: GetAssayDefinitionsParams) {
             specialty_order: row.specialty_order,
             units: row.units,
             validation_rules: row.validation_rules || {},
+            is_confidential: row.is_confidential ?? false,
             methods: row.methods || [],
             created_at: row.created_at,
             updated_at: row.updated_at,
@@ -125,6 +127,7 @@ export async function getAssayDefinitionById(id: string) {
                 specialty_id: row.specialty_id,
                 units: row.units,
                 validation_rules: row.validation_rules || {},
+                is_confidential: row.is_confidential ?? false,
                 methods: row.methods || [],
                 created_at: row.created_at,
                 updated_at: row.updated_at,

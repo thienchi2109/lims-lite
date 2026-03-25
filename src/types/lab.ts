@@ -85,6 +85,7 @@ export const AssayDefinitionSchema = z.object({
     specialty_id: z.string().uuid().nullable().optional(),
     units: z.string().nullable(),
     validation_rules: z.record(z.string(), z.any()).default({}),
+    is_confidential: z.boolean().default(false),
     created_at: z.string().datetime(),
     updated_at: z.string().datetime(),
     deleted_at: z.string().datetime().nullable(),
@@ -98,6 +99,7 @@ export const CreateAssayDefinitionSchema = z.object({
     method_id: z.string().uuid().optional(),
     units: z.string().optional(),
     validation_rules: z.record(z.string(), z.any()).optional(),
+    is_confidential: z.boolean().optional(),
 })
 
 export type CreateAssayDefinition = z.infer<typeof CreateAssayDefinitionSchema>

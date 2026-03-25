@@ -24,35 +24,35 @@
 
 ## Batch 2: `results` RLS Enforcement
 ### RED
-- [ ] 2.1 Add a failing negative SQL test proving unauthorized users can still read confidential HIV results today
-- [ ] 2.2 Add a failing negative SQL test proving unauthorized users can still insert confidential HIV results today
-- [ ] 2.3 Add a failing negative SQL test proving unauthorized users can still update confidential HIV results today
-- [ ] 2.4 Add a failing positive SQL test proving authorized users must retain confidential access
+- [x] 2.1 Add a failing negative SQL test proving unauthorized users can still read confidential HIV results today
+- [x] 2.2 Add a failing negative SQL test proving unauthorized users can still insert confidential HIV results today
+- [x] 2.3 Add a failing negative SQL test proving unauthorized users can still update confidential HIV results today
+- [x] 2.4 Add a failing positive SQL test proving authorized users must retain confidential access
 ### GREEN
-- [ ] 2.5 Update `results` SELECT policy to allow confidential rows only for authorized users
-- [ ] 2.6 Update `results` INSERT policy to require confidential access when the assay is confidential
-- [ ] 2.7 Update `results` UPDATE policy to require confidential access when the assay is confidential
-- [ ] 2.8 Backfill HIV assay definitions to `is_confidential = true`
-- [ ] 2.9 Re-run the targeted RLS tests until all unauthorized and authorized cases pass
+- [x] 2.5 Update `results` SELECT policy to allow confidential rows only for authorized users
+- [x] 2.6 Update `results` INSERT policy to require confidential access when the assay is confidential
+- [x] 2.7 Update `results` UPDATE policy to require confidential access when the assay is confidential
+- [x] 2.8 Backfill HIV assay definitions to `is_confidential = true`
+- [x] 2.9 Re-run the targeted RLS tests until all unauthorized and authorized cases pass
 ### REFACTOR
-- [ ] 2.10 Verify no overlapping or orphaned policies weaken confidential enforcement
-- [ ] 2.11 Run policy verification queries and simplify policy definitions if needed without changing behavior
+- [x] 2.10 Verify no overlapping or orphaned policies weaken confidential enforcement
+- [x] 2.11 Run policy verification queries and simplify policy definitions if needed without changing behavior
 
 ## Batch 3: Types, User Management, and Approval Guards
 ### RED
-- [ ] 3.1 Add failing TypeScript or integration tests for schemas carrying `is_confidential` and `can_access_confidential`
-- [ ] 3.2 Add a failing test proving manager approval of confidential results is not yet guarded correctly
-- [ ] 3.3 Add a failing test proving managers without confidential authorization can still see confidential items in approval workspace tabs or approval counts
-- [ ] 3.4 Add a failing test proving authorized analysts must retain confidential HIV workflow capability
+- [x] 3.1 Add failing TypeScript or integration tests for schemas carrying `is_confidential` and `can_access_confidential`
+- [x] 3.2 Add a failing test proving manager approval of confidential results is not yet guarded correctly
+- [x] 3.3 Add a failing test proving managers without confidential authorization can still see confidential items in approval workspace tabs or approval counts
+- [x] 3.4 Add a failing test proving authorized analysts must retain confidential HIV workflow capability
 ### GREEN
-- [ ] 3.5 Extend TypeScript and Zod schemas with the new confidentiality fields
-- [ ] 3.6 Update assay management actions to read and write `is_confidential`
-- [ ] 3.7 Update user management actions to read and write `can_access_confidential`
-- [ ] 3.8 Enforce confidential checks in manager result approval flow (`approveResults`)
-- [ ] 3.9 Filter confidential items out of unauthorized approval workspace tabs, pending-approval lists, completed-results lists, and approval counts
-- [ ] 3.10 Re-run the focused tests until the new types and approval behavior pass
+- [x] 3.5 Extend TypeScript and Zod schemas with the new confidentiality fields
+- [x] 3.6 Update assay management actions to read and write `is_confidential`
+- [x] 3.7 Update user management actions to read and write `can_access_confidential`
+- [x] 3.8 Enforce confidential checks in manager result approval flow (`approveResults`)
+- [x] 3.9 Filter confidential items out of unauthorized approval workspace tabs, pending-approval lists, completed-results lists, and approval counts
+- [x] 3.10 Re-run the focused tests until the new types and approval behavior pass
 ### REFACTOR
-- [ ] 3.11 Simplify shared authorization checks or schema helpers after green
+- [x] 3.11 Simplify shared authorization checks or schema helpers after green
 
 ## Batch 4: Sample Concealment in Lists and Detail
 ### RED

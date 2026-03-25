@@ -12,7 +12,12 @@ const UpdateAssayDefinitionSchema = z.object({
     specialty_id: z.string().uuid().optional(),
     units: z.string().optional(),
     validation_rules: z.record(z.string(), z.any()).optional(),
+    is_confidential: z.boolean().optional(),
 })
+
+function parseFormBoolean(value: FormDataEntryValue | null) {
+    return value === 'true' || value === 'on'
+}
 
 /**
  * Create a new assay definition (Manager only)
@@ -32,6 +37,7 @@ export async function createAssayDefinition(formData: FormData) {
             specialty_id: formData.get('specialty_id') || undefined,
             method_id: formData.get('method_id') || undefined,
             units: formData.get('units') || undefined,
+            is_confidential: parseFormBoolean(formData.get('is_confidential')),
             validation_rules: formData.get('validation_rules')
                 ? JSON.parse(formData.get('validation_rules') as string)
                 : undefined,
@@ -54,6 +60,7 @@ export async function createAssayDefinition(formData: FormData) {
                 specialty_id: result.data.specialty_id || null,
                 units: result.data.units || null,
                 validation_rules: result.data.validation_rules || {},
+                is_confidential: result.data.is_confidential ?? false,
             })
             .select()
             .single()
@@ -105,6 +112,7 @@ export async function updateAssayDefinition(formData: FormData) {
             name: formData.get('name'),
             specialty_id: formData.get('specialty_id') || undefined,
             units: formData.get('units') || undefined,
+            is_confidential: parseFormBoolean(formData.get('is_confidential')),
             validation_rules: formData.get('validation_rules')
                 ? JSON.parse(formData.get('validation_rules') as string)
                 : undefined,
@@ -127,6 +135,7 @@ export async function updateAssayDefinition(formData: FormData) {
                 specialty_id: result.data.specialty_id || null,
                 units: result.data.units || null,
                 validation_rules: result.data.validation_rules || {},
+                is_confidential: result.data.is_confidential ?? false,
             })
             .eq('id', result.data.id)
             .is('deleted_at', null)

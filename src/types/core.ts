@@ -39,6 +39,7 @@ export const UserSchema = z.object({
     role: UserRole,
     email: z.string().email().nullable().optional(),
     lab: z.string().nullable().optional(),
+    can_access_confidential: z.boolean().default(false),
     created_at: z.string().datetime(),
     updated_at: z.string().datetime(),
     deleted_at: z.string().datetime().nullable().optional(),
@@ -58,6 +59,7 @@ export const CreateUserSchema = z.object({
     lab: z.string().optional(),
     password: z.string().min(8),
     role: UserRole,
+    can_access_confidential: z.boolean().optional(),
 })
 
 export type CreateUser = z.infer<typeof CreateUserSchema>
@@ -69,6 +71,7 @@ export const UpdateUserSchema = z.object({
     lab: z.string().optional(),
     role: UserRole.optional(),
     password: z.string().min(8).optional(),
+    can_access_confidential: z.boolean().optional(),
 })
 
 export type UpdateUser = z.infer<typeof UpdateUserSchema>
