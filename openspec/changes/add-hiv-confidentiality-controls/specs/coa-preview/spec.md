@@ -1,6 +1,6 @@
 ## ADDED Requirements
 
-### Requirement: Confidential CoA preview requires explicit staff authorization
+### Requirement: Confidential CoA preview requires explicit staff authorization without confirming existence
 
 The system SHALL require confidential authorization before rendering any CoA preview or direct staff-view response for a sample associated with a confidential assay.
 
@@ -9,8 +9,9 @@ The system SHALL require confidential authorization before rendering any CoA pre
 - **GIVEN** an authenticated analyst or manager without `can_access_confidential = true`
 - **AND** the requested CoA belongs to a sample associated with at least one confidential assay
 - **WHEN** the staff user opens the embedded CoA preview or direct CoA staff route
-- **THEN** the system SHALL deny the request
+- **THEN** the system SHALL return a generic not-found or equivalent authorization-neutral failure
 - **AND** the system SHALL NOT stream the confidential CoA document
+- **AND** the response SHALL NOT disclose whether a confidential CoA exists for that sample
 
 #### Scenario: Staff with confidential authorization can preview confidential CoA
 

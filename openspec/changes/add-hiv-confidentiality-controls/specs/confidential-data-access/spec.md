@@ -26,19 +26,19 @@ The system SHALL classify sensitive assays as confidential and enforce that only
 - **THEN** the system SHALL reject the operation via RLS
 - **AND** no confidential result mutation SHALL be persisted
 
-### Requirement: Confidential sample detail redaction
+### Requirement: Confidential sample existence is hidden without authorization
 
-The system SHALL protect sensitive client fields in sample detail responses when the sample context includes confidential assays and the caller lacks confidential authorization.
+The system SHALL prevent users without confidential authorization from discovering or confirming that a confidential-associated sample exists through sample-detail access paths.
 
-#### Scenario: Unauthorized user receives redacted client fields
+#### Scenario: Unauthorized user cannot confirm confidential sample through detail lookup
 
 - **GIVEN** an authenticated user without confidential authorization
 - **AND** the requested sample is associated with at least one confidential assay
-- **WHEN** the sample detail API is requested
-- **THEN** the system SHALL return a payload with sensitive client fields redacted or omitted
-- **AND** non-sensitive operational fields required for workflow continuity SHALL remain available
+- **WHEN** the sample detail API or equivalent detail action is requested
+- **THEN** the system SHALL return a generic not-found or equivalent authorization-neutral response
+- **AND** the response SHALL NOT disclose whether a confidential-associated sample exists
 
-#### Scenario: Authorized user receives full client fields
+#### Scenario: Authorized user receives full sample detail
 
 - **GIVEN** an authenticated user with confidential authorization
 - **WHEN** the sample detail API is requested for a confidential-associated sample

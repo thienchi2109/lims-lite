@@ -2,15 +2,15 @@
 
 ### Requirement: Confidentiality-aware search results
 
-The search capability SHALL enforce confidential-data authorization so unauthorized users cannot discover or retrieve HIV-confidential records through search surfaces.
+The search capability SHALL enforce confidential-data authorization so unauthorized users cannot discover or confirm confidential-associated HIV records through search surfaces.
 
-#### Scenario: Unauthorized user cannot discover confidential HIV results in search
+#### Scenario: Unauthorized user gets zero confidential-only matches in search
 
 - **GIVEN** an authenticated user without confidential authorization
-- **WHEN** the user executes result search or global search queries
-- **AND** matching records include confidential-assay result data
-- **THEN** the system SHALL exclude confidential matches from search output
-- **AND** no confidential identifiers or values SHALL be returned
+- **WHEN** the user executes result, sample, client, or global search queries
+- **AND** the only matching records are linked to confidential assays
+- **THEN** the system SHALL return zero confidential-associated matches
+- **AND** no confidential identifiers, counts, snippets, or error details SHALL confirm hidden records exist
 
 #### Scenario: Authorized user can search confidential HIV results
 
@@ -21,12 +21,11 @@ The search capability SHALL enforce confidential-data authorization so unauthori
 
 ### Requirement: Confidential-safe client search in restricted contexts
 
-Search responses that may reveal sensitive client identity linked to confidential assays SHALL apply confidentiality safeguards.
+Search responses that intersect both visible and confidential-associated records SHALL preserve normal search behavior for permitted matches without leaking hidden confidential context.
 
-#### Scenario: Unauthorized user receives confidentiality-safe client search output
+#### Scenario: Unauthorized user sees only permitted mixed-context matches
 
 - **GIVEN** an authenticated user without confidential authorization
-- **WHEN** client or global search intersects confidential-sample context
-- **THEN** the system SHALL return only confidentiality-safe output (redacted or excluded as configured)
-- **AND** avoid leaking confidential status through descriptive snippets
-
+- **WHEN** client, sample, or global search intersects both non-confidential and confidential-associated records
+- **THEN** the system SHALL return only the permitted non-confidential matches
+- **AND** ranking, counts, and descriptive snippets SHALL NOT reveal that additional confidential-associated records were hidden

@@ -52,47 +52,47 @@
 ### REFACTOR
 - [ ] 3.9 Simplify shared authorization checks or schema helpers after green
 
-## Batch 4: Sample Detail Redaction
+## Batch 4: Sample Concealment in Lists and Detail
 ### RED
-- [ ] 4.1 Add a failing integration test for confidential-associated sample detail requested by an unauthorized user
-- [ ] 4.2 Add a failing integration test proving authorized users still receive full sample detail
-- [ ] 4.3 Add a failing integration test for `/api/samples/[id]` returning an unsafe payload in confidential context
+- [ ] 4.1 Add a failing integration test for confidential-associated sample detail requested by an unauthorized user returning an existence-confirming response
+- [ ] 4.2 Add a failing integration test proving unauthorized sample lists, work queues, or exact lookups can still surface confidential-associated samples
+- [ ] 4.3 Add a failing integration test proving authorized users still receive full sample visibility and detail
 ### GREEN
-- [ ] 4.4 Update sample detail retrieval to detect confidential-associated samples
-- [ ] 4.5 Redact sensitive client fields for unauthorized users in confidential contexts
-- [ ] 4.6 Ensure `/api/samples/[id]` returns confidentiality-safe payloads
-- [ ] 4.7 Re-run the sample detail tests until authorized and unauthorized paths both pass
+- [ ] 4.4 Update sample retrieval to detect confidential-associated samples consistently across list and detail flows
+- [ ] 4.5 Exclude confidential-associated samples from unauthorized lists, work queues, and exact-identifier lookup results
+- [ ] 4.6 Ensure `/api/samples/[id]` and related detail actions return generic not-found or equivalent authorization-neutral responses for unauthorized users
+- [ ] 4.7 Re-run the sample concealment tests until authorized and unauthorized paths both pass
 ### REFACTOR
-- [ ] 4.8 Centralize redaction logic so API and action layers cannot drift
+- [ ] 4.8 Centralize confidential-associated sample detection and authorization-neutral response logic so API and action layers cannot drift
 
 ## Batch 5: Search Hardening
 ### RED
-- [ ] 5.1 Add a failing test proving search functions or RPC responses can expose confidential HIV data to unauthorized users
-- [ ] 5.2 Add a failing test proving client or global search can leak confidential context
+- [ ] 5.1 Add a failing test proving exact searches by sample code, name, phone, or national ID can expose confidential-associated records to unauthorized users
+- [ ] 5.2 Add a failing test proving client, sample, result, or global search can leak confidential context through counts, snippets, or mixed-result responses
 ### GREEN
-- [ ] 5.3 Ensure search functions and RPC responses do not expose confidential HIV data to unauthorized users
-- [ ] 5.4 Ensure global and client search behavior remains role-safe and confidentiality-safe
+- [ ] 5.3 Ensure search functions and RPC responses return zero confidential-associated matches for unauthorized users, including exact-identifier searches
+- [ ] 5.4 Ensure mixed-result searches return only permitted non-confidential matches without leaking hidden confidential counts or snippets
 - [ ] 5.5 Re-run the search tests until all targeted leaks are closed
 ### REFACTOR
-- [ ] 5.6 Simplify confidentiality-safe search projections or response shaping after green
+- [ ] 5.6 Simplify centralized confidential-search filtering and authorization-neutral response shaping after green
 
 ## Batch 6: CoA Hardening
 ### RED
-- [ ] 6.1 Add a failing test proving staff CoA preview, download, or direct view lacks confidential authorization checks
+- [ ] 6.1 Add a failing test proving staff CoA preview, download, or direct view confirms confidential CoA existence to unauthorized users
 - [ ] 6.2 Add a failing test proving the public `/coa/access` flow can still surface confidential HIV CoAs
 ### GREEN
-- [ ] 6.3 Apply confidential authorization checks in CoA staff preview, download, and direct view flows
+- [ ] 6.3 Apply confidentiality checks in CoA staff preview, download, and direct view flows so unauthorized callers get no existence confirmation
 - [ ] 6.4 Exclude confidential HIV CoAs from the public `/coa/access` flow in MVP
 - [ ] 6.5 Re-run the CoA tests until all targeted leaks are closed
 ### REFACTOR
-- [ ] 6.6 Verify storage and report access paths do not bypass confidential rules
+- [ ] 6.6 Verify storage, report, and error-handling paths do not bypass confidential rules or confirm hidden CoA existence
 
 ## Batch 7: Full Verification Gate
 - [ ] 7.1 Extend `run_security_tests()` to include the new confidential-control assertions
 - [ ] 7.2 Re-run `run_security_tests()` after each database batch reaches green
-- [ ] 7.3 Run integration tests for sample detail redaction behavior
-- [ ] 7.4 Run integration tests for search confidentiality rules
-- [ ] 7.5 Run integration tests for CoA confidentiality rules
+- [ ] 7.3 Run integration tests for confidential sample non-discoverability in list and detail flows
+- [ ] 7.4 Run integration tests for search non-discoverability rules
+- [ ] 7.5 Run integration tests for CoA non-discoverability rules
 - [ ] 7.6 Run `npm run typecheck`
 - [ ] 7.7 Run the smallest relevant test target first for each batch, then the broader regression set before merge
 
@@ -100,4 +100,4 @@
 - [ ] 8.1 Prepare runbook: grant confidential access before enabling assay confidentiality
 - [ ] 8.2 Validate migration sequencing in staging
 - [ ] 8.3 Validate audit observability for confidential access
-- [ ] 8.4 Communicate role and permission implications to manager users
+- [ ] 8.4 Communicate that confidential-associated samples disappear entirely from unauthorized sample, search, and CoA workflows

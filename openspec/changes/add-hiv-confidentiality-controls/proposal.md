@@ -3,9 +3,9 @@
 CDC-LIMS currently enforces access mostly by role (`analyst`, `manager`) and authentication status. For HIV-related data, that is not sufficient because:
 
 - `results` visibility is still broad enough to expose confidential assay rows to authenticated staff who were never explicitly authorized for HIV data.
-- `samples` and `clients` access paths can expose PII that allows HIV status inference even when a user does not need the underlying result values.
+- `samples`, `clients`, and exact-identifier lookup paths can confirm that a confidential HIV sample exists even when the caller does not need that workflow.
 - Search and CoA surfaces can amplify leakage if they do not apply the same confidentiality rule set as the core database policies.
-- The highest-risk paths in the current system are operational access to confidential HIV data, PII leakage through sample detail, and bypasses through search or CoA surfaces.
+- The highest-risk paths in the current system are operational access to confidential HIV data, existence leakage through sample-facing workflows, and bypasses through search or CoA surfaces.
 
 The internal research and implementation plan in `docs/plans/2026-03-24-hiv-confidentiality-internal-research.md` and `docs/plans/2026-03-24-hiv-confidentiality-implementation-plan.md` establish a DB-first confidentiality model and identify public CoA plus broad authenticated data access as the highest-priority gaps to close first.
 
@@ -18,19 +18,19 @@ The internal research and implementation plan in `docs/plans/2026-03-24-hiv-conf
 
 - **RLS and data-access hardening:**
   - Restrict `results` SELECT/INSERT/UPDATE for confidential assays to explicitly authorized personnel only.
-  - Make sample-detail and client-facing operational responses confidentiality-aware so unauthorized users receive redacted or omitted sensitive fields.
+  - Make sample-detail, sample-list, and related lookup responses confidentiality-aware so unauthorized users cannot discover or confirm confidential-associated sample existence.
   - Keep enforcement DB-first; app-layer checks exist for defense in depth and user-safe responses, not as the primary gate.
 
 - **Workflow and surface consistency:**
   - Preserve analyst workflow for authorized staff working on confidential HIV samples.
   - Require confidential authorization for manager approval of confidential results.
-  - Make search functions confidentiality-aware so they do not reveal restricted data through result snippets, counts, or client matches.
+  - Make search functions confidentiality-aware so they do not reveal restricted data through result snippets, counts, client matches, sample identifiers, or exact-identifier lookups.
   - Restrict staff CoA access for confidential samples to staff with confidential authorization.
   - Exclude confidential HIV CoAs from the public `/coa/access` flow in MVP until a stronger client verification mechanism exists.
 
 - **Verification uplift:**
   - Extend `run_security_tests()` with confidentiality-specific schema and RLS assertions.
-  - Add negative and positive integration coverage for confidential results, redacted sample detail, search behavior, and CoA access.
+  - Add negative and positive integration coverage for confidential results, confidential sample non-discoverability, search behavior, and CoA access.
 
 ## Impact
 
@@ -54,7 +54,7 @@ The internal research and implementation plan in `docs/plans/2026-03-24-hiv-conf
 ### Behavior changes
 
 - Unauthorized staff will no longer see or mutate confidential HIV results.
-- Unauthorized staff will receive redacted or omitted client PII in confidential sample contexts.
+- Unauthorized staff will not be able to discover or confirm confidential-associated samples through sample lists, detail routes, exact lookups, search, or CoA paths.
 - Managers will need explicit confidential authorization to approve confidential results.
 - Staff without confidential authorization will be blocked from confidential CoA preview or download flows.
 - The public CoA portal will not expose confidential HIV CoAs in this MVP.
@@ -88,6 +88,7 @@ This forwards the local browser request on port `3002` to the VPS-hosted `lims-s
 - Additional RLS predicates may affect query latency if supporting indexes are missing.
 - Existing public CoA expectations will change for confidential HIV samples until a stronger verification flow is introduced.
 - Admin-bypass endpoints remain a leakage risk unless every path applies the same confidential checks.
+- Mixed-workflow samples become fully hidden from unauthorized staff as soon as any assigned assay is confidential.
 
 ### Non-goals
 
@@ -95,4 +96,5 @@ This forwards the local browser request on port `3002` to the VPS-hosted `lims-s
 - Introducing public step-up verification for confidential HIV CoAs in this change.
 - Building anonymized HIV export in this change.
 - Allowing direct research access to operational HIV tables.
+- Preventing out-of-band disclosure by clients or third parties outside the system boundary.
 - Introducing hard deletes for confidential records.
