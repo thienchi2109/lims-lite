@@ -77,6 +77,20 @@ The internal research and implementation plan in `docs/plans/2026-03-24-hiv-conf
 6. Add the anonymized export path and audit trail.
 7. Run confidentiality regression and security checks before rollout.
 
+### Operational note: SSH access to self-hosted Supabase Studio
+
+For direct table edits on the current VPS-hosted Supabase stack, use SSH port forwarding instead of expecting `localhost:3002` on the local workstation to resolve to the VPS automatically.
+
+```bash
+ssh -L 3002:localhost:3002 root@43.228.215.111
+```
+
+After the tunnel is established, open:
+
+- `http://localhost:3002/project/default`
+
+This forwards the local browser request on port `3002` to the VPS-hosted `lims-studio` container bound on the same port.
+
 ### Risks
 
 - Operational lockout if confidential assays are enabled before the correct users receive confidential access.
