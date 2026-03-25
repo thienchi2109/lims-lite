@@ -44,24 +44,6 @@ The system SHALL protect sensitive client fields in sample detail responses when
 - **WHEN** the sample detail API is requested for a confidential-associated sample
 - **THEN** the system SHALL return full client detail fields according to existing permitted schema
 
-### Requirement: Anonymized HIV export requires confidential authorization
-
-The system SHALL restrict anonymized HIV export to users who already hold confidential-data access.
-
-#### Scenario: User without confidential authorization cannot run export
-
-- **GIVEN** an authenticated user with `can_access_confidential = false`
-- **WHEN** the user attempts to run the anonymized HIV export
-- **THEN** the system SHALL deny the export request
-- **AND** no dataset SHALL be returned
-
-#### Scenario: Authorized export returns de-identified dataset
-
-- **GIVEN** an authenticated user with `can_access_confidential = true`
-- **WHEN** the user runs the anonymized HIV export
-- **THEN** the system SHALL return only the approved de-identified dataset shape
-- **AND** the output SHALL omit direct operational identifiers
-
 ### Requirement: Confidential access auditability
 
 The system SHALL provide verifiable evidence for confidential access controls and usage paths.
@@ -72,9 +54,3 @@ The system SHALL provide verifiable evidence for confidential access controls an
 - **WHEN** the security verification suite is executed
 - **THEN** the suite SHALL validate presence of confidentiality schema, helper functions, and policy predicates
 - **AND** include at least one unauthorized-negative and authorized-positive access check
-
-#### Scenario: Confidential exports are auditable
-
-- **GIVEN** a user performs an anonymized epidemiology or research export
-- **WHEN** the export completes or fails
-- **THEN** the system SHALL log actor, timestamp, scope, and outcome in an audit trail

@@ -7,9 +7,8 @@
 ## Batch Dependency Map
 - [ ] D.1 `Batch 1 -> Batch 2 -> Batch 3`
 - [ ] D.2 `Batch 4`, `Batch 5`, and `Batch 6` depend on `Batch 3` and can run in parallel after it reaches green
-- [ ] D.3 `Batch 7` depends on the authorization foundation from `Batch 1` and `Batch 3`
-- [ ] D.4 `Batch 8` is the final verification gate for `Batch 1` through `Batch 7`
-- [ ] D.5 `Batch 9` is rollout-only and starts after `Batch 8` is green
+- [ ] D.3 `Batch 7` is the final verification gate for `Batch 1` through `Batch 6`
+- [ ] D.4 `Batch 8` is rollout-only and starts after `Batch 7` is green
 
 ## Batch 1: Confidential Schema and Authorization Helpers
 ### RED
@@ -88,34 +87,17 @@
 ### REFACTOR
 - [ ] 6.6 Verify storage and report access paths do not bypass confidential rules
 
-## Batch 7: Anonymized Export for Research and Epidemiology
-### RED
-- [ ] 7.1 Add a failing test proving a user without `can_access_confidential` can still reach the export path
-- [ ] 7.2 Add a failing test proving direct identifiers are still present in export output
-- [ ] 7.3 Add a failing test proving suppression or generalization rules are not yet enforced
-- [ ] 7.4 Add a failing test proving export audit logging is missing or incomplete
-### GREEN
-- [ ] 7.5 Create a dedicated anonymized export path (view or RPC), not direct operational-table export
-- [ ] 7.6 Restrict anonymized export execution to users with `can_access_confidential = true`
-- [ ] 7.7 Remove direct identifiers and apply a stable pseudonymization strategy
-- [ ] 7.8 Apply generalization and suppression rules for re-identification control
-- [ ] 7.9 Audit-log all anonymized export operations
-- [ ] 7.10 Re-run the export tests until authorization, de-identification, and audit behavior pass
-### REFACTOR
-- [ ] 7.11 Simplify export dataset shaping and audit helpers after green
+## Batch 7: Full Verification Gate
+- [ ] 7.1 Extend `run_security_tests()` to include the new confidential-control assertions
+- [ ] 7.2 Re-run `run_security_tests()` after each database batch reaches green
+- [ ] 7.3 Run integration tests for sample detail redaction behavior
+- [ ] 7.4 Run integration tests for search confidentiality rules
+- [ ] 7.5 Run integration tests for CoA confidentiality rules
+- [ ] 7.6 Run `npm run typecheck`
+- [ ] 7.7 Run the smallest relevant test target first for each batch, then the broader regression set before merge
 
-## Batch 8: Full Verification Gate
-- [ ] 8.1 Extend `run_security_tests()` to include the new confidential-control assertions
-- [ ] 8.2 Re-run `run_security_tests()` after each database batch reaches green
-- [ ] 8.3 Run integration tests for sample detail redaction behavior
-- [ ] 8.4 Run integration tests for search confidentiality rules
-- [ ] 8.5 Run integration tests for CoA confidentiality rules
-- [ ] 8.6 Run integration tests for anonymized export authorization and de-identification rules
-- [ ] 8.7 Run `npm run typecheck`
-- [ ] 8.8 Run the smallest relevant test target first for each batch, then the broader regression set before merge
-
-## Batch 9: Rollout and Operational Safety
-- [ ] 9.1 Prepare runbook: grant confidential access before enabling assay confidentiality
-- [ ] 9.2 Validate migration sequencing in staging
-- [ ] 9.3 Validate audit observability for confidential and anonymized access
-- [ ] 9.4 Communicate role and permission implications to manager users
+## Batch 8: Rollout and Operational Safety
+- [ ] 8.1 Prepare runbook: grant confidential access before enabling assay confidentiality
+- [ ] 8.2 Validate migration sequencing in staging
+- [ ] 8.3 Validate audit observability for confidential access
+- [ ] 8.4 Communicate role and permission implications to manager users

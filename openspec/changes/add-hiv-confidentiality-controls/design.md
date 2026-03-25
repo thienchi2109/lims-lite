@@ -5,7 +5,7 @@ CDC-LIMS currently relies on role-based access plus broad authenticated reads fo
 - `results` access is not scoped to explicitly authorized HIV staff.
 - Sample detail and client responses can expose PII that implies HIV status even when result values are hidden.
 - Search and CoA routes can bypass the intent of the data model if they do not reuse the same confidentiality rule.
-- Research and epidemiology access still needs de-identified output, but this MVP does not need a second user-permission flag just for export.
+- Research and epidemiology export is intentionally excluded from this change so rollout can focus on operational confidentiality controls first.
 
 This change is cross-cutting: it affects schema, RLS, application guards, search behavior, CoA flows, and verification. It also needs a rollout order that avoids locking out authorized staff.
 
@@ -17,13 +17,13 @@ This change is cross-cutting: it affects schema, RLS, application guards, search
 - Make `results` RLS the authoritative gate for confidential HIV data.
 - Redact or omit sensitive PII in sample-related responses when the caller lacks confidential authorization.
 - Apply the same confidentiality rule set to search and CoA surfaces.
-- Keep a compliant anonymized export path with auditable execution.
 - Define a safe rollout order and verification plan.
 
 **Non-Goals:**
 
 - Replacing the existing `analyst` and `manager` role model with a new permission system.
 - Building a patient-facing step-up verification flow for confidential CoAs in this change.
+- Building anonymized HIV export in this change.
 - Allowing direct research queries against operational HIV tables.
 - Solving every future confidential-data category beyond the HIV-sensitive controls defined here.
 
@@ -44,10 +44,6 @@ Alternative considered:
 Use only `users.can_access_confidential`, with one helper function `user_can_access_confidential()`.
 
 In this repo, `role` already decides what type of action a user may perform, while confidential access decides whether those role-based actions may target HIV-sensitive records. Reusing one flag keeps the model small and matches the user's operational expectation: if a manager or analyst is authorized for confidential HIV data, they can perform the already-permitted confidential workflows without a second admin step.
-
-Trade-off accepted:
-
-- Authorized users who can access confidential HIV data will also be able to run the anonymized export path if that path remains in scope.
 
 Alternative considered:
 
@@ -75,26 +71,15 @@ Alternative considered:
 
 - Keep public access with stronger verification in the same change: rejected because it expands scope into identity-proofing and increases rollout risk.
 
-### 5. Build anonymized export as a dedicated path, not a filtered reuse of operational queries
+### 5. Extend verification at both database and application layers
 
-The export should still be a dedicated view or RPC that emits only the approved de-identified dataset, backed by `can_access_confidential` checks and audit logging.
-
-This keeps de-identification mandatory even though the authorization model is simplified to one user flag.
-
-Alternative considered:
-
-- Let authorized users export directly from operational tables: rejected because it makes de-identification optional instead of guaranteed.
-
-### 6. Extend verification at both database and application layers
-
-`run_security_tests()` should validate the new columns, helper functions, and confidential RLS behavior. Integration tests should cover sample-detail redaction, confidentiality-safe search responses, CoA restrictions, and anonymized export authorization.
+`run_security_tests()` should validate the new columns, helper functions, and confidential RLS behavior. Integration tests should cover sample-detail redaction, confidentiality-safe search responses, and CoA restrictions.
 
 This change touches multiple access paths, so schema verification alone is not enough.
 
 ## Risks / Trade-offs
 
 - [Operational lockout] -> Grant `can_access_confidential` before backfilling or enabling confidential assays in production, and include that order in the rollout runbook.
-- [Broader export access] -> Accept that confidential-data authorization also unlocks anonymized export in MVP, and rely on audit logging plus role checks to manage exposure.
 - [RLS performance overhead] -> Add supporting indexes for confidential predicates and confirm query plans in staging after migration.
 - [Public CoA behavior change] -> Communicate that confidential HIV CoAs are staff-only in MVP and track stronger public verification as follow-up work.
 - [Projection drift] -> Keep redaction logic centralized so sample detail and search surfaces do not diverge in what they hide.
@@ -106,14 +91,12 @@ This change touches multiple access paths, so schema verification alone is not e
 3. Backfill existing HIV assay definitions to `is_confidential = true`.
 4. Update TypeScript types and server actions to read and write the new confidentiality field safely.
 5. Apply confidentiality-safe sample detail, search, and CoA behavior.
-6. Add the anonymized export path and its audit trail.
-7. Validate staging rollout using the order above, then promote to production.
+6. Validate staging rollout using the order above, then promote to production.
 
 Rollback strategy:
 
 - Remove confidential assay backfills before relaxing policies if emergency rollback is needed.
 - Recreate previous `results` policies after dropping new confidentiality predicates.
-- Disable the export path before relaxing the confidential authorization check if rollback is needed.
 - Preserve audit evidence; do not hard-delete any log data during rollback.
 
 ## Open Questions
