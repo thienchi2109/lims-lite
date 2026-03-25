@@ -1,6 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { isValidUUID } from '@/lib/utils-lims'
 import {
+    getConfidentialAssociatedSampleIds,
+    getUserConfidentialAccess,
+} from './confidential-samples'
+import {
     SampleListParamsSchema,
     type SampleListParams,
     type SampleWithUser,
@@ -38,6 +42,11 @@ export async function fetchSamples(params: SampleListParams) {
 
     if (!user) {
         return { error: 'Unauthorized' }
+    }
+
+    const access = await getUserConfidentialAccess(user.id, supabase)
+    if (access.error) {
+        return { error: access.error }
     }
 
     const receiverId = normalizeReceiverId(params.receiverId)
@@ -80,6 +89,33 @@ export async function fetchSamples(params: SampleListParams) {
     const payload = (data ?? {}) as FetchSamplesRpcPayload
     const samples = Array.isArray(payload.rows) ? payload.rows : []
     const count = Number(payload.total_count ?? 0)
+
+    if (access.canAccessConfidential) {
+        return {
+            data: samples,
+            count,
+            page: validatedParams.page,
+            pageSize: validatedParams.pageSize,
+            totalPages: Math.ceil(count / validatedParams.pageSize),
+        }
+    }
+
+    let confidentialSampleIds: { data: Set<string> }
+    try {
+        confidentialSampleIds = await getConfidentialAssociatedSampleIds(
+            samples.map((sample) => sample.id),
+        )
+    } catch (error) {
+        console.error('Error verifying confidential sample associations:', error)
+        return { error: 'Không thể tải danh sách mẫu' }
+    }
+
+    if (confidentialSampleIds.data.size > 0) {
+        console.error('Confidential samples leaked from get_samples_page RPC', {
+            leakedSampleIds: [...confidentialSampleIds.data],
+        })
+        return { error: 'Không thể tải danh sách mẫu' }
+    }
 
     return {
         data: samples,

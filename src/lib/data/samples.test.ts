@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mockCreateClient = vi.fn()
 const mockRpc = vi.fn()
 const mockGetUser = vi.fn()
+const mockUserSelect = vi.fn()
+const mockUserEq = vi.fn()
+const mockUserSingle = vi.fn()
 
 vi.mock('@/lib/supabase/server', () => ({
     createClient: (...args: unknown[]) => mockCreateClient(...args),
@@ -42,6 +45,13 @@ describe('fetchSamples query optimization', () => {
             data: { user: { id: 'user-1' } },
         })
 
+        mockUserSelect.mockReturnValue({ eq: mockUserEq })
+        mockUserEq.mockReturnValue({ single: mockUserSingle })
+        mockUserSingle.mockResolvedValue({
+            data: { can_access_confidential: true },
+            error: null,
+        })
+
         mockRpc.mockResolvedValue({
             data: {
                 rows: [],
@@ -53,6 +63,13 @@ describe('fetchSamples query optimization', () => {
         mockCreateClient.mockResolvedValue({
             auth: {
                 getUser: mockGetUser,
+            },
+            from: (table: string) => {
+                if (table === 'users') {
+                    return { select: mockUserSelect }
+                }
+
+                throw new Error(`Unexpected table: ${table}`)
             },
             rpc: mockRpc,
         })

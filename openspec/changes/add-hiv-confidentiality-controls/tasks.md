@@ -56,18 +56,19 @@
 
 ## Batch 4: Sample Concealment in Lists and Detail
 ### RED
-- [ ] 4.1 Add a failing integration test for confidential-associated sample detail requested by an unauthorized user returning an existence-confirming response
-- [ ] 4.2 Add a failing integration test proving unauthorized sample lists, work queues, or exact lookups can still surface confidential-associated samples
-- [ ] 4.3 Add a failing integration test proving authorized users still receive full sample visibility and detail
+- [x] 4.1 Add a failing integration test for confidential-associated sample detail requested by an unauthorized user returning an existence-confirming response
+- [x] 4.2 Add a failing integration test proving unauthorized sample lists, work queues, or exact lookups can still surface confidential-associated samples
+- [x] 4.3 Add a failing integration test proving authorized users still receive full sample visibility and detail
 ### GREEN
-- [ ] 4.4 Update sample retrieval to detect confidential-associated samples consistently across list and detail flows
-- [ ] 4.5 Exclude confidential-associated samples from unauthorized lists, work queues, and exact-identifier lookup results
-- [ ] 4.6 Ensure `/api/samples/[id]` and related detail actions return generic not-found or equivalent authorization-neutral responses for unauthorized users
-- [ ] 4.7 Re-run the sample concealment tests until authorized and unauthorized paths both pass
+- [x] 4.4 Update sample retrieval to detect confidential-associated samples consistently across list and detail flows
+- [x] 4.5 Exclude confidential-associated samples from unauthorized lists, work queues, and exact-identifier lookup results
+- [x] 4.6 Ensure `/api/samples/[id]` and related detail actions return generic not-found or equivalent authorization-neutral responses for unauthorized users
+- [x] 4.7 Re-run the sample concealment tests until authorized and unauthorized paths both pass
 ### REFACTOR
-- [ ] 4.8 Centralize confidential-associated sample detection and authorization-neutral response logic so API and action layers cannot drift
+- [x] 4.8 Centralize confidential-associated sample detection and authorization-neutral response logic so API and action layers cannot drift
 
 ## Batch 5: Search Hardening
+- Note for future Batch 5/6 kickoff: Batch 4 review confirmed remaining CoA leak paths outside sample detail concealment. Investigate `src/app/api/coa/view/route.ts`, `src/app/api/coa/download/route.ts`, `src/app/api/coa/authenticate/route.ts`, `src/app/actions/coa.ts`, and `src/lib/coa/helpers.ts` first, along with callers in `src/components/coa-preview-dialog.tsx`, `src/hooks/use-print-handlers.ts`, `src/components/coa-access-form.tsx`, `src/app/actions/results-approval.ts`, and `src/app/api/client-actions/route.ts`.
 ### RED
 - [ ] 5.1 Add a failing test proving exact searches by sample code, name, phone, or national ID can expose confidential-associated records to unauthorized users
 - [ ] 5.2 Add a failing test proving client, sample, result, or global search can leak confidential context through counts, snippets, or mixed-result responses

@@ -18,6 +18,11 @@ import {
     type SampleListParams,
 } from '@/types'
 import { fetchSamples } from '@/lib/data/samples'
+import {
+    isConfidentialAssociatedSample,
+    getUserConfidentialAccess,
+    SAMPLE_NOT_FOUND_ERROR,
+} from '@/lib/data/confidential-samples'
 
 /**
  * Creates a new sample with auto-generated sample ID
@@ -153,6 +158,13 @@ export async function getSamples(params: SampleListParams) {
 export async function getSample(id: string) {
     try {
         const supabase = await createClient()
+        const {
+            data: { user },
+        } = await supabase.auth.getUser()
+
+        if (!user) {
+            return { error: 'Unauthorized' }
+        }
 
         const { data: sample, error } = await supabase
             .from('samples')
@@ -175,7 +187,22 @@ export async function getSample(id: string) {
 
         if (error) {
             console.error('Error fetching sample:', error)
+            if (error.code === 'PGRST116') {
+                return { error: SAMPLE_NOT_FOUND_ERROR }
+            }
             return { error: error.message }
+        }
+
+        const access = await getUserConfidentialAccess(user.id, supabase)
+        if (access.error) {
+            return { error: access.error }
+        }
+
+        if (!access.canAccessConfidential) {
+            const confidentiality = await isConfidentialAssociatedSample(id)
+            if (confidentiality.data) {
+                return { error: SAMPLE_NOT_FOUND_ERROR }
+            }
         }
 
         return {

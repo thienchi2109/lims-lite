@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSample } from '@/app/actions/samples'
+import { SAMPLE_NOT_FOUND_ERROR } from '@/lib/data/confidential-samples'
 
 type RouteContext = {
     params: Promise<{
@@ -17,8 +18,7 @@ export async function GET(_request: Request, context: RouteContext) {
     const result = await getSample(sampleId)
 
     if ('error' in result) {
-        const status = result.error === 'Unauthorized' ? 401 : 404
-        return NextResponse.json({ error: result.error }, { status })
+        return NextResponse.json({ error: SAMPLE_NOT_FOUND_ERROR }, { status: 404 })
     }
 
     return NextResponse.json({ data: result.data })
