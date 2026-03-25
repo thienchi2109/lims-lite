@@ -4,6 +4,33 @@
 
 SET search_path TO public;
 
+DROP FUNCTION IF EXISTS public.sample_has_confidential_results(UUID);
+
+CREATE OR REPLACE FUNCTION public.sample_has_confidential_results(
+    p_sample_id UUID
+)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+    SELECT EXISTS (
+        SELECT 1
+        FROM public.results AS confidential_result
+        INNER JOIN public.assay_definitions AS confidential_assay
+            ON confidential_assay.id = confidential_result.assay_id
+        WHERE confidential_result.sample_id = p_sample_id
+          AND confidential_assay.is_confidential = TRUE
+    );
+$$;
+
+COMMENT ON FUNCTION public.sample_has_confidential_results(UUID) IS
+'Returns true when the sample has at least one result linked to a confidential assay, including historical soft-deleted assay definitions.';
+
+REVOKE ALL ON FUNCTION public.sample_has_confidential_results(UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.sample_has_confidential_results(UUID) TO authenticated;
+
 DROP FUNCTION IF EXISTS get_samples_page(
     TEXT,
     TEXT,
@@ -95,15 +122,7 @@ BEGIN
           )
           AND (
               user_can_access_confidential()
-              OR NOT EXISTS (
-                  SELECT 1
-                  FROM results r_conf
-                  INNER JOIN assay_definitions ad_conf
-                      ON ad_conf.id = r_conf.assay_id
-                  WHERE r_conf.sample_id = s.id
-                    AND ad_conf.deleted_at IS NULL
-                    AND ad_conf.is_confidential = true
-              )
+              OR NOT public.sample_has_confidential_results(s.id)
           )
     ),
     counted_samples AS (

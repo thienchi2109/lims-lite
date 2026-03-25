@@ -200,9 +200,6 @@ export async function getSample(id: string) {
 
         if (!access.canAccessConfidential) {
             const confidentiality = await isConfidentialAssociatedSample(id)
-            if (confidentiality.error) {
-                return { error: confidentiality.error }
-            }
             if (confidentiality.data) {
                 return { error: SAMPLE_NOT_FOUND_ERROR }
             }

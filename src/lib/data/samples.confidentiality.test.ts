@@ -89,11 +89,7 @@ describe('fetchSamples confidentiality concealment', () => {
             from: (table: string) => {
                 if (table === 'results') {
                     return createThenableQuery({
-                        data: [
-                            {
-                                sample_id: CONFIDENTIAL_SAMPLE_ID,
-                            },
-                        ],
+                        data: [],
                         error: null,
                     })
                 }
@@ -101,20 +97,16 @@ describe('fetchSamples confidentiality concealment', () => {
                 throw new Error(`Unexpected admin table: ${table}`)
             },
         })
+
     })
 
-    it('removes confidential-associated samples from unauthorized list payloads and counts', async () => {
+    it('returns only already-concealed rows and metadata from the RPC for unauthorized users', async () => {
         mockRpc.mockResolvedValueOnce({
             data: {
                 rows: [
-                    buildSampleRow({
-                        id: CONFIDENTIAL_SAMPLE_ID,
-                        sample_id: 'S-HIV-001',
-                        client_name: 'Bệnh nhân HIV',
-                    }),
                     buildSampleRow(),
                 ],
-                total_count: 2,
+                total_count: 1,
             },
             error: null,
         })
@@ -132,17 +124,11 @@ describe('fetchSamples confidentiality concealment', () => {
         })
     })
 
-    it('returns zero exact-lookup matches for unauthorized users when only confidential samples match', async () => {
+    it('returns zero exact-lookup matches for unauthorized users when the RPC conceals confidential matches', async () => {
         mockRpc.mockResolvedValueOnce({
             data: {
-                rows: [
-                    buildSampleRow({
-                        id: CONFIDENTIAL_SAMPLE_ID,
-                        sample_id: 'S-HIV-001',
-                        client_name: 'Bệnh nhân HIV',
-                    }),
-                ],
-                total_count: 1,
+                rows: [],
+                total_count: 0,
             },
             error: null,
         })
@@ -159,6 +145,46 @@ describe('fetchSamples confidentiality concealment', () => {
             page: 1,
             pageSize: 20,
             totalPages: 0,
+        })
+    })
+
+    it('fails closed when the RPC unexpectedly leaks confidential rows for an unauthorized user', async () => {
+        mockCreateAdminClient.mockReturnValueOnce({
+            from: (table: string) => {
+                if (table === 'results') {
+                    return createThenableQuery({
+                        data: [
+                            {
+                                sample_id: CONFIDENTIAL_SAMPLE_ID,
+                            },
+                        ],
+                        error: null,
+                    })
+                }
+
+                throw new Error(`Unexpected admin table: ${table}`)
+            },
+        })
+
+        mockRpc.mockResolvedValueOnce({
+            data: {
+                rows: [
+                    buildSampleRow({
+                        id: CONFIDENTIAL_SAMPLE_ID,
+                        sample_id: 'S-HIV-001',
+                        client_name: 'Bệnh nhân HIV',
+                    }),
+                    buildSampleRow(),
+                ],
+                total_count: 5,
+            },
+            error: null,
+        })
+
+        const result = await fetchSamples({ page: 1, pageSize: 20 })
+
+        expect(result).toEqual({
+            error: 'Không thể tải danh sách mẫu',
         })
     })
 

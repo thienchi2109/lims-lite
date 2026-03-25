@@ -33,7 +33,6 @@ export async function getUserConfidentialAccess(
 
 export async function getConfidentialAssociatedSampleIds(sampleIds: string[]): Promise<{
     data: Set<string>
-    error?: string
 }> {
     if (sampleIds.length === 0) {
         return {
@@ -55,10 +54,7 @@ export async function getConfidentialAssociatedSampleIds(sampleIds: string[]): P
 
     if (error) {
         console.error('Error fetching confidential-associated sample ids:', error)
-        return {
-            data: new Set<string>(),
-            error: error.message,
-        }
+        throw new Error(error.message)
     }
 
     return {
@@ -70,16 +66,8 @@ export async function getConfidentialAssociatedSampleIds(sampleIds: string[]): P
 
 export async function isConfidentialAssociatedSample(sampleId: string): Promise<{
     data: boolean
-    error?: string
 }> {
     const result = await getConfidentialAssociatedSampleIds([sampleId])
-
-    if (result.error) {
-        return {
-            data: false,
-            error: result.error,
-        }
-    }
 
     return {
         data: result.data.has(sampleId),

@@ -100,22 +100,27 @@ export async function fetchSamples(params: SampleListParams) {
         }
     }
 
-    const confidentialSampleIds = await getConfidentialAssociatedSampleIds(
-        samples.map((sample) => sample.id),
-    )
-    if (confidentialSampleIds.error) {
-        return { error: confidentialSampleIds.error }
+    let confidentialSampleIds: { data: Set<string> }
+    try {
+        confidentialSampleIds = await getConfidentialAssociatedSampleIds(
+            samples.map((sample) => sample.id),
+        )
+    } catch (error) {
+        return { error: error instanceof Error ? error.message : 'Failed to fetch samples' }
     }
 
-    const visibleSamples = samples.filter((sample) => !confidentialSampleIds.data.has(sample.id))
-    const hiddenCount = samples.length - visibleSamples.length
-    const visibleCount = Math.max(0, count - hiddenCount)
+    if (confidentialSampleIds.data.size > 0) {
+        console.error('Confidential samples leaked from get_samples_page RPC', {
+            leakedSampleIds: [...confidentialSampleIds.data],
+        })
+        return { error: 'Không thể tải danh sách mẫu' }
+    }
 
     return {
-        data: visibleSamples,
-        count: visibleCount,
+        data: samples,
+        count,
         page: validatedParams.page,
         pageSize: validatedParams.pageSize,
-        totalPages: Math.ceil(visibleCount / validatedParams.pageSize),
+        totalPages: Math.ceil(count / validatedParams.pageSize),
     }
 }
