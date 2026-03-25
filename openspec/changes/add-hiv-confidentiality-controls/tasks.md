@@ -68,6 +68,7 @@
 - [x] 4.8 Centralize confidential-associated sample detection and authorization-neutral response logic so API and action layers cannot drift
 
 ## Batch 5: Search Hardening
+- Note for future Batch 5/6 kickoff: Batch 4 review confirmed remaining CoA leak paths outside sample detail concealment. Investigate `src/app/api/coa/view/route.ts`, `src/app/api/coa/download/route.ts`, `src/app/api/coa/authenticate/route.ts`, `src/app/actions/coa.ts`, and `src/lib/coa/helpers.ts` first, along with callers in `src/components/coa-preview-dialog.tsx`, `src/hooks/use-print-handlers.ts`, `src/components/coa-access-form.tsx`, `src/app/actions/results-approval.ts`, and `src/app/api/client-actions/route.ts`.
 ### RED
 - [ ] 5.1 Add a failing test proving exact searches by sample code, name, phone, or national ID can expose confidential-associated records to unauthorized users
 - [ ] 5.2 Add a failing test proving client, sample, result, or global search can leak confidential context through counts, snippets, or mixed-result responses
