@@ -40,7 +40,7 @@ The system SHALL require confidential authorization for manager approval actions
 
 - **GIVEN** an authenticated manager without `can_access_confidential = true`
 - **AND** one or more submitted results waiting for approval are linked to confidential assays
-- **WHEN** the manager loads an approval queue, pending-approval list, or approval count endpoint
+- **WHEN** the manager loads an approval queue, pending-approval list, completed approval tab, or approval count endpoint
 - **THEN** the system SHALL exclude those confidential items from the response
 - **AND** the UI and API SHALL NOT reveal that confidential approval work was hidden
 
@@ -56,6 +56,6 @@ The system SHALL require confidential authorization for manager approval actions
 
 - **GIVEN** an authenticated manager with `can_access_confidential = true`
 - **AND** target results satisfy existing workflow preconditions
-- **WHEN** the manager loads the approval queue and approves confidential results
-- **THEN** the system SHALL include those confidential items in the permitted approval workflow
+- **WHEN** the manager loads the approval workspace and approves confidential results
+- **THEN** the system SHALL include those confidential items in the permitted approval workflow, including the completed-results tab after approval
 - **AND** the system SHALL process approval using existing approval flow semantics

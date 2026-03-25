@@ -52,9 +52,9 @@ Alternative considered:
 
 ### 3. Keep RLS authoritative and make unauthorized confidential-associated samples non-discoverable
 
-`results` RLS remains the hard gate for confidential reads and writes. For sample lists, sample detail, approval queues, search outputs, and CoA routes, callers without `can_access_confidential = true` should either receive no confidential-associated match at all or a generic not-found or equivalent authorization-neutral response.
+`results` RLS remains the hard gate for confidential reads and writes. For sample lists, sample detail, approval workspace tabs, search outputs, and CoA routes, callers without `can_access_confidential = true` should either receive no confidential-associated match at all or a generic not-found or equivalent authorization-neutral response.
 
-This prioritizes secrecy of existence over partial workflow continuity. A redacted payload, approval-queue badge, or approval-count entry still confirms that a confidential-associated sample exists, which is exactly what this change must prevent.
+This prioritizes secrecy of existence over partial workflow continuity. A redacted payload, approval-queue badge, approval-count entry, or row in the approved-results tab still confirms that a confidential-associated sample exists, which is exactly what this change must prevent.
 
 Alternative considered:
 
@@ -92,7 +92,7 @@ This change touches multiple access paths, so schema verification alone is not e
 2. Update `results` RLS policies and extend `run_security_tests()` for confidential scenarios.
 3. Backfill existing HIV assay definitions to `is_confidential = true`.
 4. Update TypeScript types and server actions to read and write the new confidentiality field safely.
-5. Apply confidential sample concealment, approval-queue filtering, search, and CoA behavior.
+5. Apply confidential sample concealment, approval-workspace filtering, search, and CoA behavior.
 6. Validate staging rollout using the order above, then promote to production.
 
 Rollback strategy:
