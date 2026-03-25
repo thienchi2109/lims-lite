@@ -75,7 +75,6 @@ async function getConfidentialSampleIds(sampleIds: string[]): Promise<{
             )
         `)
         .eq('assay.is_confidential', true)
-        .is('deleted_at', null)
         .in('sample_id', sampleIds)
 
     if (error) {
@@ -196,6 +195,21 @@ export async function getSamplesForApprovalCount() {
 
         const supabase = await createClient()
 
+        if (access.canAccessConfidential) {
+            const { count, error } = await supabase
+                .from('samples')
+                .select('id', { count: 'exact', head: true })
+                .eq('status', 'review')
+                .is('deleted_at', null)
+
+            if (error) {
+                console.error('Error counting samples for approval:', error)
+                return { error: error.message }
+            }
+
+            return { data: count ?? 0 }
+        }
+
         const { data: samples, error } = await supabase
             .from('samples')
             .select('id')
@@ -208,7 +222,7 @@ export async function getSamplesForApprovalCount() {
         }
 
         const sampleIds = (samples ?? []).map((sample: { id: string }) => sample.id)
-        if (access.canAccessConfidential || sampleIds.length === 0) {
+        if (sampleIds.length === 0) {
             return { data: sampleIds.length }
         }
 

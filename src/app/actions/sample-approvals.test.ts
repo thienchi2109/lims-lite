@@ -21,11 +21,9 @@ const mockSamplesOrder = vi.fn()
 const mockSamplesDeleted = vi.fn()
 const mockSamplesEq = vi.fn()
 const mockConfidentialEqStatus = vi.fn()
-const mockConfidentialEqDeleted = vi.fn()
 const mockConfidentialEqSample = vi.fn()
 const mockApprovalCountDeleted = vi.fn()
 const mockApprovalCountEqStatus = vi.fn()
-const mockApprovalCountIn = vi.fn()
 
 vi.mock('@/lib/supabase/server', () => ({
     createClient: vi.fn(() => ({
@@ -288,9 +286,6 @@ describe('approval confidentiality filtering', () => {
             error: null,
         })
         mockConfidentialEqStatus.mockReturnValueOnce({
-            is: mockConfidentialEqDeleted,
-        })
-        mockConfidentialEqDeleted.mockReturnValueOnce({
             in: mockConfidentialEqSample,
         })
         mockConfidentialEqSample.mockResolvedValueOnce({
@@ -316,20 +311,14 @@ describe('approval confidentiality filtering', () => {
             data: { can_access_confidential: false },
             error: null,
         })
-        mockSelect.mockReturnValueOnce({
-            eq: mockApprovalCountEqStatus,
+        mockSamplesEq.mockReturnValueOnce({
+            is: mockSamplesDeleted,
         })
-        mockApprovalCountEqStatus.mockReturnValueOnce({
-            is: mockApprovalCountDeleted,
-        })
-        mockApprovalCountDeleted.mockResolvedValueOnce({
+        mockSamplesDeleted.mockResolvedValueOnce({
             data: [{ id: 'sample-public' }, { id: 'sample-confidential' }],
             error: null,
         })
         mockConfidentialEqStatus.mockReturnValueOnce({
-            is: mockConfidentialEqDeleted,
-        })
-        mockConfidentialEqDeleted.mockReturnValueOnce({
             in: mockConfidentialEqSample,
         })
         mockConfidentialEqSample.mockResolvedValueOnce({
@@ -340,6 +329,26 @@ describe('approval confidentiality filtering', () => {
         const result = await getSamplesForApprovalCount()
 
         expect(result).toEqual({ data: 1 })
+    })
+
+    it('uses the efficient count query for authorized managers', async () => {
+        mockUserSingle.mockResolvedValueOnce({
+            data: { can_access_confidential: true },
+            error: null,
+        })
+        mockApprovalCountEqStatus.mockReturnValueOnce({
+            is: mockApprovalCountDeleted,
+        })
+        mockApprovalCountDeleted.mockResolvedValueOnce({
+            count: 7,
+            error: null,
+        })
+
+        const result = await getSamplesForApprovalCount()
+
+        expect(result).toEqual({ data: 7 })
+        expect(mockSelect).toHaveBeenCalledWith('id', { count: 'exact', head: true })
+        expect(mockAdminFrom).not.toHaveBeenCalled()
     })
 
     it('preserves confidential approval visibility for authorized managers in review and completed tabs', async () => {
@@ -400,9 +409,6 @@ describe('approval confidentiality filtering', () => {
             error: null,
         })
         mockConfidentialEqStatus.mockReturnValueOnce({
-            is: mockConfidentialEqDeleted,
-        })
-        mockConfidentialEqDeleted.mockReturnValueOnce({
             in: mockConfidentialEqSample,
         })
         mockConfidentialEqSample.mockResolvedValueOnce({

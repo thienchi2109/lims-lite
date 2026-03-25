@@ -61,6 +61,18 @@ describe('confidentiality schemas', () => {
             name: 'HIV Ag/Ab',
             is_confidential: true,
         })
+        expect(() =>
+            AssayDefinitionSchema.parse({
+                id: '11111111-1111-4111-8111-111111111111',
+                name: 'HIV Ag/Ab',
+                specialty_id: null,
+                units: null,
+                validation_rules: {},
+                created_at: '2026-03-25T00:00:00.000Z',
+                updated_at: '2026-03-25T00:00:00.000Z',
+                deleted_at: null,
+            })
+        ).toThrow()
         const assay = AssayDefinitionSchema.parse({
             id: '11111111-1111-4111-8111-111111111111',
             name: 'HIV Ag/Ab',
@@ -250,6 +262,24 @@ describe('confidentiality actions', () => {
                 is_confidential: true,
             }),
         )
+    })
+
+    it('does not declassify assay definitions when update form omits is_confidential', async () => {
+        const result = await updateAssayDefinition(
+            buildAssayFormData({
+                id: '11111111-1111-4111-8111-111111111111',
+                name: 'HIV Ag/Ab updated',
+            }),
+        )
+
+        expect(result).toEqual(
+            expect.objectContaining({
+                success: true,
+            }),
+        )
+
+        const updatePayload = mockAssayUpdate.mock.calls[0][0]
+        expect(updatePayload).not.toHaveProperty('is_confidential')
     })
 
     it('persists can_access_confidential when creating users', async () => {

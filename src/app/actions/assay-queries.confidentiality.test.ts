@@ -77,4 +77,55 @@ describe('assay query confidentiality mapping', () => {
             }),
         )
     })
+
+    it('fails closed when the list RPC omits is_confidential', async () => {
+        mockRpc.mockResolvedValue({
+            data: [
+                {
+                    id: '11111111-1111-4111-8111-111111111111',
+                    name: 'HIV Ag/Ab',
+                    specialty_id: null,
+                    specialty_name: 'Vi sinh',
+                    specialty_order: 1,
+                    units: 'Index',
+                    validation_rules: {},
+                    methods: [],
+                    created_at: '2026-03-25T00:00:00.000Z',
+                    updated_at: '2026-03-25T00:00:00.000Z',
+                    total_count: 1,
+                },
+            ],
+            error: null,
+        })
+
+        const result = await getAssayDefinitions()
+
+        expect(result).toEqual({
+            error: 'Thiếu trạng thái bảo mật của chỉ tiêu xét nghiệm',
+        })
+    })
+
+    it('fails closed when the detail RPC omits is_confidential', async () => {
+        mockRpc.mockResolvedValue({
+            data: [
+                {
+                    id: '11111111-1111-4111-8111-111111111111',
+                    name: 'HIV Ag/Ab',
+                    specialty_id: null,
+                    units: 'Index',
+                    validation_rules: {},
+                    methods: [],
+                    created_at: '2026-03-25T00:00:00.000Z',
+                    updated_at: '2026-03-25T00:00:00.000Z',
+                },
+            ],
+            error: null,
+        })
+
+        const result = await getAssayDefinitionById('11111111-1111-4111-8111-111111111111')
+
+        expect(result).toEqual({
+            error: 'Thiếu trạng thái bảo mật của chỉ tiêu xét nghiệm',
+        })
+    })
 })

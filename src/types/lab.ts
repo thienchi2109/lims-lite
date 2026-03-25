@@ -85,7 +85,7 @@ export const AssayDefinitionSchema = z.object({
     specialty_id: z.string().uuid().nullable().optional(),
     units: z.string().nullable(),
     validation_rules: z.record(z.string(), z.any()).default({}),
-    is_confidential: z.boolean().default(false),
+    is_confidential: z.boolean(),
     created_at: z.string().datetime(),
     updated_at: z.string().datetime(),
     deleted_at: z.string().datetime().nullable(),
