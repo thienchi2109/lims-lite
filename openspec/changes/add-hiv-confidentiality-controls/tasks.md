@@ -1,10 +1,17 @@
 ## TDD Rule
-- [ ] 0.1 Follow strict `RED -> GREEN -> REFACTOR` for every slice below
-- [ ] 0.2 Do not write production migration or app code before a focused failing test exists for that slice
+- [ ] 0.1 Follow strict `RED -> GREEN -> REFACTOR` for every batch below
+- [ ] 0.2 Do not write production migration or app code before a focused failing test exists for that batch
 - [ ] 0.3 For SQL changes, verify the new test fails for the expected reason before applying the migration
 - [ ] 0.4 For TypeScript and route changes, run the narrowest relevant test file first, then expand to broader verification after green
 
-## 1. TDD Slice: Confidential Schema and Authorization Helpers
+## Batch Dependency Map
+- [ ] D.1 `Batch 1 -> Batch 2 -> Batch 3`
+- [ ] D.2 `Batch 4`, `Batch 5`, and `Batch 6` depend on `Batch 3` and can run in parallel after it reaches green
+- [ ] D.3 `Batch 7` depends on the authorization foundation from `Batch 1` and `Batch 3`
+- [ ] D.4 `Batch 8` is the final verification gate for `Batch 1` through `Batch 7`
+- [ ] D.5 `Batch 9` is rollout-only and starts after `Batch 8` is green
+
+## Batch 1: Confidential Schema and Authorization Helpers
 ### RED
 - [ ] 1.1 Add failing SQL security tests for `assay_definitions.is_confidential`
 - [ ] 1.2 Add failing SQL security tests for `users.can_access_confidential`
@@ -18,7 +25,7 @@
 ### REFACTOR
 - [ ] 1.9 Clean up migration naming, comments, and helper function structure without changing behavior
 
-## 2. TDD Slice: `results` RLS Enforcement
+## Batch 2: `results` RLS Enforcement
 ### RED
 - [ ] 2.1 Add a failing negative SQL test proving unauthorized users can still read confidential HIV results today
 - [ ] 2.2 Add a failing negative SQL test proving unauthorized users can still insert confidential HIV results today
@@ -34,7 +41,7 @@
 - [ ] 2.10 Verify no overlapping or orphaned policies weaken confidential enforcement
 - [ ] 2.11 Run policy verification queries and simplify policy definitions if needed without changing behavior
 
-## 3. TDD Slice: Types, User Management, and Approval Guards
+## Batch 3: Types, User Management, and Approval Guards
 ### RED
 - [ ] 3.1 Add failing TypeScript or integration tests for schemas carrying `is_confidential`, `can_access_confidential`, and `can_export_hiv_anonymized`
 - [ ] 3.2 Add a failing test proving manager approval of confidential results is not yet guarded correctly
@@ -48,7 +55,7 @@
 ### REFACTOR
 - [ ] 3.9 Simplify shared authorization checks or schema helpers after green
 
-## 4. TDD Slice: Sample Detail Redaction
+## Batch 4: Sample Detail Redaction
 ### RED
 - [ ] 4.1 Add a failing integration test for confidential-associated sample detail requested by an unauthorized user
 - [ ] 4.2 Add a failing integration test proving authorized users still receive full sample detail
@@ -61,49 +68,57 @@
 ### REFACTOR
 - [ ] 4.8 Centralize redaction logic so API and action layers cannot drift
 
-## 5. TDD Slice: Search and CoA Hardening
+## Batch 5: Search Hardening
 ### RED
 - [ ] 5.1 Add a failing test proving search functions or RPC responses can expose confidential HIV data to unauthorized users
 - [ ] 5.2 Add a failing test proving client or global search can leak confidential context
-- [ ] 5.3 Add a failing test proving staff CoA preview, download, or direct view lacks confidential authorization checks
-- [ ] 5.4 Add a failing test proving the public `/coa/access` flow can still surface confidential HIV CoAs
 ### GREEN
-- [ ] 5.5 Ensure search functions and RPC responses do not expose confidential HIV data to unauthorized users
-- [ ] 5.6 Ensure global and client search behavior remains role-safe and confidentiality-safe
-- [ ] 5.7 Apply confidential authorization checks in CoA staff preview, download, and direct view flows
-- [ ] 5.8 Exclude confidential HIV CoAs from the public `/coa/access` flow in MVP
-- [ ] 5.9 Re-run the search and CoA tests until all targeted leaks are closed
+- [ ] 5.3 Ensure search functions and RPC responses do not expose confidential HIV data to unauthorized users
+- [ ] 5.4 Ensure global and client search behavior remains role-safe and confidentiality-safe
+- [ ] 5.5 Re-run the search tests until all targeted leaks are closed
 ### REFACTOR
-- [ ] 5.10 Verify storage and report access paths do not bypass confidential rules
+- [ ] 5.6 Simplify confidentiality-safe search projections or response shaping after green
 
-## 6. TDD Slice: Anonymized Export for Research and Epidemiology
+## Batch 6: CoA Hardening
 ### RED
-- [ ] 6.1 Add a failing test proving operational confidential access alone can reach the export path
-- [ ] 6.2 Add a failing test proving direct identifiers are still present in export output
-- [ ] 6.3 Add a failing test proving suppression or generalization rules are not yet enforced
-- [ ] 6.4 Add a failing test proving export audit logging is missing or incomplete
+- [ ] 6.1 Add a failing test proving staff CoA preview, download, or direct view lacks confidential authorization checks
+- [ ] 6.2 Add a failing test proving the public `/coa/access` flow can still surface confidential HIV CoAs
 ### GREEN
-- [ ] 6.5 Create a dedicated anonymized export path (view or RPC), not direct operational-table export
-- [ ] 6.6 Restrict anonymized export execution to users with `can_export_hiv_anonymized = true`
-- [ ] 6.7 Remove direct identifiers and apply a stable pseudonymization strategy
-- [ ] 6.8 Apply generalization and suppression rules for re-identification control
-- [ ] 6.9 Audit-log all anonymized export operations
-- [ ] 6.10 Re-run the export tests until authorization, de-identification, and audit behavior pass
+- [ ] 6.3 Apply confidential authorization checks in CoA staff preview, download, and direct view flows
+- [ ] 6.4 Exclude confidential HIV CoAs from the public `/coa/access` flow in MVP
+- [ ] 6.5 Re-run the CoA tests until all targeted leaks are closed
 ### REFACTOR
-- [ ] 6.11 Simplify export dataset shaping and audit helpers after green
+- [ ] 6.6 Verify storage and report access paths do not bypass confidential rules
 
-## 7. Full Verification Gate
-- [ ] 7.1 Extend `run_security_tests()` to include the new confidential-control assertions
-- [ ] 7.2 Re-run `run_security_tests()` after each database slice reaches green
-- [ ] 7.3 Run integration tests for sample detail redaction behavior
-- [ ] 7.4 Run integration tests for search and CoA confidentiality rules
-- [ ] 7.5 Run integration tests for anonymized export authorization and de-identification rules
-- [ ] 7.6 Run `npm run typecheck`
-- [ ] 7.7 Run the smallest relevant test target first for each slice, then the broader regression set before merge
+## Batch 7: Anonymized Export for Research and Epidemiology
+### RED
+- [ ] 7.1 Add a failing test proving operational confidential access alone can reach the export path
+- [ ] 7.2 Add a failing test proving direct identifiers are still present in export output
+- [ ] 7.3 Add a failing test proving suppression or generalization rules are not yet enforced
+- [ ] 7.4 Add a failing test proving export audit logging is missing or incomplete
+### GREEN
+- [ ] 7.5 Create a dedicated anonymized export path (view or RPC), not direct operational-table export
+- [ ] 7.6 Restrict anonymized export execution to users with `can_export_hiv_anonymized = true`
+- [ ] 7.7 Remove direct identifiers and apply a stable pseudonymization strategy
+- [ ] 7.8 Apply generalization and suppression rules for re-identification control
+- [ ] 7.9 Audit-log all anonymized export operations
+- [ ] 7.10 Re-run the export tests until authorization, de-identification, and audit behavior pass
+### REFACTOR
+- [ ] 7.11 Simplify export dataset shaping and audit helpers after green
 
-## 8. Rollout and Operational Safety
-- [ ] 8.1 Prepare runbook: grant confidential access before enabling assay confidentiality
-- [ ] 8.2 Prepare runbook: grant export authorization before enabling anonymized HIV export
-- [ ] 8.3 Validate migration sequencing in staging
-- [ ] 8.4 Validate audit observability for confidential and anonymized access
-- [ ] 8.5 Communicate role and permission implications to manager users
+## Batch 8: Full Verification Gate
+- [ ] 8.1 Extend `run_security_tests()` to include the new confidential-control assertions
+- [ ] 8.2 Re-run `run_security_tests()` after each database batch reaches green
+- [ ] 8.3 Run integration tests for sample detail redaction behavior
+- [ ] 8.4 Run integration tests for search confidentiality rules
+- [ ] 8.5 Run integration tests for CoA confidentiality rules
+- [ ] 8.6 Run integration tests for anonymized export authorization and de-identification rules
+- [ ] 8.7 Run `npm run typecheck`
+- [ ] 8.8 Run the smallest relevant test target first for each batch, then the broader regression set before merge
+
+## Batch 9: Rollout and Operational Safety
+- [ ] 9.1 Prepare runbook: grant confidential access before enabling assay confidentiality
+- [ ] 9.2 Prepare runbook: grant export authorization before enabling anonymized HIV export
+- [ ] 9.3 Validate migration sequencing in staging
+- [ ] 9.4 Validate audit observability for confidential and anonymized access
+- [ ] 9.5 Communicate role and permission implications to manager users
