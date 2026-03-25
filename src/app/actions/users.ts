@@ -174,6 +174,7 @@ export async function createUser(data: z.infer<typeof CreateUserSchema>) {
             role: validated.role,
             email: email,
             lab: validated.lab || 'Central Lab',
+            can_access_confidential: validated.can_access_confidential ?? false,
         })
 
     if (dbError) {
@@ -213,6 +214,9 @@ export async function updateUser(data: z.infer<typeof UpdateUserSchema>) {
     if (validated.role) updateData.role = validated.role
     if (validated.email) updateData.email = validated.email
     if (validated.lab) updateData.lab = validated.lab
+    if (validated.can_access_confidential !== undefined) {
+        updateData.can_access_confidential = validated.can_access_confidential
+    }
 
     if (Object.keys(updateData).length > 0) {
         const { error } = await supabase

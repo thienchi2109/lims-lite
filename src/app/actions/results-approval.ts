@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import {
     ApproveResultsSchema,
@@ -9,6 +9,33 @@ import {
     type CancelApproval,
 } from '@/types'
 import { generateCoA } from './coa'
+
+async function sampleHasConfidentialResults(sampleIds: string[]) {
+    if (sampleIds.length === 0) {
+        return { hasConfidential: false as const }
+    }
+
+    const supabase = createAdminClient()
+    const { data, error } = await supabase
+        .from('results')
+        .select(`
+            sample_id,
+            assay:assay_definitions!results_assay_id_fkey!inner(
+                is_confidential
+            )
+        `)
+        .in('sample_id', sampleIds)
+        .eq('assay.is_confidential', true)
+
+    if (error) {
+        console.error('Error fetching confidential sample guard:', error)
+        return { hasConfidential: false as const, error: error.message }
+    }
+
+    return {
+        hasConfidential: (data ?? []).length > 0,
+    }
+}
 
 /**
  * Approves a batch of results (Manager only)
@@ -28,7 +55,7 @@ export async function approveResults(data: ApproveResults) {
         // Verify user is manager
         const { data: userData } = await supabase
             .from('users')
-            .select('role')
+            .select('role, can_access_confidential')
             .eq('id', user.id)
             .single()
 
@@ -41,7 +68,14 @@ export async function approveResults(data: ApproveResults) {
         // Fetch results to verify they exist and have status='entered'
         const { data: results, error: fetchError } = await supabase
             .from('results')
-            .select('id, status, sample_id')
+            .select(`
+                id,
+                status,
+                sample_id,
+                assay:assay_definitions!results_assay_id_fkey(
+                    is_confidential
+                )
+            `)
             .in('id', validatedData.resultIds)
 
         if (fetchError) {
@@ -49,14 +83,33 @@ export async function approveResults(data: ApproveResults) {
             return { error: fetchError.message }
         }
 
+        if (results.length !== validatedData.resultIds.length) {
+            return { error: 'Không thể phê duyệt một hoặc nhiều kết quả đã chọn' }
+        }
+
         const invalidResults = results.filter((r: any) => r.status !== 'entered')
         if (invalidResults.length > 0) {
             return { error: 'Can only approve results with status "entered"' }
         }
 
+        const includesConfidentialResult = results.some(
+            (result: any) => result.assay?.is_confidential === true
+        )
+        if (includesConfidentialResult && userData?.can_access_confidential !== true) {
+            return { error: 'Không có quyền phê duyệt kết quả bảo mật' }
+        }
+
         const sampleIds = [...new Set(results.map((r: any) => r.sample_id))]
         if (sampleIds.length > 1) {
             return { error: 'All results must belong to the same sample' }
+        }
+
+        const confidentialSampleCheck = await sampleHasConfidentialResults(sampleIds)
+        if (confidentialSampleCheck.error) {
+            return { error: confidentialSampleCheck.error }
+        }
+        if (confidentialSampleCheck.hasConfidential && userData?.can_access_confidential !== true) {
+            return { error: 'Không có quyền phê duyệt kết quả bảo mật' }
         }
 
         if (sampleIds[0]) {
@@ -310,7 +363,7 @@ export async function cancelApproval(data: CancelApproval) {
         // Verify user is manager
         const { data: userData } = await supabase
             .from('users')
-            .select('role')
+            .select('role, can_access_confidential')
             .eq('id', user.id)
             .single()
 
@@ -331,6 +384,10 @@ export async function cancelApproval(data: CancelApproval) {
             return { error: fetchError.message }
         }
 
+        if (results.length !== validatedData.resultIds.length) {
+            return { error: 'Không thể hủy phê duyệt một hoặc nhiều kết quả đã chọn' }
+        }
+
         const invalidResults = results.filter((r: any) => r.status !== 'approved')
         if (invalidResults.length > 0) {
             return { error: 'Can only cancel approval for approved results' }
@@ -339,6 +396,14 @@ export async function cancelApproval(data: CancelApproval) {
         const sampleIds = [...new Set(results.map((r: any) => r.sample_id))]
         if (sampleIds.length > 1) {
             return { error: 'All results must belong to the same sample' }
+        }
+
+        const confidentialSampleCheck = await sampleHasConfidentialResults(sampleIds)
+        if (confidentialSampleCheck.error) {
+            return { error: confidentialSampleCheck.error }
+        }
+        if (confidentialSampleCheck.hasConfidential && userData?.can_access_confidential !== true) {
+            return { error: 'Không có quyền hủy phê duyệt kết quả bảo mật' }
         }
 
         // Cancel approval

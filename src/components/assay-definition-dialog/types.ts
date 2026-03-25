@@ -23,6 +23,7 @@ export const AssayFormSchema = z.object({
   methodId: z.string().optional(),
   units: z.string().optional(),
   validationRules: ValidationRulesSchema.optional(),
+  isConfidential: z.boolean(),
 })
 
 // Type exports
@@ -59,6 +60,7 @@ export type AssayDefinition = {
   name: string
   specialty_id?: string | null
   units: string | null
+  is_confidential?: boolean
   // Using Record for compatibility with existing code that uses Record<string, any>
   // RawValidationRules is used for type-safe access in the hook
   validation_rules: Record<string, unknown> | null

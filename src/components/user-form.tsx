@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { CreateUserSchema, UpdateUserSchema, type CreateUser, type UpdateUser, type User } from '@/types'
 import { createUserClient, updateUserClient, uploadSignatureClient } from '@/lib/api-client'
@@ -15,6 +15,7 @@ import {
     FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
     Select,
     SelectContent,
@@ -52,6 +53,7 @@ export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormP
         email: z.string().email().optional().or(z.literal('')),
         lab: z.string().optional().or(z.literal('')),
         password: z.string().min(8).optional().or(z.literal('')),
+        can_access_confidential: z.boolean().optional(),
     })
 
     type CreateUserFormValues = z.infer<typeof CreateUserSchema>
@@ -68,6 +70,7 @@ export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormP
                   lab: user?.lab || '',
                   role: user?.role ?? 'analyst',
                   password: '',
+                  can_access_confidential: user?.can_access_confidential ?? false,
               }
             : {
                   username: '',
@@ -76,7 +79,12 @@ export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormP
                   lab: '',
                   role: 'analyst',
                   password: '',
+                  can_access_confidential: false,
               }) as UserFormValues,
+    })
+    const selectedRole = useWatch({
+        control: form.control,
+        name: 'role',
     })
 
     const hasActionError = (result: any): result is { error: string } =>
@@ -95,6 +103,8 @@ export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormP
                     role: updateValues.role ?? user.role,
                     email: updateValues.email || undefined,
                     lab: updateValues.lab || undefined,
+                    can_access_confidential:
+                        updateValues.can_access_confidential ?? user.can_access_confidential,
                 }
 
                 if (updateValues.password) {
@@ -103,7 +113,10 @@ export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormP
 
                 const result = await updateUserClient(updatePayload)
                 if (hasActionError(result)) {
-                    throw new Error(result.error)
+                    form.setError('root', { message: result.error })
+                    toast.error(result.error)
+                    setIsSubmitting(false)
+                    return
                 }
 
                 // If self-edit and manager role and signature file provided, upload signature
@@ -139,11 +152,15 @@ export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormP
                     role: createValues.role,
                     email: createValues.email || undefined,
                     lab: createValues.lab || undefined,
+                    can_access_confidential: createValues.can_access_confidential ?? false,
                 }
 
                 const result = await createUserClient(createPayload)
                 if (hasActionError(result)) {
-                    throw new Error(result.error)
+                    form.setError('root', { message: result.error })
+                    toast.error(result.error)
+                    setIsSubmitting(false)
+                    return
                 }
 
                 // If manager role and signature file provided, upload signature
@@ -181,9 +198,9 @@ export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormP
             const message = error instanceof Error ? error.message : 'Đã xảy ra lỗi. Vui lòng thử lại.'
             form.setError('root', { message })
             toast.error(message)
-        } finally {
-            setIsSubmitting(false)
         }
+
+        setIsSubmitting(false)
     }
 
     return (
@@ -191,14 +208,14 @@ export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormP
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 {/* Compliance banner when editing other users */}
                 {isOtherEdit && (
-                    <Alert>
-                        <Info className="h-4 w-4" />
-                        <AlertDescription>
-                            <strong>Chế độ quản trị:</strong> Bạn chỉ có thể chỉnh sửa vai trò của người dùng này.
+                        <Alert>
+                            <Info className="h-4 w-4" />
+                            <AlertDescription>
+                            <strong>Chế độ quản trị:</strong> Bạn có thể chỉnh sửa vai trò và quyền truy cập dữ liệu bí mật của người dùng này.
                             Chỉ người dùng mới có thể cập nhật thông tin cá nhân của họ để đảm bảo tuân thủ quy định.
-                        </AlertDescription>
-                    </Alert>
-                )}
+                            </AlertDescription>
+                        </Alert>
+                    )}
 
                 {!isEdit && (
                     <FormField
@@ -295,6 +312,27 @@ export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormP
 
                 <FormField
                     control={form.control}
+                    name="can_access_confidential"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                            <div className="space-y-0.5">
+                                <FormLabel>Có quyền truy cập dữ liệu bí mật</FormLabel>
+                                <div className="text-sm text-muted-foreground">
+                                    Cho phép người dùng xem và xử lý các chỉ tiêu bí mật.
+                                </div>
+                            </div>
+                            <FormControl>
+                                <Checkbox
+                                    checked={Boolean(field.value)}
+                                    onCheckedChange={(checked) => field.onChange(checked === true)}
+                                />
+                            </FormControl>
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
                     name="password"
                     render={({ field }) => (
                         <FormItem>
@@ -314,7 +352,7 @@ export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormP
 
                 {/* Signature upload section */}
                 {/* Case 1: Creating new manager - allow signature upload */}
-                {!isEdit && form.watch('role') === 'manager' && (
+                {!isEdit && selectedRole === 'manager' && (
                     <SignatureUploadField
                         value={signatureFile}
                         onChange={setSignatureFile}

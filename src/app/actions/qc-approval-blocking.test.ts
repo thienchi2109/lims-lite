@@ -18,6 +18,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockRpc = vi.fn()
 const mockFrom = vi.fn()
+const mockCreateAdminClient = vi.hoisted(() => vi.fn())
 const mockGetUser = vi.fn()
 
 // Create chainable mock for different query scenarios
@@ -37,6 +38,11 @@ function createChainableMock() {
 }
 
 let fromChain = createChainableMock()
+let adminFromChain = {
+    select: vi.fn(() => adminFromChain),
+    in: vi.fn(() => adminFromChain),
+    eq: vi.fn(() => Promise.resolve({ data: [], error: null })),
+}
 
 vi.mock('@/lib/supabase/server', () => ({
     createClient: vi.fn(() => ({
@@ -49,6 +55,7 @@ vi.mock('@/lib/supabase/server', () => ({
             getUser: mockGetUser,
         },
     })),
+    createAdminClient: mockCreateAdminClient,
 }))
 
 // Mock next/cache
@@ -134,6 +141,15 @@ function setupReviewApprovalFlow(results: any[], remainingUnapprovedCount = 0) {
     })) as any
 }
 
+function setupConfidentialSampleLookup(hasConfidential: boolean) {
+    adminFromChain.eq = vi.fn(() =>
+        Promise.resolve({
+            data: hasConfidential ? [{ sample_id: TEST_SAMPLE_ID }] : [],
+            error: null,
+        })
+    ) as any
+}
+
 // ============================================================================
 // TESTS
 // ============================================================================
@@ -142,6 +158,14 @@ describe('QC Approval Blocking Mechanism', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         fromChain = createChainableMock()
+        adminFromChain = {
+            select: vi.fn(() => adminFromChain),
+            in: vi.fn(() => adminFromChain),
+            eq: vi.fn(() => Promise.resolve({ data: [], error: null })),
+        }
+        mockCreateAdminClient.mockReturnValue({
+            from: () => adminFromChain,
+        })
     })
 
     describe('Blocked QC Sessions', () => {
@@ -282,6 +306,124 @@ describe('QC Approval Blocking Mechanism', () => {
     })
 
     describe('Allowed QC Sessions', () => {
+        it('blocks managers without confidential authorization from approving confidential results', async () => {
+            mockGetUser.mockResolvedValue({
+                data: { user: { id: TEST_USER_ID } },
+            })
+
+            fromChain.single
+                .mockResolvedValueOnce({
+                    data: { role: 'manager', can_access_confidential: false },
+                    error: null,
+                })
+            setupResultsFetch([
+                {
+                    id: TEST_RESULT_ID_1,
+                    status: 'entered',
+                    sample_id: TEST_SAMPLE_ID,
+                    assay: { is_confidential: true },
+                },
+            ])
+            setupSampleStatusFetch('review')
+
+            const result = await approveResults({
+                sampleId: TEST_SAMPLE_ID,
+                resultIds: [TEST_RESULT_ID_1],
+            })
+
+            expect(result).toEqual({
+                error: 'Không có quyền phê duyệt kết quả bảo mật',
+            })
+            expect(mockRpc).not.toHaveBeenCalled()
+            expect(fromChain.update).not.toHaveBeenCalled()
+        })
+
+        it('blocks managers from approving visible rows on confidential samples', async () => {
+            mockGetUser.mockResolvedValue({
+                data: { user: { id: TEST_USER_ID } },
+            })
+
+            fromChain.single
+                .mockResolvedValueOnce({
+                    data: { role: 'manager', can_access_confidential: false },
+                    error: null,
+                })
+            setupResultsFetch([
+                {
+                    id: TEST_RESULT_ID_1,
+                    status: 'entered',
+                    sample_id: TEST_SAMPLE_ID,
+                    assay: { is_confidential: false },
+                },
+            ])
+            setupConfidentialSampleLookup(true)
+            setupSampleStatusFetch('review')
+
+            const result = await approveResults({
+                sampleId: TEST_SAMPLE_ID,
+                resultIds: [TEST_RESULT_ID_1],
+            })
+
+            expect(result).toEqual({
+                error: 'Không có quyền phê duyệt kết quả bảo mật',
+            })
+            expect(mockRpc).not.toHaveBeenCalled()
+            expect(fromChain.update).not.toHaveBeenCalled()
+        })
+
+        it('fails atomically when a mixed batch includes hidden confidential result ids', async () => {
+            mockGetUser.mockResolvedValue({
+                data: { user: { id: TEST_USER_ID } },
+            })
+
+            fromChain.single.mockResolvedValueOnce({
+                data: { role: 'manager', can_access_confidential: false },
+                error: null,
+            })
+            setupResultsFetch([
+                {
+                    id: TEST_RESULT_ID_1,
+                    status: 'entered',
+                    sample_id: TEST_SAMPLE_ID,
+                    assay: { is_confidential: false },
+                },
+            ])
+
+            const result = await approveResults({
+                sampleId: TEST_SAMPLE_ID,
+                resultIds: [TEST_RESULT_ID_1, TEST_RESULT_ID_2],
+            })
+
+            expect(result).toEqual({
+                error: 'Không thể phê duyệt một hoặc nhiều kết quả đã chọn',
+            })
+            expect(mockRpc).not.toHaveBeenCalled()
+            expect(fromChain.update).not.toHaveBeenCalled()
+        })
+
+        it('rejects hidden confidential-only result ids before approval work starts', async () => {
+            mockGetUser.mockResolvedValue({
+                data: { user: { id: TEST_USER_ID } },
+            })
+
+            fromChain.single.mockResolvedValueOnce({
+                data: { role: 'manager', can_access_confidential: false },
+                error: null,
+            })
+            setupResultsFetch([])
+
+            const result = await approveResults({
+                sampleId: TEST_SAMPLE_ID,
+                resultIds: [TEST_RESULT_ID_1],
+            })
+
+            expect(result).toEqual({
+                error: 'Không thể phê duyệt một hoặc nhiều kết quả đã chọn',
+            })
+            expect(mockRpc).not.toHaveBeenCalled()
+            expect(fromChain.update).not.toHaveBeenCalled()
+        })
+
         it('rejects approval when sample is not under review and does not mutate state', async () => {
             setupManagerAuth()
             setupResultsFetch([
@@ -306,10 +448,22 @@ describe('QC Approval Blocking Mechanism', () => {
         })
 
         it('allows approval when QC session status is pass', async () => {
-            setupManagerAuth()
+            mockGetUser.mockResolvedValue({
+                data: { user: { id: TEST_USER_ID } },
+            })
+            fromChain.single
+                .mockResolvedValueOnce({
+                    data: { role: 'manager', can_access_confidential: true },
+                    error: null,
+                })
             setupReviewApprovalFlow(
                 [
-                    { id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID },
+                    {
+                        id: TEST_RESULT_ID_1,
+                        status: 'entered',
+                        sample_id: TEST_SAMPLE_ID,
+                        assay: { is_confidential: true },
+                    },
                 ],
                 0
             )
@@ -334,6 +488,7 @@ describe('QC Approval Blocking Mechanism', () => {
 
             // Should not have qc_blocked error
             expect((result as any).qc_blocked).toBeUndefined()
+            expect(result).toHaveProperty('success', true)
         })
 
         it('allows approval when QC session status is resolved', async () => {
@@ -548,6 +703,44 @@ describe('QC Approval Blocking Mechanism', () => {
     })
 
     describe('Cancel Approval', () => {
+        it('rejects hidden confidential result ids before cancel approval work starts', async () => {
+            setupManagerAuth()
+            setupInCallSequence([{ data: [], error: null }])
+
+            const result = await cancelApproval({
+                sampleId: TEST_SAMPLE_ID,
+                resultIds: [TEST_RESULT_ID_1],
+                reason: 'Correction required',
+            })
+
+            expect(result).toEqual({
+                error: 'Không thể hủy phê duyệt một hoặc nhiều kết quả đã chọn',
+            })
+            expect(fromChain.update).not.toHaveBeenCalled()
+        })
+
+        it('blocks managers from canceling approval on confidential samples with visible rows', async () => {
+            setupManagerAuth()
+            setupInCallSequence([
+                {
+                    data: [{ id: TEST_RESULT_ID_1, status: 'approved', sample_id: TEST_SAMPLE_ID }],
+                    error: null,
+                },
+            ])
+            setupConfidentialSampleLookup(true)
+
+            const result = await cancelApproval({
+                sampleId: TEST_SAMPLE_ID,
+                resultIds: [TEST_RESULT_ID_1],
+                reason: 'Correction required',
+            })
+
+            expect(result).toEqual({
+                error: 'Không có quyền hủy phê duyệt kết quả bảo mật',
+            })
+            expect(fromChain.update).not.toHaveBeenCalled()
+        })
+
         it('clears rejection fields when reverting sample to in_progress', async () => {
             setupManagerAuth()
             setupInCallSequence([
@@ -557,6 +750,7 @@ describe('QC Approval Blocking Mechanism', () => {
                 },
                 { error: null },
             ])
+            setupConfidentialSampleLookup(false)
 
             const result = await cancelApproval({
                 sampleId: TEST_SAMPLE_ID,

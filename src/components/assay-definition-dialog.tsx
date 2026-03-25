@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -48,13 +49,16 @@ export function AssayDefinitionDialog({
   onCreated,
   onUpdated,
 }: Props) {
-  // Local state for specialties to allow immediate updates after creation
-  const [localSpecialties, setLocalSpecialties] = useState<LabSpecialty[]>(specialties)
+  const [createdSpecialties, setCreatedSpecialties] = useState<LabSpecialty[]>(EMPTY_SPECIALTIES)
+  const availableSpecialties = [...specialties]
 
-  // Sync with prop changes
-  useEffect(() => {
-    setLocalSpecialties(specialties)
-  }, [specialties])
+  createdSpecialties.forEach((specialty) => {
+    if (!availableSpecialties.some((existing) => existing.id === specialty.id)) {
+      availableSpecialties.push(specialty)
+    }
+  })
+
+  availableSpecialties.sort((a, b) => a.display_order - b.display_order)
 
   const handleClose = () => {
     if (!isPending) {
@@ -97,8 +101,10 @@ export function AssayDefinitionDialog({
   }, [mode, assay, open, initializeForm, resetForm])
 
   const handleSpecialtyCreated = (specialty: LabSpecialty) => {
-    setLocalSpecialties((prev) =>
-      [...prev, specialty].sort((a, b) => a.display_order - b.display_order)
+    setCreatedSpecialties((prev) =>
+      prev.some((existing) => existing.id === specialty.id)
+        ? prev
+        : [...prev, specialty]
     )
   }
 
@@ -140,7 +146,7 @@ export function AssayDefinitionDialog({
               {/* Specialty - Extracted Component */}
               <SpecialtyField
                 form={form}
-                specialties={localSpecialties}
+                specialties={availableSpecialties}
                 onSpecialtyCreated={handleSpecialtyCreated}
                 disabled={isPending}
               />
@@ -187,6 +193,24 @@ export function AssayDefinitionDialog({
                   placeholder="Ví dụ: mg/L, CFU/100mL, NTU"
                   disabled={isPending}
                 />
+              </div>
+
+              {/* Confidential flag */}
+              <div className="flex items-start gap-3 rounded-md border p-3">
+                <Checkbox
+                  id="isConfidential"
+                  checked={form.watch('isConfidential')}
+                  onCheckedChange={(checked) => form.setValue('isConfidential', checked === true)}
+                  disabled={isPending}
+                />
+                <div className="space-y-1">
+                  <Label htmlFor="isConfidential" className="cursor-pointer">
+                    Chỉ tiêu bí mật
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Bật cho các chỉ tiêu HIV hoặc dữ liệu nhạy cảm cần giới hạn truy cập.
+                  </p>
+                </div>
               </div>
 
               {/* Validation Rules - Extracted Component */}

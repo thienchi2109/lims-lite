@@ -173,6 +173,9 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
         if (payload.units) {
             formData.append('units', payload.units)
         }
+        if (typeof payload.is_confidential === 'boolean') {
+            formData.append('is_confidential', String(payload.is_confidential))
+        }
         if (payload.validationRules) {
             formData.append('validation_rules', JSON.stringify(payload.validationRules))
         }
@@ -190,6 +193,9 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
         }
         if (payload.units) {
             formData.append('units', payload.units)
+        }
+        if (typeof payload.is_confidential === 'boolean') {
+            formData.append('is_confidential', String(payload.is_confidential))
         }
         if (payload.validationRules) {
             formData.append('validation_rules', JSON.stringify(payload.validationRules))

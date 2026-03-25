@@ -18,6 +18,7 @@ interface AssayDefinition {
     specialty_order: number | null
     units: string | null
     validation_rules: Record<string, unknown>
+    is_confidential: boolean
     methods: AssayMethod[]
     created_at: string
     updated_at: string
@@ -30,6 +31,8 @@ interface GetAssayDefinitionsParams {
     methodId?: string
     specialtyId?: string
 }
+
+const MISSING_ASSAY_CONFIDENTIALITY_ERROR = 'Thiếu trạng thái bảo mật của chỉ tiêu xét nghiệm'
 
 /**
  * Get paginated list of assay definitions with search/filter support
@@ -64,6 +67,10 @@ export async function getAssayDefinitions(params?: GetAssayDefinitionsParams) {
             }
         }
 
+        if (data.some((row: any) => typeof row.is_confidential !== 'boolean')) {
+            return { error: MISSING_ASSAY_CONFIDENTIALITY_ERROR }
+        }
+
         const totalCount = Number(data[0].total_count)
         const transformedData: AssayDefinition[] = data.map((row: any) => ({
             id: row.id,
@@ -73,6 +80,7 @@ export async function getAssayDefinitions(params?: GetAssayDefinitionsParams) {
             specialty_order: row.specialty_order,
             units: row.units,
             validation_rules: row.validation_rules || {},
+            is_confidential: row.is_confidential,
             methods: row.methods || [],
             created_at: row.created_at,
             updated_at: row.updated_at,
@@ -118,6 +126,10 @@ export async function getAssayDefinitionById(id: string) {
         }
 
         const row = data[0]
+        if (typeof row.is_confidential !== 'boolean') {
+            return { error: MISSING_ASSAY_CONFIDENTIALITY_ERROR }
+        }
+
         return {
             data: {
                 id: row.id,
@@ -125,6 +137,7 @@ export async function getAssayDefinitionById(id: string) {
                 specialty_id: row.specialty_id,
                 units: row.units,
                 validation_rules: row.validation_rules || {},
+                is_confidential: row.is_confidential,
                 methods: row.methods || [],
                 created_at: row.created_at,
                 updated_at: row.updated_at,

@@ -5,7 +5,7 @@
  * Functions: getSamplesWithTab, getSamplesForApprovalCount, getRejectedSamplesCount, submitSampleForReview, rejectSample, discardSample
  */
 
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { requireRole, isAuthError } from '@/lib/auth-helpers'
 import {
@@ -34,6 +34,59 @@ interface RawSample {
     received_by_user: { full_name: string } | null
     results: RawSampleResult[]
     coa_reports: { status: CoAReportStatus; error_message: string | null; deleted_at: string | null }[] | null
+}
+
+async function getManagerConfidentialAccess(managerId: string): Promise<{
+    canAccessConfidential: boolean
+    error?: string
+}> {
+    const supabase = await createClient()
+    const { data: userData, error } = await supabase
+        .from('users')
+        .select('can_access_confidential')
+        .eq('id', managerId)
+        .single()
+
+    if (error) {
+        console.error('Error fetching manager confidentiality access:', error)
+        return { canAccessConfidential: false, error: error.message }
+    }
+
+    return {
+        canAccessConfidential: userData?.can_access_confidential === true,
+    }
+}
+
+async function getConfidentialSampleIds(sampleIds: string[]): Promise<{
+    data: Set<string>
+    error?: string
+}> {
+    if (sampleIds.length === 0) {
+        return { data: new Set<string>() }
+    }
+
+    const supabase = createAdminClient()
+    const { data: confidentialResults, error } = await supabase
+        .from('results')
+        .select(`
+            sample_id,
+            assay:assay_definitions!results_assay_id_fkey!inner(
+                is_confidential
+            )
+        `)
+        .eq('assay.is_confidential', true)
+        .in('sample_id', sampleIds)
+
+    if (error) {
+        console.error('Error fetching confidential approval samples:', error)
+        return { data: new Set<string>(), error: error.message }
+    }
+
+    return {
+        data: new Set(
+            (confidentialResults ?? []).map((result: { sample_id: string }) => result.sample_id)
+        ),
+    }
 }
 
 /**
@@ -75,6 +128,11 @@ export async function getSamplesWithTab(tab: ApprovalTab) {
         const auth = await requireRole('manager')
         if (isAuthError(auth)) return { error: 'Only managers can view approval queue' }
 
+        const access = await getManagerConfidentialAccess(auth.id)
+        if (access.error) {
+            return { error: access.error }
+        }
+
         const supabase = await createClient()
 
         const { data: samples, error } = await supabase
@@ -99,7 +157,23 @@ export async function getSamplesWithTab(tab: ApprovalTab) {
             return { error: error.message }
         }
 
-        return { data: transformSamplesWithCounts(samples as unknown as RawSample[]) }
+        const typedSamples = samples as unknown as RawSample[]
+        if (access.canAccessConfidential) {
+            return { data: transformSamplesWithCounts(typedSamples) }
+        }
+
+        const confidentialSampleIds = await getConfidentialSampleIds(
+            typedSamples.map((sample) => sample.id)
+        )
+        if (confidentialSampleIds.error) {
+            return { error: confidentialSampleIds.error }
+        }
+
+        return {
+            data: transformSamplesWithCounts(
+                typedSamples.filter((sample) => !confidentialSampleIds.data.has(sample.id))
+            ),
+        }
     } catch (error) {
         console.error('Error in getSamplesWithTab:', error)
         return { error: error instanceof Error ? error.message : 'Failed to fetch samples' }
@@ -114,11 +188,31 @@ export async function getSamplesForApprovalCount() {
         const auth = await requireRole('manager')
         if (isAuthError(auth)) return { error: 'Only managers can view approval queue' }
 
+        const access = await getManagerConfidentialAccess(auth.id)
+        if (access.error) {
+            return { error: access.error }
+        }
+
         const supabase = await createClient()
 
-        const { count, error } = await supabase
+        if (access.canAccessConfidential) {
+            const { count, error } = await supabase
+                .from('samples')
+                .select('id', { count: 'exact', head: true })
+                .eq('status', 'review')
+                .is('deleted_at', null)
+
+            if (error) {
+                console.error('Error counting samples for approval:', error)
+                return { error: error.message }
+            }
+
+            return { data: count ?? 0 }
+        }
+
+        const { data: samples, error } = await supabase
             .from('samples')
-            .select('id', { count: 'exact', head: true })
+            .select('id')
             .eq('status', 'review')
             .is('deleted_at', null)
 
@@ -127,7 +221,18 @@ export async function getSamplesForApprovalCount() {
             return { error: error.message }
         }
 
-        return { data: count ?? 0 }
+        const sampleIds = (samples ?? []).map((sample: { id: string }) => sample.id)
+        if (sampleIds.length === 0) {
+            return { data: sampleIds.length }
+        }
+
+        const confidentialSampleIds = await getConfidentialSampleIds(sampleIds)
+        if (confidentialSampleIds.error) {
+            return { error: confidentialSampleIds.error }
+        }
+
+        const visibleCount = sampleIds.filter((sampleId) => !confidentialSampleIds.data.has(sampleId)).length
+        return { data: visibleCount }
     } catch (error) {
         console.error('Error in getSamplesForApprovalCount:', error)
         return { error: error instanceof Error ? error.message : 'Failed to count samples for approval' }
