@@ -56,16 +56,16 @@
 
 ## Batch 4: Sample Concealment in Lists and Detail
 ### RED
-- [ ] 4.1 Add a failing integration test for confidential-associated sample detail requested by an unauthorized user returning an existence-confirming response
-- [ ] 4.2 Add a failing integration test proving unauthorized sample lists, work queues, or exact lookups can still surface confidential-associated samples
-- [ ] 4.3 Add a failing integration test proving authorized users still receive full sample visibility and detail
+- [x] 4.1 Add a failing integration test for confidential-associated sample detail requested by an unauthorized user returning an existence-confirming response
+- [x] 4.2 Add a failing integration test proving unauthorized sample lists, work queues, or exact lookups can still surface confidential-associated samples
+- [x] 4.3 Add a failing integration test proving authorized users still receive full sample visibility and detail
 ### GREEN
-- [ ] 4.4 Update sample retrieval to detect confidential-associated samples consistently across list and detail flows
-- [ ] 4.5 Exclude confidential-associated samples from unauthorized lists, work queues, and exact-identifier lookup results
-- [ ] 4.6 Ensure `/api/samples/[id]` and related detail actions return generic not-found or equivalent authorization-neutral responses for unauthorized users
-- [ ] 4.7 Re-run the sample concealment tests until authorized and unauthorized paths both pass
+- [x] 4.4 Update sample retrieval to detect confidential-associated samples consistently across list and detail flows
+- [x] 4.5 Exclude confidential-associated samples from unauthorized lists, work queues, and exact-identifier lookup results
+- [x] 4.6 Ensure `/api/samples/[id]` and related detail actions return generic not-found or equivalent authorization-neutral responses for unauthorized users
+- [x] 4.7 Re-run the sample concealment tests until authorized and unauthorized paths both pass
 ### REFACTOR
-- [ ] 4.8 Centralize confidential-associated sample detection and authorization-neutral response logic so API and action layers cannot drift
+- [x] 4.8 Centralize confidential-associated sample detection and authorization-neutral response logic so API and action layers cannot drift
 
 ## Batch 5: Search Hardening
 ### RED

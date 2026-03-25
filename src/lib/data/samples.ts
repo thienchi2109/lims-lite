@@ -1,6 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { isValidUUID } from '@/lib/utils-lims'
 import {
+    getConfidentialAssociatedSampleIds,
+    getUserConfidentialAccess,
+} from './confidential-samples'
+import {
     SampleListParamsSchema,
     type SampleListParams,
     type SampleWithUser,
@@ -38,6 +42,11 @@ export async function fetchSamples(params: SampleListParams) {
 
     if (!user) {
         return { error: 'Unauthorized' }
+    }
+
+    const access = await getUserConfidentialAccess(user.id, supabase)
+    if (access.error) {
+        return { error: access.error }
     }
 
     const receiverId = normalizeReceiverId(params.receiverId)
@@ -81,11 +90,32 @@ export async function fetchSamples(params: SampleListParams) {
     const samples = Array.isArray(payload.rows) ? payload.rows : []
     const count = Number(payload.total_count ?? 0)
 
+    if (access.canAccessConfidential) {
+        return {
+            data: samples,
+            count,
+            page: validatedParams.page,
+            pageSize: validatedParams.pageSize,
+            totalPages: Math.ceil(count / validatedParams.pageSize),
+        }
+    }
+
+    const confidentialSampleIds = await getConfidentialAssociatedSampleIds(
+        samples.map((sample) => sample.id),
+    )
+    if (confidentialSampleIds.error) {
+        return { error: confidentialSampleIds.error }
+    }
+
+    const visibleSamples = samples.filter((sample) => !confidentialSampleIds.data.has(sample.id))
+    const hiddenCount = samples.length - visibleSamples.length
+    const visibleCount = Math.max(0, count - hiddenCount)
+
     return {
-        data: samples,
-        count,
+        data: visibleSamples,
+        count: visibleCount,
         page: validatedParams.page,
         pageSize: validatedParams.pageSize,
-        totalPages: Math.ceil(count / validatedParams.pageSize),
+        totalPages: Math.ceil(visibleCount / validatedParams.pageSize),
     }
 }
