@@ -1,6 +1,5 @@
 'use client'
 
-import { useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { SampleWithUser, type LabSpecialty } from '@/types'
 import { SampleDetailPanel } from '@/components/sample-detail-panel'
@@ -23,18 +22,10 @@ interface SampleBottomRowProps {
 }
 
 export function SampleBottomRow({ sample, isLoadingSample = false, permissions, specialties = EMPTY_SPECIALTIES, userRole }: SampleBottomRowProps) {
-    // Track if panels have been shown (for progressive disclosure)
-    const hasShownPanelsRef = useRef(false)
-
-    // Mark panels as shown when first sample is selected
-    if (sample && !hasShownPanelsRef.current) {
-        hasShownPanelsRef.current = true
-    }
-
     // Loading state
     if (isLoadingSample) {
         return (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+            <div className="grid h-full min-h-0 grid-cols-1 gap-2 lg:grid-cols-2">
                 <div className="h-full min-h-0 flex items-center justify-center rounded-lg border border-slate-200 bg-white p-6">
                     <div className="text-sm text-slate-500">Đang tải chi tiết mẫu...</div>
                 </div>
@@ -45,26 +36,11 @@ export function SampleBottomRow({ sample, isLoadingSample = false, permissions, 
         )
     }
 
-    // First visit - no sample ever selected, show placeholder
-    if (!hasShownPanelsRef.current && !sample) {
-        return (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
-                <div className="h-full min-h-0 flex items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-slate-400">
-                    Chọn một mẫu để xem chi tiết
-                </div>
-                <div className="h-full min-h-0 flex items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-slate-400">
-                    Chọn một mẫu để xem chi tiết và chỉ định xét nghiệm
-                </div>
-            </div>
-        )
-    }
-
-    // Panels have been shown - animate content transitions
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
+        <div className="grid h-full min-h-0 grid-cols-1 gap-2 lg:grid-cols-2">
             {/* Left Panel - Sample Details */}
             <motion.div
-                className="h-full min-h-0"
+                className="h-full min-h-0 overflow-hidden"
                 initial={fadeInScale.initial}
                 animate={fadeInScale.animate}
                 transition={{ duration: durations.normal }}
@@ -72,7 +48,7 @@ export function SampleBottomRow({ sample, isLoadingSample = false, permissions, 
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={sample?.id ?? 'empty'}
-                        className="h-full"
+                        className="h-full min-h-0"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -85,7 +61,7 @@ export function SampleBottomRow({ sample, isLoadingSample = false, permissions, 
 
             {/* Right Panel - Assigned Tests (staggered by 50ms) */}
             <motion.div
-                className="h-full min-h-0"
+                className="h-full min-h-0 overflow-hidden"
                 initial={fadeInScale.initial}
                 animate={fadeInScale.animate}
                 transition={{ duration: durations.normal, delay: 0.05 }}
@@ -93,7 +69,7 @@ export function SampleBottomRow({ sample, isLoadingSample = false, permissions, 
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={sample?.id ?? 'empty-tests'}
-                        className="h-full"
+                        className="h-full min-h-0"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
