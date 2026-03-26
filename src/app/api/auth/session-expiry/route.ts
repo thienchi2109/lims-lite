@@ -1,113 +1,47 @@
 import { NextResponse } from 'next/server'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { decodeJwtPayload } from '@/lib/jwt'
-import { getSessionTimeboxSeconds } from '@/lib/auth-session-timebox'
-import { buildAuthenticatedPrincipalKey } from '@/lib/authenticated-query-cache'
-
-type SessionExpirySource = 'sessions.created_at' | 'auth.users.last_sign_in_at' | 'unknown'
+import { getAuthenticatedDashboardSession } from '@/lib/dashboard-session'
+import {
+    resolveAuthenticatedSessionTimeboxStatus,
+    type AuthenticatedSessionTimeboxStatus,
+} from '@/lib/session-timebox-status'
 
 type SessionExpiryResponse =
-    | {
-          authenticated: true
-          timebox_seconds: number
-          expires_at: string | null
-          expires_in_ms: number | null
-          source: SessionExpirySource
-          principal_key: string
-      }
+    | AuthenticatedSessionTimeboxStatus
     | { authenticated: false; error: string }
 
 export async function GET() {
-    const supabase = await createClient()
+    let dashboardSession
 
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
+    try {
+        dashboardSession = await getAuthenticatedDashboardSession()
+    } catch (error) {
+        console.error(
+            'Failed to resolve authenticated principal during session expiry check',
+            error,
+        )
+        return NextResponse.json<SessionExpiryResponse>(
+            {
+                authenticated: false,
+                error: 'Không thể xác minh quyền truy cập hiện tại.',
+            },
+            { status: 503 },
+        )
+    }
 
-    if (!user) {
+    if (!dashboardSession) {
         return NextResponse.json<SessionExpiryResponse>(
             { authenticated: false, error: 'Chưa đăng nhập' },
-            { status: 401 }
+            { status: 401 },
         )
     }
-
-    const { data: userProfile, error: userProfileError } = await supabase
-        .from('users')
-        .select('role, can_access_confidential')
-        .eq('id', user.id)
-        .single()
-
-    if (userProfileError) {
-        console.error('Failed to resolve authenticated principal during session expiry check', userProfileError)
-        return NextResponse.json<SessionExpiryResponse>(
-            { authenticated: false, error: 'Không thể xác minh quyền truy cập hiện tại.' },
-            { status: 503 }
-        )
-    }
-
-    const principalKey = buildAuthenticatedPrincipalKey({
-        userId: user.id,
-        role: userProfile.role ?? null,
-        canAccessConfidential: userProfile.can_access_confidential === true,
-    })
-
-    const {
-        data: { session },
-    } = await supabase.auth.getSession()
-
-    const timeboxSeconds = getSessionTimeboxSeconds()
-    const accessToken = session?.access_token
-    const payload = accessToken ? decodeJwtPayload<{ session_id?: string; sid?: string }>(accessToken) : null
-    const sessionId = payload?.session_id ?? payload?.sid
-
-    let sessionCreatedAtMs: number | null = null
-    let source: SessionExpirySource = 'unknown'
-
-    if (sessionId) {
-        try {
-            const adminClient = createAdminClient()
-            const { data: createdAt, error } = await adminClient.rpc('get_session_created_at', {
-                p_session_id: sessionId,
-            })
-
-            if (!error && createdAt) {
-                const createdAtMs = Date.parse(createdAt)
-                if (Number.isFinite(createdAtMs)) {
-                    sessionCreatedAtMs = createdAtMs
-                    source = 'sessions.created_at'
-                }
-            }
-        } catch {
-            // ignore and fall back
-        }
-    }
-
-    if (sessionCreatedAtMs === null) {
-        const lastSignInAt = user.last_sign_in_at
-        if (lastSignInAt) {
-            const lastSignInAtMs = Date.parse(lastSignInAt)
-            if (Number.isFinite(lastSignInAtMs)) {
-                sessionCreatedAtMs = lastSignInAtMs
-                source = 'auth.users.last_sign_in_at'
-            }
-        }
-    }
-
-    const nowMs = Date.now()
-    const expiresAtMs = sessionCreatedAtMs !== null ? sessionCreatedAtMs + timeboxSeconds * 1000 : null
-    const expiresInMs =
-        expiresAtMs !== null ? Math.max(0, expiresAtMs - nowMs) : null
 
     const response = NextResponse.json<SessionExpiryResponse>(
-        {
-            authenticated: true,
-            timebox_seconds: timeboxSeconds,
-            expires_at: expiresAtMs !== null ? new Date(expiresAtMs).toISOString() : null,
-            expires_in_ms: expiresInMs,
-            source,
-            principal_key: principalKey,
-        },
-        { status: 200 }
+        await resolveAuthenticatedSessionTimeboxStatus({
+            accessToken: dashboardSession.accessToken,
+            lastSignInAt: dashboardSession.lastSignInAt,
+            principalKey: dashboardSession.principalKey,
+        }),
+        { status: 200 },
     )
     response.headers.set('Cache-Control', 'no-store')
     return response

@@ -4,9 +4,45 @@ import { render, screen } from '@testing-library/react'
 const mockReplace = vi.fn()
 const mockPush = vi.fn()
 
+interface MockTableCell {
+    id: string
+    column: {
+        columnDef: {
+            cell: unknown
+        }
+    }
+    getContext: () => unknown
+}
+
+interface MockTableRow {
+    id: string
+    getVisibleCells: () => MockTableCell[]
+}
+
+interface MockTable {
+    getRowModel: () => {
+        rows: MockTableRow[]
+    }
+}
+
+interface ValueCellProps {
+    value: string | null | undefined
+}
+
+interface StatusCellProps {
+    status: string
+}
+
+interface ReceiverCellProps {
+    receiverName: string | null | undefined
+}
+
+interface HeaderCellProps {
+    label: string
+}
+
 vi.mock('next/navigation', () => ({
     useRouter: () => ({ replace: mockReplace, push: mockPush }),
-    useSearchParams: () => new URLSearchParams(),
     usePathname: () => '/manager/samples',
 }))
 
@@ -28,11 +64,11 @@ vi.mock('@/components/sample-grid', async () => {
     const { flexRender } = await import('@tanstack/react-table')
 
     return {
-        SampleDataGrid: ({ table }: any) => (
+        SampleDataGrid: ({ table }: { table: MockTable }) => (
             <div data-testid="sample-data-grid">
-                {table.getRowModel().rows.map((row: any) => (
+                {table.getRowModel().rows.map((row: MockTableRow) => (
                     <div key={row.id} data-testid={`row-${row.id}`}>
-                        {row.getVisibleCells().map((cell: any) => (
+                        {row.getVisibleCells().map((cell: MockTableCell) => (
                             <div key={cell.id}>
                                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
                             </div>
@@ -41,12 +77,12 @@ vi.mock('@/components/sample-grid', async () => {
                 ))}
             </div>
         ),
-        SampleIdCell: ({ value }: any) => <span>{value}</span>,
-        ClientNameCell: ({ value }: any) => <span>{value}</span>,
-        StatusCell: ({ status }: any) => <span>{status}</span>,
-        DateCell: ({ value }: any) => <span>{value}</span>,
-        ReceiverCell: ({ receiverName }: any) => <span>{receiverName}</span>,
-        ColumnHeader: ({ label }: any) => <span>{label}</span>,
+        SampleIdCell: ({ value }: ValueCellProps) => <span>{value}</span>,
+        ClientNameCell: ({ value }: ValueCellProps) => <span>{value}</span>,
+        StatusCell: ({ status }: StatusCellProps) => <span>{status}</span>,
+        DateCell: ({ value }: ValueCellProps) => <span>{value}</span>,
+        ReceiverCell: ({ receiverName }: ReceiverCellProps) => <span>{receiverName}</span>,
+        ColumnHeader: ({ label }: HeaderCellProps) => <span>{label}</span>,
         useGridHighlight: () => [],
         GRID_LABELS: {
             columns: {
@@ -91,6 +127,7 @@ describe('SampleListTable discard action visibility', () => {
                 pageSize={10}
                 totalPages={1}
                 totalCount={1}
+                searchParams=""
                 permissions={{
                     canDiscard: true,
                     canEdit: false,
@@ -111,6 +148,7 @@ describe('SampleListTable discard action visibility', () => {
                 pageSize={10}
                 totalPages={1}
                 totalCount={1}
+                searchParams=""
                 permissions={{
                     canDiscard: true,
                     canEdit: false,

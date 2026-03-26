@@ -6,6 +6,7 @@
  */
 
 import type { ApprovalTab, SampleListParams, QCEntryParams } from './index'
+import { markLocalSamplesMutation } from '@/lib/samples-realtime'
 
 /**
  * Query key factory for samples-related queries
@@ -163,7 +164,7 @@ export const searchKeys = {
 /**
  * Type helper to extract query key from factory
  */
-export type QueryKey<T extends (...args: any[]) => readonly any[]> = ReturnType<T>
+export type QueryKey<T extends (...args: never[]) => readonly unknown[]> = ReturnType<T>
 
 /**
  * Invalidation helper for sample-related operations.
@@ -193,6 +194,7 @@ export async function invalidateSampleQueries(
     options: InvalidateSampleQueriesOptions = {}
 ): Promise<void> {
     const { includeResults = true, includeTests = false } = options
+    markLocalSamplesMutation()
 
     await queryClient.invalidateQueries({
         predicate: (query) => {

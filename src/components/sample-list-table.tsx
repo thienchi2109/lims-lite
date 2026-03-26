@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, type MouseEvent } from 'react'
 import {
     useReactTable,
     getCoreRowModel,
@@ -11,8 +11,9 @@ import { Button } from '@/components/ui/button'
 import { SampleEditDialog } from '@/components/sample-edit-dialog'
 import { DiscardSampleDialog } from '@/components/discard-sample-dialog'
 import { Eye, Pencil, ClipboardPen, Trash2 } from 'lucide-react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
+import { markLocalSamplesMutation } from '@/lib/samples-realtime'
 import { sampleKeys } from '@/types/query-keys'
 import {
     SampleDataGrid,
@@ -39,6 +40,7 @@ interface SampleListTableProps {
         canViewResults: boolean
         canEnterResults: boolean
     }
+    searchParams: string
     error?: string | null
     sortBy?: string
     sortOrder?: 'asc' | 'desc'
@@ -52,32 +54,26 @@ export function SampleListTable({
     totalPages,
     totalCount,
     permissions,
+    searchParams,
     error,
     sortBy = 'updated_at',
     sortOrder = 'desc',
     selectedSampleId,
 }: SampleListTableProps) {
-    const [samples, setSamples] = useState<SampleWithUser[]>(serverSamples)
     const [editDialogOpen, setEditDialogOpen] = useState(false)
     const [selectedSampleForEdit, setSelectedSampleForEdit] = useState<SampleWithUser | null>(null)
     const [discardDialogOpen, setDiscardDialogOpen] = useState(false)
     const [selectedSampleForDiscard, setSelectedSampleForDiscard] = useState<string | null>(null)
 
     const router = useRouter()
-    const searchParams = useSearchParams()
     const pathname = usePathname()
     const queryClient = useQueryClient()
 
     // Use shared highlight hook for realtime updates
-    const highlightedRowIds = useGridHighlight(samples)
-
-    // Keep local state in sync with server data on navigation
-    useEffect(() => {
-        setSamples(serverSamples)
-    }, [serverSamples])
+    const highlightedRowIds = useGridHighlight(serverSamples)
 
     const updateQuery = (updates: Record<string, string | null>) => {
-        const params = new URLSearchParams(searchParams.toString())
+        const params = new URLSearchParams(searchParams)
         Object.entries(updates).forEach(([key, value]) => {
             if (value === null || value === undefined) {
                 params.delete(key)
@@ -105,13 +101,14 @@ export function SampleListTable({
     const handleEditSuccess = () => {
         if (!selectedSampleForEdit) return
 
-        const params = new URLSearchParams(searchParams?.toString() ?? '')
+        const params = new URLSearchParams(searchParams)
         params.set('sortBy', 'updated_at')
         params.set('sortOrder', 'desc')
         params.set('sampleId', selectedSampleForEdit.id)
         params.set('page', '1')
         router.push(`${pathname}?${params.toString()}`)
 
+        markLocalSamplesMutation()
         queryClient.invalidateQueries({ queryKey: sampleKeys.all })
     }
 
@@ -127,6 +124,10 @@ export function SampleListTable({
     const getSortDirection = (column: string): SortDirection => {
         if (sortBy !== column) return null
         return sortOrder
+    }
+
+    const stopRowClick = (event: MouseEvent<HTMLButtonElement>) => {
+        event.stopPropagation()
     }
 
     // Define columns using shared cell components
@@ -193,15 +194,17 @@ export function SampleListTable({
                 return (
                     <div
                         className="flex items-center gap-1"
-                        onClick={(e) => e.stopPropagation()}
-                        data-stop-row-click="true"
+                        role="presentation"
                     >
                         {/* Edit button - Both roles, status-gated */}
                         {canEdit && (
                             <Button
                                 variant="ghost"
                                 size="icon-sm"
-                                onClick={() => handleEditSample(row.original)}
+                                onClick={(event) => {
+                                    stopRowClick(event)
+                                    handleEditSample(row.original)
+                                }}
                                 title="Chỉnh sửa"
                                 className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50"
                             >
@@ -214,7 +217,10 @@ export function SampleListTable({
                             <Button
                                 variant="ghost"
                                 size="icon-sm"
-                                onClick={() => updateQuery({ sampleId: row.original.id, view: 'results' })}
+                                onClick={(event) => {
+                                    stopRowClick(event)
+                                    updateQuery({ sampleId: row.original.id, view: 'results' })
+                                }}
                                 title="Nhập kết quả"
                                 className="h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50"
                             >
@@ -227,7 +233,10 @@ export function SampleListTable({
                             <Button
                                 variant="ghost"
                                 size="icon-sm"
-                                onClick={() => updateQuery({ sampleId: row.original.id, view: 'results' })}
+                                onClick={(event) => {
+                                    stopRowClick(event)
+                                    updateQuery({ sampleId: row.original.id, view: 'results' })
+                                }}
                                 title="Xem kết quả"
                                 className="h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50"
                             >
@@ -240,7 +249,8 @@ export function SampleListTable({
                             <Button
                                 variant="ghost"
                                 size="icon-sm"
-                                onClick={() => {
+                                onClick={(event) => {
+                                    stopRowClick(event)
                                     setSelectedSampleForDiscard(row.original.id)
                                     setDiscardDialogOpen(true)
                                 }}
@@ -257,7 +267,7 @@ export function SampleListTable({
     ]
 
     const table = useReactTable({
-        data: samples,
+        data: serverSamples,
         columns,
         getCoreRowModel: getCoreRowModel(),
         manualPagination: true,

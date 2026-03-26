@@ -23,8 +23,9 @@
  */
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { fetchSamplesClient } from '@/lib/api-client'
+import { shouldSuppressSamplesRealtimeEcho } from '@/lib/samples-realtime'
 import { sampleKeys } from '@/types/query-keys'
 import type { SampleListParams } from '@/types'
 import { createClient } from '@/lib/supabase/client'
@@ -44,6 +45,7 @@ interface UseSamplesOptions {
 
 export function useSamples({ params, enabled = true }: UseSamplesOptions) {
     const queryClient = useQueryClient()
+    const needsVisibilityCatchUpRef = useRef(false)
 
     // Setup realtime subscription for samples table changes
     useEffect(() => {
@@ -61,6 +63,18 @@ export function useSamples({ params, enabled = true }: UseSamplesOptions) {
             }, 250) // Debounce rapid changes
         }
 
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') {
+                needsVisibilityCatchUpRef.current = true
+                return
+            }
+
+            if (!needsVisibilityCatchUpRef.current) return
+
+            needsVisibilityCatchUpRef.current = false
+            scheduleRefetch()
+        }
+
         // Subscribe to all changes on samples table
         const channel = supabase
             .channel('samples-list-changes')
@@ -72,13 +86,18 @@ export function useSamples({ params, enabled = true }: UseSamplesOptions) {
                     table: 'samples'
                 },
                 () => {
+                    if (shouldSuppressSamplesRealtimeEcho()) return
                     scheduleRefetch()
                 }
             )
             .subscribe()
 
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+
         return () => {
+            needsVisibilityCatchUpRef.current = false
             if (timeoutId) clearTimeout(timeoutId)
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
             void supabase.removeChannel(channel)
         }
     }, [enabled, queryClient])
@@ -95,8 +114,8 @@ export function useSamples({ params, enabled = true }: UseSamplesOptions) {
             return result
         },
         enabled,
-        // Refetch on window focus to ensure fresh data
-        refetchOnWindowFocus: true,
+        // Realtime subscriptions already keep this list fresh enough while mounted.
+        refetchOnWindowFocus: false,
         // Keep previous data while fetching new data (better UX)
         placeholderData: (previousData) => previousData,
     })

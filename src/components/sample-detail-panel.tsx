@@ -1,6 +1,6 @@
 'use client'
 
-import type { SampleWithUser } from '@/types'
+import type { Client, SampleWithUser } from '@/types'
 import { formatDate } from '@/lib/utils-lims'
 import { SampleLifecycleChevron } from '@/components/sample-lifecycle-stepper'
 import { useClient } from '@/hooks/use-client'
@@ -16,23 +16,36 @@ import { useState } from 'react'
 import { SampleEditDialog } from '@/components/sample-edit-dialog'
 import { SampleActivityFeed } from '@/components/sample-activity-feed'
 import { useQueryClient } from '@tanstack/react-query'
+import { markLocalSamplesMutation } from '@/lib/samples-realtime'
 import { sampleKeys, clientKeys } from '@/types/query-keys'
 import { cn } from '@/lib/utils'
 
 interface SampleDetailPanelProps {
-    sample: SampleWithUser | null
+    sample: SampleDetailPanelSample | null
+}
+
+type SampleDetailPanelSample = SampleWithUser & {
+    client?: Client | null
+}
+
+function getEmbeddedClient(sample: SampleDetailPanelSample | null) {
+    return sample?.client ?? null
 }
 
 export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
     const [editDialogOpen, setEditDialogOpen] = useState(false)
     const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
     const queryClient = useQueryClient()
+    const embeddedClient = getEmbeddedClient(sample)
 
     const {
         data: client,
         isLoading: isClientLoading,
         error: clientError,
-    } = useClient({ clientId: sample?.client_id ?? null })
+    } = useClient({
+        clientId: sample?.client_id ?? null,
+        placeholderData: embeddedClient ?? undefined,
+    })
 
     if (!sample) {
         return (
@@ -44,13 +57,16 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
     }
 
     const handleEditSuccess = () => {
+        markLocalSamplesMutation()
         queryClient.invalidateQueries({ queryKey: sampleKeys.all })
         if (sample.client_id) {
             queryClient.invalidateQueries({ queryKey: clientKeys.detail(sample.client_id) })
         }
     }
 
-    const displayedClientName = client?.name || sample.client_name || 'N/A'
+    const resolvedClient = client ?? embeddedClient ?? null
+    const displayedClientName =
+        resolvedClient?.name || sample.client_name || 'N/A'
 
     return (
         <div id="tour-sample-detail" className="h-full min-h-0 flex flex-col overflow-hidden rounded-lg border bg-white shadow-sm dark:bg-slate-950">
@@ -158,27 +174,27 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
                             </h4>
                             {sample.client_id ? (
                                 <div className="rounded-md bg-slate-50/60 dark:bg-slate-900/30 p-2">
-                                    {isClientLoading && (
+                                    {isClientLoading && !resolvedClient && (
                                         <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground py-1">
                                             <Loader2 className="h-3 w-3 animate-spin" />
                                             Đang tải...
                                         </div>
                                     )}
-                                    {!isClientLoading && clientError && (
+                                    {!isClientLoading && !resolvedClient && clientError && (
                                         <div className="text-[11px] text-red-600 dark:text-red-400 py-1">
                                             {clientError.message}
                                         </div>
                                     )}
-                                    {client && (
+                                    {resolvedClient && (
                                         <>
                                             <InfoRow label="Họ tên" value={displayedClientName} bold />
-                                            <InfoRow label="Số CCCD" value={client.id_card_num} />
-                                            <InfoRow label="Ngày sinh" value={formatDateOnly(client.date_of_birth)} />
-                                            <InfoRow label="Giới tính" value={client.gender} />
-                                            <InfoRow label="Điện thoại" value={client.phone} />
-                                            <InfoRow label="Địa chỉ" value={client.address || 'N/A'} />
-                                            <InfoRow label="Mã BHYT" value={client.health_insurance_num || 'N/A'} />
-                                            <InfoRow label="Hạn BHYT" value={client.expiry_date ? formatDateOnly(client.expiry_date) : 'N/A'} />
+                                            <InfoRow label="Số CCCD" value={resolvedClient.id_card_num} />
+                                            <InfoRow label="Ngày sinh" value={formatDateOnly(resolvedClient.date_of_birth)} />
+                                            <InfoRow label="Giới tính" value={resolvedClient.gender} />
+                                            <InfoRow label="Điện thoại" value={resolvedClient.phone} />
+                                            <InfoRow label="Địa chỉ" value={resolvedClient.address || 'N/A'} />
+                                            <InfoRow label="Mã BHYT" value={resolvedClient.health_insurance_num || 'N/A'} />
+                                            <InfoRow label="Hạn BHYT" value={resolvedClient.expiry_date ? formatDateOnly(resolvedClient.expiry_date) : 'N/A'} />
                                         </>
                                     )}
                                 </div>
