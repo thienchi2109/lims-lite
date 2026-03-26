@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { logoutClient } from '@/lib/api-client'
+import { clearAuthenticatedQueryCache } from '@/lib/authenticated-query-cache'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -33,22 +35,19 @@ interface UserProfileDropdownProps {
 
 export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
     const [showLogoutDialog, setShowLogoutDialog] = useState(false)
-    const [isMounted, setIsMounted] = useState(false)
     const router = useRouter()
-
-    useEffect(() => {
-        setIsMounted(true)
-    }, [])
+    const queryClient = useQueryClient()
 
     const handleLogout = async () => {
         setShowLogoutDialog(false)
+        clearAuthenticatedQueryCache(queryClient)
         try {
             await logoutClient()
         } catch (error) {
             console.error('Logout failed', error)
-        } finally {
-            router.replace('/login')
         }
+
+        router.replace('/login')
     }
 
     const initials = user.full_name
@@ -59,8 +58,6 @@ export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
             .toUpperCase()
             .slice(0, 2)
         : 'U'
-
-    if (!isMounted) return null
 
     return (
         <>

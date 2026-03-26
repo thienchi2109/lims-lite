@@ -1,15 +1,22 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { getSessionTimeboxExpiryClient, logoutClient } from '@/lib/api-client'
+import { clearAuthenticatedQueryCache } from '@/lib/authenticated-query-cache'
 import { createClient } from '@/lib/supabase/client'
 
 const CHANNEL_NAME = 'auth-session-timebox'
 
 type LogoutReason = 'session_expired' | 'signed_out_elsewhere'
+type LogoutBroadcastMessage = {
+    type: 'logout'
+    reason?: LogoutReason
+}
 
 export function SessionTimeboxGuard() {
     const hasTriggeredRef = useRef(false)
+    const queryClient = useQueryClient()
 
     useEffect(() => {
         let timeoutId: ReturnType<typeof setTimeout> | null = null
@@ -40,6 +47,7 @@ export function SessionTimeboxGuard() {
         const triggerLogout = async (reason: LogoutReason) => {
             if (hasTriggeredRef.current) return
             hasTriggeredRef.current = true
+            clearAuthenticatedQueryCache(queryClient)
 
             try {
                 broadcastChannel?.postMessage({ type: 'logout', reason })
@@ -74,6 +82,7 @@ export function SessionTimeboxGuard() {
                     return
                 }
 
+                clearAuthenticatedQueryCache(queryClient)
                 redirectToLogin('signed_out_elsewhere')
                 return
             }
@@ -108,7 +117,7 @@ export function SessionTimeboxGuard() {
         }
 
         const handleBroadcastMessage = (event: MessageEvent) => {
-            const data = event.data as any
+            const data = event.data as LogoutBroadcastMessage | null
             if (!data || data.type !== 'logout') return
             triggerLogout(data.reason === 'session_expired' ? 'session_expired' : 'signed_out_elsewhere').catch(() => {
                 // ignore
@@ -131,7 +140,7 @@ export function SessionTimeboxGuard() {
             window.removeEventListener('focus', handleVisibilityOrFocus)
             document.removeEventListener('visibilitychange', handleVisibilityOrFocus)
         }
-    }, [])
+    }, [queryClient])
 
     return null
 }

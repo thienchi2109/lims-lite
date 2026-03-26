@@ -2,8 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { logoutClient } from '@/lib/api-client'
 import { Button } from '@/components/ui/button'
+import { clearAuthenticatedQueryCache } from '@/lib/authenticated-query-cache'
 import {
     Dialog,
     DialogContent,
@@ -16,16 +18,18 @@ import {
 export function LogoutButton() {
     const [open, setOpen] = useState(false)
     const router = useRouter()
+    const queryClient = useQueryClient()
 
     const handleLogout = async () => {
         setOpen(false)
+        clearAuthenticatedQueryCache(queryClient)
         try {
             await logoutClient()
         } catch (error) {
             console.error('Logout failed', error)
-        } finally {
-            router.replace('/login')
         }
+
+        router.replace('/login')
     }
 
     return (
