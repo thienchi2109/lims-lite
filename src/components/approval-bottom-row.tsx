@@ -69,15 +69,13 @@ export function ApprovalBottomRow({
                         <SampleDetailPanel sample={sample} />
                     </div>
                 </div>
-                <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden pr-1">
-                    <div className="flex-1 min-h-0 overflow-hidden">
+                <div className="min-h-0 overflow-y-auto pr-1">
+                    <div className="space-y-2">
                         <AssignedTestsPanel
                             sampleId={sample.id}
                             userRole="manager"
                             initialResults={results}
                         />
-                    </div>
-                    <div className="shrink-0">
                         <ApprovalActions sampleId={sample.id} results={results} />
                     </div>
                 </div>
