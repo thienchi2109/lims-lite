@@ -160,4 +160,25 @@ describe('SampleListTable discard action visibility', () => {
 
         expect(screen.queryByTitle('Loại bỏ mẫu')).toBeNull()
     })
+
+    it('keeps the actions cell marked to suppress row clicks even when no actions render', () => {
+        const { container } = render(
+            <SampleListTable
+                samples={[buildSample('completed')]}
+                page={1}
+                pageSize={10}
+                totalPages={1}
+                totalCount={1}
+                searchParams=""
+                permissions={{
+                    canDiscard: false,
+                    canEdit: false,
+                    canViewResults: false,
+                    canEnterResults: false,
+                }}
+            />,
+        )
+
+        expect(container.querySelector('[data-stop-row-click="true"]')).not.toBeNull()
+    })
 })

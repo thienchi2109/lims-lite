@@ -194,7 +194,7 @@ export function SampleListTable({
                 return (
                     <div
                         className="flex items-center gap-1"
-                        role="presentation"
+                        data-stop-row-click="true"
                     >
                         {/* Edit button - Both roles, status-gated */}
                         {canEdit && (
