@@ -119,26 +119,8 @@ export async function GET(request: NextRequest) {
             return response
         }
 
-        // Step 4: Deny confidential-associated samples with a generic not-found response
-        // only after the public session is valid, so session-expiry handling remains intact.
-        try {
-            const confidentialSample = await isConfidentialAssociatedSample(sampleId)
-
-            if (confidentialSample.data) {
-                return NextResponse.json(
-                    { error: 'Không tìm thấy phiếu kết quả' },
-                    { status: 404 }
-                )
-            }
-        } catch (error) {
-            console.error('Confidential CoA association check failed:', error)
-            return NextResponse.json(
-                { error: 'Không tìm thấy phiếu kết quả' },
-                { status: 404 }
-            )
-        }
-
-        // Step 5: Verify sample belongs to authenticated client
+        // Step 4: Fetch sample and verify client ownership before the confidential probe
+        // so foreign sample IDs cannot distinguish confidential vs non-confidential records.
         const { data: sample, error: sampleError } = await supabase
             .from('samples')
             .select('id, sample_id, client_id, status')
@@ -163,7 +145,7 @@ export async function GET(request: NextRequest) {
             )
         }
 
-        // Step 6: Verify client authorization
+        // Step 5: Verify client authorization
         if (sample.client_id !== tokenPayload.client_id) {
             await supabase.from('coa_access_log').insert({
                 client_id: tokenPayload.client_id,
@@ -178,6 +160,25 @@ export async function GET(request: NextRequest) {
             return NextResponse.json(
                 { error: 'Bạn không có quyền truy cập mẫu này' },
                 { status: 403 }
+            )
+        }
+
+        // Step 6: Deny confidential-associated samples with a generic not-found response
+        // only after the public session is valid and the sample belongs to this client.
+        try {
+            const confidentialSample = await isConfidentialAssociatedSample(sampleId)
+
+            if (confidentialSample.data) {
+                return NextResponse.json(
+                    { error: 'Không tìm thấy phiếu kết quả' },
+                    { status: 404 }
+                )
+            }
+        } catch (error) {
+            console.error('Confidential CoA association check failed:', error)
+            return NextResponse.json(
+                { error: 'Không tìm thấy phiếu kết quả' },
+                { status: 404 }
             )
         }
 

@@ -58,8 +58,10 @@ function createRequest(sampleId: string, options?: { includeToken?: boolean }) {
 
 function mockPublicDownloadRoute({
     sampleIsConfidential,
+    sampleClientId = 'client-1',
 }: {
     sampleIsConfidential: boolean
+    sampleClientId?: string
 }) {
     mockVerifyCoAToken.mockResolvedValue({
         client_id: 'client-1',
@@ -80,7 +82,7 @@ function mockPublicDownloadRoute({
                     data: {
                         id: 'sample-1',
                         sample_id: 'COA-0001',
-                        client_id: 'client-1',
+                        client_id: sampleClientId,
                         status: 'completed',
                     },
                     error: null,
@@ -144,6 +146,21 @@ describe('public CoA download confidentiality', () => {
         expect(response.status).toBe(404)
         await expect(response.json()).resolves.toEqual({
             error: 'Không tìm thấy phiếu kết quả',
+        })
+        expect(mockStorageDownload).not.toHaveBeenCalled()
+    })
+
+    it('does not distinguish foreign confidential samples from other unauthorized client samples', async () => {
+        mockPublicDownloadRoute({
+            sampleIsConfidential: true,
+            sampleClientId: 'client-2',
+        })
+
+        const response = await GET(createRequest('sample-1'))
+
+        expect(response.status).toBe(403)
+        await expect(response.json()).resolves.toEqual({
+            error: 'Bạn không có quyền truy cập mẫu này',
         })
         expect(mockStorageDownload).not.toHaveBeenCalled()
     })
