@@ -23,7 +23,6 @@ export function shouldSuppressSamplesRealtimeEcho(
         return false
     }
 
-    pendingLocalSampleEchoes.delete(sampleId)
     return true
 }
 

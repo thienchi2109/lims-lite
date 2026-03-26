@@ -179,6 +179,34 @@ describe('useSamples', () => {
         expect(mockFetchSamplesClient).toHaveBeenCalledTimes(1)
     })
 
+    it('keeps suppressing repeated realtime echoes for the same sample within the grace window', async () => {
+        const { Wrapper } = createWrapper()
+
+        renderHook(
+            () =>
+                useSamples({
+                    params: {
+                        page: 1,
+                        pageSize: 20,
+                    },
+                }),
+            { wrapper: Wrapper },
+        )
+
+        await waitFor(() => {
+            expect(mockFetchSamplesClient).toHaveBeenCalledTimes(1)
+        })
+
+        await act(async () => {
+            markLocalSamplesMutation('sample-1')
+            triggerRealtimeChange('sample-1')
+            triggerRealtimeChange('sample-1')
+            await new Promise((resolve) => setTimeout(resolve, 350))
+        })
+
+        expect(mockFetchSamplesClient).toHaveBeenCalledTimes(1)
+    })
+
     it('still refetches for realtime updates on a different sample during the grace window', async () => {
         const { Wrapper } = createWrapper()
 
