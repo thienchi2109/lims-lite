@@ -68,7 +68,7 @@ export function ApprovalBottomRow({
                     <SampleDetailPanel sample={sample} />
                 </div>
                 <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden pr-1">
-                    <div className="flex-1 min-h-0">
+                    <div className="flex-1 min-h-0 overflow-y-auto">
                         <AssignedTestsPanel
                             sampleId={sample.id}
                             userRole="manager"

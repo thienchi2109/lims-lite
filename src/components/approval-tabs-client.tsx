@@ -58,7 +58,7 @@ function ApprovalQueueContent({
                 />
             </div>
 
-            <div id="tour-approval-detail" className="flex-1 min-h-0 border-t pt-4">
+            <div id="tour-approval-detail" className="flex-1 min-h-0 overflow-hidden border-t pt-4">
                 <ApprovalBottomRow
                     sample={sample}
                     results={results}
