@@ -19,6 +19,7 @@ import {
     recordAuthAttempt,
 } from '@/lib/coa-auth'
 import { createCoAToken } from '@/lib/jwt'
+import { getConfidentialAssociatedSampleIds } from '@/lib/data/confidential-samples'
 
 /**
  * Get client IP address from request
@@ -161,14 +162,34 @@ export async function POST(request: NextRequest) {
 
         const samplesWithCoA = new Set(coaReports?.map(r => r.sample_id) || [])
 
-        const sampleInfoList: CoASampleInfo[] = (samples || []).map(sample => ({
-            id: sample.id,
-            sample_id_display: sample.sample_id,
-            sample_type: sample.type,
-            received_date: sample.received_at,
-            approved_at: null, // Not tracked in samples table
-            has_coa: samplesWithCoA.has(sample.id),
-        }))
+        let confidentialSampleIds = new Set<string>()
+
+        if (sampleIds.length > 0) {
+            try {
+                const confidentialSampleResult = await getConfidentialAssociatedSampleIds(sampleIds)
+                confidentialSampleIds = confidentialSampleResult.data
+            } catch (error) {
+                console.error('Error verifying confidential sample associations:', error)
+                return NextResponse.json<CoAAuthResponse>(
+                    {
+                        success: false,
+                        error: 'Đã xảy ra lỗi khi tải danh sách mẫu',
+                    },
+                    { status: 500 }
+                )
+            }
+        }
+
+        const sampleInfoList: CoASampleInfo[] = (samples || [])
+            .filter(sample => !confidentialSampleIds.has(sample.id))
+            .map(sample => ({
+                id: sample.id,
+                sample_id_display: sample.sample_id,
+                sample_type: sample.type,
+                received_date: sample.received_at,
+                approved_at: null, // Not tracked in samples table
+                has_coa: samplesWithCoA.has(sample.id),
+            }))
 
         // Step 9: Generate JWT token for CoA viewing (stored in HttpOnly cookie)
         const token = await createCoAToken({
