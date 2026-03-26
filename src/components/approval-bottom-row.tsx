@@ -63,7 +63,7 @@ export function ApprovalBottomRow({
                 </div>
             )}
 
-            <div className="grid h-full min-h-0 grid-cols-1 gap-2 lg:grid-cols-2">
+            <div className="grid h-full min-h-0 grid-cols-1 grid-rows-[1fr] gap-2 overflow-hidden lg:grid-cols-2">
                 <div className="flex h-full min-h-0 flex-col overflow-hidden">
                     <div className="flex-1 min-h-0">
                         <SampleDetailPanel sample={sample} />
