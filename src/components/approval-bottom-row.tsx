@@ -76,7 +76,7 @@ export function ApprovalBottomRow({
                             userRole="manager"
                             initialResults={results}
                         />
-                        <ApprovalActions sampleId={sample.id} results={results} />
+                        <ApprovalActions sampleId={sample.id} results={results} compact />
                     </div>
                 </div>
             </div>
