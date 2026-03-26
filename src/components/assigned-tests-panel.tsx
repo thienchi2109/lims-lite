@@ -180,7 +180,7 @@ export function AssignedTestsPanel({
                 userRole={userRole}
             />
 
-            <div className="flex-1 overflow-auto bg-slate-50/50 p-4">
+            <div className="flex-1 overflow-auto bg-slate-50/50 p-2">
                 <Card id="tour-results-table" className="border-slate-200 shadow-sm">
                     <CardContent className="p-0">
                         <Table>
@@ -197,7 +197,7 @@ export function AssignedTestsPanel({
                             <TableBody>
                                 {results.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="h-32 text-center text-slate-500">
+                                        <TableCell colSpan={6} className="h-20 text-center text-slate-500">
                                             Chưa có xét nghiệm nào được chỉ định
                                         </TableCell>
                                     </TableRow>
