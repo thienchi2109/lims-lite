@@ -118,6 +118,10 @@ refactor: Optimize database query in practitioners list
 - Use Morph or targeted file reads for semantic exploration, configuration lookup, and business-logic walkthroughs
 - Run `gitnexus status` or `gitnexus list` before assuming a repo is already indexed
 - Do not run `gitnexus analyze` in `E:\lims-lite` unless the user explicitly asks or you are working in an isolated worktree, because it generates repo files such as `AGENTS.md`, `CLAUDE.md`, and `.claude/skills/*`
+- Treat Morph `codebase_search` / `warp_grep` as single-flight only in this repo: do not launch parallel Morph searches from multiple subagents or parallel tool calls in the same turn
+- In subagent-driven work, the coordinator may use Morph once for broad semantic discovery; subagents should use `gitnexus`, targeted file reads, or `rg` instead of issuing their own Morph searches
+- If Morph returns `429`, stop issuing more Morph searches for the current task/session and fall back immediately to `gitnexus query/context/impact`, then `rg` for exact text lookups
+- When falling back after a Morph `429`, prefer `gitnexus` first if the repo is indexed; use `rg` only for exact-string/config search or when graph results are insufficient
 
 ## Quality Check
 

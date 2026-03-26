@@ -15,8 +15,8 @@
 
 ## ⚠️ ENFORCEMENT CHECKLIST (Read Before Every Action)
 
-**BEFORE searching code, ASK:** Am I about to use `grep`, `Grep`, or `Glob`?
-→ **STOP.** Use `mcp__filesystem-with-morph__warpgrep_codebase_search` instead.
+**BEFORE searching code, ASK:** Do I need broad semantic discovery, symbol graph context, or an exact string lookup?
+→ **STOP.** In this repo, prefer `gitnexus` first for graph-backed discovery. Use Morph `codebase_search` only as a single in-flight semantic search when needed. If Morph returns `429`, fall back immediately to `gitnexus` and then `rg` for exact text lookups.
 
 **BEFORE editing code, ASK:** Am I about to use the `Edit` tool?
 → **STOP.** Use `mcp__filesystem-with-morph__edit_file` with `// ... existing code ...` placeholders.
@@ -35,7 +35,9 @@
 
 | ❌ NEVER | ✅ ALWAYS |
 |----------|-----------|
-| `grep`, `Grep`, `rg` for code search | `warpgrep` MCP tool |
+| Parallel Morph search from multiple agents | Single-flight Morph search only; otherwise use GitNexus |
+| Keep retrying Morph after `429` | Fall back to `gitnexus` then `rg` |
+| `grep`, `Grep`, `rg` for broad semantic search | `gitnexus` first, Morph as secondary semantic tool |
 | `Edit` tool for file changes | `edit_file` MCP tool |
 | Generate library code from memory | Context7 lookup first |
 | Manual symbol lookup / callers | GitNexus `context` / `impact` |
@@ -167,24 +169,27 @@ Read `.claude/skills/context-engineering/references/` for:
 | Task | Tool | Notes |
 |------|------|-------|
 | File autocomplete | File Suggestion | rg + fzf fuzzy matching (~50ms) |
-| Find code | warpgrep | `mcp__filesystem-with-morph__warpgrep_codebase_search` - semantic queries |
+| Find code by concept | GitNexus | `gitnexus query <term>` first in this repo |
+| Find code by semantic natural-language search | Morph `codebase_search` | Single-flight only; do not run parallel Morph searches |
 | Find symbol context | GitNexus | `gitnexus context <symbol> --file <path>` - definitions, callers, callees |
 | Impact analysis | GitNexus | `gitnexus impact <symbol>` - upstream blast radius before changes |
+| Exact string / config lookup | `rg` | Use after GitNexus or when Morph is rate-limited |
 | Edit code | edit_file | `mcp__filesystem-with-morph__edit_file` - use `// ... existing code ...` |
 | Create file | write_file | Only for new files |
 | Library docs | Context7 | `mcp__context7__resolve-library-id` → `mcp__context7__query-docs` |
 
 **Hybrid Search Strategy:**
-- **Layer 1 (Autocomplete):** File Suggestion with rg+fzf - fast path completion
-- **Layer 2 (Semantic):** warpgrep - "Where is X handled?"
-- **Layer 3 (Graph Context):** GitNexus - symbol context, callers/callees, and blast radius
+- **Layer 1 (Graph Context):** GitNexus - `query`, `context`, `impact`
+- **Layer 2 (Semantic):** Morph `codebase_search` for one broad natural-language search at a time
+- **Layer 3 (Exact Text):** `rg` for config keys, SQL text, literals, and fallback after Morph `429`
 
 **MCP Tools - USE PROACTIVELY:**
 
-1. **Morph (warpgrep)** - For ANY code search:
-   - Use BEFORE grep/glob for semantic queries like "Where is auth handled?"
-   - Faster and smarter than manual file searching
-  **Workflow:** warpgrep → edit_file → verify
+1. **Morph (warpgrep / `codebase_search`)** - For broad semantic exploration only:
+   - Do not launch more than one Morph search at a time
+   - Do not assign parallel Morph searches to multiple subagents in the same task
+   - If Morph returns `429`, stop using it for the current task/session and switch to GitNexus + `rg`
+  **Workflow:** GitNexus → single Morph search if needed → `rg` / direct reads → edit_file → verify
 
 2. **Context7** - For ANY library/framework questions:
    - Code generation with external libraries (Supabase, React, Zod, etc.)
