@@ -36,9 +36,11 @@ function createThenableQuery(result: QueryResult) {
 function mockStaffViewRoute({
     canAccessConfidential,
     sampleIsConfidential,
+    sampleExists = true,
 }: {
     canAccessConfidential: boolean
     sampleIsConfidential: boolean
+    sampleExists?: boolean
 }) {
     mockDownload.mockResolvedValue({
         data: {
@@ -67,12 +69,18 @@ function mockStaffViewRoute({
 
             if (table === 'samples') {
                 return createThenableQuery({
-                    data: {
-                        id: 'sample-1',
-                        sample_id: 'COA-0001',
-                        status: 'completed',
-                    },
-                    error: null,
+                    data: sampleExists
+                        ? {
+                              id: 'sample-1',
+                              sample_id: 'COA-0001',
+                              status: 'completed',
+                          }
+                        : null,
+                    error: sampleExists
+                        ? null
+                        : {
+                              message: 'Not found',
+                          },
                 })
             }
 
@@ -167,5 +175,23 @@ describe('staff CoA view confidentiality', () => {
         expect(response.status).toBe(200)
         await expect(response.text()).resolves.toContain('Confidential CoA')
         expect(mockDownload).toHaveBeenCalledTimes(1)
+    })
+
+    it('uses the same generic not-found response for non-existent sample ids', async () => {
+        mockStaffViewRoute({
+            canAccessConfidential: false,
+            sampleIsConfidential: false,
+            sampleExists: false,
+        })
+
+        const response = await GET(
+            new Request('http://localhost/api/coa/view?sample_id=sample-1') as Request,
+        )
+
+        expect(response.status).toBe(404)
+        await expect(response.json()).resolves.toEqual({
+            error: 'Không tìm thấy phiếu kết quả',
+        })
+        expect(mockDownload).not.toHaveBeenCalled()
     })
 })

@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
 
         if (sampleError || !sample) {
             return NextResponse.json(
-                { error: 'Không tìm thấy mẫu' },
+                { error: COA_NOT_FOUND_ERROR },
                 { status: 404 }
             )
         }
