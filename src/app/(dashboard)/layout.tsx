@@ -31,7 +31,7 @@ export default async function DashboardLayout({
 
     if (userProfileError) {
         console.error('Failed to resolve authenticated dashboard principal', userProfileError)
-        throw new Error('Failed to resolve authenticated dashboard principal')
+        throw new Error('Không thể xác minh quyền truy cập hiện tại.')
     }
 
     const principalKey = buildAuthenticatedPrincipalKey({
