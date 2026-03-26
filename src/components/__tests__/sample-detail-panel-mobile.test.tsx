@@ -76,8 +76,8 @@ describe('SampleDetailPanel mobile behavior', () => {
         expect(detailTab.className).toContain('text-[11px]')
         expect(content?.className).toContain('min-h-0')
         expect(content?.className).toContain('overflow-y-auto')
-        expect(detailBody?.className).toContain('p-2.5')
-        expect(detailBody?.className).toContain('text-xs')
+        expect(detailBody?.className).toContain('p-3')
+        expect(detailBody?.className).toContain('text-sm')
     })
 
     it('uses compact typography inside the client detail grid when client data is present', () => {
@@ -99,8 +99,8 @@ describe('SampleDetailPanel mobile behavior', () => {
 
         expect(infoRow?.className).toContain('flex')
         expect(infoRow?.className).toContain('items-baseline')
-        expect(screen.getByText('Số CCCD').className).toContain('text-[11px]')
-        expect(detailValue.className).toContain('text-xs')
+        expect(screen.getByText('Số CCCD').className).toContain('text-xs')
+        expect(detailValue.className).toContain('text-sm')
 
         mockClientData = null
     })

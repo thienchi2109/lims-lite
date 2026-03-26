@@ -126,7 +126,7 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
             {/* Tab Content */}
             <div className="flex-1 min-h-0 overflow-y-auto">
                 {activeTab === 'details' ? (
-                    <div className="p-2.5 text-xs space-y-2.5">
+                    <div className="p-3 text-sm space-y-3">
                         {/* Rejection Alert */}
                         {sample.rejection_reason && ['in_progress', 'discarded'].includes(sample.status) && (
                             <div className={`rounded-md border p-2.5 ${sample.status === 'discarded'
@@ -153,7 +153,7 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
 
                         {/* Client Info Section */}
                         <div>
-                            <h4 className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                            <h4 className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                                 Thông tin bệnh nhân
                             </h4>
                             {sample.client_id ? (
@@ -226,9 +226,9 @@ function InfoRow({
 }) {
     return (
         <div className="flex items-baseline justify-between py-0.5">
-            <span className="text-[11px] text-slate-400 shrink-0 mr-3">{label}</span>
+            <span className="text-xs text-slate-400 shrink-0 mr-3">{label}</span>
             <span className={cn(
-                "text-xs text-right truncate",
+                "text-sm text-right truncate",
                 bold && "font-medium text-slate-900 dark:text-slate-100",
                 muted && "text-muted-foreground",
                 !bold && !muted && "text-slate-700 dark:text-slate-300",
