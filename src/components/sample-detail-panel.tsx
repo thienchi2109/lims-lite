@@ -2,19 +2,14 @@
 
 import type { SampleWithUser } from '@/types'
 import { formatDate } from '@/lib/utils-lims'
-// import { SampleStatusBadge } from '@/components/sample-status-badge' // Removed
 import { SampleLifecycleChevron } from '@/components/sample-lifecycle-stepper'
 import { useClient } from '@/hooks/use-client'
 import {
     FileText,
-    Calendar,
-    User,
-    Building2,
-    Clock,
-    Pencil,
     AlertCircle,
     Activity,
     Loader2,
+    Pencil,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
@@ -33,7 +28,6 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
     const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
     const queryClient = useQueryClient()
 
-    // Fetch client data using TanStack Query
     const {
         data: client,
         isLoading: isClientLoading,
@@ -50,10 +44,7 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
     }
 
     const handleEditSuccess = () => {
-        // Invalidate sample queries to refetch fresh data
         queryClient.invalidateQueries({ queryKey: sampleKeys.all })
-
-        // Also invalidate the client detail query to refresh client data
         if (sample.client_id) {
             queryClient.invalidateQueries({ queryKey: clientKeys.detail(sample.client_id) })
         }
@@ -63,6 +54,7 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
 
     return (
         <div id="tour-sample-detail" className="h-full min-h-0 flex flex-col overflow-hidden rounded-lg border bg-white shadow-sm dark:bg-slate-950">
+            {/* Header */}
             <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-slate-50/50 px-2.5 py-1 dark:bg-slate-900/50">
                 <div className="flex items-center gap-1.5 overflow-hidden">
                     <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sky-50 text-sky-600 dark:bg-sky-900/20 dark:text-sky-400">
@@ -134,112 +126,74 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
             {/* Tab Content */}
             <div className="flex-1 min-h-0 overflow-y-auto">
                 {activeTab === 'details' ? (
-                    <div className="p-1.5 text-xs">
+                    <div className="p-2.5 text-xs space-y-2.5">
+                        {/* Rejection Alert */}
                         {sample.rejection_reason && ['in_progress', 'discarded'].includes(sample.status) && (
-                            <div className={`mb-2.5 rounded-md border p-2.5 ${sample.status === 'discarded'
+                            <div className={`rounded-md border p-2.5 ${sample.status === 'discarded'
                                 ? 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'
                                 : 'bg-orange-50 border-orange-200 text-orange-800 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-300'
                                 }`}>
-                                <div className="flex items-start gap-2.5">
-                                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                                    <div className="flex-1 text-sm">
-                                        <h4 className="mb-1 text-xs font-semibold">
+                                <div className="flex items-start gap-2">
+                                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                                    <div className="flex-1 text-xs">
+                                        <h4 className="mb-0.5 font-semibold">
                                             {sample.status === 'discarded' ? 'Mẫu đã bị loại bỏ' : 'Mẫu đã bị từ chối'}
                                         </h4>
-                                        <div className="space-y-0.5 text-xs opacity-90">
-                                            <p><span className="font-medium">Lý do:</span> {sample.rejection_reason}</p>
-                                            {sample.rejected_at && (
-                                                <p><span className="font-medium">Thời gian:</span> {new Date(sample.rejected_at).toLocaleString('vi-VN')}</p>
-                                            )}
-                                            {sample.rejected_by_name && (
-                                                <p><span className="font-medium">Người thực hiện:</span> {sample.rejected_by_name}</p>
-                                            )}
-                                        </div>
+                                        <p><span className="font-medium">Lý do:</span> {sample.rejection_reason}</p>
+                                        {sample.rejected_at && (
+                                            <p><span className="font-medium">Thời gian:</span> {new Date(sample.rejected_at).toLocaleString('vi-VN')}</p>
+                                        )}
+                                        {sample.rejected_by_name && (
+                                            <p><span className="font-medium">Người thực hiện:</span> {sample.rejected_by_name}</p>
+                                        )}
                                     </div>
                                 </div>
                             </div>
                         )}
 
-                        <div className="grid grid-cols-2 gap-1.5">
-                            <div className="col-span-2 space-y-0.5">
-                                <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                                    <Building2 className="h-3.5 w-3.5" />
-                                    Khách hàng
+                        {/* Client Info Section */}
+                        <div>
+                            <h4 className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                                Thông tin bệnh nhân
+                            </h4>
+                            {sample.client_id ? (
+                                <div className="rounded-md bg-slate-50/60 dark:bg-slate-900/30 p-2">
+                                    {isClientLoading && (
+                                        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground py-1">
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                            Đang tải...
+                                        </div>
+                                    )}
+                                    {!isClientLoading && clientError && (
+                                        <div className="text-[11px] text-red-600 dark:text-red-400 py-1">
+                                            {clientError.message}
+                                        </div>
+                                    )}
+                                    {client && (
+                                        <>
+                                            <InfoRow label="Họ tên" value={displayedClientName} bold />
+                                            <InfoRow label="Số CCCD" value={client.id_card_num} />
+                                            <InfoRow label="Ngày sinh" value={formatDateOnly(client.date_of_birth)} />
+                                            <InfoRow label="Giới tính" value={client.gender} />
+                                            <InfoRow label="Điện thoại" value={client.phone} />
+                                            <InfoRow label="Địa chỉ" value={client.address || 'N/A'} />
+                                            <InfoRow label="Mã BHYT" value={client.health_insurance_num || 'N/A'} />
+                                            <InfoRow label="Hạn BHYT" value={client.expiry_date ? formatDateOnly(client.expiry_date) : 'N/A'} />
+                                        </>
+                                    )}
                                 </div>
-                                <div className="truncate text-xs font-medium" title={displayedClientName}>
-                                    {displayedClientName}
+                            ) : (
+                                <div className="text-[11px] text-muted-foreground">
+                                    Mẫu chưa được liên kết với khách hàng
                                 </div>
+                            )}
+                        </div>
 
-                                {sample.client_id ? (
-                                    <div className="mt-1.5 space-y-1.5">
-                                        {isClientLoading && (
-                                            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                                Đang tải thông tin khách hàng...
-                                            </div>
-                                        )}
-
-                                        {!isClientLoading && clientError && (
-                                            <div className="text-[11px] text-red-600 dark:text-red-400">
-                                                {clientError.message}
-                                            </div>
-                                        )}
-
-                                        {client && (
-                                            <div className="grid grid-cols-2 gap-1.5 rounded-md border border-slate-100 bg-slate-50/40 p-1.5 text-xs dark:border-slate-800 dark:bg-slate-900/30">
-                                                <DetailItem label="SỐ CCCD/CMND" value={client.id_card_num} />
-                                                <DetailItem label="Ngày sinh" value={formatDateOnly(client.date_of_birth)} />
-                                                <DetailItem label="Giới tính" value={client.gender} />
-                                                <DetailItem label="Số điện thoại" value={client.phone} />
-                                                <DetailItem
-                                                    className="col-span-2"
-                                                    label="Địa chỉ"
-                                                    value={client.address || 'N/A'}
-                                                />
-                                                <DetailItem
-                                                    label="BHYT"
-                                                    value={client.health_insurance_num || 'N/A'}
-                                                />
-                                                <DetailItem
-                                                    label="NGÀY HẾT HẠN BHYT"
-                                                    value={client.expiry_date ? formatDateOnly(client.expiry_date) : 'N/A'}
-                                                />
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="mt-0.5 text-[11px] text-muted-foreground">
-                                        Mẫu chưa được liên kết với khách hàng
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="space-y-0.5">
-                                <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                                    <Calendar className="h-3.5 w-3.5" />
-                                    Ngày nhận mẫu
-                                </div>
-                                <div className="text-xs">
-                                    {formatDate(sample.received_at)}
-                                </div>
-                            </div>
-
-                            <div className="space-y-0.5">
-                                <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                                    <User className="h-3.5 w-3.5" />
-                                    Người nhận mẫu
-                                </div>
-                                <div className="truncate text-xs" title={sample.received_by_name || ''}>
-                                    {sample.received_by_name || 'N/A'}
-                                </div>
-                            </div>
-
-                            <div className="col-span-2 border-t border-slate-100 pt-1 dark:border-slate-800">
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                    <Clock className="h-3 w-3" />
-                                    <span>Cập nhật: {formatDate(sample.updated_at)}</span>
-                                </div>
-                            </div>
+                        {/* Reception Metadata Footer */}
+                        <div className="border-t border-slate-100 dark:border-slate-800 pt-2">
+                            <InfoRow label="Thời điểm nhận" value={formatDate(sample.received_at)} />
+                            <InfoRow label="Người nhận mẫu" value={sample.received_by_name || 'N/A'} />
+                            <InfoRow label="Cập nhật cuối" value={formatDate(sample.updated_at)} muted />
                         </div>
                     </div>
                 ) : (
@@ -259,21 +213,26 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
     )
 }
 
-function DetailItem({
+function InfoRow({
     label,
     value,
-    className,
+    bold,
+    muted,
 }: {
     label: string
     value: string
-    className?: string
+    bold?: boolean
+    muted?: boolean
 }) {
     return (
-        <div className={cn('space-y-0.5', className)}>
-            <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                {label}
-            </div>
-            <div className="break-words text-xs leading-tight">{value}</div>
+        <div className="flex items-baseline justify-between py-0.5">
+            <span className="text-[11px] text-slate-400 shrink-0 mr-3">{label}</span>
+            <span className={cn(
+                "text-xs text-right truncate",
+                bold && "font-medium text-slate-900 dark:text-slate-100",
+                muted && "text-muted-foreground",
+                !bold && !muted && "text-slate-700 dark:text-slate-300",
+            )}>{value}</span>
         </div>
     )
 }

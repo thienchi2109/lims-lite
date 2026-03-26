@@ -76,7 +76,7 @@ describe('SampleDetailPanel mobile behavior', () => {
         expect(detailTab.className).toContain('text-[11px]')
         expect(content?.className).toContain('min-h-0')
         expect(content?.className).toContain('overflow-y-auto')
-        expect(detailBody?.className).toContain('p-1.5')
+        expect(detailBody?.className).toContain('p-2.5')
         expect(detailBody?.className).toContain('text-xs')
     })
 
@@ -94,15 +94,12 @@ describe('SampleDetailPanel mobile behavior', () => {
 
         render(<SampleDetailPanel sample={{ ...sample, client_id: 'client-1' }} />)
 
-        const detailItem = screen.getByText('SỐ CCCD/CMND').parentElement
-        const detailCard = detailItem?.parentElement
+        const infoRow = screen.getByText('Số CCCD').parentElement
         const detailValue = screen.getByText('079123456789')
 
-        expect(detailCard?.className).toContain('gap-1.5')
-        expect(detailCard?.className).toContain('p-1.5')
-        expect(detailCard?.className).toContain('text-xs')
-        expect(detailItem?.className).toContain('space-y-0.5')
-        expect(screen.getByText('SỐ CCCD/CMND').className).toContain('text-[10px]')
+        expect(infoRow?.className).toContain('flex')
+        expect(infoRow?.className).toContain('items-baseline')
+        expect(screen.getByText('Số CCCD').className).toContain('text-[11px]')
         expect(detailValue.className).toContain('text-xs')
 
         mockClientData = null
