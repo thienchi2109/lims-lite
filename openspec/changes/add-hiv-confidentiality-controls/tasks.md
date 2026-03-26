@@ -70,14 +70,14 @@
 ## Batch 5: Search Hardening
 - Note for future Batch 5/6 kickoff: Batch 4 review confirmed remaining CoA leak paths outside sample detail concealment. Investigate `src/app/api/coa/view/route.ts`, `src/app/api/coa/download/route.ts`, `src/app/api/coa/authenticate/route.ts`, `src/app/actions/coa.ts`, and `src/lib/coa/helpers.ts` first, along with callers in `src/components/coa-preview-dialog.tsx`, `src/hooks/use-print-handlers.ts`, `src/components/coa-access-form.tsx`, `src/app/actions/results-approval.ts`, and `src/app/api/client-actions/route.ts`.
 ### RED
-- [ ] 5.1 Add a failing test proving exact searches by sample code, name, phone, or national ID can expose confidential-associated records to unauthorized users
-- [ ] 5.2 Add a failing test proving client, sample, result, or global search can leak confidential context through counts, snippets, or mixed-result responses
+- [x] 5.1 Add a failing test proving exact searches by sample code, name, phone, or national ID can expose confidential-associated records to unauthorized users
+- [x] 5.2 Add a failing test proving client, sample, result, or global search can leak confidential context through counts, snippets, or mixed-result responses
 ### GREEN
-- [ ] 5.3 Ensure search functions and RPC responses return zero confidential-associated matches for unauthorized users, including exact-identifier searches
-- [ ] 5.4 Ensure mixed-result searches return only permitted non-confidential matches without leaking hidden confidential counts or snippets
-- [ ] 5.5 Re-run the search tests until all targeted leaks are closed
+- [x] 5.3 Ensure search functions and RPC responses return zero confidential-associated matches for unauthorized users, including exact-identifier searches
+- [x] 5.4 Ensure mixed-result searches return only permitted non-confidential matches without leaking hidden confidential counts or snippets
+- [x] 5.5 Re-run the search tests until all targeted leaks are closed
 ### REFACTOR
-- [ ] 5.6 Simplify centralized confidential-search filtering and authorization-neutral response shaping after green
+- [x] 5.6 Simplify centralized confidential-search filtering and authorization-neutral response shaping after green
 
 ## Batch 6: CoA Hardening
 ### RED
