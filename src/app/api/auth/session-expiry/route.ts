@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { decodeJwtPayload } from '@/lib/jwt'
 import { getSessionTimeboxSeconds } from '@/lib/auth-session-timebox'
+import { buildAuthenticatedPrincipalKey } from '@/lib/authenticated-query-cache'
 
 type SessionExpirySource = 'sessions.created_at' | 'auth.users.last_sign_in_at' | 'unknown'
 
@@ -12,6 +13,7 @@ type SessionExpiryResponse =
           expires_at: string | null
           expires_in_ms: number | null
           source: SessionExpirySource
+          principal_key: string
       }
     | { authenticated: false; error: string }
 
@@ -28,6 +30,22 @@ export async function GET() {
             { status: 401 }
         )
     }
+
+    const { data: userProfile, error: userProfileError } = await supabase
+        .from('users')
+        .select('role, can_access_confidential')
+        .eq('id', user.id)
+        .single()
+
+    if (userProfileError) {
+        console.error('Failed to resolve authenticated principal during session expiry check', userProfileError)
+    }
+
+    const principalKey = buildAuthenticatedPrincipalKey({
+        userId: user.id,
+        role: userProfile?.role ?? null,
+        canAccessConfidential: userProfile?.can_access_confidential === true,
+    })
 
     const {
         data: { session },
@@ -61,7 +79,7 @@ export async function GET() {
     }
 
     if (sessionCreatedAtMs === null) {
-        const lastSignInAt = (user as any).last_sign_in_at as string | null | undefined
+        const lastSignInAt = user.last_sign_in_at
         if (lastSignInAt) {
             const lastSignInAtMs = Date.parse(lastSignInAt)
             if (Number.isFinite(lastSignInAtMs)) {
@@ -83,6 +101,7 @@ export async function GET() {
             expires_at: expiresAtMs !== null ? new Date(expiresAtMs).toISOString() : null,
             expires_in_ms: expiresInMs,
             source,
+            principal_key: principalKey,
         },
         { status: 200 }
     )

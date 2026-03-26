@@ -154,4 +154,61 @@ describe('AuthenticatedQueryBoundary', () => {
         expect(replacementClient).not.toBe(initialClient)
         expect(replacementClient.getQueryData(sampleKeys.list(sampleParams))).toBeUndefined()
     })
+
+    it('replaces the query client when only the authenticated role changes', async () => {
+        const rootQueryClient = createRootClient()
+        const seenClients: QueryClient[] = []
+        const managerKey = buildAuthenticatedPrincipalKey({
+            userId: 'staff-1',
+            role: 'manager',
+            canAccessConfidential: false,
+        })
+        const analystKey = buildAuthenticatedPrincipalKey({
+            userId: 'staff-1',
+            role: 'analyst',
+            canAccessConfidential: false,
+        })
+
+        function QueryClientProbe() {
+            const queryClient = useQueryClient()
+
+            useEffect(() => {
+                seenClients.push(queryClient)
+            }, [queryClient])
+
+            return null
+        }
+
+        const { rerender } = render(
+            <QueryClientProvider client={rootQueryClient}>
+                <AuthenticatedQueryBoundary principalKey={managerKey}>
+                    <QueryClientProbe />
+                </AuthenticatedQueryBoundary>
+            </QueryClientProvider>,
+        )
+
+        await waitFor(() => {
+            expect(seenClients).toHaveLength(1)
+        })
+
+        const initialClient = seenClients[0]
+        initialClient.setQueryData(sampleKeys.list(sampleParams), cachedSamples)
+
+        rerender(
+            <QueryClientProvider client={rootQueryClient}>
+                <AuthenticatedQueryBoundary principalKey={analystKey}>
+                    <QueryClientProbe />
+                </AuthenticatedQueryBoundary>
+            </QueryClientProvider>,
+        )
+
+        await waitFor(() => {
+            expect(seenClients).toHaveLength(2)
+        })
+
+        const replacementClient = seenClients[1]
+
+        expect(replacementClient).not.toBe(initialClient)
+        expect(replacementClient.getQueryData(sampleKeys.list(sampleParams))).toBeUndefined()
+    })
 })

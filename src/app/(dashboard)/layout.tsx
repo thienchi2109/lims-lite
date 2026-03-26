@@ -43,7 +43,7 @@ export default async function DashboardLayout({
     return (
         <WalkthroughWrapper>
             <AuthenticatedQueryBoundary principalKey={principalKey}>
-                <SessionTimeboxGuard />
+                <SessionTimeboxGuard principalKey={principalKey} />
                 {children}
             </AuthenticatedQueryBoundary>
         </WalkthroughWrapper>

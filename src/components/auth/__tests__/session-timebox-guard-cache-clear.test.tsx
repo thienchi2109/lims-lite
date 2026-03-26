@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, waitFor } from '@testing-library/react'
+import { buildAuthenticatedPrincipalKey } from '@/lib/authenticated-query-cache'
 
 const mockGetSessionTimeboxExpiryClient = vi.fn()
 const mockLogoutClient = vi.fn()
@@ -33,8 +34,20 @@ vi.mock('@tanstack/react-query', async () => {
 import { SessionTimeboxGuard } from '../session-timebox-guard'
 
 describe('SessionTimeboxGuard cache isolation', () => {
+    const managerKey = buildAuthenticatedPrincipalKey({
+        userId: 'manager-1',
+        role: 'manager',
+        canAccessConfidential: true,
+    })
+    const downgradedManagerKey = buildAuthenticatedPrincipalKey({
+        userId: 'manager-1',
+        role: 'manager',
+        canAccessConfidential: false,
+    })
+
     beforeEach(() => {
         vi.clearAllMocks()
+        vi.useRealTimers()
         mockGetSessionTimeboxExpiryClient.mockReset()
         mockLogoutClient.mockReset()
         mockSignOut.mockReset()
@@ -54,7 +67,7 @@ describe('SessionTimeboxGuard cache isolation', () => {
         })
         mockLogoutClient.mockRejectedValueOnce(new Error('logout failed'))
 
-        render(<SessionTimeboxGuard />)
+        render(<SessionTimeboxGuard principalKey={managerKey} />)
 
         await waitFor(() => {
             expect(mockGetSessionTimeboxExpiryClient).toHaveBeenCalled()
@@ -75,11 +88,45 @@ describe('SessionTimeboxGuard cache isolation', () => {
             reason: 'signed_out_elsewhere',
         })
 
-        render(<SessionTimeboxGuard />)
+        render(<SessionTimeboxGuard principalKey={managerKey} />)
 
         await waitFor(() => {
             expect(mockGetSessionTimeboxExpiryClient).toHaveBeenCalled()
         })
+
+        expect(mockQueryClient.clear).toHaveBeenCalled()
+        expect(mockLogoutClient).not.toHaveBeenCalled()
+        expect(mockSignOut).not.toHaveBeenCalled()
+    })
+
+    it('clears the query cache when a later server poll reports a different principal key', async () => {
+        vi.useFakeTimers()
+        mockGetSessionTimeboxExpiryClient
+            .mockResolvedValueOnce({
+                authenticated: true,
+                timebox_seconds: 14_400,
+                expires_at: '2026-03-26T13:00:00.000Z',
+                expires_in_ms: 600_000,
+                source: 'sessions.created_at',
+                principal_key: managerKey,
+            })
+            .mockResolvedValueOnce({
+                authenticated: true,
+                timebox_seconds: 14_400,
+                expires_at: '2026-03-26T13:00:00.000Z',
+                expires_in_ms: 540_000,
+                source: 'sessions.created_at',
+                principal_key: downgradedManagerKey,
+            })
+
+        render(<SessionTimeboxGuard principalKey={managerKey} />)
+
+        await vi.runAllTicks()
+        expect(mockGetSessionTimeboxExpiryClient).toHaveBeenCalledTimes(1)
+
+        await vi.advanceTimersByTimeAsync(60_000)
+        await vi.runAllTicks()
+        expect(mockGetSessionTimeboxExpiryClient).toHaveBeenCalledTimes(2)
 
         expect(mockQueryClient.clear).toHaveBeenCalled()
         expect(mockLogoutClient).not.toHaveBeenCalled()
