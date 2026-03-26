@@ -1,29 +1,50 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { getSessionTimeboxExpiryClient, logoutClient } from '@/lib/api-client'
+import { clearAuthenticatedQueryCache } from '@/lib/authenticated-query-cache'
 import { createClient } from '@/lib/supabase/client'
 
 const CHANNEL_NAME = 'auth-session-timebox'
+const STATUS_REFRESH_INTERVAL_MS = 60_000
 
 type LogoutReason = 'session_expired' | 'signed_out_elsewhere'
+type AuthGuardBroadcastMessage =
+    | {
+          type: 'logout'
+          reason?: LogoutReason
+      }
+    | {
+          type: 'principal_changed'
+          principalKey: string
+      }
 
-export function SessionTimeboxGuard() {
+interface SessionTimeboxGuardProps {
+    principalKey: string
+}
+
+export function SessionTimeboxGuard({ principalKey }: SessionTimeboxGuardProps) {
     const hasTriggeredRef = useRef(false)
+    const queryClient = useQueryClient()
 
     useEffect(() => {
         let timeoutId: ReturnType<typeof setTimeout> | null = null
-        let intervalId: ReturnType<typeof setInterval> | null = null
+        let refreshIntervalId: ReturnType<typeof setInterval> | null = null
         const abortController = new AbortController()
 
         const broadcastChannel =
             typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(CHANNEL_NAME) : null
 
-        const cleanupTimers = () => {
+        const clearExpiryTimeout = () => {
             if (timeoutId) clearTimeout(timeoutId)
-            if (intervalId) clearInterval(intervalId)
             timeoutId = null
-            intervalId = null
+        }
+
+        const cleanupTimers = () => {
+            clearExpiryTimeout()
+            if (refreshIntervalId) clearInterval(refreshIntervalId)
+            refreshIntervalId = null
         }
 
         const redirectToLogin = (reason: LogoutReason) => {
@@ -40,6 +61,7 @@ export function SessionTimeboxGuard() {
         const triggerLogout = async (reason: LogoutReason) => {
             if (hasTriggeredRef.current) return
             hasTriggeredRef.current = true
+            clearAuthenticatedQueryCache(queryClient)
 
             try {
                 broadcastChannel?.postMessage({ type: 'logout', reason })
@@ -63,35 +85,62 @@ export function SessionTimeboxGuard() {
             redirectToLogin(reason)
         }
 
-        const scheduleFromServer = async () => {
-            cleanupTimers()
+        const refreshForPrincipalChange = (nextPrincipalKey: string) => {
+            if (hasTriggeredRef.current) return
+            if (nextPrincipalKey === principalKey) return
 
+            hasTriggeredRef.current = true
+            clearAuthenticatedQueryCache(queryClient)
+
+            try {
+                broadcastChannel?.postMessage({ type: 'principal_changed', principalKey: nextPrincipalKey })
+            } catch {
+                // ignore broadcast failures
+            }
+
+            window.location.reload()
+        }
+
+        const redirectForSignedOutElsewhere = () => {
+            if (hasTriggeredRef.current) return
+
+            hasTriggeredRef.current = true
+            clearAuthenticatedQueryCache(queryClient)
+            redirectToLogin('signed_out_elsewhere')
+        }
+
+        const scheduleFromServer = async () => {
             const status = await getSessionTimeboxExpiryClient({ signal: abortController.signal })
 
             if (!status.authenticated) {
+                clearExpiryTimeout()
                 if (status.reason === 'session_expired') {
                     await triggerLogout('session_expired')
                     return
                 }
 
-                redirectToLogin('signed_out_elsewhere')
+                redirectForSignedOutElsewhere()
+                return
+            }
+
+            if (status.principal_key !== principalKey) {
+                clearExpiryTimeout()
+                refreshForPrincipalChange(status.principal_key)
                 return
             }
 
             if (status.expires_in_ms === null) {
-                intervalId = setInterval(() => {
-                    scheduleFromServer().catch(() => {
-                        // ignore; next interval will retry
-                    })
-                }, 60_000)
+                clearExpiryTimeout()
                 return
             }
 
             if (status.expires_in_ms <= 0) {
+                clearExpiryTimeout()
                 await triggerLogout('session_expired')
                 return
             }
 
+            clearExpiryTimeout()
             timeoutId = setTimeout(() => {
                 triggerLogout('session_expired').catch(() => {
                     // ignore
@@ -108,16 +157,30 @@ export function SessionTimeboxGuard() {
         }
 
         const handleBroadcastMessage = (event: MessageEvent) => {
-            const data = event.data as any
-            if (!data || data.type !== 'logout') return
-            triggerLogout(data.reason === 'session_expired' ? 'session_expired' : 'signed_out_elsewhere').catch(() => {
-                // ignore
-            })
+            const data = event.data as AuthGuardBroadcastMessage | null
+            if (!data) return
+
+            if (data.type === 'logout') {
+                triggerLogout(data.reason === 'session_expired' ? 'session_expired' : 'signed_out_elsewhere').catch(() => {
+                    // ignore
+                })
+                return
+            }
+
+            if (data.type === 'principal_changed') {
+                refreshForPrincipalChange(data.principalKey)
+            }
         }
 
         broadcastChannel?.addEventListener('message', handleBroadcastMessage)
         window.addEventListener('focus', handleVisibilityOrFocus)
         document.addEventListener('visibilitychange', handleVisibilityOrFocus)
+        refreshIntervalId = setInterval(() => {
+            if (hasTriggeredRef.current) return
+            scheduleFromServer().catch(() => {
+                // ignore; next interval will retry
+            })
+        }, STATUS_REFRESH_INTERVAL_MS)
 
         scheduleFromServer().catch(() => {
             // ignore; we will retry on focus/visibility
@@ -131,7 +194,7 @@ export function SessionTimeboxGuard() {
             window.removeEventListener('focus', handleVisibilityOrFocus)
             document.removeEventListener('visibilitychange', handleVisibilityOrFocus)
         }
-    }, [])
+    }, [principalKey, queryClient])
 
     return null
 }

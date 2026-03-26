@@ -30,6 +30,7 @@ export type SessionTimeboxExpiryClientResponse =
           expires_at: string | null
           expires_in_ms: number | null
           source: 'sessions.created_at' | 'auth.users.last_sign_in_at' | 'unknown'
+          principal_key: string
       }
     | {
           authenticated: false
@@ -37,6 +38,16 @@ export type SessionTimeboxExpiryClientResponse =
           reason?: string
       }
 
+type ClientActionErrorPayload = {
+    error?: unknown
+    reason?: unknown
+}
+
+type ClientActionErrorObject = {
+    message?: unknown
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function callClientAction<T = any>(action: ClientActionName, payload?: unknown): Promise<T> {
     const response = await fetch(ENDPOINT, {
         method: 'POST',
@@ -59,14 +70,18 @@ async function callClientAction<T = any>(action: ClientActionName, payload?: unk
     if (!response.ok) {
         let errorMessage = 'Không thể kết nối đến máy chủ'
         try {
-            const errorBody = await response.json()
+            const errorBody = (await response.json()) as ClientActionErrorPayload
             if (errorBody?.error) {
                 // Handle both string and object errors
                 if (typeof errorBody.error === 'string') {
                     errorMessage = errorBody.error
-                } else if (typeof errorBody.error === 'object') {
+                } else if (typeof errorBody.error === 'object' && errorBody.error !== null) {
                     // Extract message from error object, or stringify
-                    errorMessage = errorBody.error.message || JSON.stringify(errorBody.error)
+                    const errorObject = errorBody.error as ClientActionErrorObject
+                    errorMessage =
+                        typeof errorObject.message === 'string'
+                            ? errorObject.message
+                            : JSON.stringify(errorBody.error)
                 }
             }
         } catch {
@@ -76,14 +91,18 @@ async function callClientAction<T = any>(action: ClientActionName, payload?: unk
     }
 
     const data = await response.json()
-    if (data && typeof data === 'object' && 'error' in data && (data as any).error) {
+    if (data && typeof data === 'object' && 'error' in data && (data as ClientActionErrorPayload).error) {
         // Extract error message, handling both string and object errors
-        const rawError = (data as any).error
+        const rawError = (data as ClientActionErrorPayload).error
         let errorMsg: string
         if (typeof rawError === 'string') {
             errorMsg = rawError
-        } else if (typeof rawError === 'object') {
-            errorMsg = rawError.message || JSON.stringify(rawError)
+        } else if (typeof rawError === 'object' && rawError !== null) {
+            const errorObject = rawError as ClientActionErrorObject
+            errorMsg =
+                typeof errorObject.message === 'string'
+                    ? errorObject.message
+                    : JSON.stringify(rawError)
         } else {
             errorMsg = String(rawError)
         }
@@ -255,7 +274,7 @@ export async function getSessionTimeboxExpiryClient(
 
     if (response.status === 401) {
         try {
-            const body = (await response.json()) as any
+            const body = (await response.json()) as ClientActionErrorPayload
             return {
                 authenticated: false,
                 error: String(body?.error || 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'),
