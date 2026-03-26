@@ -101,6 +101,14 @@ export function SessionTimeboxGuard({ principalKey }: SessionTimeboxGuardProps) 
             window.location.reload()
         }
 
+        const redirectForSignedOutElsewhere = () => {
+            if (hasTriggeredRef.current) return
+
+            hasTriggeredRef.current = true
+            clearAuthenticatedQueryCache(queryClient)
+            redirectToLogin('signed_out_elsewhere')
+        }
+
         const scheduleFromServer = async () => {
             const status = await getSessionTimeboxExpiryClient({ signal: abortController.signal })
 
@@ -111,8 +119,7 @@ export function SessionTimeboxGuard({ principalKey }: SessionTimeboxGuardProps) 
                     return
                 }
 
-                clearAuthenticatedQueryCache(queryClient)
-                redirectToLogin('signed_out_elsewhere')
+                redirectForSignedOutElsewhere()
                 return
             }
 

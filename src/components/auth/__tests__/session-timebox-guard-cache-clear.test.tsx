@@ -8,6 +8,27 @@ const mockSignOut = vi.fn()
 const mockQueryClient = {
     clear: vi.fn(),
 }
+const broadcastListeners = new Set<(event: MessageEvent) => void>()
+
+class MockBroadcastChannel {
+    addEventListener(_type: string, listener: (event: MessageEvent) => void) {
+        broadcastListeners.add(listener)
+    }
+
+    removeEventListener(_type: string, listener: (event: MessageEvent) => void) {
+        broadcastListeners.delete(listener)
+    }
+
+    postMessage() {}
+
+    close() {}
+}
+
+function emitBroadcastMessage(data: unknown) {
+    for (const listener of [...broadcastListeners]) {
+        listener({ data } as MessageEvent)
+    }
+}
 
 vi.mock('@/lib/api-client', () => ({
     getSessionTimeboxExpiryClient: (...args: unknown[]) => mockGetSessionTimeboxExpiryClient(...args),
@@ -48,6 +69,8 @@ describe('SessionTimeboxGuard cache isolation', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         vi.useRealTimers()
+        broadcastListeners.clear()
+        vi.stubGlobal('BroadcastChannel', MockBroadcastChannel)
         mockGetSessionTimeboxExpiryClient.mockReset()
         mockLogoutClient.mockReset()
         mockSignOut.mockReset()
@@ -57,6 +80,7 @@ describe('SessionTimeboxGuard cache isolation', () => {
 
     afterEach(() => {
         vi.restoreAllMocks()
+        vi.unstubAllGlobals()
     })
 
     it('clears the query cache before forced logout continues the redirect flow', async () => {
@@ -99,6 +123,30 @@ describe('SessionTimeboxGuard cache isolation', () => {
         await waitFor(() => {
             expect(mockQueryClient.clear).toHaveBeenCalled()
         })
+        expect(mockLogoutClient).not.toHaveBeenCalled()
+        expect(mockSignOut).not.toHaveBeenCalled()
+    })
+
+    it('does not start a second logout flow after signed_out_elsewhere has already redirected', async () => {
+        mockGetSessionTimeboxExpiryClient.mockResolvedValue({
+            authenticated: false,
+            error: 'signed out elsewhere',
+            reason: 'signed_out_elsewhere',
+        })
+
+        render(<SessionTimeboxGuard principalKey={managerKey} />)
+
+        await waitFor(() => {
+            expect(mockGetSessionTimeboxExpiryClient).toHaveBeenCalled()
+        })
+
+        emitBroadcastMessage({
+            type: 'logout',
+            reason: 'session_expired',
+        })
+
+        await Promise.resolve()
+
         expect(mockLogoutClient).not.toHaveBeenCalled()
         expect(mockSignOut).not.toHaveBeenCalled()
     })
