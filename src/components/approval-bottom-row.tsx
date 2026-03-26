@@ -56,19 +56,19 @@ export function ApprovalBottomRow({
     }
 
     return (
-        <div className="relative flex h-full min-h-0 flex-col gap-4">
+        <div className="relative flex h-full min-h-0 flex-col gap-3">
             {loadErrorMessage && (
                 <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-200">
                     {loadErrorMessage}
                 </div>
             )}
 
-            <div className="grid h-full min-h-0 grid-cols-1 gap-6 lg:grid-cols-2">
-                <div className="h-full min-h-0 overflow-y-auto">
+            <div className="grid h-full min-h-0 grid-cols-1 gap-4 lg:grid-cols-2">
+                <div className="h-full min-h-0 overflow-hidden">
                     <SampleDetailPanel sample={sample} />
                 </div>
-                <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden pr-1">
-                    <div className="flex-1 min-h-0 overflow-y-auto">
+                <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden pr-1">
+                    <div className="flex-1 min-h-0 overflow-hidden">
                         <AssignedTestsPanel
                             sampleId={sample.id}
                             userRole="manager"

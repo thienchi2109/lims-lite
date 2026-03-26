@@ -1,9 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
+let mockClientData: Record<string, unknown> | null = null
+
 vi.mock('@/hooks/use-client', () => ({
     useClient: () => ({
-        data: null,
+        data: mockClientData,
         isLoading: false,
         error: null,
     }),
@@ -76,6 +78,34 @@ describe('SampleDetailPanel mobile behavior', () => {
         expect(content?.className).toContain('overflow-y-auto')
         expect(detailBody?.className).toContain('p-1.5')
         expect(detailBody?.className).toContain('text-xs')
+    })
+
+    it('uses compact typography inside the client detail grid when client data is present', () => {
+        mockClientData = {
+            name: 'Khach hang A',
+            id_card_num: '079123456789',
+            date_of_birth: '1990-01-01',
+            gender: 'Nam',
+            phone: '0901234567',
+            address: '123 Duong ABC',
+            health_insurance_num: 'BHYT-123',
+            expiry_date: '2026-12-31',
+        }
+
+        render(<SampleDetailPanel sample={{ ...sample, client_id: 'client-1' }} />)
+
+        const detailItem = screen.getByText('SỐ CCCD/CMND').parentElement
+        const detailCard = detailItem?.parentElement
+        const detailValue = screen.getByText('079123456789')
+
+        expect(detailCard?.className).toContain('gap-1.5')
+        expect(detailCard?.className).toContain('p-1.5')
+        expect(detailCard?.className).toContain('text-xs')
+        expect(detailItem?.className).toContain('space-y-0.5')
+        expect(screen.getByText('SỐ CCCD/CMND').className).toContain('text-[10px]')
+        expect(detailValue.className).toContain('text-xs')
+
+        mockClientData = null
     })
 
     it('hides lifecycle progress chevron on mobile breakpoints', () => {

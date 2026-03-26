@@ -77,7 +77,7 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
                     <SampleLifecycleChevron status={sample.status} className="hidden sm:flex" />
                     {['received', 'assigned'].includes(sample.status) && (
                         <Button
@@ -85,9 +85,9 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
                             size="icon-sm"
                             onClick={() => setEditDialogOpen(true)}
                             title="Chỉnh sửa thông tin"
-                            className="h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50"
+                            className="h-7 w-7 text-slate-500 hover:text-sky-600 hover:bg-sky-50"
                         >
-                            <Pencil className="h-4 w-4" />
+                            <Pencil className="h-3.5 w-3.5" />
                         </Button>
                     )}
                 </div>
@@ -269,11 +269,11 @@ function DetailItem({
     className?: string
 }) {
     return (
-        <div className={cn('space-y-1.5', className)}>
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+        <div className={cn('space-y-0.5', className)}>
+            <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
                 {label}
             </div>
-            <div className="text-sm break-words">{value}</div>
+            <div className="break-words text-xs leading-tight">{value}</div>
         </div>
     )
 }

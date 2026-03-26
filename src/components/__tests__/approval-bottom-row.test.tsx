@@ -55,9 +55,15 @@ describe('ApprovalBottomRow', () => {
         const assignedTestsRegion = assignedTestsPanel.parentElement
         const approvalActionsFooter = approvalActions.parentElement
         const rightColumn = assignedTestsRegion?.parentElement
+        const detailPanel = screen.getByTestId('sample-detail-panel')
+        const detailShell = detailPanel.parentElement
 
+        expect(detailShell?.className).toContain('overflow-hidden')
+        expect(detailShell?.className).not.toContain('overflow-y-auto')
         expect(assignedTestsRegion?.className).toContain('flex-1')
         expect(assignedTestsRegion?.className).toContain('min-h-0')
+        expect(assignedTestsRegion?.className).toContain('overflow-hidden')
+        expect(assignedTestsRegion?.className).not.toContain('overflow-y-auto')
         expect(approvalActionsFooter?.className).toContain('shrink-0')
         expect(rightColumn?.className).toContain('overflow-hidden')
     })
