@@ -30,7 +30,7 @@ const sample = {
 } as any
 
 describe('SampleBottomRow', () => {
-    it('keeps both animated panel shells constrained so child panels can own scrolling', () => {
+    it('keeps both animated panel shells in a flex min-height chain so child panels can own scrolling', () => {
         render(<SampleBottomRow sample={sample} userRole="manager" />)
 
         const detailPanel = screen.getByTestId('sample-detail-panel')
@@ -40,11 +40,15 @@ describe('SampleBottomRow', () => {
         const assignedAnimatedContent = assignedPanel.parentElement
         const assignedShell = assignedAnimatedContent?.parentElement
 
+        expect(detailShell?.className).toContain('flex')
         expect(detailShell?.className).toContain('min-h-0')
         expect(detailShell?.className).toContain('overflow-hidden')
+        expect(detailAnimatedContent?.className).toContain('flex-1')
         expect(detailAnimatedContent?.className).toContain('min-h-0')
+        expect(assignedShell?.className).toContain('flex')
         expect(assignedShell?.className).toContain('min-h-0')
         expect(assignedShell?.className).toContain('overflow-hidden')
+        expect(assignedAnimatedContent?.className).toContain('flex-1')
         expect(assignedAnimatedContent?.className).toContain('min-h-0')
     })
 

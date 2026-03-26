@@ -62,17 +62,17 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
     const displayedClientName = client?.name || sample.client_name || 'N/A'
 
     return (
-        <div id="tour-sample-detail" className="h-full flex flex-col bg-white dark:bg-slate-950 border rounded-lg overflow-hidden shadow-sm">
-            <div className="px-3 py-1.5 border-b bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between sticky top-0 z-10">
-                <div className="flex items-center gap-2 overflow-hidden">
-                    <div className="h-6 w-6 rounded-full bg-sky-50 dark:bg-sky-900/20 flex items-center justify-center text-sky-600 dark:text-sky-400 shrink-0">
-                        <FileText className="h-3.5 w-3.5" />
+        <div id="tour-sample-detail" className="h-full min-h-0 flex flex-col overflow-hidden rounded-lg border bg-white shadow-sm dark:bg-slate-950">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-slate-50/50 px-2.5 py-1 dark:bg-slate-900/50">
+                <div className="flex items-center gap-1.5 overflow-hidden">
+                    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sky-50 text-sky-600 dark:bg-sky-900/20 dark:text-sky-400">
+                        <FileText className="h-3 w-3" />
                     </div>
                     <div className="min-w-0">
-                        <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate font-mono">
+                        <h3 className="truncate font-mono text-xs font-semibold text-slate-900 dark:text-slate-100">
                             {sample.sample_id}
                         </h3>
-                        <p className="text-xs text-muted-foreground truncate">
+                        <p className="truncate text-[11px] text-muted-foreground">
                             Chi tiết mẫu
                         </p>
                     </div>
@@ -98,14 +98,14 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
                 <button
                     onClick={() => setActiveTab('details')}
                     className={cn(
-                        "flex-1 px-3 py-1.5 text-xs font-medium transition-colors relative",
+                        "relative flex-1 px-2.5 py-1 text-[11px] font-medium transition-colors",
                         activeTab === 'details'
                             ? "text-sky-600 dark:text-sky-400"
                             : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
                     )}
                 >
-                    <div className="flex items-center justify-center gap-1.5">
-                        <FileText className="h-3.5 w-3.5" />
+                    <div className="flex items-center justify-center gap-1">
+                        <FileText className="h-3 w-3" />
                         <span>Thông tin</span>
                     </div>
                     {activeTab === 'details' && (
@@ -115,14 +115,14 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
                 <button
                     onClick={() => setActiveTab('activity')}
                     className={cn(
-                        "flex-1 px-3 py-1.5 text-xs font-medium transition-colors relative",
+                        "relative flex-1 px-2.5 py-1 text-[11px] font-medium transition-colors",
                         activeTab === 'activity'
                             ? "text-sky-600 dark:text-sky-400"
                             : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
                     )}
                 >
-                    <div className="flex items-center justify-center gap-1.5">
-                        <Activity className="h-3.5 w-3.5" />
+                    <div className="flex items-center justify-center gap-1">
+                        <Activity className="h-3 w-3" />
                         <span>Lịch sử cập nhật</span>
                     </div>
                     {activeTab === 'activity' && (
@@ -132,21 +132,21 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
             </div>
 
             {/* Tab Content */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 min-h-0 overflow-y-auto">
                 {activeTab === 'details' ? (
-                    <div className="p-2">
+                    <div className="p-1.5 text-xs">
                         {sample.rejection_reason && ['in_progress', 'discarded'].includes(sample.status) && (
-                            <div className={`mb-4 p-3 rounded-md border ${sample.status === 'discarded'
+                            <div className={`mb-2.5 rounded-md border p-2.5 ${sample.status === 'discarded'
                                 ? 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'
                                 : 'bg-orange-50 border-orange-200 text-orange-800 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-300'
                                 }`}>
-                                <div className="flex items-start gap-3">
-                                    <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                                <div className="flex items-start gap-2.5">
+                                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                                     <div className="flex-1 text-sm">
-                                        <h4 className="font-semibold mb-1">
+                                        <h4 className="mb-1 text-xs font-semibold">
                                             {sample.status === 'discarded' ? 'Mẫu đã bị loại bỏ' : 'Mẫu đã bị từ chối'}
                                         </h4>
-                                        <div className="space-y-1 opacity-90">
+                                        <div className="space-y-0.5 text-xs opacity-90">
                                             <p><span className="font-medium">Lý do:</span> {sample.rejection_reason}</p>
                                             {sample.rejected_at && (
                                                 <p><span className="font-medium">Thời gian:</span> {new Date(sample.rejected_at).toLocaleString('vi-VN')}</p>
@@ -160,33 +160,33 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
                             </div>
                         )}
 
-                        <div className="grid grid-cols-2 gap-2">
-                            <div className="col-span-2 space-y-1">
+                        <div className="grid grid-cols-2 gap-1.5">
+                            <div className="col-span-2 space-y-0.5">
                                 <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                                     <Building2 className="h-3.5 w-3.5" />
                                     Khách hàng
                                 </div>
-                                <div className="font-medium text-sm truncate" title={displayedClientName}>
+                                <div className="truncate text-xs font-medium" title={displayedClientName}>
                                     {displayedClientName}
                                 </div>
 
                                 {sample.client_id ? (
-                                    <div className="mt-2 space-y-2">
+                                    <div className="mt-1.5 space-y-1.5">
                                         {isClientLoading && (
-                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                                 Đang tải thông tin khách hàng...
                                             </div>
                                         )}
 
                                         {!isClientLoading && clientError && (
-                                            <div className="text-xs text-red-600 dark:text-red-400">
+                                            <div className="text-[11px] text-red-600 dark:text-red-400">
                                                 {clientError.message}
                                             </div>
                                         )}
 
                                         {client && (
-                                            <div className="grid grid-cols-2 gap-2 rounded-md border border-slate-100 bg-slate-50/40 p-2 text-sm dark:border-slate-800 dark:bg-slate-900/30">
+                                            <div className="grid grid-cols-2 gap-1.5 rounded-md border border-slate-100 bg-slate-50/40 p-1.5 text-xs dark:border-slate-800 dark:bg-slate-900/30">
                                                 <DetailItem label="SỐ CCCD/CMND" value={client.id_card_num} />
                                                 <DetailItem label="Ngày sinh" value={formatDateOnly(client.date_of_birth)} />
                                                 <DetailItem label="Giới tính" value={client.gender} />
@@ -208,33 +208,33 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
                                         )}
                                     </div>
                                 ) : (
-                                    <div className="mt-1 text-xs text-muted-foreground">
+                                    <div className="mt-0.5 text-[11px] text-muted-foreground">
                                         Mẫu chưa được liên kết với khách hàng
                                     </div>
                                 )}
                             </div>
 
-                            <div className="space-y-1">
+                            <div className="space-y-0.5">
                                 <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                                     <Calendar className="h-3.5 w-3.5" />
                                     Ngày nhận mẫu
                                 </div>
-                                <div className="text-sm">
+                                <div className="text-xs">
                                     {formatDate(sample.received_at)}
                                 </div>
                             </div>
 
-                            <div className="space-y-1">
+                            <div className="space-y-0.5">
                                 <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                                     <User className="h-3.5 w-3.5" />
                                     Người nhận mẫu
                                 </div>
-                                <div className="text-sm truncate" title={sample.received_by_name || ''}>
+                                <div className="truncate text-xs" title={sample.received_by_name || ''}>
                                     {sample.received_by_name || 'N/A'}
                                 </div>
                             </div>
 
-                            <div className="col-span-2 pt-1.5 border-t border-slate-100 dark:border-slate-800">
+                            <div className="col-span-2 border-t border-slate-100 pt-1 dark:border-slate-800">
                                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                     <Clock className="h-3 w-3" />
                                     <span>Cập nhật: {formatDate(sample.updated_at)}</span>
@@ -243,7 +243,7 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
                         </div>
                     </div>
                 ) : (
-                    <div className="p-2">
+                    <div className="p-1.5">
                         <SampleActivityFeed sampleId={sample.id} />
                     </div>
                 )}

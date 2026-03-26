@@ -199,4 +199,16 @@ describe('AssignedTestsPanel CoA preview wiring', () => {
 
         expect(mockHandlePrintCoABody).toHaveBeenCalledTimes(1)
     })
+
+    it('keeps the results region in a constrained scroll chain for split-panel layouts', () => {
+        const { container } = render(<AssignedTestsPanel sampleId="sample-1" />)
+
+        const panel = container.firstElementChild as HTMLDivElement | null
+        const scrollRegion = screen.getByRole('table').parentElement?.parentElement?.parentElement as HTMLDivElement | null
+
+        expect(panel?.className).toContain('min-h-0')
+        expect(scrollRegion?.className).toContain('flex-1')
+        expect(scrollRegion?.className).toContain('min-h-0')
+        expect(scrollRegion?.className).toContain('overflow-auto')
+    })
 })

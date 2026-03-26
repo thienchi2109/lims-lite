@@ -56,6 +56,28 @@ function buildSampleWithStatus(status: SampleWithUser['status']): SampleWithUser
 }
 
 describe('SampleDetailPanel mobile behavior', () => {
+    it('uses a visibly compact chrome and a constrained internal scroll region', () => {
+        const { container } = render(<SampleDetailPanel sample={sample} />)
+
+        const panel = container.querySelector('#tour-sample-detail')
+        const header = panel?.firstElementChild as HTMLDivElement | null
+        const tabs = header?.nextElementSibling as HTMLDivElement | null
+        const content = tabs?.nextElementSibling as HTMLDivElement | null
+        const detailBody = content?.firstElementChild as HTMLDivElement | null
+        const detailTab = screen.getByRole('button', { name: /Thông tin/i })
+
+        expect(panel?.className).toContain('min-h-0')
+        expect(header?.className).toContain('px-2.5')
+        expect(header?.className).toContain('py-1')
+        expect(detailTab.className).toContain('px-2.5')
+        expect(detailTab.className).toContain('py-1')
+        expect(detailTab.className).toContain('text-[11px]')
+        expect(content?.className).toContain('min-h-0')
+        expect(content?.className).toContain('overflow-y-auto')
+        expect(detailBody?.className).toContain('p-1.5')
+        expect(detailBody?.className).toContain('text-xs')
+    })
+
     it('hides lifecycle progress chevron on mobile breakpoints', () => {
         render(<SampleDetailPanel sample={sample} />)
 

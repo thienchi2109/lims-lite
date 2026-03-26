@@ -161,7 +161,7 @@ export function AssignedTestsPanel({
         })
 
     return (
-        <div className="relative flex h-full flex-col">
+        <div className="relative flex h-full min-h-0 flex-col">
             <AssignedTestsToolbar
                 resultsCount={results.length}
                 sampleStatus={sampleStatus}
@@ -180,7 +180,7 @@ export function AssignedTestsPanel({
                 userRole={userRole}
             />
 
-            <div className="flex-1 overflow-auto bg-slate-50/50 p-2">
+            <div className="flex-1 min-h-0 overflow-auto bg-slate-50/50 p-2">
                 <Card id="tour-results-table" className="border-slate-200 shadow-sm">
                     <CardContent className="p-0">
                         <Table>

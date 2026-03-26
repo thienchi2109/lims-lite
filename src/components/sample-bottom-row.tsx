@@ -40,7 +40,7 @@ export function SampleBottomRow({ sample, isLoadingSample = false, permissions, 
         <div className="grid h-full min-h-0 grid-cols-1 gap-2 lg:grid-cols-2">
             {/* Left Panel - Sample Details */}
             <motion.div
-                className="h-full min-h-0 overflow-hidden"
+                className="flex h-full min-h-0 flex-col overflow-hidden"
                 initial={fadeInScale.initial}
                 animate={fadeInScale.animate}
                 transition={{ duration: durations.normal }}
@@ -48,7 +48,7 @@ export function SampleBottomRow({ sample, isLoadingSample = false, permissions, 
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={sample?.id ?? 'empty'}
-                        className="h-full min-h-0"
+                        className="flex-1 min-h-0"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -61,7 +61,7 @@ export function SampleBottomRow({ sample, isLoadingSample = false, permissions, 
 
             {/* Right Panel - Assigned Tests (staggered by 50ms) */}
             <motion.div
-                className="h-full min-h-0 overflow-hidden"
+                className="flex h-full min-h-0 flex-col overflow-hidden"
                 initial={fadeInScale.initial}
                 animate={fadeInScale.animate}
                 transition={{ duration: durations.normal, delay: 0.05 }}
@@ -69,7 +69,7 @@ export function SampleBottomRow({ sample, isLoadingSample = false, permissions, 
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={sample?.id ?? 'empty-tests'}
-                        className="h-full min-h-0"
+                        className="flex-1 min-h-0"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
