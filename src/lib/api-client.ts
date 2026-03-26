@@ -91,7 +91,7 @@ async function callClientAction<T = any>(action: ClientActionName, payload?: unk
     }
 
     const data = await response.json()
-    if (data && typeof data === 'object' && 'error' in data) {
+    if (data && typeof data === 'object' && 'error' in data && (data as ClientActionErrorPayload).error) {
         // Extract error message, handling both string and object errors
         const rawError = (data as ClientActionErrorPayload).error
         let errorMsg: string

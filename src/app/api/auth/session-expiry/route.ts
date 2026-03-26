@@ -39,12 +39,16 @@ export async function GET() {
 
     if (userProfileError) {
         console.error('Failed to resolve authenticated principal during session expiry check', userProfileError)
+        return NextResponse.json(
+            { error: 'Không thể xác minh quyền truy cập hiện tại.' },
+            { status: 503 }
+        )
     }
 
     const principalKey = buildAuthenticatedPrincipalKey({
         userId: user.id,
-        role: userProfile?.role ?? null,
-        canAccessConfidential: userProfile?.can_access_confidential === true,
+        role: userProfile.role ?? null,
+        canAccessConfidential: userProfile.can_access_confidential === true,
     })
 
     const {

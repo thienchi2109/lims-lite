@@ -102,11 +102,10 @@ export function SessionTimeboxGuard({ principalKey }: SessionTimeboxGuardProps) 
         }
 
         const scheduleFromServer = async () => {
-            clearExpiryTimeout()
-
             const status = await getSessionTimeboxExpiryClient({ signal: abortController.signal })
 
             if (!status.authenticated) {
+                clearExpiryTimeout()
                 if (status.reason === 'session_expired') {
                     await triggerLogout('session_expired')
                     return
@@ -118,17 +117,23 @@ export function SessionTimeboxGuard({ principalKey }: SessionTimeboxGuardProps) 
             }
 
             if (status.principal_key !== principalKey) {
+                clearExpiryTimeout()
                 refreshForPrincipalChange(status.principal_key)
                 return
             }
 
-            if (status.expires_in_ms === null) return
+            if (status.expires_in_ms === null) {
+                clearExpiryTimeout()
+                return
+            }
 
             if (status.expires_in_ms <= 0) {
+                clearExpiryTimeout()
                 await triggerLogout('session_expired')
                 return
             }
 
+            clearExpiryTimeout()
             timeoutId = setTimeout(() => {
                 triggerLogout('session_expired').catch(() => {
                     // ignore

@@ -75,7 +75,9 @@ describe('SessionTimeboxGuard cache isolation', () => {
             expect(mockSignOut).toHaveBeenCalled()
         })
 
-        expect(mockQueryClient.clear).toHaveBeenCalled()
+        await waitFor(() => {
+            expect(mockQueryClient.clear).toHaveBeenCalled()
+        })
         expect(mockQueryClient.clear.mock.invocationCallOrder[0]).toBeLessThan(
             mockSignOut.mock.invocationCallOrder[0],
         )
@@ -94,7 +96,9 @@ describe('SessionTimeboxGuard cache isolation', () => {
             expect(mockGetSessionTimeboxExpiryClient).toHaveBeenCalled()
         })
 
-        expect(mockQueryClient.clear).toHaveBeenCalled()
+        await waitFor(() => {
+            expect(mockQueryClient.clear).toHaveBeenCalled()
+        })
         expect(mockLogoutClient).not.toHaveBeenCalled()
         expect(mockSignOut).not.toHaveBeenCalled()
     })
@@ -131,5 +135,34 @@ describe('SessionTimeboxGuard cache isolation', () => {
         expect(mockQueryClient.clear).toHaveBeenCalled()
         expect(mockLogoutClient).not.toHaveBeenCalled()
         expect(mockSignOut).not.toHaveBeenCalled()
+    })
+
+    it('keeps the current expiry timeout when a periodic principal refresh fails', async () => {
+        vi.useFakeTimers()
+        mockGetSessionTimeboxExpiryClient
+            .mockResolvedValueOnce({
+                authenticated: true,
+                timebox_seconds: 14_400,
+                expires_at: '2026-03-26T13:00:00.000Z',
+                expires_in_ms: 90_000,
+                source: 'sessions.created_at',
+                principal_key: managerKey,
+            })
+            .mockRejectedValueOnce(new Error('network failed'))
+
+        render(<SessionTimeboxGuard principalKey={managerKey} />)
+
+        await vi.runAllTicks()
+        expect(mockGetSessionTimeboxExpiryClient).toHaveBeenCalledTimes(1)
+
+        await vi.advanceTimersByTimeAsync(60_000)
+        await vi.runAllTicks()
+        expect(mockGetSessionTimeboxExpiryClient).toHaveBeenCalledTimes(2)
+
+        await vi.advanceTimersByTimeAsync(30_000)
+        await vi.runAllTicks()
+
+        expect(mockLogoutClient).toHaveBeenCalled()
+        expect(mockSignOut).toHaveBeenCalled()
     })
 })
