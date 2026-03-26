@@ -43,6 +43,15 @@ interface UseSamplesOptions {
     enabled?: boolean
 }
 
+type SampleRealtimePayload = {
+    new: { id?: string | null } | null
+    old: { id?: string | null } | null
+}
+
+function getRealtimeSampleId(payload: SampleRealtimePayload) {
+    return payload.new?.id ?? payload.old?.id ?? null
+}
+
 export function useSamples({ params, enabled = true }: UseSamplesOptions) {
     const queryClient = useQueryClient()
     const needsVisibilityCatchUpRef = useRef(false)
@@ -85,8 +94,8 @@ export function useSamples({ params, enabled = true }: UseSamplesOptions) {
                     schema: 'public',
                     table: 'samples'
                 },
-                () => {
-                    if (shouldSuppressSamplesRealtimeEcho()) return
+                (payload: SampleRealtimePayload) => {
+                    if (shouldSuppressSamplesRealtimeEcho(getRealtimeSampleId(payload))) return
                     scheduleRefetch()
                 }
             )

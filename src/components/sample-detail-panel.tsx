@@ -57,7 +57,7 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
     }
 
     const handleEditSuccess = () => {
-        markLocalSamplesMutation()
+        markLocalSamplesMutation(sample.id)
         queryClient.invalidateQueries({ queryKey: sampleKeys.all })
         if (sample.client_id) {
             queryClient.invalidateQueries({ queryKey: clientKeys.detail(sample.client_id) })

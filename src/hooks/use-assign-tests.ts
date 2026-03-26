@@ -113,7 +113,7 @@ export function useAssignTests(options: UseAssignTestsOptions = {}) {
         onSuccess: (data, variables) => {
             // Invalidate all samples queries to trigger refetch
             // This ensures the samples list updates with new status
-            markLocalSamplesMutation()
+            markLocalSamplesMutation(variables.sampleId)
             queryClient.invalidateQueries({ queryKey: sampleKeys.all })
 
             // Invalidate specific sample detail

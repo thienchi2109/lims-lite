@@ -9,12 +9,18 @@ import { markLocalSamplesMutation, resetLocalSamplesMutationTracking } from '@/l
 
 const mockFetchSamplesClient = vi.fn()
 const mockRemoveChannel = vi.fn()
-let mockPostgresChangeHandler: (() => void) | null = null
+type MockRealtimePayload = {
+    eventType: 'INSERT' | 'UPDATE' | 'DELETE'
+    new: { id?: string | null } | null
+    old: { id?: string | null } | null
+}
+
+let mockPostgresChangeHandler: ((payload: MockRealtimePayload) => void) | null = null
 const mockChannel = {
     on: vi.fn((
         _event: string,
         _filter: unknown,
-        callback: () => void,
+        callback: (payload: MockRealtimePayload) => void,
     ) => {
         mockPostgresChangeHandler = callback
         return mockChannel
@@ -67,6 +73,21 @@ describe('useSamples', () => {
         })
     })
 
+    const triggerRealtimeChange = (
+        sampleId = 'sample-1',
+        eventType: MockRealtimePayload['eventType'] = 'UPDATE',
+    ) => {
+        if (!mockPostgresChangeHandler) {
+            throw new Error('Realtime callback was not registered')
+        }
+
+        mockPostgresChangeHandler({
+            eventType,
+            new: eventType === 'DELETE' ? null : { id: sampleId },
+            old: eventType === 'INSERT' ? null : { id: sampleId },
+        })
+    }
+
     it('refetches when the realtime subscription receives a sample change event', async () => {
         const { Wrapper } = createWrapper()
 
@@ -86,7 +107,7 @@ describe('useSamples', () => {
         })
 
         await act(async () => {
-            mockPostgresChangeHandler?.()
+            triggerRealtimeChange()
         })
 
         await waitFor(() => {
@@ -150,11 +171,39 @@ describe('useSamples', () => {
         })
 
         await act(async () => {
-            markLocalSamplesMutation()
-            mockPostgresChangeHandler?.()
+            markLocalSamplesMutation('sample-1')
+            triggerRealtimeChange('sample-1')
             await new Promise((resolve) => setTimeout(resolve, 350))
         })
 
         expect(mockFetchSamplesClient).toHaveBeenCalledTimes(1)
+    })
+
+    it('still refetches for realtime updates on a different sample during the grace window', async () => {
+        const { Wrapper } = createWrapper()
+
+        renderHook(
+            () =>
+                useSamples({
+                    params: {
+                        page: 1,
+                        pageSize: 20,
+                    },
+                }),
+            { wrapper: Wrapper },
+        )
+
+        await waitFor(() => {
+            expect(mockFetchSamplesClient).toHaveBeenCalledTimes(1)
+        })
+
+        await act(async () => {
+            markLocalSamplesMutation('sample-1')
+            triggerRealtimeChange('sample-2')
+        })
+
+        await waitFor(() => {
+            expect(mockFetchSamplesClient).toHaveBeenCalledTimes(2)
+        }, { timeout: 1000 })
     })
 })

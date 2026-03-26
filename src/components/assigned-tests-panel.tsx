@@ -82,7 +82,7 @@ export function AssignedTestsPanel({
             params.set('sampleId', targetSampleId)
             params.set('page', '1')
             router.push(`?${params.toString()}`)
-            markLocalSamplesMutation()
+            markLocalSamplesMutation(targetSampleId)
             queryClient.invalidateQueries({ queryKey: sampleKeys.all })
         },
         [router, queryClient],

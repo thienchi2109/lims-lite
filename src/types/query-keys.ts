@@ -194,7 +194,7 @@ export async function invalidateSampleQueries(
     options: InvalidateSampleQueriesOptions = {}
 ): Promise<void> {
     const { includeResults = true, includeTests = false } = options
-    markLocalSamplesMutation()
+    markLocalSamplesMutation(sampleId)
 
     await queryClient.invalidateQueries({
         predicate: (query) => {

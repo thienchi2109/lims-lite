@@ -108,7 +108,7 @@ export function SampleListTable({
         params.set('page', '1')
         router.push(`${pathname}?${params.toString()}`)
 
-        markLocalSamplesMutation()
+        markLocalSamplesMutation(selectedSampleForEdit.id)
         queryClient.invalidateQueries({ queryKey: sampleKeys.all })
     }
 
