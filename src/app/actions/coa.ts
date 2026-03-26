@@ -18,6 +18,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { getActiveSignature, downloadSignature } from './signatures'
 import type { CoAData, CoAManualInputs, UserRole } from '@/types'
+import {
+    getUserConfidentialAccess,
+    isConfidentialAssociatedSample,
+} from '@/lib/data/confidential-samples'
 
 // Import extracted modules
 import {
@@ -31,6 +35,34 @@ import {
     type GenerateCoAResult,
 } from '@/lib/coa/helpers'
 import { renderCoATemplate } from '@/lib/coa/template'
+
+const CONCEALED_COA_SAMPLE_ERROR = 'Không tìm thấy thông tin mẫu'
+
+async function denyUnauthorizedConfidentialCoA(
+    sampleId: string,
+    userId: string,
+    supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<string | null> {
+    const access = await getUserConfidentialAccess(userId, supabase)
+
+    if (access.error) {
+        console.error('Error verifying CoA confidentiality access:', access.error)
+        return CONCEALED_COA_SAMPLE_ERROR
+    }
+
+    if (access.canAccessConfidential) {
+        return null
+    }
+
+    try {
+        const confidentialSample = await isConfidentialAssociatedSample(sampleId)
+
+        return confidentialSample.data ? CONCEALED_COA_SAMPLE_ERROR : null
+    } catch (error) {
+        console.error('Error checking CoA confidential sample association:', error)
+        return CONCEALED_COA_SAMPLE_ERROR
+    }
+}
 
 // ============================================================================
 // MAIN FUNCTION
@@ -113,6 +145,16 @@ export async function generateCoA(
         const userRole = userData.role as UserRole
         if (userRole !== 'analyst' && userRole !== 'manager') {
             return { success: false, error: 'Chỉ Nhân viên phân tích và Quản lý mới có thể tạo CoA' }
+        }
+
+        const confidentialCoAError = await denyUnauthorizedConfidentialCoA(
+            sampleId,
+            user.id,
+            supabase,
+        )
+
+        if (confidentialCoAError) {
+            return { success: false, error: confidentialCoAError }
         }
 
         // Role-specific validation for sample status and results
@@ -381,6 +423,16 @@ export async function regenerateCoA(
 
         if (roleError || !userData || userData.role !== 'manager') {
             return { success: false, error: 'Chỉ Quản lý mới có thể tạo lại CoA' }
+        }
+
+        const confidentialCoAError = await denyUnauthorizedConfidentialCoA(
+            sampleId,
+            user.id,
+            supabase,
+        )
+
+        if (confidentialCoAError) {
+            return { success: false, error: confidentialCoAError }
         }
 
         // Validate manual inputs if provided

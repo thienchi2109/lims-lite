@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { verifyCoAToken, isTokenExpired } from '@/lib/jwt'
+import { isConfidentialAssociatedSample } from '@/lib/data/confidential-samples'
 
 /**
  * Get client IP address from request
@@ -118,7 +119,8 @@ export async function GET(request: NextRequest) {
             return response
         }
 
-        // Step 4: Verify sample belongs to authenticated client
+        // Step 4: Fetch sample and verify client ownership before the confidential probe
+        // so foreign sample IDs cannot distinguish confidential vs non-confidential records.
         const { data: sample, error: sampleError } = await supabase
             .from('samples')
             .select('id, sample_id, client_id, status')
@@ -161,7 +163,26 @@ export async function GET(request: NextRequest) {
             )
         }
 
-        // Step 6: Check sample status
+        // Step 6: Deny confidential-associated samples with a generic not-found response
+        // only after the public session is valid and the sample belongs to this client.
+        try {
+            const confidentialSample = await isConfidentialAssociatedSample(sampleId)
+
+            if (confidentialSample.data) {
+                return NextResponse.json(
+                    { error: 'Không tìm thấy phiếu kết quả' },
+                    { status: 404 }
+                )
+            }
+        } catch (error) {
+            console.error('Confidential CoA association check failed:', error)
+            return NextResponse.json(
+                { error: 'Không tìm thấy phiếu kết quả' },
+                { status: 404 }
+            )
+        }
+
+        // Step 7: Check sample status
         if (sample.status !== 'completed') {
             return NextResponse.json(
                 { error: 'Mẫu chưa hoàn thành xét nghiệm' },
@@ -169,7 +190,7 @@ export async function GET(request: NextRequest) {
             )
         }
 
-        // Step 7: Fetch latest ready CoA report
+        // Step 8: Fetch latest ready CoA report
         const { data: coaReport, error: coaError } = await supabase
             .from('coa_reports')
             .select('id, file_path, file_hash, version')
@@ -197,7 +218,7 @@ export async function GET(request: NextRequest) {
             )
         }
 
-        // Step 8: Download file from storage
+        // Step 9: Download file from storage
         const { data: fileData, error: downloadError } = await supabase
             .storage
             .from('coa-reports')
@@ -222,7 +243,7 @@ export async function GET(request: NextRequest) {
             )
         }
 
-        // Step 9: Log successful access
+        // Step 10: Log successful access
         await supabase.from('coa_access_log').insert({
             client_id: tokenPayload.client_id,
             sample_id: sampleId,
@@ -233,7 +254,7 @@ export async function GET(request: NextRequest) {
             failure_reason: null,
         })
 
-        // Step 10: Convert blob to text and return with proper Content-Type header
+        // Step 11: Convert blob to text and return with proper Content-Type header
         const htmlContent = await fileData.text()
 
         return new NextResponse(htmlContent, {

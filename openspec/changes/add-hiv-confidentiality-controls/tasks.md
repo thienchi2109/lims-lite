@@ -81,23 +81,23 @@
 
 ## Batch 6: CoA Hardening
 ### RED
-- [ ] 6.1 Add a failing test proving staff CoA preview, download, or direct view confirms confidential CoA existence to unauthorized users
-- [ ] 6.2 Add a failing test proving the public `/coa/access` flow can still surface confidential HIV CoAs
+- [x] 6.1 Add a failing test proving staff CoA preview, download, or direct view confirms confidential CoA existence to unauthorized users
+- [x] 6.2 Add a failing test proving the public `/coa/access` flow can still surface confidential HIV CoAs
 ### GREEN
-- [ ] 6.3 Apply confidentiality checks in CoA staff preview, download, and direct view flows so unauthorized callers get no existence confirmation
-- [ ] 6.4 Exclude confidential HIV CoAs from the public `/coa/access` flow in MVP
-- [ ] 6.5 Re-run the CoA tests until all targeted leaks are closed
+- [x] 6.3 Apply confidentiality checks in CoA staff preview, download, and direct view flows so unauthorized callers get no existence confirmation
+- [x] 6.4 Exclude confidential HIV CoAs from the public `/coa/access` flow in MVP
+- [x] 6.5 Re-run the CoA tests until all targeted leaks are closed
 ### REFACTOR
-- [ ] 6.6 Verify storage, report, and error-handling paths do not bypass confidential rules or confirm hidden CoA existence
+- [x] 6.6 Verify storage, report, and error-handling paths do not bypass confidential rules or confirm hidden CoA existence
 
 ## Batch 7: Full Verification Gate
-- [ ] 7.1 Extend `run_security_tests()` to include the new confidential-control assertions
-- [ ] 7.2 Re-run `run_security_tests()` after each database batch reaches green
-- [ ] 7.3 Run integration tests for confidential sample non-discoverability in list and detail flows
-- [ ] 7.4 Run integration tests for search non-discoverability rules
-- [ ] 7.5 Run integration tests for CoA non-discoverability rules
-- [ ] 7.6 Run `npm run typecheck`
-- [ ] 7.7 Run the smallest relevant test target first for each batch, then the broader regression set before merge
+- [x] 7.1 Extend `run_security_tests()` to include the new confidential-control assertions
+- [x] 7.2 Re-run `run_security_tests()` after each database batch reaches green
+- [x] 7.3 Run integration tests for confidential sample non-discoverability in list and detail flows
+- [x] 7.4 Run integration tests for search non-discoverability rules
+- [x] 7.5 Run integration tests for CoA non-discoverability rules
+- [x] 7.6 Run `npm run typecheck`
+- [x] 7.7 Run the smallest relevant test target first for each batch, then the broader regression set before merge
 
 ## Batch 8: Rollout and Operational Safety
 - [ ] 8.1 Prepare runbook: grant confidential access before enabling assay confidentiality

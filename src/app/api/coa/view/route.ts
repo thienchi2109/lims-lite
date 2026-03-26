@@ -9,6 +9,12 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import {
+    getUserConfidentialAccess,
+    isConfidentialAssociatedSample,
+} from '@/lib/data/confidential-samples'
+
+const COA_NOT_FOUND_ERROR = 'Không tìm thấy phiếu kết quả'
 
 /**
  * GET /api/coa/view
@@ -64,6 +70,34 @@ export async function GET(request: NextRequest) {
             )
         }
 
+        const access = await getUserConfidentialAccess(user.id, supabase)
+
+        if (access.error) {
+            return NextResponse.json(
+                { error: 'Không thể xác minh quyền truy cập' },
+                { status: 500 }
+            )
+        }
+
+        if (!access.canAccessConfidential) {
+            try {
+                const confidentialSample = await isConfidentialAssociatedSample(sampleId)
+
+                if (confidentialSample.data) {
+                    return NextResponse.json(
+                        { error: COA_NOT_FOUND_ERROR },
+                        { status: 404 }
+                    )
+                }
+            } catch (error) {
+                console.error('Confidential CoA association check failed:', error)
+                return NextResponse.json(
+                    { error: COA_NOT_FOUND_ERROR },
+                    { status: 404 }
+                )
+            }
+        }
+
         // Step 4: Fetch sample to verify it exists and is completed
         const { data: sample, error: sampleError } = await supabase
             .from('samples')
@@ -74,7 +108,7 @@ export async function GET(request: NextRequest) {
 
         if (sampleError || !sample) {
             return NextResponse.json(
-                { error: 'Không tìm thấy mẫu' },
+                { error: COA_NOT_FOUND_ERROR },
                 { status: 404 }
             )
         }
