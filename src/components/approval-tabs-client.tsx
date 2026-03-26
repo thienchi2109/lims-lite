@@ -49,7 +49,7 @@ function ApprovalQueueContent({
         <div className="flex flex-1 min-h-0 flex-col gap-2">
             <div
                 id="tour-approval-queue"
-                className="h-[50vh] min-h-[400px] shrink-0 flex flex-col"
+                className="h-[40vh] min-h-[250px] shrink-0 flex flex-col"
             >
                 <ApprovalQueueTable
                     data={samples}
@@ -58,7 +58,7 @@ function ApprovalQueueContent({
                 />
             </div>
 
-            <div id="tour-approval-detail" className="flex-1 min-h-0 overflow-hidden border-t pt-4">
+            <div id="tour-approval-detail" className="flex-1 min-h-0 overflow-hidden border-t pt-2">
                 <ApprovalBottomRow
                     sample={sample}
                     results={results}
