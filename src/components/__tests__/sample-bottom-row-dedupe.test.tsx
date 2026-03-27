@@ -1,10 +1,19 @@
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 
-const mockCoAStatus = vi.fn()
-const mockQCStatusForAssays = vi.fn()
-const mockToolbarProps: Array<{ enrichmentNotice?: string; enrichmentError?: string }> = []
+const mockFetchSampleResultsClient = vi.fn()
+const mockGetCoAStatus = vi.fn()
+const mockGetQCStatusForAssays = vi.fn()
+
+vi.mock('motion/react', () => ({
+    AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
+    motion: {
+        div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+            <div {...props}>{children}</div>
+        ),
+    },
+}))
 
 vi.mock('@tanstack/react-query', () => ({
     useQueryClient: () => ({
@@ -19,15 +28,22 @@ vi.mock('next/navigation', () => ({
 }))
 
 vi.mock('@/lib/api-client', () => ({
+    fetchSampleResultsClient: (...args: unknown[]) => mockFetchSampleResultsClient(...args),
     submitSampleForReviewClient: vi.fn(),
 }))
 
 vi.mock('@/app/actions/coa', () => ({
-    getCoAStatus: (...args: unknown[]) => mockCoAStatus(...args),
+    getCoAStatus: (...args: unknown[]) => mockGetCoAStatus(...args),
 }))
 
 vi.mock('@/app/actions/qc-status', () => ({
-    getQCStatusForAssays: (...args: unknown[]) => mockQCStatusForAssays(...args),
+    getQCStatusForAssays: (...args: unknown[]) => mockGetQCStatusForAssays(...args),
+}))
+
+vi.mock('@/components/sample-detail-panel', () => ({
+    SampleDetailPanel: ({ sample }: { sample: { sample_id: string } | null }) => (
+        <div data-testid="sample-detail-panel">{sample?.sample_id ?? 'empty'}</div>
+    ),
 }))
 
 vi.mock('@/hooks/use-results-editor', () => ({
@@ -70,25 +86,7 @@ vi.mock('@/hooks/use-print-handlers', () => ({
 }))
 
 vi.mock('@/components/assigned-tests-toolbar', () => ({
-    AssignedTestsToolbar: ({
-        enrichmentNotice,
-        enrichmentError,
-    }: {
-        enrichmentNotice?: string
-        enrichmentError?: string
-    }) => {
-        mockToolbarProps.push({ enrichmentNotice, enrichmentError })
-
-        return (
-            <div
-                data-testid="assigned-tests-toolbar"
-                data-notice={enrichmentNotice ?? ''}
-                data-error={enrichmentError ?? ''}
-            >
-                {enrichmentError || enrichmentNotice || 'Tóm tắt xét nghiệm'}
-            </div>
-        )
-    },
+    AssignedTestsToolbar: () => <div data-testid="assigned-tests-toolbar" />,
 }))
 
 vi.mock('@/components/batch-save-toolbar', () => ({
@@ -149,47 +147,44 @@ vi.mock('sonner', () => ({
     },
 }))
 
-import { AssignedTestsPanel } from '../assigned-tests-panel'
+import { SampleBottomRow } from '../sample-bottom-row'
 
-const initialResults = [
-    {
-        id: 'result-1',
-        assay_id: 'assay-1',
-        assay_name: 'Glucose',
-        sample_status: 'completed',
-        status: 'entered',
-        value: '5.2',
-    },
-]
+const sample = {
+    id: 'sample-1',
+    sample_id: 'CDC-XN-0001',
+    results: [
+        {
+            id: 'result-1',
+            assay_id: 'assay-1',
+            assay_name: 'Glucose',
+            sample_status: 'assigned',
+            status: 'entered',
+            value: '5.2',
+        },
+    ],
+} as any
 
-describe('AssignedTestsPanel enrichment isolation', () => {
+describe('SampleBottomRow composition dedupe', () => {
     beforeEach(() => {
         vi.clearAllMocks()
-        mockToolbarProps.length = 0
-        mockCoAStatus.mockImplementation(async () => new Promise(() => {}))
-        mockQCStatusForAssays.mockImplementation(async () => new Promise(() => {}))
+        mockFetchSampleResultsClient.mockResolvedValue({
+            data: [],
+            error: null,
+        })
+        mockGetCoAStatus.mockResolvedValue({
+            status: null,
+        })
+        mockGetQCStatusForAssays.mockResolvedValue({})
     })
 
-    it('keeps the core assigned-results table visible while enrichment remains pending', () => {
-        render(<AssignedTestsPanel sampleId="sample-1" initialResults={initialResults as any} />)
+    it('keeps the core assigned-results row visible without refetching when the bottom row already has core results', async () => {
+        render(<SampleBottomRow sample={sample} userRole="manager" />)
+
+        await waitFor(() => {
+            expect(mockFetchSampleResultsClient).not.toHaveBeenCalled()
+        })
 
         expect(screen.getByText('Glucose')).toBeDefined()
-        expect(screen.getByTestId('assigned-tests-toolbar')).toBeDefined()
-        expect(mockToolbarProps.at(-1)).toMatchObject({
-            enrichmentNotice: 'Đang tải trạng thái bổ sung...',
-        })
-    })
-
-    it('keeps the core assigned-results table visible while enrichment fails', async () => {
-        mockCoAStatus.mockRejectedValueOnce(new Error('CoA enrichment failed'))
-        mockQCStatusForAssays.mockResolvedValueOnce({})
-
-        render(<AssignedTestsPanel sampleId="sample-1" initialResults={initialResults as any} />)
-
-        expect(screen.getByText('Glucose')).toBeDefined()
-        expect(screen.getByTestId('assigned-tests-toolbar')).toBeDefined()
-        expect(mockToolbarProps.at(-1)).toMatchObject({
-            enrichmentError: 'Không thể tải trạng thái bổ sung',
-        })
+        expect(screen.getByTestId('assigned-tests-panel')).toBeDefined()
     })
 })
