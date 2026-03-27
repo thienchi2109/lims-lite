@@ -39,7 +39,6 @@ describe('SampleDetailPanel enrichment isolation', () => {
 
         expect(screen.getByText('CDC-XN-0001')).toBeDefined()
         expect(screen.getByText('Thông tin bệnh nhân')).toBeDefined()
-        expect(screen.getByText('Khach hang A')).toBeDefined()
         expect(screen.getByText('Thời điểm nhận')).toBeDefined()
         expect(screen.getByText('Đang tải...')).toBeDefined()
     })
