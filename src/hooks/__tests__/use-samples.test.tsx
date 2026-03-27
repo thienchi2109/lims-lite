@@ -176,7 +176,9 @@ describe('useSamples', () => {
             await new Promise((resolve) => setTimeout(resolve, 350))
         })
 
-        expect(mockFetchSamplesClient).toHaveBeenCalledTimes(1)
+        await waitFor(() => {
+            expect(mockFetchSamplesClient).toHaveBeenCalledTimes(1)
+        })
     })
 
     it('keeps suppressing repeated realtime echoes for the same sample within the grace window', async () => {
@@ -204,7 +206,9 @@ describe('useSamples', () => {
             await new Promise((resolve) => setTimeout(resolve, 350))
         })
 
-        expect(mockFetchSamplesClient).toHaveBeenCalledTimes(1)
+        await waitFor(() => {
+            expect(mockFetchSamplesClient).toHaveBeenCalledTimes(1)
+        })
     })
 
     it('still refetches for realtime updates on a different sample during the grace window', async () => {
