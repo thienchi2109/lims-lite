@@ -1,8 +1,22 @@
-import { waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { createElement, type ReactNode } from 'react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 
 const mockFetchSampleDetail = vi.fn()
 const mockFetchSampleResultsClient = vi.fn()
+const mockUseQuery = vi.fn()
+
+vi.mock('@tanstack/react-query', async () => {
+    const actual = await vi.importActual<typeof import('@tanstack/react-query')>(
+        '@tanstack/react-query',
+    )
+
+    return {
+        ...actual,
+        useQuery: (...args: unknown[]) => mockUseQuery(...args),
+    }
+})
 
 vi.mock('@/hooks/use-sample-detail', () => ({
     fetchSampleDetail: (...args: unknown[]) => mockFetchSampleDetail(...args),
@@ -12,7 +26,7 @@ vi.mock('@/lib/api-client', () => ({
     fetchSampleResultsClient: (...args: unknown[]) => mockFetchSampleResultsClient(...args),
 }))
 
-import { fetchSampleSelectionCore } from '../use-sample-selection-core'
+import { fetchSampleSelectionCore, useSampleSelectionCore } from '../use-sample-selection-core'
 
 function deferredPromise<T>() {
     let resolve!: (value: T | PromiseLike<T>) => void
@@ -29,9 +43,33 @@ function deferredPromise<T>() {
     }
 }
 
+function createWrapper() {
+    const queryClient = new QueryClient({
+        defaultOptions: {
+            queries: {
+                retry: false,
+                refetchOnMount: false,
+                refetchOnWindowFocus: false,
+                refetchOnReconnect: false,
+            },
+        },
+    })
+
+    function Wrapper({ children }: { children: ReactNode }) {
+        return createElement(QueryClientProvider, { client: queryClient }, children)
+    }
+
+    return { Wrapper, queryClient }
+}
+
 describe('fetchSampleSelectionCore', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        mockUseQuery.mockReturnValue({
+            data: undefined,
+            error: null,
+            isLoading: false,
+        })
         mockFetchSampleResultsClient.mockResolvedValue({
             data: [],
             error: null,
@@ -106,5 +144,48 @@ describe('fetchSampleSelectionCore', () => {
             },
             results: undefined,
         })
+    })
+})
+
+describe('useSampleSelectionCore', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+        mockUseQuery.mockReturnValue({
+            data: undefined,
+            error: null,
+            isLoading: false,
+        })
+    })
+
+    it('does not reseed the selection cache on rerender when initialResults is omitted', async () => {
+        const { Wrapper, queryClient } = createWrapper()
+        const setQueryDataSpy = vi.spyOn(queryClient, 'setQueryData')
+        const initialSample = {
+            id: 'sample-1',
+            sample_id: 'CDC-XN-0001',
+        } as any
+
+        const { rerender } = renderHook(
+            (props: { sampleId: string; initialSample: typeof initialSample }) =>
+                useSampleSelectionCore(props),
+            {
+                initialProps: {
+                    sampleId: 'sample-1',
+                    initialSample,
+                },
+                wrapper: Wrapper,
+            },
+        )
+
+        await waitFor(() => expect(setQueryDataSpy).toHaveBeenCalledTimes(1))
+
+        act(() => {
+            rerender({
+                sampleId: 'sample-1',
+                initialSample,
+            })
+        })
+
+        expect(setQueryDataSpy).toHaveBeenCalledTimes(1)
     })
 })

@@ -9,6 +9,7 @@ import { fetchSampleDetail } from '@/hooks/use-sample-detail'
 
 const SAMPLE_SELECTION_CORE_STALE_TIME_MS = 30 * 1000
 const SAMPLE_SELECTION_CORE_GC_TIME_MS = 10 * 60 * 1000
+const EMPTY_INITIAL_RESULTS: ResultWithAssay[] = []
 
 export interface SampleSelectionCoreData {
     sample: SampleWithUser
@@ -47,7 +48,7 @@ export async function fetchSampleSelectionCore(sampleId: string): Promise<Sample
 export function useSampleSelectionCore({
     sampleId,
     initialSample,
-    initialResults = [],
+    initialResults = EMPTY_INITIAL_RESULTS,
 }: UseSampleSelectionCoreCacheOptions = {}) {
     const queryClient = useQueryClient()
 
