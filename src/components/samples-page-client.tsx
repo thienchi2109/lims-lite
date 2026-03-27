@@ -1,11 +1,12 @@
 'use client'
 
+import { useEffect, useReducer, useRef } from 'react'
 import { useSamples } from '@/hooks/use-samples'
-import { useSampleDetail } from '@/hooks/use-sample-detail'
 import { SampleListTable } from '@/components/sample-list-table'
 import { SampleFilters } from '@/components/sample-filters'
 import { SampleBottomRow } from '@/components/sample-bottom-row'
-import { type SampleStatus } from '@/types'
+import { type ResultWithAssay, type SampleStatus, type SampleWithUser } from '@/types'
+import { useSampleSelectionCoreCache, type SampleSelectionCoreData } from '@/hooks/use-sample-selection-core'
 import type { LabSpecialty } from '@/types'
 import { isValidUUID } from '@/lib/utils-lims'
 import { Button } from '@/components/ui/button'
@@ -25,6 +26,71 @@ interface SamplesPageClientProps {
     homeHref: string
     receiverOptions: Array<{ id: string; name: string }>
     specialties: LabSpecialty[]
+}
+
+interface SelectedSampleState {
+    sample: SampleWithUser | null
+    results: ResultWithAssay[]
+    isLoading: boolean
+    loadError: string | null
+}
+
+type SelectedSampleAction =
+    | {
+          type: 'clear'
+      }
+    | {
+          type: 'start-request'
+          cachedCore: SampleSelectionCoreData | null
+      }
+    | {
+          type: 'resolve-request'
+          sampleCore: SampleSelectionCoreData
+      }
+    | {
+          type: 'reject-request'
+          keepCurrent: boolean
+          message: string
+      }
+
+const INITIAL_SELECTED_SAMPLE_STATE: SelectedSampleState = {
+    sample: null,
+    results: [],
+    isLoading: false,
+    loadError: null,
+}
+
+function selectedSampleReducer(
+    state: SelectedSampleState,
+    action: SelectedSampleAction,
+): SelectedSampleState {
+    switch (action.type) {
+        case 'clear':
+            return INITIAL_SELECTED_SAMPLE_STATE
+        case 'start-request':
+            return {
+                sample: action.cachedCore?.sample ?? state.sample,
+                results: action.cachedCore?.results ?? state.results,
+                isLoading: !action.cachedCore,
+                loadError: null,
+            }
+        case 'resolve-request':
+            return {
+                sample: action.sampleCore.sample,
+                results: action.sampleCore.results,
+                isLoading: false,
+                loadError: null,
+            }
+        case 'reject-request':
+            return {
+                sample: action.keepCurrent ? state.sample : null,
+                results: action.keepCurrent ? state.results : [],
+                isLoading: false,
+                loadError: action.message,
+            }
+        default:
+            return state
+    }
 }
 
 export function SamplesPageClient({
@@ -66,6 +132,13 @@ export function SamplesPageClient({
         .filter(isValidUUID)
 
     const sampleId = searchParams.get('sampleId') || undefined
+    const [selectedSampleState, dispatchSelectedSample] = useReducer(
+        selectedSampleReducer,
+        INITIAL_SELECTED_SAMPLE_STATE,
+    )
+    const selectedSampleStateRef = useRef<SelectedSampleState>(INITIAL_SELECTED_SAMPLE_STATE)
+    const sampleRequestIdRef = useRef(0)
+    const { getCachedSampleCore, loadSampleCore } = useSampleSelectionCoreCache()
 
     // Fetch samples with TanStack Query
     const { data: result, isLoading, error } = useSamples({
@@ -84,16 +157,52 @@ export function SamplesPageClient({
         }
     })
 
-    // Fetch selected sample with TanStack Query hook
-    const {
-        data: selectedSampleData,
-        isLoading: isLoadingSample
-    } = useSampleDetail({
-        sampleId: sampleId || null,
-        enabled: !!sampleId
-    })
+    useEffect(() => {
+        selectedSampleStateRef.current = selectedSampleState
+    }, [selectedSampleState])
 
-    const selectedSample = selectedSampleData || null
+    useEffect(() => {
+        if (!sampleId) {
+            sampleRequestIdRef.current += 1
+            dispatchSelectedSample({ type: 'clear' })
+            return
+        }
+
+        const requestId = sampleRequestIdRef.current + 1
+        sampleRequestIdRef.current = requestId
+        const cachedSampleCore = getCachedSampleCore(sampleId)
+
+        dispatchSelectedSample({
+            type: 'start-request',
+            cachedCore: cachedSampleCore,
+        })
+
+        void loadSampleCore(sampleId)
+            .then((sampleCore) => {
+                if (sampleRequestIdRef.current !== requestId) {
+                    return
+                }
+
+                dispatchSelectedSample({
+                    type: 'resolve-request',
+                    sampleCore,
+                })
+            })
+            .catch((loadError) => {
+                if (sampleRequestIdRef.current !== requestId) {
+                    return
+                }
+
+                console.error('Failed to load sample selection core:', loadError)
+                dispatchSelectedSample({
+                    type: 'reject-request',
+                    keepCurrent: Boolean(
+                        cachedSampleCore || selectedSampleStateRef.current.sample,
+                    ),
+                    message: 'Không thể tải chi tiết mẫu. Vui lòng thử lại.',
+                })
+            })
+    }, [getCachedSampleCore, loadSampleCore, sampleId])
 
     // Handle loading and error states
     if (isLoading) {
@@ -149,7 +258,7 @@ export function SamplesPageClient({
                         permissions={permissions}
                         sortBy={sortBy}
                         sortOrder={sortOrder as 'asc' | 'desc'}
-                        selectedSampleId={selectedSample?.id}
+                        selectedSampleId={sampleId}
                     />
                 </div>
             </div>
@@ -157,8 +266,10 @@ export function SamplesPageClient({
             {/* Bottom Row: Detail & Assignments (Remaining Height) */}
             <div className="flex-1 min-h-0 border-t pt-4">
                 <SampleBottomRow
-                    sample={selectedSample}
-                    isLoadingSample={isLoadingSample}
+                    sample={selectedSampleState.sample}
+                    results={selectedSampleState.results}
+                    isLoadingSample={selectedSampleState.isLoading}
+                    loadErrorMessage={selectedSampleState.loadError}
                     permissions={permissions}
                     specialties={specialties}
                     userRole={role}

@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 
 const mockCoAStatus = vi.fn()
 const mockQCStatusForAssays = vi.fn()
+let consoleErrorSpy: ReturnType<typeof vi.spyOn> | null = null
 
 vi.mock('@tanstack/react-query', () => ({
     useQueryClient: () => ({
@@ -146,8 +147,14 @@ const initialResults = [
 describe('AssignedTestsPanel enrichment isolation', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
         mockCoAStatus.mockImplementation(async () => new Promise(() => {}))
         mockQCStatusForAssays.mockImplementation(async () => new Promise(() => {}))
+    })
+
+    afterEach(() => {
+        consoleErrorSpy?.mockRestore()
+        consoleErrorSpy = null
     })
 
     it('keeps the core assigned-results table visible while enrichment remains pending', () => {

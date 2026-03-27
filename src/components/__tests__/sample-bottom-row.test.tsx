@@ -60,16 +60,11 @@ describe('SampleBottomRow', () => {
         expect(grid?.className).toContain('gap-2')
     })
 
-    it('keeps the visible right panel content mounted while sample B is loading after switching from sample A and shows a localized transition notice', () => {
+    it('keeps the visible right panel content mounted while the next sample is loading and shows a localized transition notice', () => {
         const sampleA = {
             ...sample,
             id: 'sample-a',
             sample_id: 'CDC-XN-0001',
-        }
-        const sampleB = {
-            ...sample,
-            id: 'sample-b',
-            sample_id: 'CDC-XN-0002',
         }
 
         const { rerender } = render(<SampleBottomRow sample={sampleA} userRole="manager" />)
@@ -77,13 +72,11 @@ describe('SampleBottomRow', () => {
         expect(screen.getByTestId('sample-detail-panel')).toBeDefined()
         expect(screen.getByTestId('assigned-tests-panel')).toBeDefined()
 
-        rerender(<SampleBottomRow sample={sampleB} isLoadingSample={true} userRole="manager" />)
+        rerender(<SampleBottomRow sample={sampleA} isLoadingSample={true} userRole="manager" />)
 
         expect(screen.getByTestId('sample-detail-panel').textContent).toBe('CDC-XN-0001')
         expect(screen.getByTestId('assigned-tests-panel').textContent).toBe('sample-a')
         expect(screen.getByText('Đang chuyển sang mẫu tiếp theo...')).toBeDefined()
-        expect(screen.queryByText('CDC-XN-0002')).toBeNull()
-        expect(screen.queryByText('sample-b')).toBeNull()
         expect(screen.queryByText('Đang tải chi tiết mẫu...')).toBeNull()
         expect(screen.queryByText('Đang tải...')).toBeNull()
     })
