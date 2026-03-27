@@ -24,6 +24,8 @@ export interface UseAssignedTestsDataReturn {
     sampleStatus: SampleStatus | null
     qcStatuses: Record<string, AssayQCStatus>
     coaStatus: CoAReportStatus | null
+    enrichmentLoading: boolean
+    enrichmentError: string | null
     setCoaStatus: Dispatch<SetStateAction<CoAReportStatus | null>>
     fetchTests: () => Promise<void>
 }
@@ -36,6 +38,10 @@ function deriveSampleStatus(results: ResultWithAssay[]): SampleStatus | null {
     return results.length > 0 && results[0].sample_status
         ? (results[0].sample_status as SampleStatus)
         : null
+}
+
+function shouldLoadEnrichment(sampleStatus: SampleStatus | null, results: ResultWithAssay[]) {
+    return sampleStatus === 'completed' && results.length > 0
 }
 
 export function useAssignedTestsData(
@@ -52,6 +58,13 @@ export function useAssignedTestsData(
     )
     const [coaStatus, setCoaStatus] = useState<CoAReportStatus | null>(null)
     const [qcStatuses, setQcStatuses] = useState<Record<string, AssayQCStatus>>({})
+    const [isCoALoading, setIsCoALoading] = useState(
+        shouldLoadEnrichment(deriveSampleStatus(seededResults), seededResults),
+    )
+    const [isQCLoading, setIsQCLoading] = useState(
+        shouldLoadEnrichment(deriveSampleStatus(seededResults), seededResults),
+    )
+    const [enrichmentError, setEnrichmentError] = useState<string | null>(null)
 
     // Ref to guard stale callbacks
     const currentSampleIdRef = useRef(sampleId)
@@ -115,13 +128,18 @@ export function useAssignedTestsData(
         previousSampleIdRef.current = sampleId
 
         setResults(seededResults)
-        setSampleStatus(deriveSampleStatus(seededResults))
+        const nextSampleStatus = deriveSampleStatus(seededResults)
+        setSampleStatus(nextSampleStatus)
         if (sampleChanged) {
             setCoaStatus(null)
             setQcStatuses({})
         }
         setError(null)
         setLoading(!hasInitialResults)
+        setEnrichmentError(null)
+        const shouldEnrich = shouldLoadEnrichment(nextSampleStatus, seededResults)
+        setIsCoALoading(shouldEnrich)
+        setIsQCLoading(shouldEnrich)
 
         if (!hasInitialResults) {
             void fetchTests()
@@ -158,7 +176,15 @@ export function useAssignedTestsData(
                 }
 
                 setCoaStatus(null)
+                setEnrichmentError('Không thể tải trạng thái bổ sung')
                 console.error('Failed to fetch CoA status:', err)
+            } finally {
+                if (
+                    currentSampleIdRef.current === sampleId &&
+                    coaRequestIdRef.current === requestId
+                ) {
+                    setIsCoALoading(false)
+                }
             }
         }
 
@@ -203,7 +229,15 @@ export function useAssignedTestsData(
                 }
 
                 setQcStatuses({})
+                setEnrichmentError('Không thể tải trạng thái bổ sung')
                 console.error('Failed to fetch QC status:', err)
+            } finally {
+                if (
+                    currentSampleIdRef.current === sampleId &&
+                    qcRequestIdRef.current === requestId
+                ) {
+                    setIsQCLoading(false)
+                }
             }
         }
 
@@ -217,6 +251,8 @@ export function useAssignedTestsData(
         sampleStatus,
         qcStatuses,
         coaStatus,
+        enrichmentLoading: isCoALoading || isQCLoading,
+        enrichmentError,
         setCoaStatus,
         fetchTests,
     }

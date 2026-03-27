@@ -230,13 +230,13 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
 
                             {sample.client_id ? (
                                 <div className="grid grid-cols-2 gap-y-3 gap-x-4">
-                                    {isClientLoading && !resolvedClient && (
+                                    {isClientLoading && (
                                         <div className="col-span-2 flex items-center gap-1.5 text-[11px] text-muted-foreground py-1">
                                             <Loader2 className="h-3 w-3 animate-spin" />
-                                            Đang tải...
+                                            Đang tải thông tin khách hàng...
                                         </div>
                                     )}
-                                    {!isClientLoading && !resolvedClient && clientError && (
+                                    {clientError && (
                                         <div className="col-span-2 text-[11px] text-red-600 dark:text-red-400 py-1">
                                             {clientError.message}
                                         </div>
