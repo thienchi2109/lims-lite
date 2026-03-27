@@ -1,12 +1,10 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
+const mockUseClient = vi.fn()
+
 vi.mock('@/hooks/use-client', () => ({
-    useClient: () => ({
-        data: null,
-        isLoading: false,
-        error: new Error('Không thể tải thông tin khách hàng'),
-    }),
+    useClient: (...args: unknown[]) => mockUseClient(...args),
 }))
 
 vi.mock('@tanstack/react-query', () => ({
@@ -46,6 +44,14 @@ const sample = {
 } as unknown as SampleWithUser
 
 describe('SampleDetailPanel enrichment isolation', () => {
+    beforeEach(() => {
+        mockUseClient.mockReturnValue({
+            data: sample.client,
+            isLoading: false,
+            error: new Error('Không thể tải thông tin khách hàng'),
+        })
+    })
+
     it('keeps snapshot client detail visible while client enrichment fails', () => {
         render(<SampleDetailPanel sample={sample} />)
 

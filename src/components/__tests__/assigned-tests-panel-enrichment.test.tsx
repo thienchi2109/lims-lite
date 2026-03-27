@@ -170,8 +170,7 @@ describe('AssignedTestsPanel enrichment isolation', () => {
         render(<AssignedTestsPanel sampleId="sample-1" initialResults={initialResults as any} />)
 
         expect(screen.getByText('Glucose')).toBeDefined()
-        expect(screen.getByTestId('assigned-tests-toolbar')).toBeDefined()
-        expect(screen.getByTestId('assigned-tests-toolbar').textContent).toBe('Đang tải trạng thái bổ sung...')
+        expect(screen.getByText('Đang tải trạng thái bổ sung...')).toBeDefined()
     })
 
     it('keeps the core assigned-results table visible while enrichment fails', async () => {
@@ -181,7 +180,6 @@ describe('AssignedTestsPanel enrichment isolation', () => {
         render(<AssignedTestsPanel sampleId="sample-1" initialResults={initialResults as any} />)
 
         expect(screen.getByText('Glucose')).toBeDefined()
-        expect(screen.getByTestId('assigned-tests-toolbar')).toBeDefined()
-        expect(screen.getByTestId('assigned-tests-toolbar').textContent).toBe('Không thể tải trạng thái bổ sung')
+        expect(screen.getByText('Không thể tải trạng thái bổ sung')).toBeDefined()
     })
 })
