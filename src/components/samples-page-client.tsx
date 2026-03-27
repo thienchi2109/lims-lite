@@ -144,6 +144,7 @@ export function SamplesPageClient({
                         pageSize={result?.pageSize || pageSize}
                         totalPages={totalPages}
                         totalCount={totalCount}
+                        searchParams={searchParams.toString()}
                         error={result?.error || null}
                         permissions={permissions}
                         sortBy={sortBy}

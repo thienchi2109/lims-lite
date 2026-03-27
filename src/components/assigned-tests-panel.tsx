@@ -39,6 +39,7 @@ import { useSignatureStatus } from '@/hooks/use-signature-status'
 import { useAssignedTestsData } from '@/hooks/use-assigned-tests-data'
 import { useCoaActions } from '@/hooks/use-coa-actions'
 import { usePrintHandlers } from '@/hooks/use-print-handlers'
+import { markLocalSamplesMutation } from '@/lib/samples-realtime'
 import { QCRowIndicator } from '@/components/qc/qc-row-indicator'
 import { CoAPreviewDialog } from '@/components/coa-preview-dialog'
 import type { ResultWithAssay } from '@/types'
@@ -81,6 +82,7 @@ export function AssignedTestsPanel({
             params.set('sampleId', targetSampleId)
             params.set('page', '1')
             router.push(`?${params.toString()}`)
+            markLocalSamplesMutation(targetSampleId)
             queryClient.invalidateQueries({ queryKey: sampleKeys.all })
         },
         [router, queryClient],

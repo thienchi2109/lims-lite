@@ -4,43 +4,35 @@ import { DashboardHeader } from '@/components/dashboard-header'
 import { SamplesPageClient } from '@/components/samples-page-client'
 import { Suspense } from 'react'
 import { getSpecialties } from '@/app/actions/assay-lookups'
+import {
+    getAuthenticatedDashboardSession,
+    isDashboardUserRole,
+} from '@/lib/dashboard-session'
 
 // This page relies on cookies/session via Supabase, so force dynamic rendering
 export const dynamic = 'force-dynamic'
 
 export default async function UnifiedSamplesPage() {
-    const supabase = await createClient()
+    const dashboardSession = await getAuthenticatedDashboardSession()
 
-    // 1. Authenticate user
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
+    if (!dashboardSession) {
         redirect('/login')
     }
 
-    // 2. Fetch user data, receiver options, and specialties in parallel
-    const [userResult, receiverResult, specialtiesResult] = await Promise.all([
-        supabase
-            .from('users')
-            .select('full_name, role')
-            .eq('id', user.id)
-            .single(),
+    if (!isDashboardUserRole(dashboardSession.role)) {
+        redirect('/login')
+    }
+
+    const supabase = await createClient()
+
+    // 2. Fetch receiver options and specialties in parallel
+    const [receiverResult, specialtiesResult] = await Promise.all([
         supabase
             .from('users')
             .select('id, full_name')
             .order('full_name', { ascending: true }),
         getSpecialties(),
     ])
-
-    const userData = userResult.data
-    const role = userData?.role
-
-    // Verify role is valid
-    if (!['analyst', 'manager'].includes(role)) {
-        redirect('/login')
-    }
 
     const { data: receiverData, error: receiverError } = receiverResult
     if (receiverError) {
@@ -54,6 +46,11 @@ export default async function UnifiedSamplesPage() {
         })) || []
 
     const specialties = specialtiesResult.data
+    const role = dashboardSession.role
+    const userData = {
+        full_name: dashboardSession.fullName,
+        role,
+    }
 
     // 4. Build permissions object based on role
     const permissions = {

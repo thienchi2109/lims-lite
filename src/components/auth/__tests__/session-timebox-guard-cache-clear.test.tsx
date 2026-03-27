@@ -213,4 +213,21 @@ describe('SessionTimeboxGuard cache isolation', () => {
         expect(mockLogoutClient).toHaveBeenCalled()
         expect(mockSignOut).toHaveBeenCalled()
     })
+
+    it('revalidates against the session-expiry endpoint immediately on mount', async () => {
+        mockGetSessionTimeboxExpiryClient.mockResolvedValue({
+            authenticated: true,
+            timebox_seconds: 14_400,
+            expires_at: '2026-03-26T13:00:00.000Z',
+            expires_in_ms: 540_000,
+            source: 'sessions.created_at',
+            principal_key: managerKey,
+        })
+
+        render(<SessionTimeboxGuard principalKey={managerKey} />)
+
+        await waitFor(() => {
+            expect(mockGetSessionTimeboxExpiryClient).toHaveBeenCalledTimes(1)
+        })
+    })
 })

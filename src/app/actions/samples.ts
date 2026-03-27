@@ -111,7 +111,7 @@ export async function updateSample(data: UpdateSample) {
         // Type-safe update: extract id, filter undefined values
         const { id, ...fields } = validatedData
         const updateData = Object.fromEntries(
-            Object.entries(fields).filter(([_, v]) => v !== undefined)
+            Object.entries(fields).filter(([, value]) => value !== undefined)
         ) as Partial<Omit<UpdateSample, 'id'>>
 
         const { data: sample, error } = await supabase
@@ -174,12 +174,16 @@ export async function getSample(id: string) {
                 rejected_by_user:users!samples_rejected_by_fkey(full_name),
                 client:clients!samples_client_fk(
                     id,
+                    id_card_num,
                     name,
                     date_of_birth,
                     gender,
                     phone,
                     address,
-                    health_insurance_num
+                    health_insurance_num,
+                    expiry_date,
+                    created_at,
+                    updated_at
                 )
             `)
             .eq('id', id)

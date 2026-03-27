@@ -39,6 +39,7 @@ describe('GET /api/auth/session-expiry', () => {
         mockCreateAdminClient.mockReturnValue({})
         mockDecodeJwtPayload.mockReturnValue(null)
         mockGetSessionTimeboxSeconds.mockReturnValue(14_400)
+        vi.spyOn(console, 'error').mockImplementation(() => {})
     })
 
     it('returns an authenticated=false error payload when the user profile lookup fails', async () => {
@@ -46,6 +47,9 @@ describe('GET /api/auth/session-expiry', () => {
             auth: {
                 getUser: vi.fn().mockResolvedValue({
                     data: { user: { id: 'staff-1' } },
+                }),
+                getSession: vi.fn().mockResolvedValue({
+                    data: { session: null },
                 }),
             },
             from: (table: string) => {

@@ -1,14 +1,15 @@
-import { describe, it, expect, vi } from 'vitest'
+import { beforeEach, describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
 let mockClientData: Record<string, unknown> | null = null
+const mockUseClient = vi.fn(() => ({
+    data: mockClientData,
+    isLoading: false,
+    error: null,
+}))
 
 vi.mock('@/hooks/use-client', () => ({
-    useClient: () => ({
-        data: mockClientData,
-        isLoading: false,
-        error: null,
-    }),
+    useClient: (args: unknown) => mockUseClient(args),
 }))
 
 vi.mock('@tanstack/react-query', () => ({
@@ -58,6 +59,11 @@ function buildSampleWithStatus(status: SampleWithUser['status']): SampleWithUser
 }
 
 describe('SampleDetailPanel mobile behavior', () => {
+    beforeEach(() => {
+        mockClientData = null
+        mockUseClient.mockClear()
+    })
+
     it('uses a visibly compact chrome and a constrained internal scroll region', () => {
         const { container } = render(<SampleDetailPanel sample={sample} />)
 
@@ -103,6 +109,39 @@ describe('SampleDetailPanel mobile behavior', () => {
         expect(detailValue.className).toContain('text-sm')
 
         mockClientData = null
+    })
+
+    it('uses embedded client details as placeholder data while still requesting a fresh client query', () => {
+        render(
+            <SampleDetailPanel
+                sample={{
+                    ...sample,
+                    client_id: 'client-1',
+                    client: {
+                        id: 'client-1',
+                        name: 'Khach hang A',
+                        id_card_num: '079123456789',
+                        date_of_birth: '1990-01-01',
+                        gender: 'Nam',
+                        phone: '0901234567',
+                        address: '123 Duong ABC',
+                        health_insurance_num: 'BHYT-123',
+                        expiry_date: '2026-12-31',
+                        created_at: '2026-01-01T00:00:00.000Z',
+                        updated_at: '2026-01-01T00:00:00.000Z',
+                    },
+                } as SampleWithUser}
+            />,
+        )
+
+        expect(mockUseClient).toHaveBeenCalledWith({
+            clientId: 'client-1',
+            placeholderData: expect.objectContaining({
+                name: 'Khach hang A',
+                id_card_num: '079123456789',
+            }),
+        })
+        expect(screen.getByText('079123456789')).toBeDefined()
     })
 
     it('hides lifecycle progress chevron on mobile breakpoints', () => {

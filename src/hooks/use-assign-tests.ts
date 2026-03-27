@@ -27,6 +27,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { assignTestsClient } from '@/lib/api-client'
+import { markLocalSamplesMutation } from '@/lib/samples-realtime'
 import { sampleKeys } from '@/types/query-keys'
 import type { AssignTests, SampleWithUser } from '@/types'
 import { toast } from 'sonner'
@@ -112,6 +113,7 @@ export function useAssignTests(options: UseAssignTestsOptions = {}) {
         onSuccess: (data, variables) => {
             // Invalidate all samples queries to trigger refetch
             // This ensures the samples list updates with new status
+            markLocalSamplesMutation(variables.sampleId)
             queryClient.invalidateQueries({ queryKey: sampleKeys.all })
 
             // Invalidate specific sample detail
