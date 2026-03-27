@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 
 const mockUseSamples = vi.fn()
 const mockUseSampleDetail = vi.fn()
@@ -42,6 +42,12 @@ vi.mock('@/components/sample-list-table', () => ({
 vi.mock('@/components/sample-detail-panel', () => ({
     SampleDetailPanel: ({ sample }: { sample: { sample_id: string } | null }) => (
         <div data-testid="sample-detail-panel">{sample?.sample_id ?? 'empty'}</div>
+    ),
+}))
+
+vi.mock('@/components/assigned-tests-panel', () => ({
+    AssignedTestsPanel: ({ sampleId }: { sampleId: string }) => (
+        <div data-testid="assigned-tests-panel">{sampleId}</div>
     ),
 }))
 
@@ -258,5 +264,26 @@ describe('SamplesPageClient read-path contract', () => {
         )
 
         expect(mockFetchSampleResultsClient).not.toHaveBeenCalled()
+    })
+
+    it('keeps the assigned-results panel tied to the selected sampleId while detail data is still loading', () => {
+        mockSearchParams = new URLSearchParams('sampleId=sample-1')
+
+        mockUseSampleDetail.mockReturnValue({
+            data: null,
+            isLoading: true,
+        })
+
+        render(
+            <SamplesPageClient
+                role="analyst"
+                permissions={basePermissions}
+                homeHref="/"
+                receiverOptions={[]}
+                specialties={[]}
+            />,
+        )
+
+        expect(screen.getByTestId('assigned-tests-panel').textContent).toBe('sample-1')
     })
 })
