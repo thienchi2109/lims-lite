@@ -59,4 +59,18 @@ describe('SampleBottomRow', () => {
 
         expect(grid?.className).toContain('gap-2')
     })
+
+    it('keeps the visible right panel content mounted while the next sample is still loading', () => {
+        const { rerender } = render(<SampleBottomRow sample={sample} userRole="manager" />)
+
+        expect(screen.getByTestId('sample-detail-panel')).toBeDefined()
+        expect(screen.getByTestId('assigned-tests-panel')).toBeDefined()
+
+        rerender(<SampleBottomRow sample={sample} isLoadingSample={true} userRole="manager" />)
+
+        expect(screen.getByTestId('sample-detail-panel')).toBeDefined()
+        expect(screen.getByTestId('assigned-tests-panel')).toBeDefined()
+        expect(screen.queryByText('Đang tải chi tiết mẫu...')).toBeNull()
+        expect(screen.queryByText('Đang tải...')).toBeNull()
+    })
 })

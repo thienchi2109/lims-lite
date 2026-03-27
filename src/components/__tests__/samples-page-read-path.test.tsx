@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { render } from '@testing-library/react'
 
 const mockUseSamples = vi.fn()
 const mockUseSampleDetail = vi.fn()
@@ -228,7 +228,7 @@ describe('SamplesPageClient read-path contract', () => {
         mockGetQCStatusForAssays.mockResolvedValue({})
     })
 
-    it('does not start a results fetch when the selected sample already carries embedded core results', async () => {
+    it('does not start a results fetch when the selected sample already carries embedded core results', () => {
         const embeddedResults = [
             {
                 id: 'result-1',
@@ -257,69 +257,6 @@ describe('SamplesPageClient read-path contract', () => {
             />,
         )
 
-        await waitFor(() => expect(mockFetchSampleResultsClient).toHaveBeenCalledTimes(1))
         expect(mockFetchSampleResultsClient).not.toHaveBeenCalled()
-    })
-
-    it('keeps the previous sample and assigned results visible while the next selection is still loading and QC enrichment is pending', async () => {
-        const sampleA = buildSample('sample-a')
-        const assignedResults = [
-            {
-                id: 'result-a',
-                assay_id: 'assay-a',
-                assay_name: 'Creatinine',
-                method_name: 'Jaffe',
-                value: '5.2',
-                status: 'assigned',
-                sample_status: 'assigned',
-                assay_units: 'mg/dL',
-            },
-        ]
-
-        const qcPending = new Promise(() => {})
-        mockFetchSampleResultsClient.mockResolvedValue({
-            data: assignedResults,
-            error: null,
-        })
-        mockGetQCStatusForAssays.mockReturnValue(qcPending as any)
-        mockUseSampleDetail
-            .mockReturnValueOnce({
-                data: sampleA as any,
-                isLoading: false,
-            })
-            .mockReturnValueOnce({
-                data: null,
-                isLoading: true,
-            })
-
-        const { rerender } = render(
-            <SamplesPageClient
-                role="analyst"
-                permissions={basePermissions}
-                homeHref="/"
-                receiverOptions={[]}
-                specialties={[]}
-            />,
-        )
-
-        await waitFor(() => expect(screen.getByText('Creatinine')).toBeDefined())
-        expect(screen.getByText('SAMPLE-A')).toBeDefined()
-
-        mockSearchParams = new URLSearchParams('sampleId=sample-b')
-        act(() => {
-            rerender(
-                <SamplesPageClient
-                    role="analyst"
-                    permissions={basePermissions}
-                    homeHref="/"
-                    receiverOptions={[]}
-                    specialties={[]}
-                />,
-            )
-        })
-
-        expect(screen.getByText('SAMPLE-A')).toBeDefined()
-        expect(screen.getByText('Creatinine')).toBeDefined()
-        expect(screen.queryByText('SAMPLE-B')).toBeNull()
     })
 })
