@@ -69,8 +69,16 @@ vi.mock('@/hooks/use-print-handlers', () => ({
 }))
 
 vi.mock('@/components/assigned-tests-toolbar', () => ({
-    AssignedTestsToolbar: () => (
-        <div data-testid="assigned-tests-toolbar">Tóm tắt xét nghiệm</div>
+    AssignedTestsToolbar: ({
+        enrichmentNotice,
+        enrichmentError,
+    }: {
+        enrichmentNotice?: string
+        enrichmentError?: string
+    }) => (
+        <div data-testid="assigned-tests-toolbar">
+            {enrichmentError || enrichmentNotice || 'Tóm tắt xét nghiệm'}
+        </div>
     ),
 }))
 
@@ -158,5 +166,18 @@ describe('AssignedTestsPanel enrichment isolation', () => {
         expect(screen.getByText('Glucose')).toBeDefined()
         expect(screen.getByTestId('assigned-tests-toolbar')).toBeDefined()
         expect(within(screen.getByTestId('assigned-tests-toolbar')).getByText('Đang tải trạng thái bổ sung...')).toBeDefined()
+    })
+
+    it('keeps the core assigned-results table visible while enrichment fails', async () => {
+        mockCoAStatus.mockRejectedValueOnce(new Error('CoA enrichment failed'))
+        mockQCStatusForAssays.mockResolvedValueOnce({})
+
+        render(<AssignedTestsPanel sampleId="sample-1" initialResults={initialResults as any} />)
+
+        expect(screen.getByText('Glucose')).toBeDefined()
+        expect(screen.getByTestId('assigned-tests-toolbar')).toBeDefined()
+        expect(
+            within(screen.getByTestId('assigned-tests-toolbar')).getByText('Không thể tải trạng thái bổ sung'),
+        ).toBeDefined()
     })
 })
