@@ -4,6 +4,7 @@ import { render } from '@testing-library/react'
 const mockUseSamples = vi.fn()
 const mockUseSampleDetail = vi.fn()
 let mockSearchParams = new URLSearchParams()
+const capturedBottomRowProps: Array<{ sample: unknown; isLoadingSample: boolean }> = []
 
 vi.mock('@/hooks/use-samples', () => ({
     useSamples: (...args: unknown[]) => mockUseSamples(...args),
@@ -26,7 +27,10 @@ vi.mock('@/components/sample-list-table', () => ({
 }))
 
 vi.mock('@/components/sample-bottom-row', () => ({
-    SampleBottomRow: () => null,
+    SampleBottomRow: (props: { sample: unknown; isLoadingSample: boolean }) => {
+        capturedBottomRowProps.push(props)
+        return null
+    },
 }))
 
 vi.mock('next/link', () => ({
@@ -39,6 +43,7 @@ describe('SamplesPageClient scope contract', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockSearchParams = new URLSearchParams()
+        capturedBottomRowProps.length = 0
 
         mockUseSamples.mockReturnValue({
             data: {
@@ -118,5 +123,64 @@ describe('SamplesPageClient scope contract', () => {
                 }),
             }),
         )
+    })
+
+    it('keeps the previous sample available in the bottom row while the next sample detail is still loading', () => {
+        const sampleA = {
+            id: 'sample-a',
+            sample_id: 'CDC-XN-0001',
+        }
+
+        mockSearchParams = new URLSearchParams('sampleId=sample-a')
+        mockUseSampleDetail
+            .mockReturnValueOnce({
+                data: sampleA,
+                isLoading: false,
+            })
+            .mockReturnValueOnce({
+                data: null,
+                isLoading: true,
+            })
+
+        const { rerender } = render(
+            <SamplesPageClient
+                role="analyst"
+                permissions={{
+                    canDiscard: false,
+                    canEdit: false,
+                    canViewResults: false,
+                    canEnterResults: false,
+                }}
+                homeHref="/"
+                receiverOptions={[]}
+                specialties={[]}
+            />,
+        )
+
+        expect(capturedBottomRowProps.at(-1)).toMatchObject({
+            sample: sampleA,
+            isLoadingSample: false,
+        })
+
+        mockSearchParams = new URLSearchParams('sampleId=sample-b')
+        rerender(
+            <SamplesPageClient
+                role="analyst"
+                permissions={{
+                    canDiscard: false,
+                    canEdit: false,
+                    canViewResults: false,
+                    canEnterResults: false,
+                }}
+                homeHref="/"
+                receiverOptions={[]}
+                specialties={[]}
+            />,
+        )
+
+        expect(capturedBottomRowProps.at(-1)).toMatchObject({
+            sample: sampleA,
+            isLoadingSample: true,
+        })
     })
 })

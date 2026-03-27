@@ -113,4 +113,24 @@ describe('AssignedTestsPanel race condition guard', () => {
         expect(resultB.wasCancelled).toBe(false)
         expect(resultB.data[0].id).toBe('result-B')
     })
+
+    it('shares one core fetch between the detail and assigned-results consumers for the same sampleId', async () => {
+        const sharedFetch = vi.fn(async (sampleId: string) => ({
+            data: [{ id: `result-${sampleId}`, assay_name: 'Creatinine' }],
+        }))
+
+        const detailPanelConsumer = {
+            loadCore: (sampleId: string) => sharedFetch(sampleId),
+        }
+        const resultsPanelConsumer = {
+            loadCore: (sampleId: string) => sharedFetch(sampleId),
+        }
+
+        await Promise.all([
+            detailPanelConsumer.loadCore('sample-A'),
+            resultsPanelConsumer.loadCore('sample-A'),
+        ])
+
+        expect(sharedFetch).toHaveBeenCalledTimes(1)
+    })
 })

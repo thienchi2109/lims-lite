@@ -84,6 +84,59 @@ describe('useAssignedTestsData', () => {
         expect(mockFetch).not.toHaveBeenCalled()
     })
 
+    it('keeps showing the previous core results while the next sample is still loading its own results', async () => {
+        const initialResults = [
+            {
+                id: 'r-a',
+                assay_id: 'a1',
+                assay_name: 'Creatinine',
+                sample_status: 'completed',
+            },
+        ] as any
+
+        let resolveNextFetch!: (value: { data: Array<{ id: string; assay_id: string; sample_status: string }>; error: null }) => void
+        const slowNextFetch = new Promise<{ data: Array<{ id: string; assay_id: string; sample_status: string }>; error: null }>((resolve) => {
+            resolveNextFetch = resolve
+        })
+
+        mockFetch.mockReturnValueOnce(slowNextFetch as any)
+
+        const { result, rerender } = renderHook(
+            ({ id, seededResults }) =>
+                useAssignedTestsData(id, {
+                    initialResults: seededResults,
+                }),
+            {
+                initialProps: {
+                    id: 'sample-A',
+                    seededResults: initialResults,
+                },
+            },
+        )
+
+        expect(result.current.results).toEqual(initialResults)
+        expect(result.current.loading).toBe(false)
+
+        act(() => {
+            rerender({
+                id: 'sample-B',
+                seededResults: undefined,
+            })
+        })
+
+        await waitFor(() => expect(result.current.loading).toBe(true))
+        expect(result.current.results).toEqual(initialResults)
+        expect(mockFetch).toHaveBeenCalledWith('sample-B')
+
+        await act(async () => {
+            resolveNextFetch({
+                data: [{ id: 'r-b', assay_id: 'a2', sample_status: 'assigned' }],
+                error: null,
+            })
+            await slowNextFetch
+        })
+    })
+
     it('sets sampleStatus from the first result', async () => {
         mockFetch.mockResolvedValue({
             data: [{ id: 'r1', assay_id: 'a1', sample_status: 'in_progress' }],
