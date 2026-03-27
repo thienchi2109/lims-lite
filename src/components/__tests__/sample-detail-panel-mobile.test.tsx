@@ -26,14 +26,6 @@ vi.mock('@/components/sample-activity-feed', () => ({
     SampleActivityFeed: () => null,
 }))
 
-vi.mock('@/components/sample-lifecycle-stepper', () => ({
-    SampleLifecycleChevron: ({ className }: { className?: string }) => (
-        <div data-testid="sample-lifecycle-chevron" className={className}>
-            lifecycle
-        </div>
-    ),
-}))
-
 import { SampleDetailPanel } from '../sample-detail-panel'
 import type { SampleWithUser } from '@/types'
 
@@ -58,35 +50,34 @@ function buildSampleWithStatus(status: SampleWithUser['status']): SampleWithUser
     } as unknown as SampleWithUser
 }
 
-describe('SampleDetailPanel mobile behavior', () => {
+describe('SampleDetailPanel redesigned layout', () => {
     beforeEach(() => {
         mockClientData = null
         mockUseClient.mockClear()
     })
 
-    it('uses a visibly compact chrome and a constrained internal scroll region', () => {
+    it('renders header with sample ID label, tabs, and scrollable content area', () => {
         const { container } = render(<SampleDetailPanel sample={sample} />)
 
         const panel = container.querySelector('#tour-sample-detail')
-        const header = panel?.firstElementChild as HTMLDivElement | null
-        const tabs = header?.nextElementSibling as HTMLDivElement | null
-        const content = tabs?.nextElementSibling as HTMLDivElement | null
-        const detailBody = content?.firstElementChild as HTMLDivElement | null
-        const detailTab = screen.getByRole('button', { name: /Thông tin/i })
+        const content = panel?.querySelector('.overflow-y-auto')
 
+        // Panel uses flex column with min-h-0 for scroll containment
         expect(panel?.className).toContain('min-h-0')
-        expect(header?.className).toContain('px-2.5')
-        expect(header?.className).toContain('py-1')
-        expect(detailTab.className).toContain('px-2.5')
-        expect(detailTab.className).toContain('py-1')
-        expect(detailTab.className).toContain('text-[11px]')
+        expect(panel?.className).toContain('flex-col')
+        // Content area is scrollable
         expect(content?.className).toContain('min-h-0')
         expect(content?.className).toContain('overflow-y-auto')
-        expect(detailBody?.className).toContain('p-3')
-        expect(detailBody?.className).toContain('text-sm')
+        // Sample ID label exists
+        expect(screen.getByText('Mã mẫu xét nghiệm')).toBeDefined()
+        // Sample ID is visible
+        expect(screen.getByText('CDC-XN-TEST-0001')).toBeDefined()
+        // Tabs exist as buttons
+        expect(screen.getByRole('button', { name: /Thông tin/i })).toBeDefined()
+        expect(screen.getByRole('button', { name: /Lịch sử cập nhật/i })).toBeDefined()
     })
 
-    it('uses compact typography inside the client detail grid when client data is present', () => {
+    it('displays patient info in a 2-column grid layout when client data is present', () => {
         mockClientData = {
             name: 'Khach hang A',
             id_card_num: '079123456789',
@@ -98,15 +89,19 @@ describe('SampleDetailPanel mobile behavior', () => {
             expiry_date: '2026-12-31',
         }
 
-        render(<SampleDetailPanel sample={{ ...sample, client_id: 'client-1' }} />)
+        const { container } = render(<SampleDetailPanel sample={{ ...sample, client_id: 'client-1' }} />)
 
-        const infoRow = screen.getByText('Số CCCD').parentElement
-        const detailValue = screen.getByText('079123456789')
+        // 2-column grid exists
+        const grid = container.querySelector('.grid.grid-cols-2')
+        expect(grid).toBeDefined()
+        expect(grid).not.toBeNull()
 
-        expect(infoRow?.className).toContain('flex')
-        expect(infoRow?.className).toContain('items-baseline')
-        expect(screen.getByText('Số CCCD').className).toContain('text-xs')
-        expect(detailValue.className).toContain('text-sm')
+        // InfoCell uses stacked layout (label above, value below)
+        const labelEl = screen.getByText('Số CCCD')
+        const cellContainer = labelEl.parentElement
+        expect(cellContainer?.className).toContain('flex-col')
+        // Value is displayed
+        expect(screen.getByText('079123456789')).toBeDefined()
 
         mockClientData = null
     })
@@ -144,12 +139,25 @@ describe('SampleDetailPanel mobile behavior', () => {
         expect(screen.getByText('079123456789')).toBeDefined()
     })
 
-    it('hides lifecycle progress chevron on mobile breakpoints', () => {
+    it('renders progress stepper with correct status visualization', () => {
         render(<SampleDetailPanel sample={sample} />)
 
-        const lifecycleChevron = screen.getByTestId('sample-lifecycle-chevron')
-        expect(lifecycleChevron.className).toContain('hidden')
-        expect(lifecycleChevron.className).toContain('sm:flex')
+        // Status bar stepper steps are visible
+        expect(screen.getByText('Đã nhận')).toBeDefined()
+        expect(screen.getByText('Đã chỉ định')).toBeDefined()
+        expect(screen.getByText('Đang thực hiện')).toBeDefined()
+        expect(screen.getByText('Hoàn thành')).toBeDefined()
+    })
+
+    it('renders metadata footer in a card', () => {
+        render(<SampleDetailPanel sample={sample} />)
+
+        // Footer labels
+        expect(screen.getByText('Thời điểm nhận')).toBeDefined()
+        expect(screen.getByText('Người nhận mẫu')).toBeDefined()
+        expect(screen.getByText('Cập nhật cuối')).toBeDefined()
+        // Values
+        expect(screen.getByText('User A')).toBeDefined()
     })
 
     it('shows rejection banner for in_progress samples with rejection metadata', () => {
