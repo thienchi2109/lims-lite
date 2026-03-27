@@ -1,12 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
-
-let mockClientData: Record<string, unknown> | null = null
+import { describe, expect, it, vi } from 'vitest'
+import { render, screen } from '@testing-library/react'
 
 vi.mock('@/hooks/use-client', () => ({
     useClient: () => ({
-        data: mockClientData,
-        isLoading: false,
+        data: null,
+        isLoading: true,
         error: null,
     }),
 }))
@@ -19,10 +17,6 @@ vi.mock('@tanstack/react-query', () => ({
 
 vi.mock('@/components/sample-edit-dialog', () => ({
     SampleEditDialog: () => null,
-}))
-
-vi.mock('@/components/sample-activity-feed', () => ({
-    SampleActivityFeed: () => <div data-testid="sample-activity-feed">Đang tải lịch sử...</div>,
 }))
 
 import { SampleDetailPanel } from '../sample-detail-panel'
@@ -40,26 +34,13 @@ const sample = {
 } as unknown as SampleWithUser
 
 describe('SampleDetailPanel enrichment isolation', () => {
-    beforeEach(() => {
-        mockClientData = {
-            name: 'Khach hang A',
-            id_card_num: '079123456789',
-            date_of_birth: '1990-01-01',
-            gender: 'Nam',
-            phone: '0901234567',
-            address: '123 Duong ABC',
-            health_insurance_num: 'BHYT-123',
-            expiry_date: '2026-12-31',
-        }
-    })
-
-    it('keeps the sample detail visible when activity enrichment is loading', () => {
+    it('keeps the core sample detail visible while client enrichment is still loading', () => {
         render(<SampleDetailPanel sample={sample} />)
-
-        fireEvent.click(screen.getByRole('button', { name: /Lịch sử cập nhật/i }))
 
         expect(screen.getByText('CDC-XN-0001')).toBeDefined()
         expect(screen.getByText('Thông tin bệnh nhân')).toBeDefined()
-        expect(screen.getByTestId('sample-activity-feed')).toBeDefined()
+        expect(screen.getByText('Khach hang A')).toBeDefined()
+        expect(screen.getByText('Thời điểm nhận')).toBeDefined()
+        expect(screen.getByText('Đang tải...')).toBeDefined()
     })
 })
