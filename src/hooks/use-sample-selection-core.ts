@@ -12,7 +12,7 @@ const SAMPLE_SELECTION_CORE_GC_TIME_MS = 10 * 60 * 1000
 
 export interface SampleSelectionCoreData {
     sample: SampleWithUser
-    results: ResultWithAssay[]
+    results?: ResultWithAssay[]
 }
 
 interface UseSampleSelectionCoreCacheOptions {
@@ -23,7 +23,7 @@ interface UseSampleSelectionCoreCacheOptions {
 
 export function createSampleSelectionCoreData(
     sample: SampleWithUser,
-    results: ResultWithAssay[] = [],
+    results?: ResultWithAssay[],
 ): SampleSelectionCoreData {
     return {
         sample,
@@ -32,16 +32,16 @@ export function createSampleSelectionCoreData(
 }
 
 export async function fetchSampleSelectionCore(sampleId: string): Promise<SampleSelectionCoreData> {
-    const [sample, resultsResponse] = await Promise.all([
-        fetchSampleDetail(sampleId),
-        fetchSampleResultsClient(sampleId),
-    ])
+    const samplePromise = fetchSampleDetail(sampleId)
+    const resultsPromise = fetchSampleResultsClient(sampleId).catch(() => null)
+    const sample = await samplePromise
+    const resultsResponse = await resultsPromise
 
-    if (resultsResponse?.error) {
-        throw new Error(resultsResponse.error)
+    if (!resultsResponse || resultsResponse.error) {
+        return createSampleSelectionCoreData(sample)
     }
 
-    return createSampleSelectionCoreData(sample, resultsResponse?.data ?? [])
+    return createSampleSelectionCoreData(sample, resultsResponse.data ?? [])
 }
 
 export function useSampleSelectionCore({

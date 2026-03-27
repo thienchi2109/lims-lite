@@ -91,4 +91,20 @@ describe('fetchSampleSelectionCore', () => {
             }),
         })
     })
+
+    it('still returns sample detail when the seeded results read fails', async () => {
+        mockFetchSampleDetail.mockResolvedValue({
+            id: 'sample-3',
+            sample_id: 'CDC-XN-0003',
+        })
+        mockFetchSampleResultsClient.mockRejectedValue(new Error('Results unavailable'))
+
+        await expect(fetchSampleSelectionCore('sample-3')).resolves.toEqual({
+            sample: {
+                id: 'sample-3',
+                sample_id: 'CDC-XN-0003',
+            },
+            results: undefined,
+        })
+    })
 })

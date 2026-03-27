@@ -447,4 +447,44 @@ describe('SamplesPageClient read-path contract', () => {
 
         unmount()
     })
+
+    it('keeps sample detail visible when the shared core only has detail and the right-panel fetch fails', async () => {
+        const sampleOnlyCore = buildSample('sample-4', {
+            sample_id: 'CDC-XN-0004',
+            status: 'assigned',
+        })
+
+        mockSearchParams = new URLSearchParams('sampleId=sample-4')
+        mockUseSampleSelectionCore.mockReturnValue({
+            data: {
+                sample: sampleOnlyCore as any,
+                results: undefined,
+            },
+            isLoading: false,
+            isFetching: false,
+            error: null,
+        })
+        mockFetchSampleResultsClient.mockResolvedValue({
+            data: null,
+            error: 'Network error',
+        })
+
+        render(
+            <SamplesPageClient
+                role="analyst"
+                permissions={basePermissions}
+                homeHref="/"
+                receiverOptions={[]}
+                specialties={[]}
+            />,
+        )
+
+        await waitFor(() => {
+            expect(screen.getByTestId('sample-detail-panel').textContent).toBe('CDC-XN-0004')
+        })
+        await waitFor(() => {
+            expect(screen.getByText('Network error')).toBeDefined()
+        })
+        expect(screen.queryByText('Không thể tải chi tiết mẫu. Vui lòng thử lại.')).toBeNull()
+    })
 })

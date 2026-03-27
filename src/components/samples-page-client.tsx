@@ -170,7 +170,7 @@ export function SamplesPageClient({
             <div className="flex-1 min-h-0 border-t pt-4">
                 <SampleBottomRow
                     sample={activeSampleCore?.sample ?? null}
-                    results={activeSampleCore?.results ?? []}
+                    results={activeSampleCore?.results}
                     isLoadingSample={isLoadingSample}
                     loadErrorMessage={loadErrorMessage}
                     permissions={permissions}

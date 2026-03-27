@@ -8,7 +8,6 @@ import { durations, fadeInScale } from '@/lib/motion'
 import { AlertCircle } from 'lucide-react'
 
 const EMPTY_SPECIALTIES: LabSpecialty[] = []
-const EMPTY_RESULTS: ResultWithAssay[] = []
 
 interface SampleBottomRowProps {
     sample: SampleWithUser | null
@@ -27,7 +26,7 @@ interface SampleBottomRowProps {
 
 export function SampleBottomRow({
     sample,
-    results = EMPTY_RESULTS,
+    results,
     isLoadingSample = false,
     loadErrorMessage = null,
     permissions,
