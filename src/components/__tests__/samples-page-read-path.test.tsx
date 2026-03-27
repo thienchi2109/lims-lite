@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 
 const mockUseSamples = vi.fn()
 let mockSearchParams = new URLSearchParams()
@@ -14,18 +14,14 @@ const mockUseCoaActions = vi.fn()
 const mockUsePrintHandlers = vi.fn()
 const mockInvalidateQueries = vi.fn()
 const mockRouterPush = vi.fn()
-const mockGetCachedSampleCore = vi.fn()
-const mockLoadSampleCore = vi.fn()
+const mockUseSampleSelectionCore = vi.fn()
 
 vi.mock('@/hooks/use-samples', () => ({
     useSamples: (...args: unknown[]) => mockUseSamples(...args),
 }))
 
 vi.mock('@/hooks/use-sample-selection-core', () => ({
-    useSampleSelectionCoreCache: () => ({
-        getCachedSampleCore: mockGetCachedSampleCore,
-        loadSampleCore: mockLoadSampleCore,
-    }),
+    useSampleSelectionCore: (...args: unknown[]) => mockUseSampleSelectionCore(...args),
 }))
 
 vi.mock('next/navigation', () => ({
@@ -46,8 +42,11 @@ vi.mock('@/components/sample-list-table', () => ({
 }))
 
 vi.mock('@/components/sample-detail-panel', () => ({
-    SampleDetailPanel: ({ sample }: { sample: { sample_id: string } | null }) => (
-        <div data-testid="sample-detail-panel">{sample?.sample_id ?? 'empty'}</div>
+    SampleDetailPanel: ({ sample }: { sample: { sample_id: string; status?: string } | null }) => (
+        <>
+            <div data-testid="sample-detail-panel">{sample?.sample_id ?? 'empty'}</div>
+            <div data-testid="sample-detail-status">{sample?.status ?? 'empty'}</div>
+        </>
     ),
 }))
 
@@ -185,21 +184,6 @@ function buildSample(sampleId: string, overrides: Record<string, unknown> = {}) 
     }
 }
 
-function deferredPromise<T>() {
-    let resolve!: (value: T | PromiseLike<T>) => void
-    let reject!: (reason?: unknown) => void
-    const promise = new Promise<T>((innerResolve, innerReject) => {
-        resolve = innerResolve
-        reject = innerReject
-    })
-
-    return {
-        promise,
-        resolve,
-        reject,
-    }
-}
-
 describe('SamplesPageClient read-path contract', () => {
     beforeEach(() => {
         vi.clearAllMocks()
@@ -247,14 +231,18 @@ describe('SamplesPageClient read-path contract', () => {
             error: null,
         })
         mockGetQCStatusForAssays.mockResolvedValue({})
-        mockGetCachedSampleCore.mockReturnValue(null)
-        mockLoadSampleCore.mockResolvedValue({
-            sample: buildSample('sample-1') as any,
-            results: [],
+        mockUseSampleSelectionCore.mockReturnValue({
+            data: {
+                sample: buildSample('sample-1') as any,
+                results: [],
+            },
+            isLoading: false,
+            isFetching: false,
+            error: null,
         })
     })
 
-    it('renders the cached core payload immediately when the selected sample is already in the shared cache', async () => {
+    it('renders the current selection core payload immediately when the selected sample query already has data', async () => {
         const embeddedResults = [
             {
                 id: 'result-1',
@@ -269,13 +257,14 @@ describe('SamplesPageClient read-path contract', () => {
         ]
 
         mockSearchParams = new URLSearchParams('sampleId=sample-1')
-        mockGetCachedSampleCore.mockReturnValue({
-            sample: buildSample('sample-1') as any,
-            results: embeddedResults,
-        })
-        mockLoadSampleCore.mockResolvedValue({
-            sample: buildSample('sample-1') as any,
-            results: embeddedResults,
+        mockUseSampleSelectionCore.mockReturnValue({
+            data: {
+                sample: buildSample('sample-1') as any,
+                results: embeddedResults,
+            },
+            isLoading: false,
+            isFetching: false,
+            error: null,
         })
 
         const rendered = render(
@@ -291,11 +280,13 @@ describe('SamplesPageClient read-path contract', () => {
         await waitFor(() => {
             expect(screen.getByText('Creatinine')).toBeDefined()
         })
-        expect(mockLoadSampleCore).toHaveBeenCalledWith('sample-1')
+        expect(mockUseSampleSelectionCore).toHaveBeenCalledWith({
+            sampleId: 'sample-1',
+        })
         rendered.unmount()
     })
 
-    it('keeps sample A visible while sample B is loading, moves grid selection immediately, and starts the shared core read for sample B', async () => {
+    it('keeps sample A visible while sample B is loading and moves grid selection immediately', async () => {
         const sampleAResults = [
             {
                 id: 'result-a',
@@ -311,30 +302,18 @@ describe('SamplesPageClient read-path contract', () => {
         const sampleA = buildSample('sample-a', {
             sample_id: 'CDC-XN-A',
         })
-        const sampleBCoreDeferred = deferredPromise<{
-            sample: ReturnType<typeof buildSample>
-            results: typeof sampleAResults
-        }>()
-
-        mockGetCachedSampleCore.mockImplementation((requestedSampleId: string) => {
-            if (requestedSampleId === 'sample-a') {
-                return {
-                    sample: sampleA as any,
-                    results: sampleAResults,
-                }
-            }
-
-            return null
+        const sampleB = buildSample('sample-b', {
+            sample_id: 'CDC-XN-B',
         })
-        mockLoadSampleCore.mockImplementation((requestedSampleId: string) => {
-            if (requestedSampleId === 'sample-b') {
-                return sampleBCoreDeferred.promise
-            }
 
-            return Promise.resolve({
+        mockUseSampleSelectionCore.mockReturnValue({
+            data: {
                 sample: sampleA as any,
                 results: sampleAResults,
-            })
+            },
+            isLoading: false,
+            isFetching: false,
+            error: null,
         })
 
         mockSearchParams = new URLSearchParams('sampleId=sample-a')
@@ -356,6 +335,16 @@ describe('SamplesPageClient read-path contract', () => {
         expect(screen.getByTestId('sample-list-selected').textContent).toBe('sample-a')
 
         mockSearchParams = new URLSearchParams('sampleId=sample-b')
+        mockUseSampleSelectionCore.mockReturnValue({
+            data: {
+                sample: sampleA as any,
+                results: sampleAResults,
+            },
+            isLoading: false,
+            isFetching: true,
+            error: null,
+        })
+
         rerender(
             <SamplesPageClient
                 role="analyst"
@@ -369,22 +358,92 @@ describe('SamplesPageClient read-path contract', () => {
         expect(screen.getByTestId('sample-list-selected').textContent).toBe('sample-b')
         expect(screen.getByText('CDC-XN-A')).toBeDefined()
 
-        try {
-            await waitFor(() => {
-                expect(mockLoadSampleCore).toHaveBeenCalledWith('sample-b')
-            })
-        } finally {
-            await act(async () => {
-                sampleBCoreDeferred.resolve({
-                    sample: buildSample('sample-b', { sample_id: 'CDC-XN-B' }),
-                    results: sampleAResults,
-                })
-                await sampleBCoreDeferred.promise
-            })
-            await waitFor(() => {
-                expect(screen.getByText('CDC-XN-B')).toBeDefined()
-            })
-        }
+        mockUseSampleSelectionCore.mockReturnValue({
+            data: {
+                sample: sampleB as any,
+                results: sampleAResults,
+            },
+            isLoading: false,
+            isFetching: false,
+            error: null,
+        })
+
+        rerender(
+            <SamplesPageClient
+                role="analyst"
+                permissions={basePermissions}
+                homeHref="/"
+                receiverOptions={[]}
+                specialties={[]}
+            />,
+        )
+
+        await waitFor(() => {
+            expect(screen.getByText('CDC-XN-B')).toBeDefined()
+        })
+
+        unmount()
+    })
+
+    it('updates the displayed sample when the current selection core refetches with fresh data', async () => {
+        const sampleAssigned = buildSample('sample-1', {
+            sample_id: 'CDC-XN-0001',
+            status: 'assigned',
+        })
+        const sampleReview = buildSample('sample-1', {
+            sample_id: 'CDC-XN-0001',
+            status: 'review',
+        })
+
+        mockSearchParams = new URLSearchParams('sampleId=sample-1')
+        mockUseSampleSelectionCore.mockReturnValue({
+            data: {
+                sample: sampleAssigned as any,
+                results: [],
+            },
+            isLoading: false,
+            isFetching: false,
+            error: null,
+        })
+
+        const rendered = render(
+            <SamplesPageClient
+                role="analyst"
+                permissions={basePermissions}
+                homeHref="/"
+                receiverOptions={[]}
+                specialties={[]}
+            />,
+        )
+        const { rerender, unmount } = rendered
+
+        await waitFor(() => {
+            expect(screen.getByTestId('sample-detail-status').textContent).toBe('assigned')
+        })
+
+        mockUseSampleSelectionCore.mockReturnValue({
+            data: {
+                sample: sampleReview as any,
+                results: [],
+            },
+            isLoading: false,
+            isFetching: false,
+            error: null,
+        })
+
+        rerender(
+            <SamplesPageClient
+                role="analyst"
+                permissions={basePermissions}
+                homeHref="/"
+                receiverOptions={[]}
+                specialties={[]}
+            />,
+        )
+
+        await waitFor(() => {
+            expect(screen.getByTestId('sample-detail-status').textContent).toBe('review')
+        })
 
         unmount()
     })

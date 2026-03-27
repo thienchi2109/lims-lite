@@ -38,8 +38,8 @@ describe('fetchSampleSelectionCore', () => {
         })
     })
 
-    it('skips the results fetch when sample detail already carries embedded core results', async () => {
-        const embeddedResults = [
+    it('returns the sample detail and fetched results as the shared core payload', async () => {
+        const fetchedResults = [
             {
                 id: 'result-1',
                 assay_id: 'assay-1',
@@ -50,13 +50,21 @@ describe('fetchSampleSelectionCore', () => {
         mockFetchSampleDetail.mockResolvedValue({
             id: 'sample-1',
             sample_id: 'CDC-XN-0001',
-            results: embeddedResults,
+        })
+        mockFetchSampleResultsClient.mockResolvedValue({
+            data: fetchedResults,
+            error: null,
         })
 
         const sampleCore = await fetchSampleSelectionCore('sample-1')
 
-        expect(mockFetchSampleResultsClient).not.toHaveBeenCalled()
-        expect(sampleCore.results).toEqual(embeddedResults)
+        expect(mockFetchSampleResultsClient).toHaveBeenCalledWith('sample-1')
+        expect(sampleCore).toMatchObject({
+            sample: expect.objectContaining({
+                id: 'sample-1',
+            }),
+            results: fetchedResults,
+        })
     })
 
     it('starts the results fetch without waiting for a slow detail read', async () => {

@@ -2,8 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render } from '@testing-library/react'
 
 const mockUseSamples = vi.fn()
-const mockGetCachedSampleCore = vi.fn()
-const mockLoadSampleCore = vi.fn()
+const mockUseSampleSelectionCore = vi.fn()
 let mockSearchParams = new URLSearchParams()
 
 vi.mock('@/hooks/use-samples', () => ({
@@ -11,10 +10,7 @@ vi.mock('@/hooks/use-samples', () => ({
 }))
 
 vi.mock('@/hooks/use-sample-selection-core', () => ({
-    useSampleSelectionCoreCache: () => ({
-        getCachedSampleCore: mockGetCachedSampleCore,
-        loadSampleCore: mockLoadSampleCore,
-    }),
+    useSampleSelectionCore: (...args: unknown[]) => mockUseSampleSelectionCore(...args),
 }))
 
 vi.mock('next/navigation', () => ({
@@ -55,9 +51,12 @@ describe('SamplesPageClient scope contract', () => {
             isLoading: false,
             error: null,
         })
-        mockGetCachedSampleCore.mockReturnValue(null)
-        mockLoadSampleCore.mockResolvedValue(null)
-
+        mockUseSampleSelectionCore.mockReturnValue({
+            data: null,
+            isLoading: false,
+            isFetching: false,
+            error: null,
+        })
     })
 
     it('passes the default active scope into the samples query contract', () => {

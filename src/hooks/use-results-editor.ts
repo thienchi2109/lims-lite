@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { sampleKeys } from '@/types/query-keys'
+import { invalidateSampleQueries } from '@/types/query-keys'
 import { saveBatchResultsClient } from '@/lib/api-client'
 import { validateNumericValue, validateTextValue } from '@/lib/utils-lims'
 import type { ResultWithAssay } from '@/types'
@@ -105,7 +105,7 @@ export function useResultsEditor({
                 toast.success('Đã lưu kết quả thành công')
                 setResultValues({})
                 setValidationErrors({})
-                queryClient.invalidateQueries({ queryKey: sampleKeys.detail(sampleId) })
+                await invalidateSampleQueries(queryClient, sampleId)
                 onSaveSuccess()
             }
         } catch (error) {
