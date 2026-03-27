@@ -4,8 +4,8 @@ import { render, screen } from '@testing-library/react'
 vi.mock('@/hooks/use-client', () => ({
     useClient: () => ({
         data: null,
-        isLoading: true,
-        error: null,
+        isLoading: false,
+        error: new Error('Không thể tải thông tin khách hàng'),
     }),
 }))
 
@@ -34,12 +34,13 @@ const sample = {
 } as unknown as SampleWithUser
 
 describe('SampleDetailPanel enrichment isolation', () => {
-    it('keeps the core sample detail visible while client enrichment is still loading', () => {
+    it('keeps snapshot client detail visible while client enrichment fails', () => {
         render(<SampleDetailPanel sample={sample} />)
 
         expect(screen.getByText('CDC-XN-0001')).toBeDefined()
         expect(screen.getByText('Thông tin bệnh nhân')).toBeDefined()
+        expect(screen.getByText('Khach hang A')).toBeDefined()
         expect(screen.getByText('Thời điểm nhận')).toBeDefined()
-        expect(screen.getByText('Đang tải...')).toBeDefined()
+        expect(screen.getByText('Không thể tải thông tin khách hàng')).toBeDefined()
     })
 })

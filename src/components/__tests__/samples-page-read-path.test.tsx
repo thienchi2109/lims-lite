@@ -36,7 +36,9 @@ vi.mock('@/components/sample-filters', () => ({
 }))
 
 vi.mock('@/components/sample-list-table', () => ({
-    SampleListTable: () => null,
+    SampleListTable: ({ selectedSampleId }: { selectedSampleId?: string }) => (
+        <div data-testid="sample-list-selected">{selectedSampleId ?? 'none'}</div>
+    ),
 }))
 
 vi.mock('@/components/sample-detail-panel', () => ({
@@ -266,15 +268,27 @@ describe('SamplesPageClient read-path contract', () => {
         expect(mockFetchSampleResultsClient).not.toHaveBeenCalled()
     })
 
-    it('keeps the assigned-results panel tied to the selected sampleId while detail data is still loading', () => {
-        mockSearchParams = new URLSearchParams('sampleId=sample-1')
+    it('keeps sample A visible while sample B is loading and moves grid selection immediately', () => {
+        const sampleA = buildSample('sample-a', { sample_id: 'CDC-XN-A' })
+        const sampleB = buildSample('sample-b', { sample_id: 'CDC-XN-B' })
 
-        mockUseSampleDetail.mockReturnValue({
-            data: null,
-            isLoading: true,
+        mockUseSampleDetail.mockImplementation(({ sampleId }: { sampleId: string | null }) => {
+            if (sampleId === 'sample-b') {
+                return {
+                    data: sampleB as any,
+                    isLoading: true,
+                }
+            }
+
+            return {
+                data: sampleA as any,
+                isLoading: false,
+            }
         })
 
-        render(
+        mockSearchParams = new URLSearchParams('sampleId=sample-a')
+
+        const { rerender } = render(
             <SamplesPageClient
                 role="analyst"
                 permissions={basePermissions}
@@ -284,6 +298,21 @@ describe('SamplesPageClient read-path contract', () => {
             />,
         )
 
-        expect(screen.getByTestId('assigned-tests-panel').textContent).toBe('sample-1')
+        expect(screen.getByTestId('sample-list-selected').textContent).toBe('sample-a')
+        expect(screen.getByText('CDC-XN-A')).toBeDefined()
+
+        mockSearchParams = new URLSearchParams('sampleId=sample-b')
+        rerender(
+            <SamplesPageClient
+                role="analyst"
+                permissions={basePermissions}
+                homeHref="/"
+                receiverOptions={[]}
+                specialties={[]}
+            />,
+        )
+
+        expect(screen.getByTestId('sample-list-selected').textContent).toBe('sample-b')
+        expect(screen.getByText('CDC-XN-A')).toBeDefined()
     })
 })
