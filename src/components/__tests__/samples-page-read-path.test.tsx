@@ -314,5 +314,6 @@ describe('SamplesPageClient read-path contract', () => {
 
         expect(screen.getByTestId('sample-list-selected').textContent).toBe('sample-b')
         expect(screen.getByText('CDC-XN-A')).toBeDefined()
+        expect(screen.getByTestId('assigned-tests-panel').textContent).toBe('sample-b')
     })
 })
