@@ -4,7 +4,6 @@ import { render, screen } from '@testing-library/react'
 
 const mockCoAStatus = vi.fn()
 const mockQCStatusForAssays = vi.fn()
-const mockToolbarProps: Array<{ enrichmentNotice?: string; enrichmentError?: string }> = []
 
 vi.mock('@tanstack/react-query', () => ({
     useQueryClient: () => ({
@@ -77,8 +76,6 @@ vi.mock('@/components/assigned-tests-toolbar', () => ({
         enrichmentNotice?: string
         enrichmentError?: string
     }) => {
-        mockToolbarProps.push({ enrichmentNotice, enrichmentError })
-
         return (
             <div
                 data-testid="assigned-tests-toolbar"
@@ -165,7 +162,6 @@ const initialResults = [
 describe('AssignedTestsPanel enrichment isolation', () => {
     beforeEach(() => {
         vi.clearAllMocks()
-        mockToolbarProps.length = 0
         mockCoAStatus.mockImplementation(async () => new Promise(() => {}))
         mockQCStatusForAssays.mockImplementation(async () => new Promise(() => {}))
     })
@@ -175,9 +171,7 @@ describe('AssignedTestsPanel enrichment isolation', () => {
 
         expect(screen.getByText('Glucose')).toBeDefined()
         expect(screen.getByTestId('assigned-tests-toolbar')).toBeDefined()
-        expect(mockToolbarProps.at(-1)).toMatchObject({
-            enrichmentNotice: 'Đang tải trạng thái bổ sung...',
-        })
+        expect(screen.getByTestId('assigned-tests-toolbar').textContent).toBe('Đang tải trạng thái bổ sung...')
     })
 
     it('keeps the core assigned-results table visible while enrichment fails', async () => {
@@ -188,8 +182,6 @@ describe('AssignedTestsPanel enrichment isolation', () => {
 
         expect(screen.getByText('Glucose')).toBeDefined()
         expect(screen.getByTestId('assigned-tests-toolbar')).toBeDefined()
-        expect(mockToolbarProps.at(-1)).toMatchObject({
-            enrichmentError: 'Không thể tải trạng thái bổ sung',
-        })
+        expect(screen.getByTestId('assigned-tests-toolbar').textContent).toBe('Không thể tải trạng thái bổ sung')
     })
 })

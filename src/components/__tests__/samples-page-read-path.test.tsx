@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 
 const mockUseSamples = vi.fn()
 const mockUseSampleDetail = vi.fn()
@@ -44,12 +44,6 @@ vi.mock('@/components/sample-list-table', () => ({
 vi.mock('@/components/sample-detail-panel', () => ({
     SampleDetailPanel: ({ sample }: { sample: { sample_id: string } | null }) => (
         <div data-testid="sample-detail-panel">{sample?.sample_id ?? 'empty'}</div>
-    ),
-}))
-
-vi.mock('@/components/assigned-tests-panel', () => ({
-    AssignedTestsPanel: ({ sampleId }: { sampleId: string }) => (
-        <div data-testid="assigned-tests-panel">{sampleId}</div>
     ),
 }))
 
@@ -236,7 +230,7 @@ describe('SamplesPageClient read-path contract', () => {
         mockGetQCStatusForAssays.mockResolvedValue({})
     })
 
-    it('does not start a results fetch when the selected sample already carries embedded core results', () => {
+    it('does not start a results fetch when the selected sample already carries embedded core results', async () => {
         const embeddedResults = [
             {
                 id: 'result-1',
@@ -265,10 +259,12 @@ describe('SamplesPageClient read-path contract', () => {
             />,
         )
 
-        expect(mockFetchSampleResultsClient).not.toHaveBeenCalled()
+        await waitFor(() => {
+            expect(mockFetchSampleResultsClient).not.toHaveBeenCalled()
+        })
     })
 
-    it('keeps sample A visible while sample B is loading and moves grid selection immediately', () => {
+    it('keeps sample A visible while sample B is loading, moves grid selection immediately, and ties the right panel to sample B', () => {
         const sampleA = buildSample('sample-a', { sample_id: 'CDC-XN-A' })
         const sampleB = buildSample('sample-b', { sample_id: 'CDC-XN-B' })
 
@@ -314,6 +310,7 @@ describe('SamplesPageClient read-path contract', () => {
 
         expect(screen.getByTestId('sample-list-selected').textContent).toBe('sample-b')
         expect(screen.getByText('CDC-XN-A')).toBeDefined()
+        // The right panel should already be following sample B during this transition.
         expect(screen.getByTestId('assigned-tests-panel').textContent).toBe('sample-b')
     })
 })

@@ -60,13 +60,24 @@ describe('SampleBottomRow', () => {
         expect(grid?.className).toContain('gap-2')
     })
 
-    it('keeps the visible right panel content mounted while the next sample is still loading and shows a localized transition notice', () => {
-        const { rerender } = render(<SampleBottomRow sample={sample} userRole="manager" />)
+    it('keeps the visible right panel content mounted while sample B is loading after switching from sample A and shows a localized transition notice', () => {
+        const sampleA = {
+            ...sample,
+            id: 'sample-a',
+            sample_id: 'CDC-XN-0001',
+        }
+        const sampleB = {
+            ...sample,
+            id: 'sample-b',
+            sample_id: 'CDC-XN-0002',
+        }
+
+        const { rerender } = render(<SampleBottomRow sample={sampleA} userRole="manager" />)
 
         expect(screen.getByTestId('sample-detail-panel')).toBeDefined()
         expect(screen.getByTestId('assigned-tests-panel')).toBeDefined()
 
-        rerender(<SampleBottomRow sample={sample} isLoadingSample={true} userRole="manager" />)
+        rerender(<SampleBottomRow sample={sampleB} isLoadingSample={true} userRole="manager" />)
 
         expect(screen.getByTestId('sample-detail-panel')).toBeDefined()
         expect(screen.getByTestId('assigned-tests-panel')).toBeDefined()
