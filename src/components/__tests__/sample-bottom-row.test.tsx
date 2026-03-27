@@ -79,9 +79,11 @@ describe('SampleBottomRow', () => {
 
         rerender(<SampleBottomRow sample={sampleB} isLoadingSample={true} userRole="manager" />)
 
-        expect(screen.getByTestId('sample-detail-panel')).toBeDefined()
-        expect(screen.getByTestId('assigned-tests-panel')).toBeDefined()
+        expect(screen.getByTestId('sample-detail-panel').textContent).toBe('CDC-XN-0001')
+        expect(screen.getByTestId('assigned-tests-panel').textContent).toBe('sample-a')
         expect(screen.getByText('Đang chuyển sang mẫu tiếp theo...')).toBeDefined()
+        expect(screen.queryByText('CDC-XN-0002')).toBeNull()
+        expect(screen.queryByText('sample-b')).toBeNull()
         expect(screen.queryByText('Đang tải chi tiết mẫu...')).toBeNull()
         expect(screen.queryByText('Đang tải...')).toBeNull()
     })

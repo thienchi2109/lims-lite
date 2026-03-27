@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 
 const mockCoAStatus = vi.fn()
 const mockQCStatusForAssays = vi.fn()
@@ -69,23 +69,7 @@ vi.mock('@/hooks/use-print-handlers', () => ({
 }))
 
 vi.mock('@/components/assigned-tests-toolbar', () => ({
-    AssignedTestsToolbar: ({
-        enrichmentNotice,
-        enrichmentError,
-    }: {
-        enrichmentNotice?: string
-        enrichmentError?: string
-    }) => {
-        return (
-            <div
-                data-testid="assigned-tests-toolbar"
-                data-notice={enrichmentNotice ?? ''}
-                data-error={enrichmentError ?? ''}
-            >
-                {enrichmentError || enrichmentNotice || 'Tóm tắt xét nghiệm'}
-            </div>
-        )
-    },
+    AssignedTestsToolbar: () => <div data-testid="assigned-tests-toolbar">Tóm tắt xét nghiệm</div>,
 }))
 
 vi.mock('@/components/batch-save-toolbar', () => ({
@@ -180,6 +164,8 @@ describe('AssignedTestsPanel enrichment isolation', () => {
         render(<AssignedTestsPanel sampleId="sample-1" initialResults={initialResults as any} />)
 
         expect(screen.getByText('Glucose')).toBeDefined()
-        expect(screen.getByText('Không thể tải trạng thái bổ sung')).toBeDefined()
+        await waitFor(() => {
+            expect(screen.getByText('Không thể tải trạng thái bổ sung')).toBeDefined()
+        })
     })
 })

@@ -259,19 +259,17 @@ describe('SamplesPageClient read-path contract', () => {
             />,
         )
 
-        await waitFor(() => {
-            expect(mockFetchSampleResultsClient).not.toHaveBeenCalled()
-        })
+        expect(mockFetchSampleResultsClient).not.toHaveBeenCalled()
+        expect(screen.getByText('Creatinine')).toBeDefined()
     })
 
-    it('keeps sample A visible while sample B is loading, moves grid selection immediately, and ties the right panel to sample B', () => {
+    it('keeps sample A visible while sample B is loading, moves grid selection immediately, and starts the right-panel core read for sample B', async () => {
         const sampleA = buildSample('sample-a', { sample_id: 'CDC-XN-A' })
-        const sampleB = buildSample('sample-b', { sample_id: 'CDC-XN-B' })
 
         mockUseSampleDetail.mockImplementation(({ sampleId }: { sampleId: string | null }) => {
             if (sampleId === 'sample-b') {
                 return {
-                    data: sampleB as any,
+                    data: sampleA as any,
                     isLoading: true,
                 }
             }
@@ -310,7 +308,9 @@ describe('SamplesPageClient read-path contract', () => {
 
         expect(screen.getByTestId('sample-list-selected').textContent).toBe('sample-b')
         expect(screen.getByText('CDC-XN-A')).toBeDefined()
-        // The right panel should already be following sample B during this transition.
-        expect(screen.getByTestId('assigned-tests-panel').textContent).toBe('sample-b')
+
+        await waitFor(() => {
+            expect(mockFetchSampleResultsClient).toHaveBeenCalledWith('sample-b')
+        })
     })
 })
