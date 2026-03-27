@@ -36,6 +36,11 @@ export const sampleKeys = {
     detail: (id: string) => ['sample', id] as const,
 
     /**
+     * Key for the shared selected-sample payload used by the samples page.
+     */
+    selectionCore: (sampleId: string) => ['sample-selection-core', sampleId] as const,
+
+    /**
      * Key for tests assigned to a sample
      */
     tests: (sampleId: string) => ['sample-tests', sampleId] as const,
@@ -205,6 +210,9 @@ export async function invalidateSampleQueries(
 
             // Match specific sample detail: ['sample', sampleId]
             if (key[0] === 'sample' && key[1] === sampleId) return true
+
+            // Match shared selected-sample payload: ['sample-selection-core', sampleId]
+            if (key[0] === 'sample-selection-core' && key[1] === sampleId) return true
 
             // Match results for this sample: ['results', sampleId]
             if (includeResults && key[0] === 'results' && key[1] === sampleId) return true

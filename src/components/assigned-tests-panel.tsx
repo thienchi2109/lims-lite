@@ -64,7 +64,7 @@ export function AssignedTestsPanel({
     const queryClient = useQueryClient()
     const {
         results, loading, error, sampleStatus,
-        qcStatuses, coaStatus, setCoaStatus, fetchTests,
+        qcStatuses, coaStatus, enrichmentLoading, enrichmentError, setCoaStatus, fetchTests,
     } = useAssignedTestsData(sampleId, { initialResults })
     const { isGeneratingCoA, handleGenerateCoA } = useCoaActions(sampleId, setCoaStatus)
     const { handlePrint, handlePrintCoABody } = usePrintHandlers(sampleId, results)
@@ -161,6 +161,7 @@ export function AssignedTestsPanel({
             const val = editor.resultValues[r.id] !== undefined ? editor.resultValues[r.id] : r.value
             return val !== null && val !== ''
         })
+    const enrichmentMessage = enrichmentError || (enrichmentLoading ? 'Đang tải trạng thái bổ sung...' : null)
 
     return (
         <div className="relative flex h-full min-h-0 flex-col">
@@ -181,6 +182,20 @@ export function AssignedTestsPanel({
                 onPrintCoABody={handlePrintCoABody}
                 userRole={userRole}
             />
+
+            {enrichmentMessage && (
+                <div className="px-4 pt-2" aria-live="polite">
+                    <div
+                        className={
+                            enrichmentError
+                                ? 'rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700'
+                                : 'rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700'
+                        }
+                    >
+                        {enrichmentMessage}
+                    </div>
+                </div>
+            )}
 
             <div className="flex-1 min-h-0 overflow-auto bg-slate-50/50 p-2">
                 <Card id="tour-results-table" className="border-slate-200 shadow-sm">

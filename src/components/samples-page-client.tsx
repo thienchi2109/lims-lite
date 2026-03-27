@@ -1,17 +1,17 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useSamples } from '@/hooks/use-samples'
-import { useSampleDetail } from '@/hooks/use-sample-detail'
 import { SampleListTable } from '@/components/sample-list-table'
 import { SampleFilters } from '@/components/sample-filters'
 import { SampleBottomRow } from '@/components/sample-bottom-row'
 import { type SampleStatus } from '@/types'
+import { useSampleSelectionCore } from '@/hooks/use-sample-selection-core'
 import type { LabSpecialty } from '@/types'
 import { isValidUUID } from '@/lib/utils-lims'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
-import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 interface SamplesPageClientProps {
@@ -66,6 +66,15 @@ export function SamplesPageClient({
         .filter(isValidUUID)
 
     const sampleId = searchParams.get('sampleId') || undefined
+    const {
+        data: selectedSampleCore,
+        error: selectedSampleError,
+        isLoading: isLoadingSelectedSampleCore,
+        isFetching: isFetchingSelectedSampleCore,
+        isPlaceholderData,
+    } = useSampleSelectionCore({
+        sampleId,
+    })
 
     // Fetch samples with TanStack Query
     const { data: result, isLoading, error } = useSamples({
@@ -83,17 +92,6 @@ export function SamplesPageClient({
             specialtyIds: specialtyIds.length > 0 ? specialtyIds.join(',') : undefined,
         }
     })
-
-    // Fetch selected sample with TanStack Query hook
-    const {
-        data: selectedSampleData,
-        isLoading: isLoadingSample
-    } = useSampleDetail({
-        sampleId: sampleId || null,
-        enabled: !!sampleId
-    })
-
-    const selectedSample = selectedSampleData || null
 
     // Handle loading and error states
     if (isLoading) {
@@ -115,6 +113,20 @@ export function SamplesPageClient({
     const samples = result?.data || []
     const totalPages = result?.totalPages || 1
     const totalCount = result?.count || 0
+    const activeSampleCore = sampleId ? selectedSampleCore ?? null : null
+    const isSwitchingSamples = Boolean(
+        sampleId &&
+        activeSampleCore &&
+        activeSampleCore.sample.id !== sampleId &&
+        (isFetchingSelectedSampleCore || isPlaceholderData),
+    )
+    const isLoadingSample = Boolean(
+        sampleId &&
+        ((isLoadingSelectedSampleCore && !activeSampleCore) || isSwitchingSamples),
+    )
+    const loadErrorMessage = selectedSampleError
+        ? 'Không thể tải chi tiết mẫu. Vui lòng thử lại.'
+        : null
 
     return (
         <main className="flex-1 flex flex-col min-h-0 p-2 sm:px-4 gap-2">
@@ -149,7 +161,7 @@ export function SamplesPageClient({
                         permissions={permissions}
                         sortBy={sortBy}
                         sortOrder={sortOrder as 'asc' | 'desc'}
-                        selectedSampleId={selectedSample?.id}
+                        selectedSampleId={sampleId}
                     />
                 </div>
             </div>
@@ -157,8 +169,10 @@ export function SamplesPageClient({
             {/* Bottom Row: Detail & Assignments (Remaining Height) */}
             <div className="flex-1 min-h-0 border-t pt-4">
                 <SampleBottomRow
-                    sample={selectedSample}
+                    sample={activeSampleCore?.sample ?? null}
+                    results={activeSampleCore?.results}
                     isLoadingSample={isLoadingSample}
+                    loadErrorMessage={loadErrorMessage}
                     permissions={permissions}
                     specialties={specialties}
                     userRole={role}

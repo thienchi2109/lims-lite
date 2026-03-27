@@ -2,15 +2,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render } from '@testing-library/react'
 
 const mockUseSamples = vi.fn()
-const mockUseSampleDetail = vi.fn()
+const mockUseSampleSelectionCore = vi.fn()
 let mockSearchParams = new URLSearchParams()
 
 vi.mock('@/hooks/use-samples', () => ({
     useSamples: (...args: unknown[]) => mockUseSamples(...args),
 }))
 
-vi.mock('@/hooks/use-sample-detail', () => ({
-    useSampleDetail: (...args: unknown[]) => mockUseSampleDetail(...args),
+vi.mock('@/hooks/use-sample-selection-core', () => ({
+    useSampleSelectionCore: (...args: unknown[]) => mockUseSampleSelectionCore(...args),
 }))
 
 vi.mock('next/navigation', () => ({
@@ -51,10 +51,11 @@ describe('SamplesPageClient scope contract', () => {
             isLoading: false,
             error: null,
         })
-
-        mockUseSampleDetail.mockReturnValue({
+        mockUseSampleSelectionCore.mockReturnValue({
             data: null,
             isLoading: false,
+            isFetching: false,
+            error: null,
         })
     })
 

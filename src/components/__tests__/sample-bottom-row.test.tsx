@@ -59,4 +59,25 @@ describe('SampleBottomRow', () => {
 
         expect(grid?.className).toContain('gap-2')
     })
+
+    it('keeps the visible right panel content mounted while the next sample is loading and shows a localized transition notice', () => {
+        const sampleA = {
+            ...sample,
+            id: 'sample-a',
+            sample_id: 'CDC-XN-0001',
+        }
+
+        const { rerender } = render(<SampleBottomRow sample={sampleA} userRole="manager" />)
+
+        expect(screen.getByTestId('sample-detail-panel')).toBeDefined()
+        expect(screen.getByTestId('assigned-tests-panel')).toBeDefined()
+
+        rerender(<SampleBottomRow sample={sampleA} isLoadingSample={true} userRole="manager" />)
+
+        expect(screen.getByTestId('sample-detail-panel').textContent).toBe('CDC-XN-0001')
+        expect(screen.getByTestId('assigned-tests-panel').textContent).toBe('sample-a')
+        expect(screen.getByText('Đang chuyển sang mẫu tiếp theo...')).toBeDefined()
+        expect(screen.queryByText('Đang tải chi tiết mẫu...')).toBeNull()
+        expect(screen.queryByText('Đang tải...')).toBeNull()
+    })
 })

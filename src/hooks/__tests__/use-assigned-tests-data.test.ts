@@ -5,7 +5,7 @@
  * and QC status fetching extracted from AssignedTestsPanel.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { useAssignedTestsData } from '../use-assigned-tests-data'
 
@@ -29,13 +29,19 @@ import { getQCStatusForAssays } from '@/app/actions/qc-status'
 const mockFetch = vi.mocked(fetchSampleResultsClient)
 const mockCoAStatus = vi.mocked(getCoAStatus)
 const mockQCStatus = vi.mocked(getQCStatusForAssays)
+let consoleErrorSpy: ReturnType<typeof vi.spyOn>
 
 describe('useAssignedTestsData', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
         mockFetch.mockResolvedValue({ data: [], error: null })
         mockCoAStatus.mockResolvedValue({ status: null })
         mockQCStatus.mockResolvedValue({})
+    })
+
+    afterEach(() => {
+        consoleErrorSpy.mockRestore()
     })
 
     it('returns loading=true initially', () => {
@@ -82,6 +88,28 @@ describe('useAssignedTestsData', () => {
 
         await waitFor(() => expect(mockCoAStatus).toHaveBeenCalledWith('sample-1'))
         expect(mockFetch).not.toHaveBeenCalled()
+    })
+
+    it('reports enrichment loading while seeded QC enrichment is still in flight', async () => {
+        const initialResults = [
+            {
+                id: 'r1',
+                assay_id: 'a1',
+                assay_name: 'Creatinine',
+                sample_status: 'assigned',
+            },
+        ] as any
+
+        mockQCStatus.mockReturnValue(new Promise(() => {}) as any)
+
+        const { result } = renderHook(() =>
+            useAssignedTestsData('sample-1', {
+                initialResults,
+            }),
+        )
+
+        await waitFor(() => expect(mockQCStatus).toHaveBeenCalledWith(['a1']))
+        expect(result.current.enrichmentLoading).toBe(true)
     })
 
     it('sets sampleStatus from the first result', async () => {
@@ -267,6 +295,21 @@ describe('useAssignedTestsData', () => {
         expect(mockCoAStatus).toHaveBeenCalledWith('sample-1')
     })
 
+    it('reports enrichment loading after fetched completed results start CoA and QC requests', async () => {
+        mockFetch.mockResolvedValue({
+            data: [{ id: 'r1', assay_id: 'a1', sample_status: 'completed' }],
+            error: null,
+        })
+        mockCoAStatus.mockReturnValue(new Promise(() => {}) as any)
+        mockQCStatus.mockReturnValue(new Promise(() => {}) as any)
+
+        const { result } = renderHook(() => useAssignedTestsData('sample-1'))
+
+        await waitFor(() => expect(mockCoAStatus).toHaveBeenCalledWith('sample-1'))
+        expect(result.current.loading).toBe(false)
+        expect(result.current.enrichmentLoading).toBe(true)
+    })
+
     it('fetches QC statuses when results are loaded', async () => {
         mockFetch.mockResolvedValue({
             data: [
@@ -346,6 +389,38 @@ describe('useAssignedTestsData', () => {
         })
 
         expect(result.current.qcStatuses).toEqual({})
+    })
+
+    it('clears enrichmentError after a successful QC refetch for the same sample', async () => {
+        const firstResults = [{ id: 'r1', assay_id: 'a1', sample_status: 'assigned' }]
+        const secondResults = [{ id: 'r1', assay_id: 'a1', sample_status: 'assigned' }]
+
+        mockFetch
+            .mockResolvedValueOnce({
+                data: firstResults,
+                error: null,
+            })
+            .mockResolvedValueOnce({
+                data: secondResults,
+                error: null,
+            })
+        mockQCStatus
+            .mockRejectedValueOnce(new Error('QC unavailable'))
+            .mockResolvedValueOnce({
+                a1: { status: 'pass', message: 'OK', last_qc_at: null },
+            })
+
+        const { result } = renderHook(() => useAssignedTestsData('sample-1'))
+
+        await waitFor(() =>
+            expect(result.current.enrichmentError).toBe('Không thể tải trạng thái bổ sung'),
+        )
+
+        await act(async () => {
+            await result.current.fetchTests()
+        })
+
+        await waitFor(() => expect(result.current.enrichmentError).toBeNull())
     })
 
     it('exposes fetchTests for manual refetch', async () => {
