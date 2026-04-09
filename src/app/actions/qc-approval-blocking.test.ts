@@ -154,10 +154,11 @@ function setupConfidentialSampleLookup(hasConfidential: boolean) {
 // TESTS
 // ============================================================================
 
-describe('QC Approval Blocking Mechanism', () => {
-    beforeEach(() => {
-        vi.clearAllMocks()
-        fromChain = createChainableMock()
+    describe('QC Approval Blocking Mechanism', () => {
+        beforeEach(() => {
+            vi.clearAllMocks()
+            mockRpc.mockReset()
+            fromChain = createChainableMock()
         adminFromChain = {
             select: vi.fn(() => adminFromChain),
             in: vi.fn(() => adminFromChain),
@@ -321,6 +322,32 @@ describe('QC Approval Blocking Mechanism', () => {
                         blocking_reason: null,
                     },
                 ],
+                error: null,
+            })
+
+            const result = await approveResults({
+                sampleId: TEST_SAMPLE_ID,
+                resultIds: [TEST_RESULT_ID_1],
+            })
+
+            expect(result).toHaveProperty('error')
+            expect(result.error).toContain('Phản hồi kiểm tra QC không hợp lệ')
+            expect((result as any).qc_blocked).toBe(true)
+            expect((result as any).blocked_count).toBe(1)
+            expect(fromChain.update).not.toHaveBeenCalled()
+        })
+
+        it('blocks approval when the QC RPC returns fewer rows than requested results', async () => {
+            setupManagerAuth()
+            setupReviewApprovalFlow(
+                [
+                    { id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID },
+                ],
+                0
+            )
+
+            mockRpc.mockResolvedValueOnce({
+                data: [],
                 error: null,
             })
 
@@ -645,28 +672,6 @@ describe('QC Approval Blocking Mechanism', () => {
             })
 
             // Should succeed since null RPC result doesn't block
-            expect((result as any).qc_blocked).toBeUndefined()
-        })
-
-        it('handles RPC returning empty array gracefully', async () => {
-            setupManagerAuth()
-            setupReviewApprovalFlow(
-                [{ id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID }],
-                0
-            )
-
-            // Mock RPC returning empty array
-            mockRpc.mockResolvedValueOnce({
-                data: [],
-                error: null,
-            })
-
-            const result = await approveResults({
-                sampleId: TEST_SAMPLE_ID,
-                resultIds: [TEST_RESULT_ID_1],
-            })
-
-            // Should succeed since empty array has no blockers
             expect((result as any).qc_blocked).toBeUndefined()
         })
 

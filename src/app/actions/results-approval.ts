@@ -173,8 +173,8 @@ export async function approveResults(data: ApproveResults) {
             }
 
             const qcStatusRows = qcCheck.filter(isQCApprovalStatusRow)
-            if (qcStatusRows.length !== qcCheck.length) {
-                return createInvalidQCApprovalStatusResponse(qcCheck.length)
+            if (qcStatusRows.length !== qcCheck.length || qcCheck.length !== validatedData.resultIds.length) {
+                return createInvalidQCApprovalStatusResponse(validatedData.resultIds.length)
             }
 
             const blockedResults = qcStatusRows.filter((result) => !result.can_approve)

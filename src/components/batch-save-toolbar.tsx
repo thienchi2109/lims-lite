@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Save, X, Loader2, CheckCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface BatchSaveToolbarProps {
     pendingCount: number
@@ -23,6 +23,7 @@ export function BatchSaveToolbar({
 }: BatchSaveToolbarProps) {
     const [showSuccess, setShowSuccess] = useState(false)
     const [isAnimating, setIsAnimating] = useState(false)
+    const wasSavingRef = useRef(false)
 
     useEffect(() => {
         let cancelled = false
@@ -45,8 +46,11 @@ export function BatchSaveToolbar({
     useEffect(() => {
         let cancelled = false
         let timeout: ReturnType<typeof setTimeout> | undefined
+        const justFinishedSave = wasSavingRef.current && !isSaving && pendingCount === 0
 
-        if (!isSaving && pendingCount === 0 && isVisible) {
+        wasSavingRef.current = isSaving
+
+        if (justFinishedSave) {
             queueMicrotask(() => {
                 if (!cancelled) setShowSuccess(true)
             })
@@ -57,7 +61,7 @@ export function BatchSaveToolbar({
             cancelled = true
             if (timeout) clearTimeout(timeout)
         }
-    }, [isSaving, pendingCount, isVisible])
+    }, [isSaving, pendingCount])
 
     if (!isAnimating && !isVisible) return null
 

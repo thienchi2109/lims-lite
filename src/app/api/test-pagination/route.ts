@@ -22,6 +22,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json(result)
     } catch (error: unknown) {
-        return NextResponse.json({ error: error instanceof Error ? error.message : 'Unexpected error' }, { status: 500 })
+        console.error('[api/test-pagination] GET failed', error)
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 }

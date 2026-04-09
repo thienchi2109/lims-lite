@@ -56,4 +56,22 @@ describe('QCSessionsFilterBar', () => {
 
         expect(screen.getByDisplayValue('AST')).toBeDefined()
     })
+
+    it('normalizes invalid pagination params before writing filter changes', () => {
+        mockSearchParams = new URLSearchParams('sess_page=wat&sess_size=nope&sess_search=ALT')
+        render(<QCSessionsFilterBar specialties={[]} assays={[]} />)
+
+        fireEvent.change(screen.getByPlaceholderText('Tìm theo tên xét nghiệm...'), {
+            target: { value: 'HbA1c' },
+        })
+
+        act(() => {
+            vi.advanceTimersByTime(300)
+        })
+
+        expect(mockPush).toHaveBeenCalledWith(
+            '/manager/quality-control?sess_search=HbA1c',
+            { scroll: false }
+        )
+    })
 })

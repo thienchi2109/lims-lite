@@ -47,27 +47,34 @@ export function AddMethodToAssayDialog({ open, onOpenChange, assayId, existingMe
     const [isDefault, setIsDefault] = useState(false)
     const [notes, setNotes] = useState('')
 
-    const loadMethods = useCallback(async () => {
+    const loadMethods = useCallback(async (signal: AbortSignal) => {
         setLoadingMethods(true)
-        const result = await fetchMethodsClient()
-        if (result.data) {
-            // Filter out methods that are already assigned to this assay
-            const availableMethods = (result.data as Method[]).filter(
-                (method) => !existingMethodIds.includes(method.id)
-            )
-            setMethods(availableMethods)
+        try {
+            const result = await fetchMethodsClient()
+            if (signal.aborted) return
+
+            if (result.data) {
+                // Filter out methods that are already assigned to this assay
+                const availableMethods = (result.data as Method[]).filter(
+                    (method) => !existingMethodIds.includes(method.id)
+                )
+                setMethods(availableMethods)
+            }
+        } finally {
+            if (!signal.aborted) {
+                setLoadingMethods(false)
+            }
         }
-        setLoadingMethods(false)
     }, [existingMethodIds])
 
     // Load methods on open
     useEffect(() => {
-        let cancelled = false
+        const controller = new AbortController()
 
         if (open) {
             queueMicrotask(() => {
-                if (!cancelled) {
-                    loadMethods().catch((error: unknown) => {
+                if (!controller.signal.aborted) {
+                    loadMethods(controller.signal).catch((error: unknown) => {
                         console.error('Error loading assay methods:', error)
                     })
                 }
@@ -75,7 +82,7 @@ export function AddMethodToAssayDialog({ open, onOpenChange, assayId, existingMe
         }
 
         return () => {
-            cancelled = true
+            controller.abort()
         }
     }, [open, loadMethods])
 

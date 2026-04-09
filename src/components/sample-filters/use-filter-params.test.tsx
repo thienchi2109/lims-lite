@@ -151,7 +151,7 @@ describe('useFilterParams scope state', () => {
     it('preserves the local search draft while the search input is focused', () => {
         mockSearchParams = new URLSearchParams('search=ABC')
         const focusedInput = document.createElement('input')
-        focusedInput.setAttribute('data-search-input', 'true')
+        focusedInput.dataset.searchInput = 'true'
         document.body.appendChild(focusedInput)
         focusedInput.focus()
 

@@ -45,4 +45,22 @@ describe('test-pagination route', () => {
         })
         expect(mockGetAssayDefinitions).not.toHaveBeenCalled()
     })
+
+    it('logs unexpected errors without returning internal messages to the client', async () => {
+        const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+        mockFetchSamples.mockRejectedValue(new Error('database host password leaked'))
+
+        await GET(new Request('http://localhost/api/test-pagination?type=samples'))
+
+        expect(consoleError).toHaveBeenCalledWith(
+            '[api/test-pagination] GET failed',
+            expect.any(Error)
+        )
+        expect(mockJson).toHaveBeenCalledWith(
+            { error: 'Internal server error' },
+            { status: 500 }
+        )
+
+        consoleError.mockRestore()
+    })
 })

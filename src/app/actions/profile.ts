@@ -5,8 +5,9 @@ import { ChangePasswordSchema } from '@/types'
 import { revalidatePath } from 'next/cache'
 
 type UpdatePasswordState = {
-    error?: string
+    error?: Record<string, string[] | undefined>
     success?: boolean
+    message?: string
 }
 
 export async function updatePassword(_prevState: UpdatePasswordState | null, formData: FormData) {

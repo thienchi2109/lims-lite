@@ -376,7 +376,10 @@ function getStatusLabel(status: string | null | undefined): string {
 
 function getStringValue(value: unknown): string | null | undefined {
     if (value === null || value === undefined) return value
-    return String(value)
+    if (typeof value === 'string') return value
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+    if (typeof value === 'bigint') return value.toString()
+    return undefined
 }
 
 function formatValue(value: unknown, field?: string): string {

@@ -76,7 +76,8 @@ export function useFilterParams({
     const [searchDraft, setSearchDraft] = useState<SearchDraft | null>(null)
     const isSearchInputFocused =
         typeof document !== 'undefined' &&
-        document.activeElement?.getAttribute('data-search-input') === 'true'
+        document.activeElement instanceof HTMLElement &&
+        document.activeElement.dataset.searchInput === 'true'
     const hasActiveSearchDraft =
         searchDraft !== null &&
         (isSearchInputFocused || searchDraft.baseSearch === filters.search)

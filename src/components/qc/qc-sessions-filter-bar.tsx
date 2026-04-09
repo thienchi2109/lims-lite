@@ -46,6 +46,8 @@ type FilterDraft = {
 // ============================================================================
 
 const SEARCH_DEBOUNCE_MS = 300
+const DEFAULT_PAGE = 1
+const DEFAULT_PAGE_SIZE = 20
 
 const STATUS_OPTIONS = [
     { value: 'all', label: 'Tất cả' },
@@ -69,6 +71,9 @@ const ACTIVE_OPTIONS = [
 ]
 
 function parseQCSessionsFilters(params: URLSearchParams): QCSessionFilters {
+    const page = Number.parseInt(params.get('sess_page') || String(DEFAULT_PAGE), 10)
+    const pageSize = Number.parseInt(params.get('sess_size') || String(DEFAULT_PAGE_SIZE), 10)
+
     return {
         status: (params.get('sess_status') as QCSessionFilters['status']) || undefined,
         session_mode: (params.get('sess_mode') as QCSessionFilters['session_mode']) || undefined,
@@ -76,8 +81,8 @@ function parseQCSessionsFilters(params: URLSearchParams): QCSessionFilters {
         specialty_id: params.get('sess_specialty') || undefined,
         active_only: params.get('sess_active') === 'true',
         search: params.get('sess_search') || undefined,
-        page: parseInt(params.get('sess_page') || '1', 10),
-        page_size: parseInt(params.get('sess_size') || '20', 10),
+        page: Number.isFinite(page) && page > 0 ? page : DEFAULT_PAGE,
+        page_size: Number.isFinite(pageSize) && pageSize > 0 ? pageSize : DEFAULT_PAGE_SIZE,
     }
 }
 
@@ -155,7 +160,7 @@ export function QCSessionsFilterBar({ specialties, assays }: QCSessionsFilterBar
         if (newFilters.active_only) params.set('sess_active', 'true')
         if (newFilters.search) params.set('sess_search', newFilters.search)
         if (newFilters.page > 1) params.set('sess_page', newFilters.page.toString())
-        if (newFilters.page_size !== 20) params.set('sess_size', newFilters.page_size.toString())
+        if (newFilters.page_size !== DEFAULT_PAGE_SIZE) params.set('sess_size', newFilters.page_size.toString())
 
         const queryString = params.toString()
         router.push(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false })
@@ -163,11 +168,13 @@ export function QCSessionsFilterBar({ specialties, assays }: QCSessionsFilterBar
 
     // Handle filter change
     const handleFilterChange = useCallback((key: keyof QCSessionFilters, value: unknown) => {
-        const newFilters = {
+        const newFilters: QCSessionFilters = {
             ...filters,
             [key]: value === 'all' ? undefined : value,
             page: key === 'page' ? (value as number) : 1,
         }
+        newFilters.search = key === 'search' ? String(value ?? '') || undefined : searchInput || undefined
+
         setFilterDraft({
             baseSearch: currentSearch,
             filters: newFilters,
@@ -196,7 +203,7 @@ export function QCSessionsFilterBar({ specialties, assays }: QCSessionsFilterBar
 
     // Clear all filters
     const clearFilters = useCallback(() => {
-        const defaultFilters: QCSessionFilters = { page: 1, page_size: 20 }
+        const defaultFilters: QCSessionFilters = { page: DEFAULT_PAGE, page_size: DEFAULT_PAGE_SIZE }
         setFilterDraft({
             baseSearch: currentSearch,
             filters: defaultFilters,
