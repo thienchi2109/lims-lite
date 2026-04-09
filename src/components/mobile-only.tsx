@@ -11,7 +11,7 @@
  * div — portals render to document.body and escape the CSS rule.
  */
 
-import { type ReactNode, useState, useEffect } from 'react'
+import { type ReactNode, useState, useSyncExternalStore } from 'react'
 import { useMediaQuery } from '@/hooks/use-media-query'
 
 interface MobileOnlyProps {
@@ -20,11 +20,43 @@ interface MobileOnlyProps {
     breakpoint?: number
 }
 
+function createClientReadyStore() {
+    let ready = false
+    let readyTimeout: ReturnType<typeof setTimeout> | null = null
+    const listeners = new Set<() => void>()
+
+    return {
+        getSnapshot: () => ready,
+        subscribe: (listener: () => void) => {
+            listeners.add(listener)
+            if (!ready && !readyTimeout) {
+                readyTimeout = setTimeout(() => {
+                    ready = true
+                    readyTimeout = null
+                    listeners.forEach((notify) => notify())
+                }, 0)
+            }
+            return () => {
+                listeners.delete(listener)
+                if (listeners.size === 0 && readyTimeout) {
+                    clearTimeout(readyTimeout)
+                    readyTimeout = null
+                }
+            }
+        },
+    }
+}
+
+const getServerSnapshot = () => false
+
 export function MobileOnly({ children, breakpoint = 1280 }: MobileOnlyProps) {
     const isDesktop = useMediaQuery(`(min-width: ${breakpoint}px)`)
-    const [hasMounted, setHasMounted] = useState(false)
-
-    useEffect(() => { setHasMounted(true) }, [])
+    const [clientReadyStore] = useState(createClientReadyStore)
+    const hasMounted = useSyncExternalStore(
+        clientReadyStore.subscribe,
+        clientReadyStore.getSnapshot,
+        getServerSnapshot
+    )
 
     // Before mount: render nothing (prevents portal flash on desktop)
     // After mount: render only when viewport is below breakpoint

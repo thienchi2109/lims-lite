@@ -8,6 +8,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { renderHook } from '@testing-library/react'
+import { useFaviconBadge } from '@/hooks/use-favicon-badge'
 
 // Test helper to simulate React hook lifecycle
 function simulateHook(hookFn: () => void, dependencies: unknown[] = []) {
@@ -282,14 +284,73 @@ describe('Helper Functions', () => {
 
     it('should return empty array in SSR environment', () => {
       const originalDocument = global.document
-      // @ts-ignore
+      // @ts-expect-error Simulate SSR by removing document from the test global.
       delete global.document
 
-      const links = getFaviconLinks()
-      expect(links).toEqual([])
-
-      global.document = originalDocument
+      try {
+        const links = getFaviconLinks()
+        expect(links).toEqual([])
+      } finally {
+        global.document = originalDocument
+      }
     })
+  })
+})
+
+describe('useFaviconBadge - DOM restoration', () => {
+  beforeEach(() => {
+    document
+      .querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]')
+      .forEach(link => link.remove())
+  })
+
+  it('restores each original favicon element after links are reordered', () => {
+    const link1 = document.createElement('link')
+    link1.rel = 'icon'
+    link1.href = '/favicon-a.ico'
+
+    const link2 = document.createElement('link')
+    link2.rel = 'shortcut icon'
+    link2.href = '/favicon-b.ico'
+
+    document.head.append(link1, link2)
+
+    const originalHref1 = link1.href
+    const originalHref2 = link2.href
+
+    const getContextSpy = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null)
+    const { unmount } = renderHook(() => useFaviconBadge(1))
+
+    link1.href = 'data:image/png;base64,a'
+    link2.href = 'data:image/png;base64,b'
+    document.head.insertBefore(link2, link1)
+
+    try {
+      unmount()
+
+      expect(link1.href).toBe(originalHref1)
+      expect(link2.href).toBe(originalHref2)
+    } finally {
+      getContextSpy.mockRestore()
+    }
+  })
+
+  it('captures the current favicon href on each mount after restoring', () => {
+    const link = document.createElement('link')
+    link.rel = 'icon'
+    link.href = '/favicon-a.ico'
+    document.head.append(link)
+
+    const firstRender = renderHook(() => useFaviconBadge(0))
+    firstRender.unmount()
+
+    const updatedHref = `${window.location.origin}/favicon-b.ico`
+    link.href = updatedHref
+
+    const secondRender = renderHook(() => useFaviconBadge(0))
+    secondRender.unmount()
+
+    expect(link.href).toBe(updatedHref)
   })
 })
 

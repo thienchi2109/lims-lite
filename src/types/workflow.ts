@@ -105,7 +105,7 @@ export type SignatureFileValidation = z.infer<typeof SignatureFileValidationSche
 export const UploadSignatureSchema = z.object({
     file: z.instanceof(File)
         .refine(f => f.size <= SIGNATURE_VALIDATION.maxFileSize, 'Kích thước file tối đa 500KB')
-        .refine(f => SIGNATURE_VALIDATION.allowedMimeTypes.includes(f.type as any), 'Chỉ chấp nhận file PNG hoặc JPEG'),
+        .refine(f => SIGNATURE_VALIDATION.allowedMimeTypes.some((mimeType) => mimeType === f.type), 'Chỉ chấp nhận file PNG hoặc JPEG'),
     width: z.number()
         .min(SIGNATURE_VALIDATION.minWidth, `Chiều rộng tối thiểu ${SIGNATURE_VALIDATION.minWidth}px`)
         .max(SIGNATURE_VALIDATION.maxWidth, `Chiều rộng tối đa ${SIGNATURE_VALIDATION.maxWidth}px`),

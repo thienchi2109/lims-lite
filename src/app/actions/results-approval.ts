@@ -9,6 +9,39 @@ import {
     type CancelApproval,
 } from '@/types'
 import { generateCoA } from './coa'
+import { firstRelation, type RelationValue } from '@/lib/supabase/relations'
+
+type ResultAssayRelation = {
+    is_confidential: boolean | null
+}
+
+type QCApprovalStatusRow = {
+    can_approve: boolean
+    blocking_reason: string | null
+}
+
+type ResultApprovalUpdate = {
+    status: 'approved'
+    approved_by: string
+    approved_at: string
+    approval_note?: string
+}
+
+function isQCApprovalStatusRow(value: unknown): value is QCApprovalStatusRow {
+    if (!value || typeof value !== 'object') return false
+
+    const row = value as Record<string, unknown>
+    return typeof row.can_approve === 'boolean'
+        && (typeof row.blocking_reason === 'string' || row.blocking_reason === null)
+}
+
+function createInvalidQCApprovalStatusResponse(rowCount: number) {
+    return {
+        error: 'Không thể phê duyệt: QC bị chặn. Phản hồi kiểm tra QC không hợp lệ.',
+        qc_blocked: true,
+        blocked_count: rowCount,
+    }
+}
 
 async function sampleHasConfidentialResults(sampleIds: string[]) {
     if (sampleIds.length === 0) {
@@ -87,19 +120,19 @@ export async function approveResults(data: ApproveResults) {
             return { error: 'Không thể phê duyệt một hoặc nhiều kết quả đã chọn' }
         }
 
-        const invalidResults = results.filter((r: any) => r.status !== 'entered')
+        const invalidResults = results.filter((result) => result.status !== 'entered')
         if (invalidResults.length > 0) {
             return { error: 'Can only approve results with status "entered"' }
         }
 
         const includesConfidentialResult = results.some(
-            (result: any) => result.assay?.is_confidential === true
+            (result) => firstRelation(result.assay as RelationValue<ResultAssayRelation>)?.is_confidential === true
         )
         if (includesConfidentialResult && userData?.can_access_confidential !== true) {
             return { error: 'Không có quyền phê duyệt kết quả bảo mật' }
         }
 
-        const sampleIds = [...new Set(results.map((r: any) => r.sample_id))]
+        const sampleIds = [...new Set(results.map((result) => result.sample_id))]
         if (sampleIds.length > 1) {
             return { error: 'All results must belong to the same sample' }
         }
@@ -130,27 +163,39 @@ export async function approveResults(data: ApproveResults) {
         }
 
         // QC Session Check: Block approval if QC is blocked
-        const { data: qcCheck } = await supabase.rpc('check_qc_approval_status', {
+        const { data: qcCheck, error: qcCheckError } = await supabase.rpc('check_qc_approval_status', {
             p_result_ids: validatedData.resultIds,
         })
 
-        if (qcCheck && Array.isArray(qcCheck)) {
-            const blockedResults = qcCheck.filter((r: any) => !r.can_approve)
-            if (blockedResults.length > 0) {
-                const reasons = blockedResults
-                    .map((r: any) => r.blocking_reason)
-                    .filter(Boolean)
-                    .join('; ')
-                return {
-                    error: `Không thể phê duyệt: QC bị chặn. ${reasons || 'Giải quyết vi phạm QC trước.'}`,
-                    qc_blocked: true,
-                    blocked_count: blockedResults.length,
-                }
+        if (qcCheckError || !qcCheck) {
+            if (qcCheckError) console.error('Error checking QC approval status:', qcCheckError)
+            return createInvalidQCApprovalStatusResponse(validatedData.resultIds.length)
+        }
+
+        if (!Array.isArray(qcCheck)) {
+            return createInvalidQCApprovalStatusResponse(validatedData.resultIds.length)
+        }
+
+        const qcStatusRows = qcCheck.filter(isQCApprovalStatusRow)
+        if (qcStatusRows.length !== qcCheck.length || qcCheck.length !== validatedData.resultIds.length) {
+            return createInvalidQCApprovalStatusResponse(validatedData.resultIds.length)
+        }
+
+        const blockedResults = qcStatusRows.filter((result) => !result.can_approve)
+        if (blockedResults.length > 0) {
+            const reasons = blockedResults
+                .map((result) => result.blocking_reason)
+                .filter(Boolean)
+                .join('; ')
+            return {
+                error: `Không thể phê duyệt: QC bị chặn. ${reasons || 'Giải quyết vi phạm QC trước.'}`,
+                qc_blocked: true,
+                blocked_count: blockedResults.length,
             }
         }
 
         // Perform batch approval
-        const updateData: any = {
+        const updateData: ResultApprovalUpdate = {
             status: 'approved',
             approved_by: user.id,
             approved_at: new Date().toISOString(),
@@ -388,12 +433,12 @@ export async function cancelApproval(data: CancelApproval) {
             return { error: 'Không thể hủy phê duyệt một hoặc nhiều kết quả đã chọn' }
         }
 
-        const invalidResults = results.filter((r: any) => r.status !== 'approved')
+        const invalidResults = results.filter((result) => result.status !== 'approved')
         if (invalidResults.length > 0) {
             return { error: 'Can only cancel approval for approved results' }
         }
 
-        const sampleIds = [...new Set(results.map((r: any) => r.sample_id))]
+        const sampleIds = [...new Set(results.map((result) => result.sample_id))]
         if (sampleIds.length > 1) {
             return { error: 'All results must belong to the same sample' }
         }

@@ -37,6 +37,47 @@ import {
 
 const EMPTY_SPECIALTIES: LabSpecialty[] = []
 
+type AssayDefinitionClientRow = {
+    id: string
+    name: string
+    code?: string
+    specialty_id?: string | null
+    methods: Array<{ method_id: string; name: string; is_default: boolean }>
+}
+
+function normalizeAssayMethod(value: unknown): AssayDefinitionClientRow['methods'][number] | null {
+    if (!value || typeof value !== 'object') return null
+
+    const method = value as Record<string, unknown>
+    if (typeof method.method_id !== 'string' || typeof method.name !== 'string') return null
+
+    return {
+        method_id: method.method_id,
+        name: method.name,
+        is_default: method.is_default === true,
+    }
+}
+
+function normalizeAssayDefinitionRow(value: unknown): AssayDefinitionClientRow | null {
+    if (!value || typeof value !== 'object') return null
+
+    const assay = value as Record<string, unknown>
+    if (typeof assay.id !== 'string' || typeof assay.name !== 'string') return null
+
+    return {
+        id: assay.id,
+        name: assay.name,
+        code: typeof assay.code === 'string' ? assay.code : undefined,
+        specialty_id: typeof assay.specialty_id === 'string' ? assay.specialty_id : null,
+        methods: Array.isArray(assay.methods)
+            ? assay.methods.flatMap((method) => {
+                const normalized = normalizeAssayMethod(method)
+                return normalized ? [normalized] : []
+            })
+            : [],
+    }
+}
+
 interface TestAssignmentModuleProps {
     sampleId: string
     sampleStatus?: SampleStatus | null
@@ -83,9 +124,15 @@ export function TestAssignmentModule({ sampleId, sampleStatus, onClose, onSucces
                 console.error(error)
             } else if (data) {
                 // Transform data to match AssayWithMethods interface
-                const transformedAssays: AssayWithMethods[] = data.map((a: any) => {
+                const assayRows = Array.isArray(data)
+                    ? data.flatMap((assay) => {
+                        const normalized = normalizeAssayDefinitionRow(assay)
+                        return normalized ? [normalized] : []
+                    })
+                    : []
+                const transformedAssays: AssayWithMethods[] = assayRows.map((a) => {
                     // Map all methods with proper structure
-                    const methods = a.methods.map((m: { method_id: string; name: string; is_default: boolean }) => ({
+                    const methods = a.methods.map((m) => ({
                         id: m.method_id,
                         name: m.name,
                         is_default: m.is_default || false,

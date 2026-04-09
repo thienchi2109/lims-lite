@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
 import { motion } from 'motion/react'
 import { Badge } from '@/components/ui/badge'
 import { type SampleStatus } from '@/types'
@@ -51,16 +50,11 @@ const statusConfig: Record<
 
 export function SampleStatusBadge({ status }: SampleStatusBadgeProps) {
     const config = statusConfig[status]
-    const prevStatusRef = useRef<SampleStatus>(status)
-    const hasChanged = prevStatusRef.current !== status
-
-    useEffect(() => {
-        prevStatusRef.current = status
-    }, [status])
 
     return (
         <motion.div
-            animate={hasChanged ? statusBadgePulse : undefined}
+            key={status}
+            animate={statusBadgePulse}
             style={{ display: 'inline-flex' }}
         >
             <Badge

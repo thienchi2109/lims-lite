@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useCallback, useEffect, useState, useTransition } from 'react'
 import {
     Dialog,
     DialogContent,
@@ -47,25 +47,44 @@ export function AddMethodToAssayDialog({ open, onOpenChange, assayId, existingMe
     const [isDefault, setIsDefault] = useState(false)
     const [notes, setNotes] = useState('')
 
+    const loadMethods = useCallback(async (signal: AbortSignal) => {
+        setLoadingMethods(true)
+        try {
+            const result = await fetchMethodsClient()
+            if (signal.aborted) return
+
+            if (result.data) {
+                // Filter out methods that are already assigned to this assay
+                const availableMethods = (result.data as Method[]).filter(
+                    (method) => !existingMethodIds.includes(method.id)
+                )
+                setMethods(availableMethods)
+            }
+        } finally {
+            if (!signal.aborted) {
+                setLoadingMethods(false)
+            }
+        }
+    }, [existingMethodIds])
+
     // Load methods on open
     useEffect(() => {
-        if (open) {
-            loadMethods()
-        }
-    }, [open])
+        const controller = new AbortController()
 
-    const loadMethods = async () => {
-        setLoadingMethods(true)
-        const result = await fetchMethodsClient()
-        if (result.data) {
-            // Filter out methods that are already assigned to this assay
-            const availableMethods = (result.data as Method[]).filter(
-                (method) => !existingMethodIds.includes(method.id)
-            )
-            setMethods(availableMethods)
+        if (open) {
+            queueMicrotask(() => {
+                if (!controller.signal.aborted) {
+                    loadMethods(controller.signal).catch((error: unknown) => {
+                        console.error('Error loading assay methods:', error)
+                    })
+                }
+            })
         }
-        setLoadingMethods(false)
-    }
+
+        return () => {
+            controller.abort()
+        }
+    }, [open, loadMethods])
 
     const resetForm = () => {
         setMethodId('')

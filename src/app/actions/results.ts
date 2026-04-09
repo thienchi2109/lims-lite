@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { firstRelation, type RelationValue } from '@/lib/supabase/relations'
 import { revalidatePath } from 'next/cache'
 import {
     SaveBatchResultsSchema,
@@ -13,6 +14,29 @@ import {
     validateResultsBatch,
 } from './results-validation'
 import { getActiveQCSessionsForAssays } from './qc-operations'
+
+type ResultAssayRelation = {
+    name: string | null
+    units: string | null
+    validation_rules: Record<string, unknown> | null
+    lab_specialties: RelationValue<{
+        name: string | null
+        display_order: number | null
+    }>
+}
+
+type ResultMethodRelation = {
+    name: string | null
+}
+
+type ResultSampleRelation = {
+    sample_id: string | null
+    status: ResultWithAssay['sample_status']
+}
+
+type ResultUserRelation = {
+    full_name: string | null
+}
 
 /**
  * Gets all results for a specific sample with assay details
@@ -62,18 +86,26 @@ export async function getResultsBySample(sampleId: string) {
         }
 
         // Transform data to flatten nested objects
-        const transformedResults: ResultWithAssay[] = results.map((result: any) => ({
-            ...result,
-            assay_name: result.assay?.name || 'Unknown',
-            assay_units: result.assay?.units || null,
-            method_name: result.method?.name || null,
-            validation_rules: result.assay?.validation_rules || {},
-            sample_id_display: result.sample?.sample_id || '',
-            sample_status: result.sample?.status || null,
-            entered_by_name: result.entered_by_user?.full_name || null,
-            lab_specialty_name: result.assay?.lab_specialties?.name || null,
-            lab_specialty_order: result.assay?.lab_specialties?.display_order ?? 9999,
-        }))
+        const transformedResults: ResultWithAssay[] = results.map((result) => {
+            const assay = firstRelation(result.assay as RelationValue<ResultAssayRelation>)
+            const labSpecialty = firstRelation(assay?.lab_specialties)
+            const method = firstRelation(result.method as RelationValue<ResultMethodRelation>)
+            const sample = firstRelation(result.sample as RelationValue<ResultSampleRelation>)
+            const enteredByUser = firstRelation(result.entered_by_user as RelationValue<ResultUserRelation>)
+
+            return {
+                ...result,
+                assay_name: assay?.name || 'Unknown',
+                assay_units: assay?.units || null,
+                method_name: method?.name || null,
+                validation_rules: assay?.validation_rules || {},
+                sample_id_display: sample?.sample_id || '',
+                sample_status: sample?.status || null,
+                entered_by_name: enteredByUser?.full_name || null,
+                lab_specialty_name: labSpecialty?.name || null,
+                lab_specialty_order: labSpecialty?.display_order ?? 9999,
+            }
+        })
 
         return { data: transformedResults }
     } catch (error) {
@@ -169,7 +201,7 @@ export async function saveBatchResults(data: SaveBatchResults) {
                 .eq('status', 'assigned')
 
             if (samplesToUpdate && samplesToUpdate.length > 0) {
-                const idsToUpdate = samplesToUpdate.map((s: any) => s.id)
+                const idsToUpdate = samplesToUpdate.map((sample) => sample.id)
                 await supabase
                     .from('samples')
                     .update({ status: 'in_progress' })

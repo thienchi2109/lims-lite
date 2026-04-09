@@ -13,7 +13,7 @@ import type {
   StaffProductivityData,
   RecentSample,
 } from '@/types'
-import { DateRangeSchema } from '@/types'
+import { DateRangeSchema, SampleStatus } from '@/types'
 
 /**
  * Server-side helper to fetch KPI metrics for Reports Dashboard.
@@ -206,16 +206,19 @@ export async function fetchRecentSamples(
     .select('id, sample_id, client_name, received_at, completed_at, status, deleted_at', {
       count: 'exact',
     })
+    .in('status', SampleStatus.options)
     .gte('received_at', validated.start)
     .lte('received_at', validated.end)
     .is('deleted_at', null)
-    .order('completed_at', { ascending: false, nullsFirst: false })
-    .range(offset, offset + pageSize - 1)
 
   // Apply status filter if provided
   if (filters?.status) {
     query = query.eq('status', filters.status)
   }
+
+  query = query
+    .order('completed_at', { ascending: false, nullsFirst: false })
+    .range(offset, offset + pageSize - 1)
 
   const { data, error, count } = await query
 
@@ -226,7 +229,7 @@ export async function fetchRecentSamples(
 
   // Calculate TAT for each sample
   const samples: RecentSample[] =
-    data?.map((sample: {
+    data?.flatMap((sample: {
       id: string
       sample_id: string
       client_name: string
@@ -234,6 +237,18 @@ export async function fetchRecentSamples(
       completed_at: string | null
       status: string
     }) => {
+      const parsedStatus = SampleStatus.safeParse(sample.status)
+      if (!parsedStatus.success) {
+        console.warn(
+          '[reports] Dropped sample with invalid status from recent samples',
+          {
+            sampleId: sample.sample_id,
+            status: sample.status,
+          }
+        )
+        return []
+      }
+
       let tatHours = null
       if (sample.completed_at && sample.received_at) {
         tatHours =
@@ -242,19 +257,19 @@ export async function fetchRecentSamples(
           (1000 * 60 * 60)
       }
 
-      return {
+      return [{
         id: sample.id,
         sampleId: sample.sample_id,
         clientName: sample.client_name,
         receivedAt: sample.received_at,
         completedAt: sample.completed_at || null,
-        status: sample.status as any, // TypeScript will validate this against SampleStatus
+        status: parsedStatus.data,
         tatHours,
-      }
+      }]
     }) || []
 
   return {
     samples,
-    total: count || 0,
+    total: count ?? samples.length,
   }
 }

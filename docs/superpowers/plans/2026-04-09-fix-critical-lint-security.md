@@ -112,7 +112,7 @@ Because GitNexus marks `useApprovalUrlState` as the only critical blast-radius s
 - Test: `src/components/__tests__/approval-tabs-client.test.tsx`
 - Test: `src/components/__tests__/approval-mobile-layout.test.tsx`
 
-- [ ] **Step 1: Re-run GitNexus context before editing**
+- [x] **Step 1: Re-run GitNexus context before editing**
 
 Run:
 
@@ -123,7 +123,7 @@ gitnexus impact useApprovalUrlState --repo lims-lite --direction upstream --max-
 
 Expected: direct callers are still `ApprovalTabsClient` and `ApprovalMobileLayout`.
 
-- [ ] **Step 2: Add or extend approval URL tests**
+- [x] **Step 2: Add or extend approval URL tests**
 
 Cover these behaviors:
 
@@ -131,7 +131,7 @@ Cover these behaviors:
 - Browser back/forward or server-provided sample changes update the selected approval sample as before.
 - Desktop `ApprovalTabsClient` and mobile `ApprovalMobileLayout` still fetch sample detail and update URL search params.
 
-- [ ] **Step 3: Run focused approval tests before implementation**
+- [x] **Step 3: Run focused approval tests before implementation**
 
 Run:
 
@@ -141,11 +141,11 @@ npm run test:run -- src/hooks/__tests__/use-approval-url-state.test.tsx src/comp
 
 Expected: existing tests pass before edits; new assertions may fail until implementation.
 
-- [ ] **Step 4: Implement minimal approval fix**
+- [x] **Step 4: Implement minimal approval fix**
 
 Prefer deriving fallback URL state with `useMemo` and storing only user overrides in state. Avoid synchronous `setState` inside effects in all three files.
 
-- [ ] **Step 5: Verify approval blast radius**
+- [x] **Step 5: Verify approval blast radius**
 
 Run:
 
@@ -166,7 +166,7 @@ Expected: tests pass, no `react-hooks/*` errors in the three files, and GitNexus
 - Test: `src/components/__tests__/accession-mobile-wizard.test.tsx`
 - Test: `src/components/__tests__/status-badge-animation.test.tsx`
 
-- [ ] **Step 1: Add or extend tests**
+- [x] **Step 1: Add or extend tests**
 
 Cover these behaviors:
 
@@ -174,7 +174,7 @@ Cover these behaviors:
 - `AccessionMobileWizard` calls `onSave` and `onReset` exactly once from the same UI paths as before.
 - `ResultStatusBadge` and `SampleStatusBadge` render the correct labels and do not throw during rerender from one status to another.
 
-- [ ] **Step 2: Run focused tests and confirm current behavior**
+- [x] **Step 2: Run focused tests and confirm current behavior**
 
 Run:
 
@@ -184,14 +184,14 @@ npm run test:run -- src/components/__tests__/accession-mobile-wizard.test.tsx
 
 Expected: existing tests pass before edits. New status-badge tests may fail until created/implemented.
 
-- [ ] **Step 3: Implement minimal fixes**
+- [x] **Step 3: Implement minimal fixes**
 
 Use these patterns:
 
 - In `AccessionMobileWizard`, destructure `onSave`, `onReset`, and other used props at the top of the component. Move the `setCurrentStep(3)` out of render into a `useEffect` keyed on `submitSuccess`.
 - In both status badge components, replace `prevStatusRef.current !== status` reads during render with state updated after commit, or use a short-lived animation trigger set by an effect when status changes.
 
-- [ ] **Step 4: Run verification for this task**
+- [x] **Step 4: Run verification for this task**
 
 Run:
 
@@ -211,7 +211,7 @@ Expected: focused tests pass and these three files have no React Compiler lint e
 - Test: `src/components/sample-grid/hooks/useGridHighlight.test.tsx`
 - Test: `src/components/__tests__/search-input.test.tsx`
 
-- [ ] **Step 1: Add tests for current contracts**
+- [x] **Step 1: Add tests for current contracts**
 
 Cover these behaviors:
 
@@ -219,7 +219,7 @@ Cover these behaviors:
 - `SearchInput` initializes from `searchParams`, debounces URL updates, resets `page` to `1`, and responds to external URL changes.
 - `use-filter-params` keeps search input in sync when URL changes externally and preserves local typing while the input has focus.
 
-- [ ] **Step 2: Run focused tests**
+- [x] **Step 2: Run focused tests**
 
 Run:
 
@@ -229,14 +229,14 @@ npm run test:run -- src/components/sample-grid/hooks/useGridHighlight.test.tsx s
 
 Expected: new tests should fail only where they depend on the pending implementation or missing test files.
 
-- [ ] **Step 3: Implement minimal fixes**
+- [x] **Step 3: Implement minimal fixes**
 
 Use these patterns:
 
 - For `useGridHighlight`, consider an event-like deferred update with `queueMicrotask`/timeout or a reducer transition that is not synchronously set inside the effect body. Keep timeout cleanup reliable.
 - For `SearchInput` and `use-filter-params`, prefer deriving display value from URL plus local dirty/focus state rather than setting local state immediately in the URL-sync effect.
 
-- [ ] **Step 4: Run verification for this task**
+- [x] **Step 4: Run verification for this task**
 
 Run:
 
@@ -261,7 +261,7 @@ Expected: focused tests pass and these four files have no React Compiler lint er
 - Modify: `src/hooks/use-favicon-badge.ts`
 - Test: focused existing tests for each edited area; create missing tests only for behavior with no coverage.
 
-- [ ] **Step 1: Add or identify focused tests**
+- [x] **Step 1: Add or identify focused tests**
 
 Use existing tests where available:
 
@@ -271,7 +271,7 @@ npm run test:run -- tests/realtime-favicon-badge.test.ts
 
 Approval tests are already handled in Task 0. For this task, add missing tests only for remaining files without relevant coverage.
 
-- [ ] **Step 2: Implement minimal fixes**
+- [x] **Step 2: Implement minimal fixes**
 
 Use these patterns:
 
@@ -280,7 +280,7 @@ Use these patterns:
 - Replace state-held imperative instances with refs when they do not affect render.
 - Avoid reading or mutating ref-held objects during render; make immutable copies in effects before mutation.
 
-- [ ] **Step 3: Run lint only on remaining runtime React Compiler files**
+- [x] **Step 3: Run lint only on remaining runtime React Compiler files**
 
 Run:
 
@@ -290,7 +290,7 @@ npm run lint -- src/components/add-method-to-assay-dialog.tsx src/components/rep
 
 Expected: no React Compiler errors remain in these files. If unrelated `any` errors appear in the same files, record them for Chunk 3 unless they are small and directly adjacent.
 
-- [ ] **Step 4: Run full React Compiler error check**
+- [x] **Step 4: Run full React Compiler error check**
 
 Run:
 
@@ -303,7 +303,7 @@ Expected: exit 0 and no `react-hooks/*` errors.
 
 ### Task 4: Commit runtime React Compiler fixes
 
-- [ ] **Step 1: Run gates**
+- [x] **Step 1: Run gates**
 
 Run:
 
@@ -316,7 +316,7 @@ npm run react-doctor -- --score
 
 Expected: all pass. Full `npm run lint` may still fail due `no-explicit-any`; that is expected until Chunk 3.
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 Run:
 
@@ -333,7 +333,7 @@ git commit -m "fix: Resolve runtime React compiler lint errors"
 - Modify: `package.json`
 - Modify: `package-lock.json`
 
-- [ ] **Step 1: Confirm latest safe Next.js 16 patch**
+- [x] **Step 1: Confirm latest safe Next.js 16 patch**
 
 Run:
 
@@ -344,7 +344,7 @@ npm view eslint-config-next version
 
 Expected: identify a Next.js version at or above `16.1.7`. Keep `eslint-config-next` on a compatible 16.x version.
 
-- [ ] **Step 2: Upgrade Next.js patch line**
+- [x] **Step 2: Upgrade Next.js patch line**
 
 Run:
 
@@ -358,7 +358,7 @@ If latest is outside the intended major line, use the newest `16.x` version inst
 npm install next@16 eslint-config-next@16
 ```
 
-- [ ] **Step 3: Verify advisory reduction**
+- [x] **Step 3: Verify advisory reduction**
 
 Run:
 
@@ -376,7 +376,7 @@ Expected: Next.js moderate advisories are gone and build remains green.
 - Modify: `package.json`
 - Modify: `package-lock.json`
 
-- [ ] **Step 1: Inspect fix paths**
+- [x] **Step 1: Inspect fix paths**
 
 Run:
 
@@ -387,7 +387,7 @@ npm ls vite picomatch flatted brace-expansion
 
 Expected: identify whether fixes come through `vitest`, `@vitest/ui`, `eslint`, `eslint-config-next`, `typescript-eslint`, or transitive overrides.
 
-- [ ] **Step 2: Prefer normal package upgrades before overrides**
+- [x] **Step 2: Prefer normal package upgrades before overrides**
 
 Run:
 
@@ -397,11 +397,11 @@ npm install -D vitest@latest @vitest/ui@latest eslint@latest eslint-config-next@
 
 If this pulls incompatible majors or leaves advisories unresolved, stop and record the exact blocker before adding overrides.
 
-- [ ] **Step 3: Use overrides only if package upgrades cannot resolve transitive CVEs**
+- [x] **Step 3: Use overrides only if package upgrades cannot resolve transitive CVEs**
 
 Only if needed, add targeted npm `overrides` for patched transitive versions. Do not override React, Next, or core framework packages unless audit proves it is safe.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run:
 
@@ -414,7 +414,7 @@ npm run build
 
 Expected: `npm audit` has 0 high vulnerabilities. If moderate dev-only issues remain, document why and create a follow-up issue.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run:
 
@@ -434,7 +434,7 @@ git commit -m "fix: Update vulnerable frontend dependencies"
 - Modify: `src/app/actions/qc-sessions.ts`
 - Modify: `src/lib/utils-lims.ts`
 
-- [ ] **Step 1: Add local typed helpers for Supabase nested relation normalization**
+- [x] **Step 1: Add local typed helpers for Supabase nested relation normalization**
 
 Use a helper pattern for relation values that can arrive as object or one-element array:
 
@@ -446,11 +446,11 @@ function firstRelation<T>(value: T | T[] | null | undefined): T | null {
 
 Place the helper near the file that needs it first. Promote to a shared helper only if at least three runtime files need the same exact helper.
 
-- [ ] **Step 2: Replace `any` in `quality-control/page.tsx` first**
+- [x] **Step 2: Replace `any` in `quality-control/page.tsx` first**
 
 Replace casts around `session.assay`, `v.result`, `definition`, `assay`, `material`, and `session` with explicit local relation types and `firstRelation`.
 
-- [ ] **Step 3: Run focused checks**
+- [x] **Step 3: Run focused checks**
 
 Run:
 
@@ -461,7 +461,7 @@ npm run lint -- 'src/app/(dashboard)/manager/quality-control/page.tsx'
 
 Expected: no `any` or React Compiler errors in the file.
 
-- [ ] **Step 4: Repeat for the remaining high-density files**
+- [x] **Step 4: Repeat for the remaining high-density files**
 
 Run after each file:
 
@@ -472,7 +472,7 @@ npm run lint -- src/app/actions/results-approval.ts src/components/sample-activi
 
 Expected: `no-explicit-any` count falls materially without changing behavior.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run:
 
@@ -503,17 +503,17 @@ for (const file of r) {
 NODE
 ```
 
-- [ ] **Step 1: Replace direct `any` with domain types, `unknown` plus narrowing, or typed Supabase relation helpers**
+- [x] **Step 1: Replace direct `any` with domain types, `unknown` plus narrowing, or typed Supabase relation helpers**
 
 Do not silence the rule. Do not use broad `Record<string, unknown>` unless the data is genuinely unstructured and narrowed before use.
 
-- [ ] **Step 2: Run runtime-only lint report**
+- [x] **Step 2: Run runtime-only lint report**
 
 Run the command above again.
 
 Expected: no runtime `src/` `no-explicit-any` errors remain.
 
-- [ ] **Step 3: Run gates**
+- [x] **Step 3: Run gates**
 
 Run:
 
@@ -527,7 +527,7 @@ npm run lint
 
 Expected: `typecheck`, tests, build, and React Doctor pass. `npm run lint` may still fail only in test files, scripts, or openspec docs.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Run:
 
@@ -546,15 +546,15 @@ git commit -m "fix: Remove runtime explicit any usage"
 - Modify: `scripts/sync-supabase-jwt-keys.js`
 - Modify: `openspec/changes/add-clients-and-link-samples/qr-parser-reference.ts`
 
-- [ ] **Step 1: Convert test `any` to typed mocks**
+- [x] **Step 1: Convert test `any` to typed mocks**
 
 Prefer `vi.mocked`, explicit mock function types, and `unknown` with narrow assertions.
 
-- [ ] **Step 2: Convert CommonJS script imports only if runtime supports ESM**
+- [x] **Step 2: Convert CommonJS script imports only if runtime supports ESM**
 
 If scripts are intended to remain CommonJS, prefer ESLint overrides for `scripts/*.js` instead of rewriting working operational scripts.
 
-- [ ] **Step 3: Run final full gates**
+- [x] **Step 3: Run final full gates**
 
 Run:
 
@@ -568,7 +568,7 @@ npm audit --json
 
 Expected: lint passes, core gates pass, audit has no high vulnerabilities.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Run:
 
@@ -579,8 +579,9 @@ git commit -m "fix: Clear remaining lint blockers"
 
 ## Landing
 
-- [ ] Run `git status --short`.
-- [ ] Run `git pull --rebase`.
-- [ ] Run `bd sync` if `bd` is available in PATH.
-- [ ] Run `git push`.
-- [ ] Run `git status --short --branch` and confirm the branch is up to date with `origin/main`.
+- [x] Run `git status --short`.
+- [x] Run `git pull --rebase`.
+- [x] Run `bd sync` if `bd` is available in PATH.
+  - `bd` was not available in this environment, so no sync command was run.
+- [x] Run `git push`.
+- [x] Run `git status --short --branch` and confirm the branch is up to date with `origin/fix-critical-lint-security`.

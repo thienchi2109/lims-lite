@@ -275,7 +275,7 @@ export function ClientSelector({
                                                         setOpen(false)
                                                     }}
                                                 >
-                                                    + Tạo mới "{searchQuery}"
+                                                    + Tạo mới {JSON.stringify(searchQuery)}
                                                 </Button>
                                             )}
                                         </div>

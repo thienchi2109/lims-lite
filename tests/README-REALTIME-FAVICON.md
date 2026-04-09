@@ -43,18 +43,6 @@ Comprehensive unit tests for the `useFaviconBadge` hook and its helper functions
    - Text color (#ffffff - white)
    - Max count (99)
 
-### `manager-approval-favicon-badge.test.mjs`
-
-Static analysis test that verifies the wiring between components.
-
-**Checks:**
-- ✅ `useFaviconBadge` hook uses Canvas API
-- ✅ `ApprovalTabsClient` integrates `useFaviconBadge`
-- ✅ Supabase Realtime subscription setup
-- ✅ Server action for fetching approval count
-- ✅ API client mapping
-- ✅ Database migration for Realtime
-
 ## Running Tests
 
 ```bash
@@ -62,10 +50,7 @@ Static analysis test that verifies the wiring between components.
 npm test
 
 # Run only favicon badge tests
-npm test tests/realtime-favicon-badge.test.ts
-
-# Run static analysis test
-node tests/manager-approval-favicon-badge.test.mjs
+npx vitest run tests/realtime-favicon-badge.test.ts
 
 # Run tests with UI
 npm run test:ui
@@ -126,9 +111,9 @@ These methods work correctly in real browsers. To test them, you would need to:
 3. Or use browser-based testing (e.g., Playwright, Cypress)
 
 The implementation is verified through:
-- Static code analysis (checking Canvas API usage exists)
 - Manual browser testing
 - Helper function unit tests
+- Hook and integration-focused Vitest coverage
 
 ## Migration Verification
 

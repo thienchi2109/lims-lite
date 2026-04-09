@@ -32,8 +32,30 @@ const STATUS_LABELS = {
     reject: 'Không đạt',
 } as const
 
+interface LJChartDatum {
+    id: string
+    value: number
+    zScore: number | null
+    status: QCResultStatus
+    measuredAt: string
+    ruleViolated?: string | null
+    index: number
+    date: string
+    fullDate: string
+}
+
+type LJChartTooltipPayload = {
+    payload: LJChartDatum
+}
+
+type LJChartDotProps = {
+    cx?: number
+    cy?: number
+    payload?: LJChartDatum
+}
+
 /** Tooltip component extracted to module scope to avoid re-creation on every render */
-function LJChartTooltip({ active, payload, units }: { active?: boolean; payload?: any[]; units: string }) {
+function LJChartTooltip({ active, payload, units }: { active?: boolean; payload?: LJChartTooltipPayload[]; units: string }) {
     if (!active || !payload?.[0]) return null
 
     const data = payload[0].payload
@@ -164,9 +186,9 @@ export function LeveyJenningsChart({
     }, [mean, sd])
 
     // Custom dot renderer for color-coded points
-    const renderDot = (props: any) => {
+    const renderDot = (props: LJChartDotProps) => {
         const { cx, cy, payload } = props
-        if (cx === undefined || cy === undefined) return null
+        if (cx === undefined || cy === undefined || !payload) return null
 
         const color = payload.status === 'reject'
             ? COLORS.reject

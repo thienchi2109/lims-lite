@@ -4,7 +4,8 @@
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, act } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import { renderToString } from 'react-dom/server'
 
 // Mock the useMediaQuery hook
 vi.mock('@/hooks/use-media-query', () => ({
@@ -27,7 +28,6 @@ describe('MobileOnly', () => {
         mockUseMediaQuery.mockReturnValue(false)
 
         // renderToString does not run useEffect — simulates the SSR/initial paint
-        const { renderToString } = require('react-dom/server')
         const html = renderToString(
             <MobileOnly>
                 <div data-testid="child">Mobile content</div>
@@ -37,7 +37,7 @@ describe('MobileOnly', () => {
         expect(html).toBe('')
     })
 
-    it('renders children when viewport is below breakpoint (mobile)', () => {
+    it('waits until client mount before rendering mobile children', async () => {
         mockUseMediaQuery.mockReturnValue(false)
 
         render(
@@ -46,7 +46,8 @@ describe('MobileOnly', () => {
             </MobileOnly>,
         )
 
-        expect(screen.getByTestId('child')).toBeDefined()
+        expect(screen.queryByTestId('child')).toBeNull()
+        await waitFor(() => expect(screen.getByTestId('child')).toBeDefined())
         expect(mockUseMediaQuery).toHaveBeenCalledWith('(min-width: 1280px)')
     })
 
@@ -62,7 +63,7 @@ describe('MobileOnly', () => {
         expect(screen.queryByTestId('child')).toBeNull()
     })
 
-    it('uses custom breakpoint when provided', () => {
+    it('uses custom breakpoint when provided', async () => {
         mockUseMediaQuery.mockReturnValue(false)
 
         render(
@@ -72,10 +73,10 @@ describe('MobileOnly', () => {
         )
 
         expect(mockUseMediaQuery).toHaveBeenCalledWith('(min-width: 768px)')
-        expect(screen.getByTestId('child')).toBeDefined()
+        await waitFor(() => expect(screen.getByTestId('child')).toBeDefined())
     })
 
-    it('unmounts children (including portals) when switching to desktop', () => {
+    it('unmounts children (including portals) when switching to desktop', async () => {
         mockUseMediaQuery.mockReturnValue(false)
 
         const { rerender } = render(
@@ -84,7 +85,7 @@ describe('MobileOnly', () => {
             </MobileOnly>,
         )
 
-        expect(screen.getByTestId('child')).toBeDefined()
+        await waitFor(() => expect(screen.getByTestId('child')).toBeDefined())
 
         // Simulate viewport change to desktop
         mockUseMediaQuery.mockReturnValue(true)

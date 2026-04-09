@@ -4,7 +4,13 @@ import { createClient } from '@/lib/supabase/server'
 import { ChangePasswordSchema } from '@/types'
 import { revalidatePath } from 'next/cache'
 
-export async function updatePassword(prevState: any, formData: FormData) {
+type UpdatePasswordState = {
+    error?: Record<string, string[] | undefined>
+    success?: boolean
+    message?: string
+}
+
+export async function updatePassword(_prevState: UpdatePasswordState | null, formData: FormData) {
     const supabase = await createClient()
 
     // Validate input with Zod

@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
 import { motion } from 'motion/react'
 import { ResultStatus } from '@/types'
 import { Badge } from '@/components/ui/badge'
@@ -12,13 +11,6 @@ interface ResultStatusBadgeProps {
 }
 
 export function ResultStatusBadge({ status }: ResultStatusBadgeProps) {
-    const prevStatusRef = useRef<ResultStatus>(status)
-    const hasChanged = prevStatusRef.current !== status
-
-    useEffect(() => {
-        prevStatusRef.current = status
-    }, [status])
-
     const variants: Record<
         ResultStatus,
         {
@@ -51,7 +43,8 @@ export function ResultStatusBadge({ status }: ResultStatusBadgeProps) {
 
     return (
         <motion.div
-            animate={hasChanged ? statusBadgePulse : undefined}
+            key={status}
+            animate={statusBadgePulse}
             style={{ display: 'inline-flex' }}
         >
             <Badge variant="outline" className={`${variant.className} gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors duration-250`}>

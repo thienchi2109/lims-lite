@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Save, X, Loader2, CheckCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface BatchSaveToolbarProps {
     pendingCount: number
@@ -23,23 +23,45 @@ export function BatchSaveToolbar({
 }: BatchSaveToolbarProps) {
     const [showSuccess, setShowSuccess] = useState(false)
     const [isAnimating, setIsAnimating] = useState(false)
+    const wasSavingRef = useRef(false)
 
     useEffect(() => {
+        let cancelled = false
+        let timeout: ReturnType<typeof setTimeout> | undefined
+
         if (isVisible) {
-            setIsAnimating(true)
+            queueMicrotask(() => {
+                if (!cancelled) setIsAnimating(true)
+            })
         } else {
-            const timeout = setTimeout(() => setIsAnimating(false), 300)
-            return () => clearTimeout(timeout)
+            timeout = setTimeout(() => setIsAnimating(false), 300)
+        }
+
+        return () => {
+            cancelled = true
+            if (timeout) clearTimeout(timeout)
         }
     }, [isVisible])
 
     useEffect(() => {
-        if (!isSaving && pendingCount === 0 && isVisible) {
-            setShowSuccess(true)
-            const timeout = setTimeout(() => setShowSuccess(false), 2000)
-            return () => clearTimeout(timeout)
+        let cancelled = false
+        let timeout: ReturnType<typeof setTimeout> | undefined
+        const justFinishedSave = wasSavingRef.current && !isSaving && pendingCount === 0
+
+        wasSavingRef.current = isSaving
+
+        if (justFinishedSave) {
+            queueMicrotask(() => {
+                if (!cancelled) setShowSuccess(true)
+            })
+            timeout = setTimeout(() => setShowSuccess(false), 2000)
         }
-    }, [isSaving, pendingCount, isVisible])
+
+        return () => {
+            cancelled = true
+            if (timeout) clearTimeout(timeout)
+        }
+    }, [isSaving, pendingCount])
 
     if (!isAnimating && !isVisible) return null
 

@@ -149,7 +149,6 @@ Before completing tasks:
 4. **PUSH TO REMOTE:**
    ```bash
    git pull --rebase
-   bd sync
    git push
    git status  # MUST show "up to date with origin"
    ```

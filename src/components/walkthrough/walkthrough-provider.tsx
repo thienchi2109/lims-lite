@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useMemo, type ReactNode } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo, useSyncExternalStore, type ReactNode } from 'react'
 import { driver, type Driver } from 'driver.js'
 import 'driver.js/dist/driver.css'
 import { driverConfig } from '@/lib/walkthrough/driver-config'
@@ -20,25 +20,30 @@ interface WalkthroughProviderProps {
     userId?: string
 }
 
+const subscribeToClientReady = () => () => undefined
+const getClientReadySnapshot = () => true
+const getServerReadySnapshot = () => false
+
 /**
  * Provider that initializes Driver.js and manages tour state.
  * Fetches tour completion status from database on mount.
  * Auto-starts tours for first-time users on relevant pages.
  */
 export function WalkthroughProvider({ children, userId }: WalkthroughProviderProps) {
-    const [driverInstance, setDriverInstance] = useState<Driver | null>(null)
+    const driverInstanceRef = useRef<Driver | null>(null)
     const [tourStatus, setTourStatus] = useState<TourStatus | null>(null)
     const [isActive, setIsActive] = useState(false)
-    const [isReady, setIsReady] = useState(false)
+    const isReady = useSyncExternalStore(
+        subscribeToClientReady,
+        getClientReadySnapshot,
+        getServerReadySnapshot
+    )
 
-    // Initialize Driver.js on mount
+    // Destroy Driver.js on unmount if a tour initialized it.
     useEffect(() => {
-        const instance = driver(driverConfig)
-        setDriverInstance(instance)
-        setIsReady(true)
-
         return () => {
-            instance.destroy()
+            driverInstanceRef.current?.destroy()
+            driverInstanceRef.current = null
         }
     }, [])
 
@@ -74,12 +79,19 @@ export function WalkthroughProvider({ children, userId }: WalkthroughProviderPro
         }
     }, [])
 
+    const getDriverInstance = useCallback(() => {
+        driverInstanceRef.current ??= driver(driverConfig)
+        return driverInstanceRef.current
+    }, [])
+
     // Start a tour
     const startTour = useCallback((tourId: TourId) => {
-        if (!driverInstance || !isReady) {
+        if (!isReady) {
             console.warn('Driver.js not ready')
             return
         }
+
+        const driverInstance = getDriverInstance()
 
         const steps = getTourSteps(tourId)
         if (steps.length === 0) {
@@ -107,7 +119,7 @@ export function WalkthroughProvider({ children, userId }: WalkthroughProviderPro
         })
 
         driverInstance.drive()
-    }, [driverInstance, isReady, getTourSteps, userId])
+    }, [getDriverInstance, isReady, getTourSteps, userId])
 
     const contextValue = useMemo(() => ({
         startTour,

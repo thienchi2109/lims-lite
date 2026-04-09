@@ -8,7 +8,7 @@
  */
 
 import { CoAAccessForm } from '@/components/coa-access-form'
-import { FileText, Shield, Clock, CheckCircle2, Phone, Search } from 'lucide-react'
+import { FileText, Shield, Clock, CheckCircle2, Phone, Search, type LucideIcon } from 'lucide-react'
 import Link from 'next/link'
 
 export default function CoAAccessPage() {
@@ -156,7 +156,7 @@ export default function CoAAccessPage() {
 // Sub-components
 // ----------------------------------------------------------------------
 
-function FeatureCard({ icon: Icon, title, description, color }: { icon: any, title: string, description: string, color: string }) {
+function FeatureCard({ icon: Icon, title, description, color }: { icon: LucideIcon, title: string, description: string, color: string }) {
     return (
         <div className="group p-6 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 hover:border-slate-200 transition-all duration-300">
             <div className={`w-12 h-12 rounded-xl ${color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>

@@ -141,6 +141,27 @@ function setupReviewApprovalFlow(results: any[], remainingUnapprovedCount = 0) {
     })) as any
 }
 
+function createEnteredResults(resultIds: string[]) {
+    return resultIds.map((id) => ({ id, status: 'entered', sample_id: TEST_SAMPLE_ID }))
+}
+
+async function expectQCValidationFailure(qcResponse: any, resultIds: string[]) {
+    setupManagerAuth()
+    setupReviewApprovalFlow(createEnteredResults(resultIds), 0)
+    mockRpc.mockResolvedValueOnce(qcResponse)
+
+    const result = await approveResults({
+        sampleId: TEST_SAMPLE_ID,
+        resultIds,
+    })
+
+    expect(result).toHaveProperty('error')
+    expect(result.error).toContain('Phản hồi kiểm tra QC không hợp lệ')
+    expect((result as any).qc_blocked).toBe(true)
+    expect((result as any).blocked_count).toBe(resultIds.length)
+    expect(fromChain.update).not.toHaveBeenCalled()
+}
+
 function setupConfidentialSampleLookup(hasConfidential: boolean) {
     adminFromChain.eq = vi.fn(() =>
         Promise.resolve({
@@ -154,10 +175,11 @@ function setupConfidentialSampleLookup(hasConfidential: boolean) {
 // TESTS
 // ============================================================================
 
-describe('QC Approval Blocking Mechanism', () => {
-    beforeEach(() => {
-        vi.clearAllMocks()
-        fromChain = createChainableMock()
+    describe('QC Approval Blocking Mechanism', () => {
+        beforeEach(() => {
+            vi.clearAllMocks()
+            mockRpc.mockReset()
+            fromChain = createChainableMock()
         adminFromChain = {
             select: vi.fn(() => adminFromChain),
             in: vi.fn(() => adminFromChain),
@@ -302,6 +324,60 @@ describe('QC Approval Blocking Mechanism', () => {
             expect(result.error).toContain('Lý do 1')
             expect(result.error).toContain('Lý do 2')
             expect((result as any).blocked_count).toBe(2)
+        })
+
+        it('blocks approval when the QC RPC returns malformed rows', async () => {
+            setupManagerAuth()
+            setupReviewApprovalFlow(
+                [
+                    { id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID },
+                ],
+                0
+            )
+
+            mockRpc.mockResolvedValueOnce({
+                data: [
+                    {
+                        result_id: TEST_RESULT_ID_1,
+                        qc_status: 'pass',
+                        blocking_reason: null,
+                    },
+                ],
+                error: null,
+            })
+
+            const result = await approveResults({
+                sampleId: TEST_SAMPLE_ID,
+                resultIds: [TEST_RESULT_ID_1],
+            })
+
+            expect(result).toHaveProperty('error')
+            expect(result.error).toContain('Phản hồi kiểm tra QC không hợp lệ')
+            expect((result as any).qc_blocked).toBe(true)
+            expect((result as any).blocked_count).toBe(1)
+            expect(fromChain.update).not.toHaveBeenCalled()
+        })
+
+        it('blocks approval when the QC RPC returns fewer rows than requested results', async () => {
+            await expectQCValidationFailure({ data: [], error: null }, [TEST_RESULT_ID_1])
+        })
+
+        it('reports all requested results as blocked when the QC RPC returns a malformed payload', async () => {
+            await expectQCValidationFailure(
+                { data: { can_approve: true }, error: null },
+                [TEST_RESULT_ID_1, TEST_RESULT_ID_2]
+            )
+        })
+
+        it('blocks approval when the QC RPC returns an error', async () => {
+            await expectQCValidationFailure(
+                { data: null, error: { message: 'QC RPC unavailable' } },
+                [TEST_RESULT_ID_1, TEST_RESULT_ID_2]
+            )
+        })
+
+        it('blocks approval when the QC RPC returns no payload', async () => {
+            await expectQCValidationFailure({ data: null, error: null }, [TEST_RESULT_ID_1])
         })
     })
 
@@ -593,49 +669,8 @@ describe('QC Approval Blocking Mechanism', () => {
     })
 
     describe('RPC Error Handling', () => {
-        it('handles RPC returning null gracefully', async () => {
-            setupManagerAuth()
-            setupReviewApprovalFlow(
-                [{ id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID }],
-                0
-            )
-
-            // Mock RPC returning null
-            mockRpc.mockResolvedValueOnce({
-                data: null,
-                error: null,
-            })
-
-            // Should not crash, just proceed
-            const result = await approveResults({
-                sampleId: TEST_SAMPLE_ID,
-                resultIds: [TEST_RESULT_ID_1],
-            })
-
-            // Should succeed since null RPC result doesn't block
-            expect((result as any).qc_blocked).toBeUndefined()
-        })
-
-        it('handles RPC returning empty array gracefully', async () => {
-            setupManagerAuth()
-            setupReviewApprovalFlow(
-                [{ id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID }],
-                0
-            )
-
-            // Mock RPC returning empty array
-            mockRpc.mockResolvedValueOnce({
-                data: [],
-                error: null,
-            })
-
-            const result = await approveResults({
-                sampleId: TEST_SAMPLE_ID,
-                resultIds: [TEST_RESULT_ID_1],
-            })
-
-            // Should succeed since empty array has no blockers
-            expect((result as any).qc_blocked).toBeUndefined()
+        it('fails closed when the QC RPC returns null', async () => {
+            await expectQCValidationFailure({ data: null, error: null }, [TEST_RESULT_ID_1])
         })
 
         it('clears rejection fields when approval completes the sample', async () => {

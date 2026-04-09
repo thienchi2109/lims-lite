@@ -24,6 +24,14 @@ interface AssayDefinition {
     updated_at: string
 }
 
+type AssayDefinitionRpcRow = AssayDefinition & {
+    total_count: number | string
+    lab_specialties?: {
+        name: string | null
+        display_order: number | null
+    } | null
+}
+
 interface GetAssayDefinitionsParams {
     page?: number
     pageSize?: number
@@ -57,7 +65,9 @@ export async function getAssayDefinitions(params?: GetAssayDefinitionsParams) {
             return { error: error.message }
         }
 
-        if (!data || data.length === 0) {
+        const rows = data as AssayDefinitionRpcRow[] | null
+
+        if (!rows || rows.length === 0) {
             return {
                 data: [],
                 totalCount: 0,
@@ -67,12 +77,12 @@ export async function getAssayDefinitions(params?: GetAssayDefinitionsParams) {
             }
         }
 
-        if (data.some((row: any) => typeof row.is_confidential !== 'boolean')) {
+        if (rows.some((row) => typeof row.is_confidential !== 'boolean')) {
             return { error: MISSING_ASSAY_CONFIDENTIALITY_ERROR }
         }
 
-        const totalCount = Number(data[0].total_count)
-        const transformedData: AssayDefinition[] = data.map((row: any) => ({
+        const totalCount = Number(rows[0].total_count)
+        const transformedData: AssayDefinition[] = rows.map((row) => ({
             id: row.id,
             name: row.name,
             specialty_id: row.specialty_id,

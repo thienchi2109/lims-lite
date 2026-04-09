@@ -17,6 +17,16 @@ import { ChartContainer } from '@/components/chart-container'
 import { chartConfig, getChartColor, formatChartDate, formatVietnameseNumber } from '@/lib/chart-theme'
 import type { TATTrendData } from '@/types'
 
+type TATTooltipPayload = {
+  payload: TATTrendData & { dateFormatted: string }
+}
+
+type TATTooltipProps = {
+  active?: boolean
+  payload?: TATTooltipPayload[]
+  label?: string
+}
+
 export interface TATTrendChartProps {
   data: TATTrendData[]
   isLoading?: boolean
@@ -25,7 +35,7 @@ export interface TATTrendChartProps {
 }
 
 // Custom Tooltip to show Sample Count which isn't a chart series
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: TATTooltipProps) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload as TATTrendData & { dateFormatted: string }
     
