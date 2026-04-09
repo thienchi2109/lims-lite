@@ -70,13 +70,45 @@ const ACTIVE_OPTIONS = [
     { value: 'active', label: 'Đang hoạt động' },
 ]
 
+const VALID_SESSION_STATUSES = new Set<NonNullable<QCSessionFilters['status']>>([
+    'pending',
+    'pass',
+    'warning',
+    'blocked',
+    'resolved',
+])
+
+const VALID_SESSION_MODES = new Set<NonNullable<QCSessionFilters['session_mode']>>([
+    'daily',
+    'batch',
+    'shift',
+])
+
+function parseEnumParam<T extends string>(
+    value: string | null,
+    allowed: ReadonlySet<T>
+): T | undefined {
+    return value && allowed.has(value as T) ? (value as T) : undefined
+}
+
+function serializeSessionSearch(search: string): string {
+    const params = new URLSearchParams(search)
+    const sessionParams = new URLSearchParams()
+
+    for (const [key, value] of params.entries()) {
+        if (key.startsWith('sess_')) sessionParams.set(key, value)
+    }
+
+    return sessionParams.toString()
+}
+
 function parseQCSessionsFilters(params: URLSearchParams): QCSessionFilters {
     const page = Number.parseInt(params.get('sess_page') || String(DEFAULT_PAGE), 10)
     const pageSize = Number.parseInt(params.get('sess_size') || String(DEFAULT_PAGE_SIZE), 10)
 
     return {
-        status: (params.get('sess_status') as QCSessionFilters['status']) || undefined,
-        session_mode: (params.get('sess_mode') as QCSessionFilters['session_mode']) || undefined,
+        status: parseEnumParam(params.get('sess_status'), VALID_SESSION_STATUSES),
+        session_mode: parseEnumParam(params.get('sess_mode'), VALID_SESSION_MODES),
         assay_id: params.get('sess_assay') || undefined,
         specialty_id: params.get('sess_specialty') || undefined,
         active_only: params.get('sess_active') === 'true',
@@ -129,17 +161,18 @@ export function QCSessionsFilterBar({ specialties, assays }: QCSessionsFilterBar
     const pathname = usePathname()
     const searchParams = useSearchParams()
     const currentSearch = searchParams.toString()
+    const currentSessionSearch = useMemo(() => serializeSessionSearch(currentSearch), [currentSearch])
 
     const [filtersOpen, setFiltersOpen] = useState(false)
     const [filterDraft, setFilterDraft] = useState<FilterDraft | null>(null)
 
     const urlFilters = useMemo(
-        () => parseQCSessionsFilters(new URLSearchParams(currentSearch)),
-        [currentSearch]
+        () => parseQCSessionsFilters(new URLSearchParams(currentSessionSearch)),
+        [currentSessionSearch]
     )
 
-    const filters = filterDraft?.baseSearch === currentSearch ? filterDraft.filters : urlFilters
-    const searchInput = filterDraft?.baseSearch === currentSearch
+    const filters = filterDraft?.baseSearch === currentSessionSearch ? filterDraft.filters : urlFilters
+    const searchInput = filterDraft?.baseSearch === currentSessionSearch
         ? filterDraft.searchInput
         : urlFilters.search || ''
 
@@ -176,20 +209,20 @@ export function QCSessionsFilterBar({ specialties, assays }: QCSessionsFilterBar
         newFilters.search = key === 'search' ? String(value ?? '') || undefined : searchInput || undefined
 
         setFilterDraft({
-            baseSearch: currentSearch,
+            baseSearch: currentSessionSearch,
             filters: newFilters,
             searchInput: key === 'search' ? String(value ?? '') : searchInput,
         })
         updateURL(newFilters)
-    }, [currentSearch, filters, searchInput, updateURL])
+    }, [currentSessionSearch, filters, searchInput, updateURL])
 
     const handleSearchInputChange = useCallback((value: string) => {
         setFilterDraft({
-            baseSearch: currentSearch,
+            baseSearch: currentSessionSearch,
             filters,
             searchInput: value,
         })
-    }, [currentSearch, filters])
+    }, [currentSessionSearch, filters])
 
     // Debounced search
     useEffect(() => {
@@ -205,12 +238,12 @@ export function QCSessionsFilterBar({ specialties, assays }: QCSessionsFilterBar
     const clearFilters = useCallback(() => {
         const defaultFilters: QCSessionFilters = { page: DEFAULT_PAGE, page_size: DEFAULT_PAGE_SIZE }
         setFilterDraft({
-            baseSearch: currentSearch,
+            baseSearch: currentSessionSearch,
             filters: defaultFilters,
             searchInput: '',
         })
         updateURL(defaultFilters)
-    }, [currentSearch, updateURL])
+    }, [currentSessionSearch, updateURL])
 
     const hasActiveFilters = useMemo(() =>
         !!(filters.status || filters.session_mode || filters.assay_id ||

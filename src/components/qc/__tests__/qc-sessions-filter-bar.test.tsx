@@ -74,4 +74,45 @@ describe('QCSessionsFilterBar', () => {
             { scroll: false }
         )
     })
+
+    it('ignores invalid session status and mode params before writing filter changes', () => {
+        mockSearchParams = new URLSearchParams('sess_status=bogus&sess_mode=hacked&sess_search=ALT')
+        render(<QCSessionsFilterBar specialties={[]} assays={[]} />)
+
+        fireEvent.change(screen.getByPlaceholderText('Tìm theo tên xét nghiệm...'), {
+            target: { value: 'HbA1c' },
+        })
+
+        act(() => {
+            vi.advanceTimersByTime(300)
+        })
+
+        expect(mockPush).toHaveBeenCalledWith(
+            '/manager/quality-control?sess_search=HbA1c',
+            { scroll: false }
+        )
+    })
+
+    it('keeps the pending session search draft when unrelated params change', () => {
+        mockSearchParams = new URLSearchParams('outside=1&sess_status=pass&sess_search=ALT')
+        const { rerender } = render(<QCSessionsFilterBar specialties={[]} assays={[]} />)
+
+        fireEvent.change(screen.getByPlaceholderText('Tìm theo tên xét nghiệm...'), {
+            target: { value: 'HbA1c' },
+        })
+
+        mockSearchParams = new URLSearchParams('outside=2&sess_status=pass&sess_search=ALT')
+        rerender(<QCSessionsFilterBar specialties={[]} assays={[]} />)
+
+        expect(screen.getByDisplayValue('HbA1c')).toBeDefined()
+
+        act(() => {
+            vi.advanceTimersByTime(300)
+        })
+
+        expect(mockPush).toHaveBeenCalledWith(
+            '/manager/quality-control?outside=2&sess_status=pass&sess_search=HbA1c',
+            { scroll: false }
+        )
+    })
 })

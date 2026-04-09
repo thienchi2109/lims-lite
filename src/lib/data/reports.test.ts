@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { DateRange } from '@/types'
+import { SampleStatus, type DateRange } from '@/types'
 
 const mockRpc = vi.fn()
 const mockFrom = vi.fn()
@@ -201,16 +201,17 @@ describe('fetchRecentSamples', () => {
         },
       ],
       error: null,
-      count: 2,
+      count: 1,
     })
     mockFrom.mockReturnValue(query)
 
     try {
       const result = await fetchRecentSamples(dateRange)
 
-      expect(result.total).toBe(2)
+      expect(result.total).toBe(1)
       expect(result.samples).toHaveLength(1)
       expect(result.samples[0].status).toBe('received')
+      expect(query.in).toHaveBeenCalledWith('status', SampleStatus.options)
       expect(consoleWarn).toHaveBeenCalledWith(
         '[reports] Dropped sample with invalid status from recent samples',
         expect.objectContaining({ sampleId: 'S-002', status: 'archived' })
@@ -218,6 +219,35 @@ describe('fetchRecentSamples', () => {
     } finally {
       consoleWarn.mockRestore()
     }
+  })
+
+  it('applies the status filter before resolving the recent samples query', async () => {
+    const dateRange: DateRange = {
+      start: '2024-12-01T00:00:00Z',
+      end: '2024-12-20T23:59:59Z',
+    }
+    const query = createSamplesQueryMock({
+      data: [
+        {
+          id: '11111111-1111-4111-8111-111111111111',
+          sample_id: 'S-001',
+          client_name: 'Client A',
+          received_at: '2024-12-01T00:00:00Z',
+          completed_at: null,
+          status: 'completed',
+        },
+      ],
+      error: null,
+      count: 1,
+    })
+    mockFrom.mockReturnValue(query)
+
+    const result = await fetchRecentSamples(dateRange, { status: 'completed' })
+
+    expect(query.eq).toHaveBeenCalledWith('status', 'completed')
+    expect(query.range).toHaveBeenCalledWith(0, 49)
+    expect(result.samples).toHaveLength(1)
+    expect(result.samples[0].status).toBe('completed')
   })
 })
 
@@ -227,6 +257,7 @@ function createSamplesQueryMock(response: unknown) {
     gte: vi.fn(() => query),
     lte: vi.fn(() => query),
     is: vi.fn(() => query),
+    in: vi.fn(() => query),
     order: vi.fn(() => query),
     range: vi.fn(() => Promise.resolve(response)),
     eq: vi.fn(() => query),

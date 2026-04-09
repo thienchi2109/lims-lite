@@ -163,31 +163,34 @@ export async function approveResults(data: ApproveResults) {
         }
 
         // QC Session Check: Block approval if QC is blocked
-        const { data: qcCheck } = await supabase.rpc('check_qc_approval_status', {
+        const { data: qcCheck, error: qcCheckError } = await supabase.rpc('check_qc_approval_status', {
             p_result_ids: validatedData.resultIds,
         })
 
-        if (qcCheck) {
-            if (!Array.isArray(qcCheck)) {
-                return createInvalidQCApprovalStatusResponse(validatedData.resultIds.length)
-            }
+        if (qcCheckError || !qcCheck) {
+            if (qcCheckError) console.error('Error checking QC approval status:', qcCheckError)
+            return createInvalidQCApprovalStatusResponse(validatedData.resultIds.length)
+        }
 
-            const qcStatusRows = qcCheck.filter(isQCApprovalStatusRow)
-            if (qcStatusRows.length !== qcCheck.length || qcCheck.length !== validatedData.resultIds.length) {
-                return createInvalidQCApprovalStatusResponse(validatedData.resultIds.length)
-            }
+        if (!Array.isArray(qcCheck)) {
+            return createInvalidQCApprovalStatusResponse(validatedData.resultIds.length)
+        }
 
-            const blockedResults = qcStatusRows.filter((result) => !result.can_approve)
-            if (blockedResults.length > 0) {
-                const reasons = blockedResults
-                    .map((result) => result.blocking_reason)
-                    .filter(Boolean)
-                    .join('; ')
-                return {
-                    error: `Không thể phê duyệt: QC bị chặn. ${reasons || 'Giải quyết vi phạm QC trước.'}`,
-                    qc_blocked: true,
-                    blocked_count: blockedResults.length,
-                }
+        const qcStatusRows = qcCheck.filter(isQCApprovalStatusRow)
+        if (qcStatusRows.length !== qcCheck.length || qcCheck.length !== validatedData.resultIds.length) {
+            return createInvalidQCApprovalStatusResponse(validatedData.resultIds.length)
+        }
+
+        const blockedResults = qcStatusRows.filter((result) => !result.can_approve)
+        if (blockedResults.length > 0) {
+            const reasons = blockedResults
+                .map((result) => result.blocking_reason)
+                .filter(Boolean)
+                .join('; ')
+            return {
+                error: `Không thể phê duyệt: QC bị chặn. ${reasons || 'Giải quyết vi phạm QC trước.'}`,
+                qc_blocked: true,
+                blocked_count: blockedResults.length,
             }
         }
 

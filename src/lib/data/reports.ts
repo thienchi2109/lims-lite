@@ -206,16 +206,19 @@ export async function fetchRecentSamples(
     .select('id, sample_id, client_name, received_at, completed_at, status, deleted_at', {
       count: 'exact',
     })
+    .in('status', SampleStatus.options)
     .gte('received_at', validated.start)
     .lte('received_at', validated.end)
     .is('deleted_at', null)
-    .order('completed_at', { ascending: false, nullsFirst: false })
-    .range(offset, offset + pageSize - 1)
 
   // Apply status filter if provided
   if (filters?.status) {
     query = query.eq('status', filters.status)
   }
+
+  query = query
+    .order('completed_at', { ascending: false, nullsFirst: false })
+    .range(offset, offset + pageSize - 1)
 
   const { data, error, count } = await query
 
@@ -267,6 +270,6 @@ export async function fetchRecentSamples(
 
   return {
     samples,
-    total: count || 0,
+    total: count ?? samples.length,
   }
 }
