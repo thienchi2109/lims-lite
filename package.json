@@ -8,8 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "react-doctor": "react-doctor . --verbose --offline --yes",
-    "react-doctor:diff": "react-doctor . --verbose --offline --yes --diff",
+    "react-doctor": "npm run lint && react-doctor . --verbose --offline --yes --no-lint",
+    "react-doctor:diff": "npm run lint && react-doctor . --verbose --offline --yes --diff --no-lint",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run"
