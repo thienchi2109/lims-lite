@@ -579,8 +579,9 @@ git commit -m "fix: Clear remaining lint blockers"
 
 ## Landing
 
-- [ ] Run `git status --short`.
-- [ ] Run `git pull --rebase`.
-- [ ] Run `bd sync` if `bd` is available in PATH.
-- [ ] Run `git push`.
-- [ ] Run `git status --short --branch` and confirm the branch is up to date with `origin/main`.
+- [x] Run `git status --short`.
+- [x] Run `git pull --rebase`.
+- [x] Run `bd sync` if `bd` is available in PATH.
+  - `bd` was not available in this environment, so no sync command was run.
+- [x] Run `git push`.
+- [x] Run `git status --short --branch` and confirm the branch is up to date with `origin/fix-critical-lint-security`.
