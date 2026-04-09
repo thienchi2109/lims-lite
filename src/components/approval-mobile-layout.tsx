@@ -85,24 +85,51 @@ export function ApprovalMobileLayout({
     )
 
     useEffect(() => {
-        const serverSelectionMatchesUrl = urlSampleId === serverSampleId
-        if (isClientSelectionRef.current && !serverSelectionMatchesUrl) {
-            return
-        }
+        let isCancelled = false
 
-        sampleRequestIdRef.current += 1
-        applyActiveDetail(
-            hasServerSelection && selectedSample
-                ? { sample: selectedSample, results }
-                : null,
-        )
-        setSampleLoadError(null)
-        setIsLoadingSample(false)
-        isClientSelectionRef.current = false
+        queueMicrotask(() => {
+            if (isCancelled) {
+                return
+            }
+
+            const serverSelectionMatchesUrl = urlSampleId === serverSampleId
+            if (isClientSelectionRef.current && !serverSelectionMatchesUrl) {
+                return
+            }
+
+            const nextDetail =
+                hasServerSelection && selectedSample
+                    ? { sample: selectedSample, results }
+                    : null
+            const hasSyncedSample = activeSample === (nextDetail?.sample ?? null)
+            const hasSyncedResults = nextDetail
+                ? activeResults === nextDetail.results
+                : activeResults.length === 0
+            const hasSyncedStatus = sampleLoadError === null && !isLoadingSample
+
+            if (hasSyncedSample && hasSyncedResults && hasSyncedStatus) {
+                isClientSelectionRef.current = false
+                return
+            }
+
+            sampleRequestIdRef.current += 1
+            applyActiveDetail(nextDetail)
+            setSampleLoadError(null)
+            setIsLoadingSample(false)
+            isClientSelectionRef.current = false
+        })
+
+        return () => {
+            isCancelled = true
+        }
     }, [
         applyActiveDetail,
+        activeResults,
+        activeSample,
         hasServerSelection,
+        isLoadingSample,
         results,
+        sampleLoadError,
         selectedSample,
         serverSampleId,
         urlSampleId,
@@ -201,6 +228,7 @@ export function ApprovalMobileLayout({
         sampleRequestIdRef.current += 1
         setUrlSampleId(null)
         setClosedSampleId(activeSample?.id ?? urlSampleId)
+        applyActiveDetail(null)
         setSampleLoadError(null)
         setIsLoadingSample(false)
         const url = buildApprovalQueueUrl({
@@ -208,7 +236,7 @@ export function ApprovalMobileLayout({
             tab: activeTab,
         })
         replaceApprovalQueueUrl(url)
-    }, [activeSample?.id, activeTab, pathname, setUrlSampleId, urlSampleId])
+    }, [activeSample?.id, activeTab, applyActiveDetail, pathname, setUrlSampleId, urlSampleId])
 
     return (
         <div className="flex flex-1 min-h-0 flex-col gap-2">

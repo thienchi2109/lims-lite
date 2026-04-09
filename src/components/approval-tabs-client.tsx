@@ -126,25 +126,52 @@ export function ApprovalTabsClient({
     }, [activeTab])
 
     useEffect(() => {
-        const serverSelectionMatchesUrl = urlSampleId === serverSampleId
-        if (isClientSelectionRef.current && !serverSelectionMatchesUrl) {
-            return
-        }
+        let isCancelled = false
 
-        sampleRequestIdRef.current += 1
-        applyActiveDetail(
-            hasServerSelection && initialSample
-                ? { sample: initialSample, results: initialResults }
-                : null,
-        )
-        setSampleLoadError(null)
-        setIsLoadingSample(false)
-        isClientSelectionRef.current = false
+        queueMicrotask(() => {
+            if (isCancelled) {
+                return
+            }
+
+            const serverSelectionMatchesUrl = urlSampleId === serverSampleId
+            if (isClientSelectionRef.current && !serverSelectionMatchesUrl) {
+                return
+            }
+
+            const nextDetail =
+                hasServerSelection && initialSample
+                    ? { sample: initialSample, results: initialResults }
+                    : null
+            const hasSyncedSample = activeSample === (nextDetail?.sample ?? null)
+            const hasSyncedResults = nextDetail
+                ? activeResults === nextDetail.results
+                : activeResults.length === 0
+            const hasSyncedStatus = sampleLoadError === null && !isLoadingSample
+
+            if (hasSyncedSample && hasSyncedResults && hasSyncedStatus) {
+                isClientSelectionRef.current = false
+                return
+            }
+
+            sampleRequestIdRef.current += 1
+            applyActiveDetail(nextDetail)
+            setSampleLoadError(null)
+            setIsLoadingSample(false)
+            isClientSelectionRef.current = false
+        })
+
+        return () => {
+            isCancelled = true
+        }
     }, [
         applyActiveDetail,
+        activeResults,
+        activeSample,
         hasServerSelection,
         initialResults,
         initialSample,
+        isLoadingSample,
+        sampleLoadError,
         serverSampleId,
         urlSampleId,
     ])

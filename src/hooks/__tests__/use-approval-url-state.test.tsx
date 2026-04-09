@@ -36,4 +36,37 @@ describe('useApprovalUrlState', () => {
         expect(result.current.setActiveTab).toBe(initialSetActiveTab)
         expect(result.current.setUrlSampleId).toBe(initialSetUrlSampleId)
     })
+
+    it('resolves fallback tab but not stale sample props when the live URL has no sample', () => {
+        window.history.replaceState(null, '', '/manager/approvals')
+
+        const { result } = renderHook(() =>
+            useApprovalUrlState({ tab: 'completed', sampleId: 'sample-from-props' }),
+        )
+
+        expect(result.current.activeTab).toBe('completed')
+        expect(result.current.urlSampleId).toBeNull()
+    })
+
+    it('uses URL state over stale props after external navigation rerenders', () => {
+        const { result, rerender } = renderHook(
+            ({ tab, sampleId }: { tab: 'review' | 'completed'; sampleId?: string | null }) =>
+                useApprovalUrlState({ tab, sampleId }),
+            {
+                initialProps: {
+                    tab: 'review' as const,
+                    sampleId: 'sample-1',
+                },
+            },
+        )
+
+        expect(result.current.activeTab).toBe('review')
+        expect(result.current.urlSampleId).toBeNull()
+
+        window.history.replaceState(null, '', '/manager/approvals?tab=completed&sampleId=sample-2')
+        rerender({ tab: 'review', sampleId: 'sample-1' })
+
+        expect(result.current.activeTab).toBe('completed')
+        expect(result.current.urlSampleId).toBe('sample-2')
+    })
 })

@@ -112,7 +112,7 @@ Because GitNexus marks `useApprovalUrlState` as the only critical blast-radius s
 - Test: `src/components/__tests__/approval-tabs-client.test.tsx`
 - Test: `src/components/__tests__/approval-mobile-layout.test.tsx`
 
-- [ ] **Step 1: Re-run GitNexus context before editing**
+- [x] **Step 1: Re-run GitNexus context before editing**
 
 Run:
 
@@ -123,7 +123,7 @@ gitnexus impact useApprovalUrlState --repo lims-lite --direction upstream --max-
 
 Expected: direct callers are still `ApprovalTabsClient` and `ApprovalMobileLayout`.
 
-- [ ] **Step 2: Add or extend approval URL tests**
+- [x] **Step 2: Add or extend approval URL tests**
 
 Cover these behaviors:
 
@@ -131,7 +131,7 @@ Cover these behaviors:
 - Browser back/forward or server-provided sample changes update the selected approval sample as before.
 - Desktop `ApprovalTabsClient` and mobile `ApprovalMobileLayout` still fetch sample detail and update URL search params.
 
-- [ ] **Step 3: Run focused approval tests before implementation**
+- [x] **Step 3: Run focused approval tests before implementation**
 
 Run:
 
@@ -141,11 +141,11 @@ npm run test:run -- src/hooks/__tests__/use-approval-url-state.test.tsx src/comp
 
 Expected: existing tests pass before edits; new assertions may fail until implementation.
 
-- [ ] **Step 4: Implement minimal approval fix**
+- [x] **Step 4: Implement minimal approval fix**
 
 Prefer deriving fallback URL state with `useMemo` and storing only user overrides in state. Avoid synchronous `setState` inside effects in all three files.
 
-- [ ] **Step 5: Verify approval blast radius**
+- [x] **Step 5: Verify approval blast radius**
 
 Run:
 
