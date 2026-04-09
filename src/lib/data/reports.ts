@@ -226,7 +226,7 @@ export async function fetchRecentSamples(
 
   // Calculate TAT for each sample
   const samples: RecentSample[] =
-    data?.map((sample: {
+    data?.flatMap((sample: {
       id: string
       sample_id: string
       client_name: string
@@ -234,6 +234,18 @@ export async function fetchRecentSamples(
       completed_at: string | null
       status: string
     }) => {
+      const parsedStatus = SampleStatus.safeParse(sample.status)
+      if (!parsedStatus.success) {
+        console.warn(
+          '[reports] Dropped sample with invalid status from recent samples',
+          {
+            sampleId: sample.sample_id,
+            status: sample.status,
+          }
+        )
+        return []
+      }
+
       let tatHours = null
       if (sample.completed_at && sample.received_at) {
         tatHours =
@@ -242,15 +254,15 @@ export async function fetchRecentSamples(
           (1000 * 60 * 60)
       }
 
-      return {
+      return [{
         id: sample.id,
         sampleId: sample.sample_id,
         clientName: sample.client_name,
         receivedAt: sample.received_at,
         completedAt: sample.completed_at || null,
-        status: SampleStatus.parse(sample.status),
+        status: parsedStatus.data,
         tatHours,
-      }
+      }]
     }) || []
 
   return {
