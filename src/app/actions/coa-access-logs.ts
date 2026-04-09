@@ -8,10 +8,19 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
+import { firstRelation, type RelationValue } from '@/lib/supabase/relations'
 
 // ============================================================================
 // COA ACCESS LOG VIEWER (Manager Feature)
 // ============================================================================
+
+type CoAAccessClientRelation = {
+    name: string | null
+}
+
+type CoAAccessSampleRelation = {
+    sample_id: string | null
+}
 
 /**
  * Fetch CoA access logs for a sample (manager only)
@@ -79,16 +88,21 @@ export async function getCoAAccessLogs(sampleId: string): Promise<{
         }
 
         // Transform data to flat structure
-        const transformedLogs = (logs || []).map((log: any) => ({
-            id: log.id,
-            client_name: log.clients?.name || 'N/A',
-            sample_id_display: log.samples?.sample_id || 'N/A',
-            accessed_at: log.accessed_at,
-            ip_address: log.ip_address,
-            user_agent: log.user_agent,
-            success: log.success,
-            failure_reason: log.failure_reason,
-        }))
+        const transformedLogs = (logs || []).map((log) => {
+            const client = firstRelation(log.clients as RelationValue<CoAAccessClientRelation>)
+            const sample = firstRelation(log.samples as RelationValue<CoAAccessSampleRelation>)
+
+            return {
+                id: log.id,
+                client_name: client?.name || 'N/A',
+                sample_id_display: sample?.sample_id || 'N/A',
+                accessed_at: log.accessed_at,
+                ip_address: log.ip_address,
+                user_agent: log.user_agent,
+                success: log.success,
+                failure_reason: log.failure_reason,
+            }
+        })
 
         return { data: transformedLogs }
     } catch (error) {

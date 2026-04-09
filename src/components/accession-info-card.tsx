@@ -26,8 +26,15 @@ import { format } from 'date-fns'
 import { vi } from 'date-fns/locale'
 import { Client } from '@/types'
 
+type AccessionInfoFormValues = {
+    clientId: string
+    sampleTypeId: string
+    receivedDate: Date
+    senderName?: string
+}
+
 interface AccessionInfoCardProps {
-    form: UseFormReturn<any>
+    form: UseFormReturn<AccessionInfoFormValues>
     clients: Client[]
     sampleTypes: string[]
     onClientSearch: (query: string) => void

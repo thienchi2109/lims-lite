@@ -47,6 +47,15 @@ interface CustomTooltipProps {
   }>
 }
 
+type CoALabelProps = {
+  cx?: number
+  x?: number
+  y?: number
+  segmentLabel?: string
+  percentage?: number
+  fill?: string
+}
+
 function CustomTooltip({ active, payload }: CustomTooltipProps) {
   if (!active || !payload || payload.length === 0) return null
 
@@ -102,7 +111,7 @@ export function CoAStatisticsChart({
             innerRadius="50%"
             outerRadius="65%"
             paddingAngle={2}
-            label={({ cx, x, y, segmentLabel, percentage, fill }: any) => {
+            label={({ cx = 0, x = 0, y = 0, segmentLabel = '', percentage = 0, fill = 'currentColor' }: CoALabelProps) => {
               // Shorten label to avoid cutoff
               const shortLabel = segmentLabel.replace(' CoA', '')
               return (

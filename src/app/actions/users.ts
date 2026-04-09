@@ -4,6 +4,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { CreateUserSchema, UpdateUserSchema, PaginationSchema, UserRole } from '@/types'
 import { z } from 'zod'
+import type { UserAttributes } from '@supabase/supabase-js'
 
 /**
  * Get users with pagination and filtering
@@ -209,7 +210,7 @@ export async function updateUser(data: z.infer<typeof UpdateUserSchema>) {
     }
 
     // Update public profile
-    const updateData: any = {}
+    const updateData: Partial<Pick<z.infer<typeof UpdateUserSchema>, 'full_name' | 'role' | 'email' | 'lab' | 'can_access_confidential'>> = {}
     if (validated.full_name) updateData.full_name = validated.full_name
     if (validated.role) updateData.role = validated.role
     if (validated.email) updateData.email = validated.email
@@ -231,7 +232,7 @@ export async function updateUser(data: z.infer<typeof UpdateUserSchema>) {
     // Requires Admin client
     if (validated.email || validated.password) {
         const adminClient = createAdminClient()
-        const authUpdates: any = {}
+        const authUpdates: UserAttributes = {}
         if (validated.email) authUpdates.email = validated.email
         if (validated.password) authUpdates.password = validated.password
 

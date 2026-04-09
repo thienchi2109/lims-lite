@@ -13,7 +13,7 @@ import type {
   StaffProductivityData,
   RecentSample,
 } from '@/types'
-import { DateRangeSchema } from '@/types'
+import { DateRangeSchema, SampleStatus } from '@/types'
 
 /**
  * Server-side helper to fetch KPI metrics for Reports Dashboard.
@@ -248,7 +248,7 @@ export async function fetchRecentSamples(
         clientName: sample.client_name,
         receivedAt: sample.received_at,
         completedAt: sample.completed_at || null,
-        status: sample.status as any, // TypeScript will validate this against SampleStatus
+        status: SampleStatus.parse(sample.status),
         tatHours,
       }
     }) || []

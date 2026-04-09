@@ -503,17 +503,17 @@ for (const file of r) {
 NODE
 ```
 
-- [ ] **Step 1: Replace direct `any` with domain types, `unknown` plus narrowing, or typed Supabase relation helpers**
+- [x] **Step 1: Replace direct `any` with domain types, `unknown` plus narrowing, or typed Supabase relation helpers**
 
 Do not silence the rule. Do not use broad `Record<string, unknown>` unless the data is genuinely unstructured and narrowed before use.
 
-- [ ] **Step 2: Run runtime-only lint report**
+- [x] **Step 2: Run runtime-only lint report**
 
 Run the command above again.
 
 Expected: no runtime `src/` `no-explicit-any` errors remain.
 
-- [ ] **Step 3: Run gates**
+- [x] **Step 3: Run gates**
 
 Run:
 
@@ -527,7 +527,7 @@ npm run lint
 
 Expected: `typecheck`, tests, build, and React Doctor pass. `npm run lint` may still fail only in test files, scripts, or openspec docs.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Run:
 

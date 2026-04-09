@@ -26,6 +26,16 @@ import { ChartContainer } from '@/components/chart-container'
 import { chartConfig, getChartColor, formatVietnameseNumber } from '@/lib/chart-theme'
 import type { SampleAccessionTrendData } from '@/types'
 
+type TrendTooltipPayload = {
+  payload: SampleAccessionTrendData
+}
+
+type TrendTooltipProps = {
+  active?: boolean
+  payload?: TrendTooltipPayload[]
+  label?: string
+}
+
 export interface SampleAccessionTrendChartProps {
   data: SampleAccessionTrendData[]
   isLoading?: boolean
@@ -33,7 +43,7 @@ export interface SampleAccessionTrendChartProps {
 }
 
 // Custom Tooltip showing both metrics
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: TrendTooltipProps) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload as SampleAccessionTrendData
 

@@ -53,7 +53,7 @@ export function SignatureUploadField({
         }
 
         // Validate MIME type
-        if (!SIGNATURE_VALIDATION.allowedMimeTypes.includes(file.type as any)) {
+        if (!SIGNATURE_VALIDATION.allowedMimeTypes.some((mimeType) => mimeType === file.type)) {
             return { valid: false, error: 'Chỉ chấp nhận file PNG hoặc JPEG' }
         }
 

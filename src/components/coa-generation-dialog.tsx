@@ -117,7 +117,7 @@ export function CoAGenerationDialog({
                         </Label>
                         <Select
                             value={sampleQuality}
-                            onValueChange={(value) => setValue('sampleQuality', value as any)}
+                            onValueChange={(value) => setValue('sampleQuality', value as CoAManualInputs['sampleQuality'])}
                             disabled={isSubmitting}
                         >
                             <SelectTrigger id="sampleQuality">

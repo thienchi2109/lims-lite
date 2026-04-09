@@ -37,6 +37,14 @@ import {
 
 const EMPTY_SPECIALTIES: LabSpecialty[] = []
 
+type AssayDefinitionClientRow = {
+    id: string
+    name: string
+    code?: string
+    specialty_id?: string | null
+    methods: Array<{ method_id: string; name: string; is_default: boolean }>
+}
+
 interface TestAssignmentModuleProps {
     sampleId: string
     sampleStatus?: SampleStatus | null
@@ -83,7 +91,8 @@ export function TestAssignmentModule({ sampleId, sampleStatus, onClose, onSucces
                 console.error(error)
             } else if (data) {
                 // Transform data to match AssayWithMethods interface
-                const transformedAssays: AssayWithMethods[] = data.map((a: any) => {
+                const assayRows = data as AssayDefinitionClientRow[]
+                const transformedAssays: AssayWithMethods[] = assayRows.map((a) => {
                     // Map all methods with proper structure
                     const methods = a.methods.map((m: { method_id: string; name: string; is_default: boolean }) => ({
                         id: m.method_id,

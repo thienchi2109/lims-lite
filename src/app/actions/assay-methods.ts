@@ -1,12 +1,18 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { firstRelation, type RelationValue } from '@/lib/supabase/relations'
 import { revalidatePath } from 'next/cache'
 import { CreateAssayMethodSchema } from '@/types'
 
 // ============================================================================
 // GET METHODS FOR AN ASSAY
 // ============================================================================
+
+type AssayMethodRelation = {
+    name: string
+    description: string | null
+}
 
 export async function getMethodsForAssay(assayId: string) {
     try {
@@ -37,16 +43,20 @@ export async function getMethodsForAssay(assayId: string) {
         }
 
         // Transform the data to flatten method info
-        const transformedData = data.map((am: any) => ({
-            id: am.id,
-            method_id: am.method_id,
-            name: am.methods?.name || '',
-            description: am.methods?.description || null,
-            is_default: am.is_default,
-            notes: am.notes,
-            created_at: am.created_at,
-            updated_at: am.updated_at,
-        }))
+        const transformedData = data.map((assayMethod) => {
+            const method = firstRelation(assayMethod.methods as RelationValue<AssayMethodRelation>)
+
+            return {
+                id: assayMethod.id,
+                method_id: assayMethod.method_id,
+                name: method?.name || '',
+                description: method?.description || null,
+                is_default: assayMethod.is_default,
+                notes: assayMethod.notes,
+                created_at: assayMethod.created_at,
+                updated_at: assayMethod.updated_at,
+            }
+        })
 
         return { data: transformedData }
     } catch (error) {
