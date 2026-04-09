@@ -434,7 +434,7 @@ git commit -m "fix: Update vulnerable frontend dependencies"
 - Modify: `src/app/actions/qc-sessions.ts`
 - Modify: `src/lib/utils-lims.ts`
 
-- [ ] **Step 1: Add local typed helpers for Supabase nested relation normalization**
+- [x] **Step 1: Add local typed helpers for Supabase nested relation normalization**
 
 Use a helper pattern for relation values that can arrive as object or one-element array:
 
@@ -446,11 +446,11 @@ function firstRelation<T>(value: T | T[] | null | undefined): T | null {
 
 Place the helper near the file that needs it first. Promote to a shared helper only if at least three runtime files need the same exact helper.
 
-- [ ] **Step 2: Replace `any` in `quality-control/page.tsx` first**
+- [x] **Step 2: Replace `any` in `quality-control/page.tsx` first**
 
 Replace casts around `session.assay`, `v.result`, `definition`, `assay`, `material`, and `session` with explicit local relation types and `firstRelation`.
 
-- [ ] **Step 3: Run focused checks**
+- [x] **Step 3: Run focused checks**
 
 Run:
 
@@ -461,7 +461,7 @@ npm run lint -- 'src/app/(dashboard)/manager/quality-control/page.tsx'
 
 Expected: no `any` or React Compiler errors in the file.
 
-- [ ] **Step 4: Repeat for the remaining high-density files**
+- [x] **Step 4: Repeat for the remaining high-density files**
 
 Run after each file:
 
@@ -472,7 +472,7 @@ npm run lint -- src/app/actions/results-approval.ts src/components/sample-activi
 
 Expected: `no-explicit-any` count falls materially without changing behavior.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run:
 

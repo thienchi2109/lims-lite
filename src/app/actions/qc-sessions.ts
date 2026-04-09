@@ -6,6 +6,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
+import { firstRelation, type RelationValue } from '@/lib/supabase/relations'
 import {
     QCSessionFiltersSchema,
     type QCSessionFilters,
@@ -16,6 +17,23 @@ import {
 // ============================================================================
 // SERVER ACTION
 // ============================================================================
+
+type SessionAssaySpecialtyRelation = {
+    id: string
+    name: string
+}
+
+type SessionAssayRelation = {
+    id: string
+    name: string
+    units: string | null
+    specialty_id: string | null
+    specialty: RelationValue<SessionAssaySpecialtyRelation>
+}
+
+type SessionUserRelation = {
+    full_name: string | null
+}
 
 /**
  * Get QC sessions with filters and pagination
@@ -85,8 +103,8 @@ export async function getQCSessionsPaginated(
         // Get counts for each session (results and violations)
         const sessionIds = sessions?.map(s => s.id) || []
 
-        let resultsCounts: Record<string, number> = {}
-        let violationsCounts: Record<string, number> = {}
+        const resultsCounts: Record<string, number> = {}
+        const violationsCounts: Record<string, number> = {}
 
         if (sessionIds.length > 0) {
             // Get results count per session
@@ -122,12 +140,10 @@ export async function getQCSessionsPaginated(
         // Transform data
         const transformedData: QCSessionRow[] = (sessions || [])
             .map(session => {
-                const rawAssay = session.assay as any
-                const assay = Array.isArray(rawAssay) ? rawAssay[0] : rawAssay
-                const rawSpecialty = assay?.specialty as any
-                const specialty = Array.isArray(rawSpecialty) ? rawSpecialty[0] : rawSpecialty
-                const startedByUser = session.started_by_user as any
-                const endedByUser = session.ended_by_user as any
+                const assay = firstRelation(session.assay as RelationValue<SessionAssayRelation>)
+                const specialty = firstRelation(assay?.specialty)
+                const startedByUser = firstRelation(session.started_by_user as RelationValue<SessionUserRelation>)
+                const endedByUser = firstRelation(session.ended_by_user as RelationValue<SessionUserRelation>)
 
                 return {
                     id: session.id,

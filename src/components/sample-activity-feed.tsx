@@ -22,13 +22,13 @@ interface AuditLog {
     id: string
     table_name: string
     operation: string
-    old_values: Record<string, any> | null
-    new_values: Record<string, any> | null
+    old_values: Record<string, unknown> | null
+    new_values: Record<string, unknown> | null
     changed_by: string | null
     changed_at: string
     user?: {
         full_name: string
-    }
+    } | Array<{ full_name: string }>
 }
 
 interface SampleActivityFeedProps {
@@ -211,7 +211,7 @@ function getActivityDisplay(activity: AuditLog): {
                 return {
                     icon: RefreshCw,
                     color: 'bg-purple-100 text-purple-600',
-                    message: `Thay đổi trạng thái: ${getStatusLabel(old_values?.status)} → ${getStatusLabel(new_values?.status)}`,
+                    message: `Thay đổi trạng thái: ${getStatusLabel(getStringValue(old_values?.status))} → ${getStatusLabel(getStringValue(new_values?.status))}`,
                 }
             }
             if (old_values?.client_name !== new_values?.client_name) {
@@ -302,14 +302,14 @@ function ChangeDetails({
     newValues,
     tableName,
 }: {
-    oldValues: Record<string, any> | null
-    newValues: Record<string, any> | null
+    oldValues: Record<string, unknown> | null
+    newValues: Record<string, unknown> | null
     tableName: string
 }) {
     if (!oldValues || !newValues) return null
 
     // Only show meaningful changes
-    const changes: Array<{ field: string; old: any; new: any }> = []
+    const changes: Array<{ field: string; old: unknown; new: unknown }> = []
 
     const fieldsToShow = tableName === 'results'
         ? ['value', 'status', 'approval_note']
@@ -374,9 +374,14 @@ function getStatusLabel(status: string | null | undefined): string {
     return labels[status] || status
 }
 
-function formatValue(value: any, field?: string): string {
+function getStringValue(value: unknown): string | null | undefined {
+    if (value === null || value === undefined) return value
+    return String(value)
+}
+
+function formatValue(value: unknown, field?: string): string {
     if (value === null || value === undefined) return 'Trống'
-    if (field === 'status') return getStatusLabel(value)
+    if (field === 'status') return getStatusLabel(getStringValue(value))
     if (typeof value === 'boolean') return value ? 'Có' : 'Không'
     if (typeof value === 'object') return JSON.stringify(value)
     return String(value)

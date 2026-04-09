@@ -8,6 +8,7 @@ import { ArrowLeft } from 'lucide-react'
 import { QualityControlPageClient } from '@/components/qc/quality-control-page-client'
 import { getQCMaterials, getQCDefinitionsPaginated, type GetQCMaterialsParams } from '@/app/actions/qc-setup'
 import { getQCSessionsPaginated } from '@/app/actions/qc-sessions'
+import { firstRelation, type RelationValue } from '@/lib/supabase/relations'
 
 interface PageSearchParams {
     qc_days?: string
@@ -30,6 +31,42 @@ interface PageSearchParams {
     def_page?: string
     def_size?: string
     def_status?: string
+}
+
+type ActiveSessionAssayRelation = {
+    id: string
+    name: string
+}
+
+type PendingViolationAssayRelation = {
+    id: string
+    name: string
+    units: string | null
+}
+
+type PendingViolationMaterialRelation = {
+    id: string
+    name: string
+    level: string
+}
+
+type PendingViolationDefinitionRelation = {
+    id: string
+    mean: number
+    sd: number
+    assay: RelationValue<PendingViolationAssayRelation>
+    material: RelationValue<PendingViolationMaterialRelation>
+}
+
+type PendingViolationResultRelation = {
+    id: string
+    value: number
+    definition: RelationValue<PendingViolationDefinitionRelation>
+}
+
+type PendingViolationSessionRelation = {
+    id: string
+    session_mode: 'daily' | 'batch' | 'shift'
 }
 
 async function getRequestTimestamp() {
@@ -270,8 +307,7 @@ export default async function QualityControlPage({
         })
 
     const transformedSessions = (activeSessions || []).map((session) => {
-        const rawAssay = session.assay as any
-        const assay = Array.isArray(rawAssay) ? rawAssay[0] : rawAssay
+        const assay = firstRelation(session.assay as RelationValue<ActiveSessionAssayRelation>)
 
         return {
             id: session.id,
@@ -284,16 +320,11 @@ export default async function QualityControlPage({
     })
 
     const transformedViolations = (pendingViolations || []).map((v) => {
-        const rawResult = v.result as any
-        const result = Array.isArray(rawResult) ? rawResult[0] : rawResult
-        const rawDef = result?.definition as any
-        const def = Array.isArray(rawDef) ? rawDef[0] : rawDef
-        const rawAssay = def?.assay as any
-        const rawMaterial = def?.material as any
-        const assay = Array.isArray(rawAssay) ? rawAssay[0] : rawAssay
-        const material = Array.isArray(rawMaterial) ? rawMaterial[0] : rawMaterial
-        const rawSession = v.session as any
-        const session = Array.isArray(rawSession) ? rawSession[0] : rawSession
+        const result = firstRelation(v.result as RelationValue<PendingViolationResultRelation>)
+        const def = firstRelation(result?.definition)
+        const assay = firstRelation(def?.assay)
+        const material = firstRelation(def?.material)
+        const session = firstRelation(v.session as RelationValue<PendingViolationSessionRelation>)
 
         return {
             id: v.id,

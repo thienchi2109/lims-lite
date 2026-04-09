@@ -77,7 +77,7 @@ export function getTodayRange(): { startOfDay: string; endOfDay: string } {
  * @param wait - Wait time in milliseconds
  * @returns Debounced function
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: never[]) => unknown>(
     func: T,
     wait: number
 ): (...args: Parameters<T>) => void {
@@ -128,13 +128,19 @@ export type ValidationRule = {
     required?: boolean
 }
 
+export type AssayValidationRule = ValidationRule & {
+    patternMessage?: string
+    minLength?: number
+    maxLength?: number
+}
+
 /**
  * Validates a numeric value against validation rules
  * @param value - The value to validate
  * @param rules - Validation rules from assay definition
  * @returns Error message if invalid, null if valid
  */
-export function validateNumericValue(value: string, rules: Record<string, any>): string | null {
+export function validateNumericValue(value: string, rules: AssayValidationRule): string | null {
     if (!value || value.trim() === '') {
         if (rules.required) return 'This field is required'
         return null
@@ -162,7 +168,7 @@ export function validateNumericValue(value: string, rules: Record<string, any>):
  * @param rules - Validation rules from assay definition
  * @returns Error message if invalid, null if valid
  */
-export function validateTextValue(value: string, rules: Record<string, any>): string | null {
+export function validateTextValue(value: string, rules: AssayValidationRule): string | null {
     if (!value || value.trim() === '') {
         if (rules.required) return 'This field is required'
         return null
@@ -174,7 +180,7 @@ export function validateTextValue(value: string, rules: Record<string, any>): st
             if (!regex.test(value)) {
                 return rules.patternMessage || 'Value does not match required format'
             }
-        } catch (e) {
+        } catch {
             console.error('Invalid regex pattern:', rules.pattern)
         }
     }
