@@ -32,6 +32,10 @@ interface PageSearchParams {
     def_status?: string
 }
 
+async function getRequestTimestamp() {
+    return Date.now()
+}
+
 export default async function QualityControlPage({
     searchParams,
 }: {
@@ -202,7 +206,7 @@ export default async function QualityControlPage({
         .map((d) => d.id)
 
     // Calculate cutoff date based on qc_days param
-    const now = Date.now()
+    const now = await getRequestTimestamp()
     const cutoffDate = days
         ? new Date(now - days * 24 * 60 * 60 * 1000)
         : null

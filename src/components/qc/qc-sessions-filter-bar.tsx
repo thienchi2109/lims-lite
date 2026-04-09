@@ -35,6 +35,12 @@ interface QCSessionsFilterBarProps {
     assays: FilterOption[]
 }
 
+type FilterDraft = {
+    baseSearch: string
+    filters: QCSessionFilters
+    searchInput: string
+}
+
 // ============================================================================
 // CONSTANTS
 // ============================================================================
@@ -61,6 +67,19 @@ const ACTIVE_OPTIONS = [
     { value: 'all', label: 'Tất cả' },
     { value: 'active', label: 'Đang hoạt động' },
 ]
+
+function parseQCSessionsFilters(params: URLSearchParams): QCSessionFilters {
+    return {
+        status: (params.get('sess_status') as QCSessionFilters['status']) || undefined,
+        session_mode: (params.get('sess_mode') as QCSessionFilters['session_mode']) || undefined,
+        assay_id: params.get('sess_assay') || undefined,
+        specialty_id: params.get('sess_specialty') || undefined,
+        active_only: params.get('sess_active') === 'true',
+        search: params.get('sess_search') || undefined,
+        page: parseInt(params.get('sess_page') || '1', 10),
+        page_size: parseInt(params.get('sess_size') || '20', 10),
+    }
+}
 
 // ============================================================================
 // FILTER SELECT SUB-COMPONENT
@@ -104,33 +123,24 @@ export function QCSessionsFilterBar({ specialties, assays }: QCSessionsFilterBar
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
+    const currentSearch = searchParams.toString()
 
-    // Parse filters from URL
-    const getFiltersFromURL = useCallback((): QCSessionFilters => ({
-        status: (searchParams.get('sess_status') as QCSessionFilters['status']) || undefined,
-        session_mode: (searchParams.get('sess_mode') as QCSessionFilters['session_mode']) || undefined,
-        assay_id: searchParams.get('sess_assay') || undefined,
-        specialty_id: searchParams.get('sess_specialty') || undefined,
-        active_only: searchParams.get('sess_active') === 'true',
-        search: searchParams.get('sess_search') || undefined,
-        page: parseInt(searchParams.get('sess_page') || '1', 10),
-        page_size: parseInt(searchParams.get('sess_size') || '20', 10),
-    }), [searchParams])
-
-    const [filters, setFilters] = useState<QCSessionFilters>(getFiltersFromURL)
-    const [searchInput, setSearchInput] = useState(filters.search || '')
     const [filtersOpen, setFiltersOpen] = useState(false)
+    const [filterDraft, setFilterDraft] = useState<FilterDraft | null>(null)
 
-    // Sync with URL when searchParams change (e.g., browser back/forward)
-    useEffect(() => {
-        const newFilters = getFiltersFromURL()
-        setFilters(newFilters)
-        setSearchInput(newFilters.search || '')
-    }, [getFiltersFromURL])
+    const urlFilters = useMemo(
+        () => parseQCSessionsFilters(new URLSearchParams(currentSearch)),
+        [currentSearch]
+    )
+
+    const filters = filterDraft?.baseSearch === currentSearch ? filterDraft.filters : urlFilters
+    const searchInput = filterDraft?.baseSearch === currentSearch
+        ? filterDraft.searchInput
+        : urlFilters.search || ''
 
     // Update URL when filters change
     const updateURL = useCallback((newFilters: QCSessionFilters) => {
-        const params = new URLSearchParams(searchParams.toString())
+        const params = new URLSearchParams(currentSearch)
 
         // Clear all sess_ params first
         Array.from(params.keys())
@@ -149,7 +159,7 @@ export function QCSessionsFilterBar({ specialties, assays }: QCSessionsFilterBar
 
         const queryString = params.toString()
         router.push(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false })
-    }, [router, pathname, searchParams])
+    }, [router, pathname, currentSearch])
 
     // Handle filter change
     const handleFilterChange = useCallback((key: keyof QCSessionFilters, value: unknown) => {
@@ -158,9 +168,21 @@ export function QCSessionsFilterBar({ specialties, assays }: QCSessionsFilterBar
             [key]: value === 'all' ? undefined : value,
             page: key === 'page' ? (value as number) : 1,
         }
-        setFilters(newFilters)
+        setFilterDraft({
+            baseSearch: currentSearch,
+            filters: newFilters,
+            searchInput: key === 'search' ? String(value ?? '') : searchInput,
+        })
         updateURL(newFilters)
-    }, [filters, updateURL])
+    }, [currentSearch, filters, searchInput, updateURL])
+
+    const handleSearchInputChange = useCallback((value: string) => {
+        setFilterDraft({
+            baseSearch: currentSearch,
+            filters,
+            searchInput: value,
+        })
+    }, [currentSearch, filters])
 
     // Debounced search
     useEffect(() => {
@@ -170,15 +192,18 @@ export function QCSessionsFilterBar({ specialties, assays }: QCSessionsFilterBar
             }
         }, SEARCH_DEBOUNCE_MS)
         return () => clearTimeout(timer)
-    }, [searchInput]) // eslint-disable-line react-hooks/exhaustive-deps
+    }, [filters.search, handleFilterChange, searchInput])
 
     // Clear all filters
     const clearFilters = useCallback(() => {
         const defaultFilters: QCSessionFilters = { page: 1, page_size: 20 }
-        setFilters(defaultFilters)
-        setSearchInput('')
+        setFilterDraft({
+            baseSearch: currentSearch,
+            filters: defaultFilters,
+            searchInput: '',
+        })
         updateURL(defaultFilters)
-    }, [updateURL])
+    }, [currentSearch, updateURL])
 
     const hasActiveFilters = useMemo(() =>
         !!(filters.status || filters.session_mode || filters.assay_id ||
@@ -201,7 +226,7 @@ export function QCSessionsFilterBar({ specialties, assays }: QCSessionsFilterBar
                         <Input
                             placeholder="Tìm theo tên xét nghiệm..."
                             value={searchInput}
-                            onChange={(e) => setSearchInput(e.target.value)}
+                            onChange={(e) => handleSearchInputChange(e.target.value)}
                             className="pl-9"
                         />
                     </div>

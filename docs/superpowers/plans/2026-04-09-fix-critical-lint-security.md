@@ -261,7 +261,7 @@ Expected: focused tests pass and these four files have no React Compiler lint er
 - Modify: `src/hooks/use-favicon-badge.ts`
 - Test: focused existing tests for each edited area; create missing tests only for behavior with no coverage.
 
-- [ ] **Step 1: Add or identify focused tests**
+- [x] **Step 1: Add or identify focused tests**
 
 Use existing tests where available:
 
@@ -271,7 +271,7 @@ npm run test:run -- tests/realtime-favicon-badge.test.ts
 
 Approval tests are already handled in Task 0. For this task, add missing tests only for remaining files without relevant coverage.
 
-- [ ] **Step 2: Implement minimal fixes**
+- [x] **Step 2: Implement minimal fixes**
 
 Use these patterns:
 
@@ -280,7 +280,7 @@ Use these patterns:
 - Replace state-held imperative instances with refs when they do not affect render.
 - Avoid reading or mutating ref-held objects during render; make immutable copies in effects before mutation.
 
-- [ ] **Step 3: Run lint only on remaining runtime React Compiler files**
+- [x] **Step 3: Run lint only on remaining runtime React Compiler files**
 
 Run:
 
@@ -290,7 +290,7 @@ npm run lint -- src/components/add-method-to-assay-dialog.tsx src/components/rep
 
 Expected: no React Compiler errors remain in these files. If unrelated `any` errors appear in the same files, record them for Chunk 3 unless they are small and directly adjacent.
 
-- [ ] **Step 4: Run full React Compiler error check**
+- [x] **Step 4: Run full React Compiler error check**
 
 Run:
 
@@ -303,7 +303,7 @@ Expected: exit 0 and no `react-hooks/*` errors.
 
 ### Task 4: Commit runtime React Compiler fixes
 
-- [ ] **Step 1: Run gates**
+- [x] **Step 1: Run gates**
 
 Run:
 
@@ -316,7 +316,7 @@ npm run react-doctor -- --score
 
 Expected: all pass. Full `npm run lint` may still fail due `no-explicit-any`; that is expected until Chunk 3.
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 Run:
 

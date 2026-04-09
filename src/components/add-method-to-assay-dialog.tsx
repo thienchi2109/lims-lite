@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useCallback, useEffect, useState, useTransition } from 'react'
 import {
     Dialog,
     DialogContent,
@@ -47,14 +47,7 @@ export function AddMethodToAssayDialog({ open, onOpenChange, assayId, existingMe
     const [isDefault, setIsDefault] = useState(false)
     const [notes, setNotes] = useState('')
 
-    // Load methods on open
-    useEffect(() => {
-        if (open) {
-            loadMethods()
-        }
-    }, [open])
-
-    const loadMethods = async () => {
+    const loadMethods = useCallback(async () => {
         setLoadingMethods(true)
         const result = await fetchMethodsClient()
         if (result.data) {
@@ -65,7 +58,22 @@ export function AddMethodToAssayDialog({ open, onOpenChange, assayId, existingMe
             setMethods(availableMethods)
         }
         setLoadingMethods(false)
-    }
+    }, [existingMethodIds])
+
+    // Load methods on open
+    useEffect(() => {
+        let cancelled = false
+
+        if (open) {
+            queueMicrotask(() => {
+                if (!cancelled) void loadMethods()
+            })
+        }
+
+        return () => {
+            cancelled = true
+        }
+    }, [open, loadMethods])
 
     const resetForm = () => {
         setMethodId('')

@@ -25,19 +25,37 @@ export function BatchSaveToolbar({
     const [isAnimating, setIsAnimating] = useState(false)
 
     useEffect(() => {
+        let cancelled = false
+        let timeout: ReturnType<typeof setTimeout> | undefined
+
         if (isVisible) {
-            setIsAnimating(true)
+            queueMicrotask(() => {
+                if (!cancelled) setIsAnimating(true)
+            })
         } else {
-            const timeout = setTimeout(() => setIsAnimating(false), 300)
-            return () => clearTimeout(timeout)
+            timeout = setTimeout(() => setIsAnimating(false), 300)
+        }
+
+        return () => {
+            cancelled = true
+            if (timeout) clearTimeout(timeout)
         }
     }, [isVisible])
 
     useEffect(() => {
+        let cancelled = false
+        let timeout: ReturnType<typeof setTimeout> | undefined
+
         if (!isSaving && pendingCount === 0 && isVisible) {
-            setShowSuccess(true)
-            const timeout = setTimeout(() => setShowSuccess(false), 2000)
-            return () => clearTimeout(timeout)
+            queueMicrotask(() => {
+                if (!cancelled) setShowSuccess(true)
+            })
+            timeout = setTimeout(() => setShowSuccess(false), 2000)
+        }
+
+        return () => {
+            cancelled = true
+            if (timeout) clearTimeout(timeout)
         }
     }, [isSaving, pendingCount, isVisible])
 

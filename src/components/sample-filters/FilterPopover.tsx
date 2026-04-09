@@ -1,6 +1,5 @@
 'use client'
 
-import { useRef } from 'react'
 import { Filter } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { type SampleStatus, type LabSpecialty } from '@/types'
@@ -66,7 +65,6 @@ export function FilterPopover({
     onReset,
     activeFiltersCount,
 }: FilterPopoverProps) {
-    const popoverContentRef = useRef<HTMLDivElement | null>(null)
     const sortedSpecialties = [...specialties].sort((a, b) => a.display_order - b.display_order)
     const receiverValue = receiverId || 'all'
 
@@ -89,7 +87,7 @@ export function FilterPopover({
                     )}
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[340px] p-0" align="end" ref={popoverContentRef}>
+            <PopoverContent className="w-[340px] p-0" align="end">
                 <div className="flex flex-col h-[85vh] sm:h-auto overflow-hidden">
                     <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
                         <h4 className="font-semibold text-sm">Bộ lọc nâng cao</h4>
@@ -129,7 +127,7 @@ export function FilterPopover({
                                                         {specialty.code}
                                                     </button>
                                                 </TooltipTrigger>
-                                                <TooltipContent container={popoverContentRef.current}>
+                                                <TooltipContent>
                                                     <p>{specialty.name}</p>
                                                 </TooltipContent>
                                             </Tooltip>

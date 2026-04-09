@@ -7,7 +7,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import { FileText, Download, Printer, Copy, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,22 +18,32 @@ interface PortalQRCodeProps {
     variant?: 'card' | 'inline'
 }
 
+const subscribeToPortalUrl = () => () => undefined
+
+function getPortalUrlSnapshot() {
+    const configuredUrl = process.env.NEXT_PUBLIC_APP_URL
+    if (configuredUrl) return `${configuredUrl}/coa/access`
+    if (typeof window === 'undefined') return ''
+
+    return `${window.location.protocol}//${window.location.host}/coa/access`
+}
+
+function getServerPortalUrlSnapshot() {
+    const configuredUrl = process.env.NEXT_PUBLIC_APP_URL
+    return configuredUrl ? `${configuredUrl}/coa/access` : ''
+}
+
 export function PortalQRCode({
     size = 300,
     showInstructions = true,
     variant = 'card'
 }: PortalQRCodeProps) {
-    const [portalUrl, setPortalUrl] = useState('')
     const [copied, setCopied] = useState(false)
-
-    useEffect(() => {
-        // Get the public portal URL
-        // Priority: 1. Environment variable, 2. Dynamic detection
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
-                       `${window.location.protocol}//${window.location.host}`
-        const url = `${baseUrl}/coa/access`
-        setPortalUrl(url)
-    }, [])
+    const portalUrl = useSyncExternalStore(
+        subscribeToPortalUrl,
+        getPortalUrlSnapshot,
+        getServerPortalUrlSnapshot
+    )
 
     // Generate QR code URL using QR Server API
     const qrCodeUrl = portalUrl

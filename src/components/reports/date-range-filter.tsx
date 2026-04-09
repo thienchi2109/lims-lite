@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,6 +21,20 @@ type DateRangeFilterProps = {
   toDate?: string
 }
 
+function getActivePresetForDates(from: string, to: string): DateRangePreset | null {
+  if (!from || !to) return null
+
+  const today = new Date()
+  const todayStr = format(today, 'yyyy-MM-dd')
+  const weekStart = format(startOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd')
+  const monthStart = format(startOfMonth(today), 'yyyy-MM-dd')
+
+  if (from === todayStr && to === todayStr) return 'today'
+  if (from === weekStart && to === todayStr) return 'week'
+  if (from === monthStart && to === todayStr) return 'month'
+  return 'custom'
+}
+
 export function DateRangeFilter({
   fromDate = '',
   toDate = '',
@@ -34,36 +48,24 @@ export function DateRangeFilter({
   const searchParams = useSearchParams()
   const pathname = usePathname()
 
+  const detectActivePreset = useCallback((from: string, to: string) => {
+    setActivePreset(getActivePresetForDates(from, to))
+  }, [])
+
   // Keep inputs in sync with URL changes
   useEffect(() => {
-    setFromDateValue(fromDate)
-    setToDateValue(toDate)
+    let cancelled = false
+    queueMicrotask(() => {
+      if (cancelled) return
+      setFromDateValue(fromDate)
+      setToDateValue(toDate)
+      detectActivePreset(fromDate, toDate)
+    })
 
-    // Detect which preset is active
-    detectActivePreset(fromDate, toDate)
-  }, [fromDate, toDate])
-
-  const detectActivePreset = (from: string, to: string) => {
-    if (!from || !to) {
-      setActivePreset(null)
-      return
+    return () => {
+      cancelled = true
     }
-
-    const today = new Date()
-    const todayStr = format(today, 'yyyy-MM-dd')
-    const weekStart = format(startOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd')
-    const monthStart = format(startOfMonth(today), 'yyyy-MM-dd')
-
-    if (from === todayStr && to === todayStr) {
-      setActivePreset('today')
-    } else if (from === weekStart && to === todayStr) {
-      setActivePreset('week')
-    } else if (from === monthStart && to === todayStr) {
-      setActivePreset('month')
-    } else {
-      setActivePreset('custom')
-    }
-  }
+  }, [fromDate, toDate, detectActivePreset])
 
   const updateUrl = (updates: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams.toString())
