@@ -166,7 +166,7 @@ Expected: tests pass, no `react-hooks/*` errors in the three files, and GitNexus
 - Test: `src/components/__tests__/accession-mobile-wizard.test.tsx`
 - Test: `src/components/__tests__/status-badge-animation.test.tsx`
 
-- [ ] **Step 1: Add or extend tests**
+- [x] **Step 1: Add or extend tests**
 
 Cover these behaviors:
 
@@ -174,7 +174,7 @@ Cover these behaviors:
 - `AccessionMobileWizard` calls `onSave` and `onReset` exactly once from the same UI paths as before.
 - `ResultStatusBadge` and `SampleStatusBadge` render the correct labels and do not throw during rerender from one status to another.
 
-- [ ] **Step 2: Run focused tests and confirm current behavior**
+- [x] **Step 2: Run focused tests and confirm current behavior**
 
 Run:
 
@@ -184,14 +184,14 @@ npm run test:run -- src/components/__tests__/accession-mobile-wizard.test.tsx
 
 Expected: existing tests pass before edits. New status-badge tests may fail until created/implemented.
 
-- [ ] **Step 3: Implement minimal fixes**
+- [x] **Step 3: Implement minimal fixes**
 
 Use these patterns:
 
 - In `AccessionMobileWizard`, destructure `onSave`, `onReset`, and other used props at the top of the component. Move the `setCurrentStep(3)` out of render into a `useEffect` keyed on `submitSuccess`.
 - In both status badge components, replace `prevStatusRef.current !== status` reads during render with state updated after commit, or use a short-lived animation trigger set by an effect when status changes.
 
-- [ ] **Step 4: Run verification for this task**
+- [x] **Step 4: Run verification for this task**
 
 Run:
 

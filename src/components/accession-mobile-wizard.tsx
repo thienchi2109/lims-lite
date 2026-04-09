@@ -63,7 +63,9 @@ export interface AccessionMobileWizardProps {
 }
 
 export function AccessionMobileWizard(props: AccessionMobileWizardProps) {
+    const { onSave, onReset, submitSuccess } = props
     const [currentStep, setCurrentStep] = useState(0)
+    const displayStep = submitSuccess ? 3 : currentStep
 
     const goNext = useCallback(() => {
         setCurrentStep((s) => Math.min(s + 1, 3))
@@ -78,27 +80,20 @@ export function AccessionMobileWizard(props: AccessionMobileWizardProps) {
     }, [])
 
     const handleConfirm = useCallback(() => {
-        props.onSave()
-    }, [props.onSave])
-
-    // After successful submit, jump to success step
-    const showSuccess = !!props.submitSuccess && currentStep !== 3
-    if (showSuccess) {
-        // Set step to 3 (success) on next render
-        if (currentStep !== 3) setCurrentStep(3)
-    }
+        onSave()
+    }, [onSave])
 
     const handleNewAccession = useCallback(() => {
-        props.onReset()
+        onReset()
         setCurrentStep(0)
-    }, [props.onReset])
+    }, [onReset])
 
     const canAdvanceStep1 = !!props.selectedClient
 
     return (
         <div className="relative flex h-full flex-col bg-background">
             {/* Stepper — hide on success */}
-            {currentStep < 3 && (
+            {displayStep < 3 && (
                 <div className="shrink-0 border-b border-border bg-background px-2">
                     <AccessionWizardStepper currentStep={currentStep} />
                 </div>
@@ -106,7 +101,7 @@ export function AccessionMobileWizard(props: AccessionMobileWizardProps) {
 
             {/* Step content */}
             <div className="relative flex-1 overflow-hidden">
-                {currentStep === 0 && (
+                {displayStep === 0 && (
                     <AccessionWizardStepCustomer
                         selectedClient={props.selectedClient}
                         onSelectClient={props.onSelectClient}
@@ -126,7 +121,7 @@ export function AccessionMobileWizard(props: AccessionMobileWizardProps) {
                     />
                 )}
 
-                {currentStep === 1 && (
+                {displayStep === 1 && (
                     <AccessionWizardStepTests
                         searchQuery={props.searchQuery}
                         setSearchQuery={props.setSearchQuery}
@@ -146,7 +141,7 @@ export function AccessionMobileWizard(props: AccessionMobileWizardProps) {
                     />
                 )}
 
-                {currentStep === 2 && (
+                {displayStep === 2 && (
                     <AccessionWizardStepReview
                         selectedClient={props.selectedClient}
                         selectedSampleType={props.selectedSampleType}
@@ -161,9 +156,9 @@ export function AccessionMobileWizard(props: AccessionMobileWizardProps) {
                     />
                 )}
 
-                {currentStep === 3 && props.submitSuccess && (
+                {displayStep === 3 && submitSuccess && (
                     <AccessionWizardStepSuccess
-                        successMessage={props.submitSuccess}
+                        successMessage={submitSuccess}
                         clientName={props.selectedClient?.name || ''}
                         sampleType={props.selectedSampleType}
                         testCount={props.selected.length}
