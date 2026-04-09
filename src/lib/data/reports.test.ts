@@ -228,9 +228,8 @@ function createSamplesQueryMock(response: unknown) {
     lte: vi.fn(() => query),
     is: vi.fn(() => query),
     order: vi.fn(() => query),
-    range: vi.fn(() => query),
+    range: vi.fn(() => Promise.resolve(response)),
     eq: vi.fn(() => query),
-    then: vi.fn((resolve) => Promise.resolve(response).then(resolve)),
   }
   return query
 }
