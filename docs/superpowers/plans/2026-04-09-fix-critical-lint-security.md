@@ -211,7 +211,7 @@ Expected: focused tests pass and these three files have no React Compiler lint e
 - Test: `src/components/sample-grid/hooks/useGridHighlight.test.tsx`
 - Test: `src/components/__tests__/search-input.test.tsx`
 
-- [ ] **Step 1: Add tests for current contracts**
+- [x] **Step 1: Add tests for current contracts**
 
 Cover these behaviors:
 
@@ -219,7 +219,7 @@ Cover these behaviors:
 - `SearchInput` initializes from `searchParams`, debounces URL updates, resets `page` to `1`, and responds to external URL changes.
 - `use-filter-params` keeps search input in sync when URL changes externally and preserves local typing while the input has focus.
 
-- [ ] **Step 2: Run focused tests**
+- [x] **Step 2: Run focused tests**
 
 Run:
 
@@ -229,14 +229,14 @@ npm run test:run -- src/components/sample-grid/hooks/useGridHighlight.test.tsx s
 
 Expected: new tests should fail only where they depend on the pending implementation or missing test files.
 
-- [ ] **Step 3: Implement minimal fixes**
+- [x] **Step 3: Implement minimal fixes**
 
 Use these patterns:
 
 - For `useGridHighlight`, consider an event-like deferred update with `queueMicrotask`/timeout or a reducer transition that is not synchronously set inside the effect body. Keep timeout cleanup reliable.
 - For `SearchInput` and `use-filter-params`, prefer deriving display value from URL plus local dirty/focus state rather than setting local state immediately in the URL-sync effect.
 
-- [ ] **Step 4: Run verification for this task**
+- [x] **Step 4: Run verification for this task**
 
 Run:
 

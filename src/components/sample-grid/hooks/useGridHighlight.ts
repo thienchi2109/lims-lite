@@ -32,9 +32,10 @@ export function useGridHighlight<T extends RowWithTimestamp>(
 
   // Cleanup all timeouts on unmount
   useEffect(() => {
+    const timeoutIds = timeoutIdsRef.current
     return () => {
-      timeoutIdsRef.current.forEach(id => clearTimeout(id))
-      timeoutIdsRef.current.clear()
+      timeoutIds.forEach(id => clearTimeout(id))
+      timeoutIds.clear()
     }
   }, [])
 
@@ -51,41 +52,55 @@ export function useGridHighlight<T extends RowWithTimestamp>(
 
     // Find changed rows by comparing timestamps
     const changedIds: string[] = []
+    const shouldHighlightInitialRows = !skipInitialAnimation && prevTimestampsRef.current.size === 0
     rows.forEach(row => {
       const prevTimestamp = prevTimestampsRef.current.get(row.id)
       // Use undefined check (not truthy) so null→value transitions are detected
-      if (prevTimestamp !== undefined && prevTimestamp !== row.updated_at) {
+      if (
+        (shouldHighlightInitialRows && row.updated_at !== null) ||
+        (prevTimestamp !== undefined && prevTimestamp !== row.updated_at)
+      ) {
         changedIds.push(row.id)
       }
     })
-
-    if (changedIds.length > 0) {
-      // Add changed IDs to highlighted set
-      setHighlightedIds(prev => {
-        const next = new Set(prev)
-        changedIds.forEach(id => next.add(id))
-        return next
-      })
-
-      // Auto-clear highlights after duration
-      const timeoutId = setTimeout(() => {
-        setHighlightedIds(prev => {
-          const next = new Set(prev)
-          changedIds.forEach(id => next.delete(id))
-          return next
-        })
-        timeoutIdsRef.current.delete(timeoutId)
-      }, highlightDuration)
-
-      // Track timeout for cleanup
-      timeoutIdsRef.current.add(timeoutId)
-    }
 
     // Update timestamps (for new rows and changed rows)
     const newMap = new Map<string, string | null>()
     rows.forEach(row => newMap.set(row.id, row.updated_at))
     prevTimestampsRef.current = newMap
-  }, [rows, highlightDuration])
+
+    if (changedIds.length > 0) {
+      let isCancelled = false
+
+      queueMicrotask(() => {
+        if (isCancelled) return
+
+        // Add changed IDs to highlighted set
+        setHighlightedIds(prev => {
+          const next = new Set(prev)
+          changedIds.forEach(id => next.add(id))
+          return next
+        })
+
+        // Auto-clear highlights after duration
+        const timeoutId = setTimeout(() => {
+          setHighlightedIds(prev => {
+            const next = new Set(prev)
+            changedIds.forEach(id => next.delete(id))
+            return next
+          })
+          timeoutIdsRef.current.delete(timeoutId)
+        }, highlightDuration)
+
+        // Track timeout for cleanup
+        timeoutIdsRef.current.add(timeoutId)
+      })
+
+      return () => {
+        isCancelled = true
+      }
+    }
+  }, [rows, highlightDuration, skipInitialAnimation])
 
   return highlightedIds
 }

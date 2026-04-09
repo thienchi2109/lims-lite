@@ -134,4 +134,37 @@ describe('useFilterParams scope state', () => {
         expect(result.current.sort.sortOrder).toBe('asc')
         expect(result.current.sort.pageSize).toBe(50)
     })
+
+    it('syncs search from external URL changes when the search input is not focused', () => {
+        mockSearchParams = new URLSearchParams('search=ABC')
+
+        const { result, rerender } = renderHook(() => useFilterParams())
+
+        expect(result.current.filters.search).toBe('ABC')
+
+        mockSearchParams = new URLSearchParams('search=DEF')
+        rerender()
+
+        expect(result.current.filters.search).toBe('DEF')
+    })
+
+    it('preserves the local search draft while the search input is focused', () => {
+        mockSearchParams = new URLSearchParams('search=ABC')
+        const focusedInput = document.createElement('input')
+        focusedInput.setAttribute('data-search-input', 'true')
+        document.body.appendChild(focusedInput)
+        focusedInput.focus()
+
+        const { result, rerender } = renderHook(() => useFilterParams())
+
+        act(() => {
+            result.current.handlers.setSearch('LOCAL')
+        })
+
+        mockSearchParams = new URLSearchParams('search=SERVER')
+        rerender()
+
+        expect(result.current.filters.search).toBe('LOCAL')
+        focusedInput.remove()
+    })
 })

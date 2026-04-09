@@ -37,6 +37,11 @@ export type SortState = {
     setPageSize: (value: string) => void
 }
 
+type SearchDraft = {
+    baseSearch: string
+    value: string
+}
+
 type UseFilterParamsProps = {
     defaultSortBy?: string
     defaultSortOrder?: 'asc' | 'desc'
@@ -67,15 +72,15 @@ export function useFilterParams({
         }
     }, [searchParamsString])
 
-    // Search needs local state for debouncing
-    const [searchValue, setSearchValue] = useState(filters.search)
-
-    // Single sync effect for search only (when URL changes externally)
-    useEffect(() => {
-        if (document.activeElement?.getAttribute('data-search-input') !== 'true') {
-            setSearchValue(filters.search)
-        }
-    }, [filters.search])
+    // Search needs local state for debouncing while still deriving external URL updates.
+    const [searchDraft, setSearchDraft] = useState<SearchDraft | null>(null)
+    const isSearchInputFocused =
+        typeof document !== 'undefined' &&
+        document.activeElement?.getAttribute('data-search-input') === 'true'
+    const hasActiveSearchDraft =
+        searchDraft !== null &&
+        (isSearchInputFocused || searchDraft.baseSearch === filters.search)
+    const searchValue = hasActiveSearchDraft ? searchDraft.value : filters.search
 
     // URL update helper
     const updateUrl = useCallback((updates: Record<string, string | null>) => {
@@ -116,7 +121,12 @@ export function useFilterParams({
 
     // Handler implementations
     const handlers: FilterHandlers = useMemo(() => ({
-        setSearch: setSearchValue,
+        setSearch: (value: string) => {
+            setSearchDraft({
+                baseSearch: filters.search,
+                value,
+            })
+        },
 
         setScope: (value: 'active' | 'all') => {
             updateUrl({ scope: value === 'all' ? value : null })
@@ -129,8 +139,8 @@ export function useFilterParams({
         // Fixes Bug #2 (Date Preset Logic) - always sets BOTH dates
         setDateRange: (range: 'today' | 'yesterday' | 'week' | 'month') => {
             const today = new Date()
-            let from = new Date()
-            let to = new Date()
+            const from = new Date()
+            const to = new Date()
 
             switch (range) {
                 case 'today':
@@ -188,13 +198,16 @@ export function useFilterParams({
             // Preserve: pageSize, sortBy, sortOrder
             const query = params.toString()
             router.replace(query ? `${pathname}?${query}` : pathname)
-            setSearchValue('')
+            setSearchDraft({
+                baseSearch: filters.search,
+                value: '',
+            })
         },
 
         clearDates: () => {
             updateUrl({ fromDate: null, toDate: null })
         },
-    }), [updateUrl, filters.selectedSpecialtyIds, searchParamsString, router, pathname])
+    }), [updateUrl, filters.selectedSpecialtyIds, filters.search, searchParamsString, router, pathname])
 
     // Sort state
     const sort: SortState = useMemo(() => {

@@ -3,11 +3,16 @@
 import { Input } from '@/components/ui/input'
 import { Search } from 'lucide-react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { useTransition, useState, useEffect, useRef } from 'react'
+import { useTransition, useState, useEffect } from 'react'
 
 interface SearchInputProps {
     placeholder?: string
     className?: string
+}
+
+type SearchDraft = {
+    baseSearch: string
+    value: string
 }
 
 export function SearchInput({
@@ -17,28 +22,15 @@ export function SearchInput({
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
-    const [isPending, startTransition] = useTransition()
+    const [, startTransition] = useTransition()
 
-    const initialSearch = searchParams.get('search')?.toString() || ''
-    const [term, setTerm] = useState(initialSearch)
-    const lastSubmittedTerm = useRef(initialSearch)
-
-    // Sync local state with URL if URL changes externally (e.g. back button)
-    useEffect(() => {
-        const currentSearchParam = searchParams.get('search')?.toString() || ''
-        // Only update local state if the new param is different from what we last submitted
-        // This prevents overwriting the user's input during the race condition where
-        // the router updates with the previous keystroke while the user is still typing
-        if (currentSearchParam !== lastSubmittedTerm.current) {
-            setTerm(currentSearchParam)
-            lastSubmittedTerm.current = currentSearchParam
-        }
-    }, [searchParams])
+    const currentSearch = searchParams.get('search')?.toString() || ''
+    const [searchDraft, setSearchDraft] = useState<SearchDraft | null>(null)
+    const term = searchDraft?.baseSearch === currentSearch ? searchDraft.value : currentSearch
 
     useEffect(() => {
         const timeoutId = setTimeout(() => {
             // Only update if the term in URL is different from current term
-            const currentSearch = searchParams.get('search')?.toString() || ''
             if (term === currentSearch) return
 
             const params = new URLSearchParams(searchParams)
@@ -50,16 +42,13 @@ export function SearchInput({
             // Reset page to 1 when searching
             params.set('page', '1')
 
-            // Update ref BEFORE calling replace, so the sync effect knows to ignore it
-            lastSubmittedTerm.current = term
-
             startTransition(() => {
                 router.replace(`${pathname}?${params.toString()}`)
             })
         }, 300)
 
         return () => clearTimeout(timeoutId)
-    }, [term, pathname, router, searchParams])
+    }, [currentSearch, term, pathname, router, searchParams])
 
     return (
         <div className={`relative ${className}`}>
@@ -69,7 +58,10 @@ export function SearchInput({
                 placeholder={placeholder}
                 className="pl-9 bg-background"
                 value={term}
-                onChange={(e) => setTerm(e.target.value)}
+                onChange={(e) => setSearchDraft({
+                    baseSearch: currentSearch,
+                    value: e.target.value,
+                })}
             />
         </div>
     )
