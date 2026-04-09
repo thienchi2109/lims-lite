@@ -33,12 +33,21 @@ function createViolation(rule_violated: string): PendingViolation {
 }
 
 describe('QCViolationsTabContent', () => {
-    it('does not crash when a violation has an unrecognized Westgard rule', () => {
+    it('passes recognized Westgard rules to the resolution dialog', () => {
+        render(<QCViolationsTabContent violations={[createViolation('1-3s')]} />)
+
+        expect(screen.getByTestId('resolution-dialog').dataset.rule).toBe('1-3s')
+        expect(screen.getByRole('button', { name: 'Xử lý vi phạm' })).toBeDefined()
+    })
+
+    it('does not resolve a violation with an unrecognized Westgard rule', () => {
         expect(() => {
             render(<QCViolationsTabContent violations={[createViolation('unexpected-rule')]} />)
         }).not.toThrow()
 
         expect(screen.getByText(/unexpected-rule/)).toBeDefined()
-        expect(screen.getByTestId('resolution-dialog').dataset.rule).toBe('1-2s')
+        expect(screen.queryByTestId('resolution-dialog')).toBeNull()
+        expect(screen.getByRole('button', { name: 'Quy tắc không hợp lệ' }))
+            .toHaveProperty('disabled', true)
     })
 })

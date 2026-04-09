@@ -287,10 +287,12 @@ describe('Helper Functions', () => {
       // @ts-expect-error Simulate SSR by removing document from the test global.
       delete global.document
 
-      const links = getFaviconLinks()
-      expect(links).toEqual([])
-
-      global.document = originalDocument
+      try {
+        const links = getFaviconLinks()
+        expect(links).toEqual([])
+      } finally {
+        global.document = originalDocument
+      }
     })
   })
 })
