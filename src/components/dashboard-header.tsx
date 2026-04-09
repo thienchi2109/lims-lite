@@ -23,6 +23,8 @@ export function DashboardHeader({
     user,
     className
 }: DashboardHeaderProps) {
+    const canUseGlobalSearch = user?.role !== 'doctor'
+
     return (
         <header className={cn(
             "sticky top-0 z-50 w-full bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/60 shadow-sm transition-all duration-200 supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-950/60",
@@ -31,13 +33,15 @@ export function DashboardHeader({
             {/* Desktop Layout (Two Rows) */}
             <div className="hidden xl:flex flex-col">
                 {/* Top Row: Search Only */}
-                <div className="border-b border-slate-200/60 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-900/50">
-                    <div className="flex items-center justify-center px-8 py-2 h-[52px] max-w-[1920px] mx-auto">
-                        <div className="flex-1 max-w-3xl">
-                            <GlobalSearch variant="full" className="w-full shadow-sm" skipShortcut />
+                {canUseGlobalSearch && (
+                    <div className="border-b border-slate-200/60 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-900/50">
+                        <div className="flex items-center justify-center px-8 py-2 h-[52px] max-w-[1920px] mx-auto">
+                            <div className="flex-1 max-w-3xl">
+                                <GlobalSearch variant="full" className="w-full shadow-sm" skipShortcut />
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
 
                 {/* Bottom Row: Branding, Nav, User */}
                 <div className="px-8 py-2 h-[60px] max-w-[1920px] mx-auto w-full flex items-center justify-between">
@@ -99,7 +103,7 @@ export function DashboardHeader({
                 </div>
 
                 <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-                    <GlobalSearch variant="compact" />
+                    {canUseGlobalSearch && <GlobalSearch variant="compact" />}
                     {user && (
                         <>
                             <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 hidden sm:block" />

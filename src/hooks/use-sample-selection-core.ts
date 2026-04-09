@@ -20,6 +20,7 @@ interface UseSampleSelectionCoreCacheOptions {
     sampleId?: string | null
     initialSample?: SampleWithUser | null
     initialResults?: ResultWithAssay[]
+    includeResults?: boolean
 }
 
 export function createSampleSelectionCoreData(
@@ -32,9 +33,14 @@ export function createSampleSelectionCoreData(
     }
 }
 
-export async function fetchSampleSelectionCore(sampleId: string): Promise<SampleSelectionCoreData> {
+export async function fetchSampleSelectionCore(
+    sampleId: string,
+    includeResults = true,
+): Promise<SampleSelectionCoreData> {
     const samplePromise = fetchSampleDetail(sampleId)
-    const resultsPromise = fetchSampleResultsClient(sampleId).catch(() => null)
+    const resultsPromise = includeResults
+        ? fetchSampleResultsClient(sampleId).catch(() => null)
+        : Promise.resolve(null)
     const sample = await samplePromise
     const resultsResponse = await resultsPromise
 
@@ -49,6 +55,7 @@ export function useSampleSelectionCore({
     sampleId,
     initialSample,
     initialResults = EMPTY_INITIAL_RESULTS,
+    includeResults = true,
 }: UseSampleSelectionCoreCacheOptions = {}) {
     const queryClient = useQueryClient()
 
@@ -70,7 +77,7 @@ export function useSampleSelectionCore({
                 throw new Error('Sample ID is required')
             }
 
-            return fetchSampleSelectionCore(sampleId)
+            return fetchSampleSelectionCore(sampleId, includeResults)
         },
         enabled: Boolean(sampleId),
         staleTime: SAMPLE_SELECTION_CORE_STALE_TIME_MS,

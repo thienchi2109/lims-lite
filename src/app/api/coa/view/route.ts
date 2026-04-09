@@ -3,7 +3,7 @@
  *
  * GET /api/coa/view?sample_id={uuid}
  *
- * Serves CoA HTML file for authenticated staff (analysts, managers).
+ * Serves CoA HTML file for authenticated staff (analysts, managers, doctors).
  * Uses Supabase session authentication, not client JWT tokens.
  */
 
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
             )
         }
 
-        // Step 2: Verify user role (must be analyst or manager)
+        // Step 2: Verify user role (must be analyst, manager, or doctor)
         const { data: userData, error: roleError } = await supabase
             .from('users')
             .select('role')
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
             )
         }
 
-        if (!['analyst', 'manager'].includes(userData.role)) {
+        if (!['analyst', 'manager', 'doctor'].includes(userData.role)) {
             return NextResponse.json(
                 { error: 'Bạn không có quyền xem phiếu kết quả' },
                 { status: 403 }

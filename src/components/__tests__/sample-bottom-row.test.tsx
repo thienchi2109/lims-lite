@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import type { SampleWithUser } from '@/types'
 
 vi.mock('motion/react', () => ({
     AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
@@ -22,12 +23,28 @@ vi.mock('@/components/assigned-tests-panel', () => ({
     ),
 }))
 
+vi.mock('@/components/doctor-coa-panel', () => ({
+    DoctorCoAPanel: ({ sampleId }: { sampleId: string }) => (
+        <div data-testid="doctor-coa-panel">{sampleId}</div>
+    ),
+}))
+
 import { SampleBottomRow } from '../sample-bottom-row'
 
 const sample = {
     id: 'sample-1',
     sample_id: 'CDC-XN-0001',
-} as any
+    client_id: null,
+    client_name: null,
+    type: 'Máu',
+    status: 'completed',
+    received_at: '2026-04-09T00:00:00.000Z',
+    received_by: null,
+    received_by_name: null,
+    created_at: '2026-04-09T00:00:00.000Z',
+    updated_at: '2026-04-09T00:00:00.000Z',
+    deleted_at: null,
+} satisfies SampleWithUser
 
 describe('SampleBottomRow', () => {
     it('keeps both animated panel shells in a flex min-height chain so child panels can own scrolling', () => {
@@ -79,5 +96,12 @@ describe('SampleBottomRow', () => {
         expect(screen.getByText('Đang chuyển sang mẫu tiếp theo...')).toBeDefined()
         expect(screen.queryByText('Đang tải chi tiết mẫu...')).toBeNull()
         expect(screen.queryByText('Đang tải...')).toBeNull()
+    })
+
+    it('renders the doctor CoA panel instead of the assigned tests panel for doctors', () => {
+        render(<SampleBottomRow sample={sample} userRole="doctor" />)
+
+        expect(screen.getByTestId('doctor-coa-panel').textContent).toBe('sample-1')
+        expect(screen.queryByTestId('assigned-tests-panel')).toBeNull()
     })
 })

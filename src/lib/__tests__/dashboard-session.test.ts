@@ -74,6 +74,56 @@ describe('getAuthenticatedDashboardSession', () => {
         })
     })
 
+    it('accepts doctor as a dashboard role and includes it in the principal key', async () => {
+        const getUser = vi.fn().mockResolvedValue({
+            data: {
+                user: {
+                    id: 'doctor-1',
+                    last_sign_in_at: '2026-04-09T12:00:00.000Z',
+                },
+            },
+        })
+        const getSession = vi.fn().mockResolvedValue({
+            data: {
+                session: {
+                    access_token: 'token-2',
+                },
+            },
+        })
+        const usersQuery = createUsersQuery({
+            data: {
+                full_name: 'Doctor A',
+                role: 'doctor',
+                can_access_confidential: true,
+            },
+            error: null,
+        })
+
+        mockCreateClient.mockResolvedValue({
+            auth: {
+                getUser,
+                getSession,
+            },
+            from: (table: string) => {
+                expect(table).toBe('users')
+                return usersQuery
+            },
+        })
+
+        const { getAuthenticatedDashboardSession, isDashboardUserRole } = await import('../dashboard-session')
+
+        expect(isDashboardUserRole('doctor')).toBe(true)
+        await expect(getAuthenticatedDashboardSession()).resolves.toEqual({
+            accessToken: 'token-2',
+            canAccessConfidential: true,
+            fullName: 'Doctor A',
+            lastSignInAt: '2026-04-09T12:00:00.000Z',
+            principalKey: 'doctor-1:doctor:confidential',
+            role: 'doctor',
+            userId: 'doctor-1',
+        })
+    })
+
     it('returns null when there is no authenticated user', async () => {
         const getUser = vi.fn().mockResolvedValue({
             data: {

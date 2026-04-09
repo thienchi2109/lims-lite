@@ -28,6 +28,10 @@ export default async function ProfilePage() {
         redirect('/login')
     }
 
+    if (userData.role === 'doctor') {
+        redirect('/samples')
+    }
+
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
             <DashboardHeader

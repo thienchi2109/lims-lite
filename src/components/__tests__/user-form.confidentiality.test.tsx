@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
@@ -46,10 +47,10 @@ vi.mock('@/components/ui/checkbox', () => ({
 }))
 
 vi.mock('@/components/ui/select', () => ({
-    Select: ({ children }: { children: any }) => <div>{children}</div>,
-    SelectContent: ({ children }: { children: any }) => <div>{children}</div>,
-    SelectItem: ({ children }: { children: any }) => <div>{children}</div>,
-    SelectTrigger: ({ children }: { children: any }) => <div>{children}</div>,
+    Select: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+    SelectContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+    SelectItem: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+    SelectTrigger: ({ children }: { children: ReactNode }) => <div>{children}</div>,
     SelectValue: ({ placeholder }: { placeholder?: string }) => <span>{placeholder ?? ''}</span>,
 }))
 
@@ -98,5 +99,16 @@ describe('UserForm confidentiality access', () => {
                 }),
             )
         })
+    })
+
+    it('offers the doctor role in the user role selector', () => {
+        render(
+            <UserForm
+                onSuccess={vi.fn()}
+                onCancel={vi.fn()}
+            />,
+        )
+
+        expect(screen.getByText('Bác sĩ')).toBeDefined()
     })
 })

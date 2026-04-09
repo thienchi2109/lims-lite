@@ -25,6 +25,9 @@ export default async function ManagerDashboard() {
         if (userData?.role === 'analyst') {
             redirect('/analyst')
         }
+        if (userData?.role === 'doctor') {
+            redirect('/samples')
+        }
         redirect('/login')
     }
 

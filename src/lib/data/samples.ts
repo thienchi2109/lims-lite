@@ -49,12 +49,15 @@ export async function fetchSamples(params: SampleListParams) {
         return { error: access.error }
     }
 
+    const isDoctor = access.role === 'doctor'
     const receiverId = normalizeReceiverId(params.receiverId)
 
     // Validate params
     const validatedParams = SampleListParamsSchema.parse({
         ...params,
         receiverId,
+        scope: isDoctor ? 'all' : params.scope,
+        status: isDoctor ? 'completed' : params.status,
     })
     const resolvedScope = validatedParams.scope ?? 'active'
     const specialtyIds = validatedParams.specialtyIds

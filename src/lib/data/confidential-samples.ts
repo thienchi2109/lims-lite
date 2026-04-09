@@ -11,11 +11,12 @@ export async function getUserConfidentialAccess(
 ): Promise<{
     canAccessConfidential: boolean
     error?: string
+    role?: string | null
 }> {
     const client = supabase ?? await createClient()
     const { data, error } = await client
         .from('users')
-        .select('can_access_confidential')
+        .select('role, can_access_confidential')
         .eq('id', userId)
         .single()
 
@@ -29,6 +30,7 @@ export async function getUserConfidentialAccess(
 
     return {
         canAccessConfidential: data?.can_access_confidential === true,
+        role: data?.role ?? null,
     }
 }
 

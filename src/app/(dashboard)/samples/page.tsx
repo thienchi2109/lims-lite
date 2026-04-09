@@ -24,19 +24,23 @@ export default async function UnifiedSamplesPage() {
     }
 
     const supabase = await createClient()
+    const role = dashboardSession.role
+    const isDoctor = role === 'doctor'
 
     // 2. Fetch receiver options and specialties in parallel
-    const [receiverResult, specialtiesResult] = await Promise.all([
-        supabase
-            .from('users')
-            .select('id, full_name')
-            .order('full_name', { ascending: true }),
-        getSpecialties(),
-    ])
+    const [receiverResult, specialtiesResult] = isDoctor
+        ? [null, { data: [] }]
+        : await Promise.all([
+            supabase
+                .from('users')
+                .select('id, full_name')
+                .order('full_name', { ascending: true }),
+            getSpecialties(),
+        ])
 
-    const { data: receiverData, error: receiverError } = receiverResult
-    if (receiverError) {
-        console.error('Error fetching receiver list:', receiverError)
+    const receiverData = receiverResult?.data
+    if (receiverResult?.error) {
+        console.error('Error fetching receiver list:', receiverResult.error)
     }
 
     const receiverOptions: Array<{ id: string; name: string }> =
@@ -46,7 +50,6 @@ export default async function UnifiedSamplesPage() {
         })) || []
 
     const specialties = specialtiesResult.data
-    const role = dashboardSession.role
     const userData = {
         full_name: dashboardSession.fullName,
         role,
@@ -55,13 +58,13 @@ export default async function UnifiedSamplesPage() {
     // 4. Build permissions object based on role
     const permissions = {
         canDiscard: role === 'manager',
-        canEdit: true, // Both roles can edit (status-gated in component)
-        canViewResults: true, // Both roles can view results
+        canEdit: !isDoctor,
+        canViewResults: !isDoctor,
         canEnterResults: role === 'analyst', // Only analysts can enter results
     }
 
     // 5. Determine home dashboard link based on role
-    const homeHref = role === 'manager' ? '/manager' : '/analyst'
+    const homeHref = role === 'manager' ? '/manager' : role === 'analyst' ? '/analyst' : '/samples'
 
     // 6. Render client component with all required props
     return (
@@ -78,7 +81,7 @@ export default async function UnifiedSamplesPage() {
                 </div>
             }>
                 <SamplesPageClient
-                    role={role as 'analyst' | 'manager'}
+                    role={role}
                     permissions={permissions}
                     homeHref={homeHref}
                     receiverOptions={receiverOptions}

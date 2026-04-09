@@ -24,6 +24,16 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { deleteUserClient } from '@/lib/api-client'
+import { getUserRoleLabel } from '@/lib/role-labels'
+
+function getActionErrorMessage(result: unknown) {
+    if (result && typeof result === 'object' && 'error' in result) {
+        const error = (result as { error?: unknown }).error
+        return typeof error === 'string' ? error : null
+    }
+
+    return null
+}
 
 interface UserListTableProps {
     users: User[]
@@ -56,18 +66,26 @@ export function UserListTable({
     }
 
     const handleDelete = async (user: User) => {
-        if (confirm(`Bạn có chắc chắn muốn xóa người dùng ${user.username}?`)) {
-            try {
-                const result = await deleteUserClient(user.id)
-                if (result?.error) {
-                    throw new Error(result.error)
-                }
-                router.refresh()
-            } catch (error) {
-                const message = error instanceof Error ? error.message : 'Không thể xóa người dùng'
-                alert(message)
-            }
+        if (!confirm(`Bạn có chắc chắn muốn xóa người dùng ${user.username}?`)) {
+            return
         }
+
+        const result = await deleteUserClient(user.id).catch((error) => {
+            const message = error instanceof Error ? error.message : 'Không thể xóa người dùng'
+            alert(message)
+            return null
+        })
+        if (!result) {
+            return
+        }
+
+        const errorMessage = getActionErrorMessage(result)
+        if (errorMessage) {
+            alert(errorMessage)
+            return
+        }
+
+        router.refresh()
     }
 
     return (
@@ -121,7 +139,7 @@ export function UserListTable({
                                     <TableCell className="text-muted-foreground">{user.lab || '-'}</TableCell>
                                     <TableCell>
                                         <Badge variant={user.role === 'manager' ? 'default' : 'secondary'} className="capitalize">
-                                            {user.role === 'manager' ? 'Quản lý' : 'Kỹ thuật viên'}
+                                            {getUserRoleLabel(user.role)}
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-center">

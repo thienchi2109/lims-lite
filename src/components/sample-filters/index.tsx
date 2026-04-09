@@ -31,11 +31,13 @@ const EMPTY_RECEIVERS: Array<{ id: string; name: string }> = []
 type SampleFiltersProps = {
     specialties?: LabSpecialty[]
     receiverOptions?: Array<{ id: string; name: string }>
+    completedOnly?: boolean
 }
 
 export function SampleFilters({
     specialties = EMPTY_SPECIALTIES,
     receiverOptions = EMPTY_RECEIVERS,
+    completedOnly = false,
 }: SampleFiltersProps) {
     const [isFilterOpen, setIsFilterOpen] = useState(false)
     const [isScannerOpen, setIsScannerOpen] = useState(false)
@@ -59,7 +61,7 @@ export function SampleFilters({
                     <Input
                         ref={searchInputRef}
                         data-search-input="true"
-                        placeholder="Tìm kiếm mẫu, khách hàng, mã..."
+                        placeholder={completedOnly ? 'Tìm kiếm mẫu đã hoàn thành...' : 'Tìm kiếm mẫu, khách hàng, mã...'}
                         value={filters.search}
                         onChange={(e) => handlers.setSearch(e.target.value)}
                         className="pl-9 pr-12 h-10 w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 shadow-sm focus-visible:ring-1 focus-visible:ring-sky-500/20"
@@ -78,35 +80,43 @@ export function SampleFilters({
 
                 {/* Right Actions */}
                 <div className="flex items-center gap-2 shrink-0">
-                    <Button
-                        type="button"
-                        variant={filters.scope === 'all' ? 'secondary' : 'outline'}
-                        onClick={() => handlers.setScope(filters.scope === 'all' ? 'active' : 'all')}
-                        className="h-10 gap-2 font-normal"
-                        aria-pressed={filters.scope === 'all'}
-                    >
-                        <span>Hiển thị tất cả</span>
-                    </Button>
+                    {completedOnly ? (
+                        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+                            Chỉ mẫu đã hoàn thành
+                        </div>
+                    ) : (
+                        <>
+                            <Button
+                                type="button"
+                                variant={filters.scope === 'all' ? 'secondary' : 'outline'}
+                                onClick={() => handlers.setScope(filters.scope === 'all' ? 'active' : 'all')}
+                                className="h-10 gap-2 font-normal"
+                                aria-pressed={filters.scope === 'all'}
+                            >
+                                <span>Hiển thị tất cả</span>
+                            </Button>
 
-                    <FilterPopover
-                        isOpen={isFilterOpen}
-                        onOpenChange={setIsFilterOpen}
-                        specialties={specialties}
-                        receiverOptions={receiverOptions}
-                        selectedSpecialtyIds={filters.selectedSpecialtyIds}
-                        status={filters.status}
-                        receiverId={filters.receiverId}
-                        fromDate={filters.fromDate}
-                        toDate={filters.toDate}
-                        onToggleSpecialty={handlers.toggleSpecialty}
-                        onStatusChange={handlers.setStatus}
-                        onReceiverChange={handlers.setReceiver}
-                        onFromDateChange={handlers.setFromDate}
-                        onToDateChange={handlers.setToDate}
-                        onDateRangePreset={handlers.setDateRange}
-                        onReset={handlers.resetFilters}
-                        activeFiltersCount={activeFiltersCount}
-                    />
+                            <FilterPopover
+                                isOpen={isFilterOpen}
+                                onOpenChange={setIsFilterOpen}
+                                specialties={specialties}
+                                receiverOptions={receiverOptions}
+                                selectedSpecialtyIds={filters.selectedSpecialtyIds}
+                                status={filters.status}
+                                receiverId={filters.receiverId}
+                                fromDate={filters.fromDate}
+                                toDate={filters.toDate}
+                                onToggleSpecialty={handlers.toggleSpecialty}
+                                onStatusChange={handlers.setStatus}
+                                onReceiverChange={handlers.setReceiver}
+                                onFromDateChange={handlers.setFromDate}
+                                onToDateChange={handlers.setToDate}
+                                onDateRangePreset={handlers.setDateRange}
+                                onReset={handlers.resetFilters}
+                                activeFiltersCount={activeFiltersCount}
+                            />
+                        </>
+                    )}
 
                     <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1" />
 
@@ -142,21 +152,23 @@ export function SampleFilters({
             </div>
 
             {/* Active Filters Row */}
-            <ActiveFilterBadges
-                specialties={specialties}
-                selectedSpecialtyIds={filters.selectedSpecialtyIds}
-                scope={filters.scope}
-                status={filters.status}
-                receiverId={filters.receiverId}
-                receiverOptions={receiverOptions}
-                fromDate={filters.fromDate}
-                toDate={filters.toDate}
-                onRemoveSpecialty={handlers.toggleSpecialty}
-                onClearStatus={() => handlers.setStatus('all')}
-                onClearReceiver={() => handlers.setReceiver('all')}
-                onClearDates={handlers.clearDates}
-                onResetAll={handlers.resetFilters}
-            />
+            {!completedOnly && (
+                <ActiveFilterBadges
+                    specialties={specialties}
+                    selectedSpecialtyIds={filters.selectedSpecialtyIds}
+                    scope={filters.scope}
+                    status={filters.status}
+                    receiverId={filters.receiverId}
+                    receiverOptions={receiverOptions}
+                    fromDate={filters.fromDate}
+                    toDate={filters.toDate}
+                    onRemoveSpecialty={handlers.toggleSpecialty}
+                    onClearStatus={() => handlers.setStatus('all')}
+                    onClearReceiver={() => handlers.setReceiver('all')}
+                    onClearDates={handlers.clearDates}
+                    onResetAll={handlers.resetFilters}
+                />
+            )}
 
             {/* QR Scanner Dialog */}
             <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>

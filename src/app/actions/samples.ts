@@ -202,6 +202,10 @@ export async function getSample(id: string) {
             return { error: access.error }
         }
 
+        if (access.role === 'doctor' && sample.status !== 'completed') {
+            return { error: SAMPLE_NOT_FOUND_ERROR }
+        }
+
         if (!access.canAccessConfidential) {
             const confidentiality = await isConfidentialAssociatedSample(id)
             if (confidentiality.data) {

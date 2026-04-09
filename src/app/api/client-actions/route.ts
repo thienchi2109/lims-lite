@@ -34,7 +34,6 @@ import {
 } from '@/app/actions/clients'
 import {
     uploadSignature,
-    uploadManagerSignature,
     getActiveSignature,
     getSignatureHistory,
     downloadSignature,
@@ -50,52 +49,24 @@ import {
 import { generateCoA, regenerateCoA } from '@/app/actions/coa'
 import { isIsoDateString } from '@/lib/iso-date'
 import type { ClientActionName, ClientActionRequest } from '@/lib/client-actions/types'
+import { isAllowedOrigin, mapErrorToStatus } from './route-helpers'
+import { getDoctorActionDenial } from './role-guard'
 
-interface ActionHandler {
-    (payload?: any): Promise<any>
+// The JSON client-action bridge intentionally accepts heterogeneous payloads.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ActionHandler = (payload?: any) => Promise<unknown>
+
+type ActionErrorResult = {
+    error?: unknown
 }
 
-function isAllowedOrigin(request: Request) {
-    const origin = request.headers.get('origin')
-    const referer = request.headers.get('referer')
-    const requestHost = new URL(request.url).host
-    const headerHost = request.headers.get('host')
-    const envSiteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL
-
-    const allowedHosts = new Set<string>()
-    allowedHosts.add(requestHost)
-    if (headerHost) allowedHosts.add(headerHost)
-    if (envSiteUrl) {
-        try {
-            allowedHosts.add(new URL(envSiteUrl).host)
-        } catch {
-            // ignore malformed SITE_URL
-        }
-    }
-
-    const isHostAllowed = (value: string | null) => {
-        if (!value) return false
-        try {
-            const host = new URL(value).host
-            return allowedHosts.has(host)
-        } catch {
-            return allowedHosts.has(value)
-        }
-    }
-
-    if (origin && !isHostAllowed(origin)) return false
-    if (!origin && referer && !isHostAllowed(referer)) return false
-
-    return true
-}
-
-function mapErrorToStatus(message: string) {
-    const normalized = message.toLowerCase()
-    // Map JWS/JWT errors to 401 so client can handle redirect
-    if (normalized.includes('unauthorized') || normalized.includes('jws') || normalized.includes('signature') || normalized.includes('jwt')) return 401
-    if (normalized.includes('forbidden')) return 403
-    if (normalized.includes('not found')) return 404
-    return 400
+function hasActionErrorResult(result: unknown): result is ActionErrorResult {
+    return (
+        typeof result === 'object' &&
+        result !== null &&
+        'error' in result &&
+        Boolean((result as ActionErrorResult).error)
+    )
 }
 
 const actionHandlers: Record<ClientActionName, ActionHandler> = {
@@ -324,7 +295,7 @@ export async function POST(request: Request) {
     let body: ClientActionRequest
     try {
         body = (await request.json()) as ClientActionRequest
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: 'Payload không hợp lệ' }, { status: 400 })
     }
 
@@ -337,11 +308,16 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: `Action không được hỗ trợ: ${body.action}` }, { status: 400 })
     }
 
+    const doctorDenial = await getDoctorActionDenial(body.action as ClientActionName)
+    if (doctorDenial) {
+        return NextResponse.json({ error: doctorDenial.error }, { status: doctorDenial.status })
+    }
+
     try {
         const result = await handler(body.payload)
 
-        if (result && typeof result === 'object' && 'error' in result && (result as any).error) {
-            const status = mapErrorToStatus(String((result as any).error))
+        if (hasActionErrorResult(result)) {
+            const status = mapErrorToStatus(String(result.error))
             return NextResponse.json(result, { status })
         }
 

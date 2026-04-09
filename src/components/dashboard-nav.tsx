@@ -63,6 +63,8 @@ export function DashboardNav({ user, className }: DashboardNavProps) {
             ]
             : []
 
+    if (links.length === 0) return null
+
     return (
         <div className={cn("flex items-center", className)}>
             {/* Desktop Navigation */}

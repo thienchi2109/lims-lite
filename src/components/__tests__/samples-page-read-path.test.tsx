@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
+import type { SampleWithUser } from '@/types'
 
 const mockUseSamples = vi.fn()
 let mockSearchParams = new URLSearchParams()
@@ -172,13 +173,19 @@ const basePermissions = {
     canEnterResults: false,
 }
 
-function buildSample(sampleId: string, overrides: Record<string, unknown> = {}) {
+function buildSample(sampleId: string, overrides: Partial<SampleWithUser> = {}): SampleWithUser {
     return {
         id: sampleId,
         sample_id: sampleId.toUpperCase(),
+        client_id: null,
+        client_name: null,
+        type: 'Máu',
         status: 'assigned',
         received_at: '2026-01-01T00:00:00.000Z',
+        received_by: null,
+        created_at: '2026-01-01T00:00:00.000Z',
         updated_at: '2026-01-01T00:00:00.000Z',
+        deleted_at: null,
         received_by_name: 'User A',
         ...overrides,
     }
@@ -233,7 +240,7 @@ describe('SamplesPageClient read-path contract', () => {
         mockGetQCStatusForAssays.mockResolvedValue({})
         mockUseSampleSelectionCore.mockReturnValue({
             data: {
-                sample: buildSample('sample-1') as any,
+                sample: buildSample('sample-1'),
                 results: [],
             },
             isLoading: false,
@@ -259,7 +266,7 @@ describe('SamplesPageClient read-path contract', () => {
         mockSearchParams = new URLSearchParams('sampleId=sample-1')
         mockUseSampleSelectionCore.mockReturnValue({
             data: {
-                sample: buildSample('sample-1') as any,
+                sample: buildSample('sample-1'),
                 results: embeddedResults,
             },
             isLoading: false,
@@ -282,6 +289,7 @@ describe('SamplesPageClient read-path contract', () => {
         })
         expect(mockUseSampleSelectionCore).toHaveBeenCalledWith({
             sampleId: 'sample-1',
+            includeResults: true,
         })
         rendered.unmount()
     })
@@ -308,7 +316,7 @@ describe('SamplesPageClient read-path contract', () => {
 
         mockUseSampleSelectionCore.mockReturnValue({
             data: {
-                sample: sampleA as any,
+                sample: sampleA,
                 results: sampleAResults,
             },
             isLoading: false,
@@ -337,7 +345,7 @@ describe('SamplesPageClient read-path contract', () => {
         mockSearchParams = new URLSearchParams('sampleId=sample-b')
         mockUseSampleSelectionCore.mockReturnValue({
             data: {
-                sample: sampleA as any,
+                sample: sampleA,
                 results: sampleAResults,
             },
             isLoading: false,
@@ -360,7 +368,7 @@ describe('SamplesPageClient read-path contract', () => {
 
         mockUseSampleSelectionCore.mockReturnValue({
             data: {
-                sample: sampleB as any,
+                sample: sampleB,
                 results: sampleAResults,
             },
             isLoading: false,
@@ -398,7 +406,7 @@ describe('SamplesPageClient read-path contract', () => {
         mockSearchParams = new URLSearchParams('sampleId=sample-1')
         mockUseSampleSelectionCore.mockReturnValue({
             data: {
-                sample: sampleAssigned as any,
+                sample: sampleAssigned,
                 results: [],
             },
             isLoading: false,
@@ -423,7 +431,7 @@ describe('SamplesPageClient read-path contract', () => {
 
         mockUseSampleSelectionCore.mockReturnValue({
             data: {
-                sample: sampleReview as any,
+                sample: sampleReview,
                 results: [],
             },
             isLoading: false,
@@ -457,7 +465,7 @@ describe('SamplesPageClient read-path contract', () => {
         mockSearchParams = new URLSearchParams('sampleId=sample-4')
         mockUseSampleSelectionCore.mockReturnValue({
             data: {
-                sample: sampleOnlyCore as any,
+                sample: sampleOnlyCore,
                 results: undefined,
             },
             isLoading: false,

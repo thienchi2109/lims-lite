@@ -15,19 +15,12 @@ import {
     FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select'
-import { SignatureUploadField } from '@/components/signature-upload-field'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Info } from 'lucide-react'
+import { UserFormRoleAccessFields } from '@/components/user-form-role-access-fields'
+import { UserFormSignatureSection } from '@/components/user-form-signature-section'
 
 // We need a combined schema or handling logic because Create and Update are different
 // But for the form, we can just use a loose schema or separate them.
@@ -44,8 +37,8 @@ export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormP
     const [signatureFile, setSignatureFile] = useState<File | null>(null)
     const [signatureError, setSignatureError] = useState<string | null>(null)
     const isEdit = !!user
-    const isSelfEdit = isEdit && currentUserId && user.id === currentUserId
-    const isOtherEdit = isEdit && !isSelfEdit
+    const isSelfEdit = Boolean(isEdit && currentUserId && user.id === currentUserId)
+    const isOtherEdit = Boolean(isEdit && !isSelfEdit)
 
     const updateSchema = UpdateUserSchema.extend({
         id: z.string().uuid().optional(), // Make optional - we use user.id in onSubmit, not form value
@@ -87,119 +80,131 @@ export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormP
         name: 'role',
     })
 
-    const hasActionError = (result: any): result is { error: string } =>
+    const hasActionError = (result: unknown): result is { error: string } =>
         Boolean(result && typeof result === 'object' && 'error' in result)
 
     async function onSubmit(values: UserFormValues) {
         setIsSubmitting(true)
         setSignatureError(null)
-
-        try {
-            if (isEdit && user) {
-                const updateValues = values as UpdateUserFormValues
-                const updatePayload: UpdateUser = {
-                    id: user.id,
-                    full_name: updateValues.full_name || undefined,
-                    role: updateValues.role ?? user.role,
-                    email: updateValues.email || undefined,
-                    lab: updateValues.lab || undefined,
-                    can_access_confidential:
-                        updateValues.can_access_confidential ?? user.can_access_confidential,
-                }
-
-                if (updateValues.password) {
-                    updatePayload.password = updateValues.password
-                }
-
-                const result = await updateUserClient(updatePayload)
-                if (hasActionError(result)) {
-                    form.setError('root', { message: result.error })
-                    toast.error(result.error)
-                    setIsSubmitting(false)
-                    return
-                }
-
-                // If self-edit and manager role and signature file provided, upload signature
-                if (isSelfEdit && user.role === 'manager' && signatureFile) {
-                    try {
-                        const formData = new FormData()
-                        formData.append('file', signatureFile)
-
-                        const signatureResult = await uploadSignatureClient(formData)
-                        if (!signatureResult.success) {
-                            setSignatureError(signatureResult.error)
-                            toast.warning(
-                                'Thông tin đã được cập nhật nhưng chữ ký tải lên thất bại. ' +
-                                signatureResult.error
-                            )
-                        } else {
-                            toast.success('Đã cập nhật thông tin và chữ ký thành công')
-                        }
-                    } catch (signatureErr) {
-                        console.error('Signature upload error:', signatureErr)
-                        setSignatureError('Tải lên chữ ký thất bại')
-                        toast.warning('Thông tin đã được cập nhật nhưng chữ ký tải lên thất bại')
-                    }
-                } else {
-                    toast.success('Đã cập nhật người dùng thành công')
-                }
-            } else {
-                const createValues = values as CreateUserFormValues
-                const createPayload: CreateUser = {
-                    username: createValues.username,
-                    full_name: createValues.full_name,
-                    password: createValues.password,
-                    role: createValues.role,
-                    email: createValues.email || undefined,
-                    lab: createValues.lab || undefined,
-                    can_access_confidential: createValues.can_access_confidential ?? false,
-                }
-
-                const result = await createUserClient(createPayload)
-                if (hasActionError(result)) {
-                    form.setError('root', { message: result.error })
-                    toast.error(result.error)
-                    setIsSubmitting(false)
-                    return
-                }
-
-                // If manager role and signature file provided, upload signature
-                if (createValues.role === 'manager' && signatureFile) {
-                    try {
-                        const formData = new FormData()
-                        formData.append('file', signatureFile)
-
-                        const signatureResult = await uploadSignatureClient(formData)
-                        if (!signatureResult.success) {
-                            // Signature upload failed, but user was created
-                            setSignatureError(signatureResult.error)
-                            toast.warning(
-                                'Tài khoản đã được tạo nhưng chữ ký tải lên thất bại. ' +
-                                'Vui lòng tải lên chữ ký trong Cài đặt.'
-                            )
-                        } else {
-                            toast.success('Đã tạo người dùng mới và tải lên chữ ký thành công')
-                        }
-                    } catch (signatureErr) {
-                        console.error('Signature upload error:', signatureErr)
-                        setSignatureError('Tải lên chữ ký thất bại')
-                        toast.warning(
-                            'Tài khoản đã được tạo nhưng chữ ký tải lên thất bại. ' +
-                            'Vui lòng tải lên chữ ký trong Cài đặt.'
-                        )
-                    }
-                } else {
-                    toast.success('Đã tạo người dùng mới')
-                }
-            }
-            onSuccess()
-        } catch (error) {
+        const userForUpdate = isEdit ? user : undefined
+        const reportSubmissionError = (error: unknown) => {
             console.error('Submission error:', error)
             const message = error instanceof Error ? error.message : 'Đã xảy ra lỗi. Vui lòng thử lại.'
             form.setError('root', { message })
             toast.error(message)
         }
 
+        if (userForUpdate) {
+            const updateValues = values as UpdateUserFormValues
+            const updatePayload: UpdateUser = {
+                id: userForUpdate.id,
+                full_name: updateValues.full_name || undefined,
+                role: updateValues.role ?? userForUpdate.role,
+                email: updateValues.email || undefined,
+                lab: updateValues.lab || undefined,
+                can_access_confidential:
+                    updateValues.can_access_confidential ?? userForUpdate.can_access_confidential,
+            }
+
+            if (updateValues.password) {
+                updatePayload.password = updateValues.password
+            }
+
+            const result = await updateUserClient(updatePayload).catch((error) => {
+                reportSubmissionError(error)
+                return null
+            })
+            if (!result) {
+                setIsSubmitting(false)
+                return
+            }
+            if (hasActionError(result)) {
+                form.setError('root', { message: result.error })
+                toast.error(result.error)
+                setIsSubmitting(false)
+                return
+            }
+
+            // If self-edit and manager role and signature file provided, upload signature
+            if (isSelfEdit && userForUpdate.role === 'manager' && signatureFile) {
+                const formData = new FormData()
+                formData.append('file', signatureFile)
+
+                const signatureResult = await uploadSignatureClient(formData).catch((signatureErr) => {
+                    console.error('Signature upload error:', signatureErr)
+                    setSignatureError('Tải lên chữ ký thất bại')
+                    toast.warning('Thông tin đã được cập nhật nhưng chữ ký tải lên thất bại')
+                    return null
+                })
+                if (signatureResult && !signatureResult.success) {
+                    setSignatureError(signatureResult.error)
+                    toast.warning(
+                        'Thông tin đã được cập nhật nhưng chữ ký tải lên thất bại. ' +
+                        signatureResult.error
+                    )
+                } else if (signatureResult) {
+                    toast.success('Đã cập nhật thông tin và chữ ký thành công')
+                }
+            } else {
+                toast.success('Đã cập nhật người dùng thành công')
+            }
+        } else {
+            const createValues = values as CreateUserFormValues
+            const createPayload: CreateUser = {
+                username: createValues.username,
+                full_name: createValues.full_name,
+                password: createValues.password,
+                role: createValues.role,
+                email: createValues.email || undefined,
+                lab: createValues.lab || undefined,
+                can_access_confidential: createValues.can_access_confidential ?? false,
+            }
+
+            const result = await createUserClient(createPayload).catch((error) => {
+                reportSubmissionError(error)
+                return null
+            })
+            if (!result) {
+                setIsSubmitting(false)
+                return
+            }
+            if (hasActionError(result)) {
+                form.setError('root', { message: result.error })
+                toast.error(result.error)
+                setIsSubmitting(false)
+                return
+            }
+
+            // If manager role and signature file provided, upload signature
+            if (createValues.role === 'manager' && signatureFile) {
+                const formData = new FormData()
+                formData.append('file', signatureFile)
+
+                const signatureResult = await uploadSignatureClient(formData).catch((signatureErr) => {
+                    console.error('Signature upload error:', signatureErr)
+                    setSignatureError('Tải lên chữ ký thất bại')
+                    toast.warning(
+                        'Tài khoản đã được tạo nhưng chữ ký tải lên thất bại. ' +
+                        'Vui lòng tải lên chữ ký trong Cài đặt.'
+                    )
+                    return null
+                })
+                if (signatureResult && !signatureResult.success) {
+                    // Signature upload failed, but user was created
+                    setSignatureError(signatureResult.error)
+                    toast.warning(
+                        'Tài khoản đã được tạo nhưng chữ ký tải lên thất bại. ' +
+                        'Vui lòng tải lên chữ ký trong Cài đặt.'
+                    )
+                } else if (signatureResult) {
+                    toast.success('Đã tạo người dùng mới và tải lên chữ ký thành công')
+                }
+            } else {
+                toast.success('Đã tạo người dùng mới')
+            }
+        }
+
+        onSuccess()
         setIsSubmitting(false)
     }
 
@@ -288,48 +293,7 @@ export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormP
                     )}
                 />
 
-                <FormField
-                    control={form.control}
-                    name="role"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Vai trò</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Chọn vai trò" />
-                                    </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    <SelectItem value="analyst">Kỹ thuật viên</SelectItem>
-                                    <SelectItem value="manager">Quản lý</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-
-                <FormField
-                    control={form.control}
-                    name="can_access_confidential"
-                    render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                            <div className="space-y-0.5">
-                                <FormLabel>Có quyền truy cập dữ liệu bí mật</FormLabel>
-                                <div className="text-sm text-muted-foreground">
-                                    Cho phép người dùng xem và xử lý các chỉ tiêu bí mật.
-                                </div>
-                            </div>
-                            <FormControl>
-                                <Checkbox
-                                    checked={Boolean(field.value)}
-                                    onCheckedChange={(checked) => field.onChange(checked === true)}
-                                />
-                            </FormControl>
-                        </FormItem>
-                    )}
-                />
+                <UserFormRoleAccessFields control={form.control} />
 
                 <FormField
                     control={form.control}
@@ -350,40 +314,16 @@ export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormP
                     )}
                 />
 
-                {/* Signature upload section */}
-                {/* Case 1: Creating new manager - allow signature upload */}
-                {!isEdit && selectedRole === 'manager' && (
-                    <SignatureUploadField
-                        value={signatureFile}
-                        onChange={setSignatureFile}
-                        error={signatureError || undefined}
-                        required={false}
-                    />
-                )}
-
-                {/* Case 2: Manager editing their own account - allow signature upload/change */}
-                {isSelfEdit && user.role === 'manager' && (
-                    <SignatureUploadField
-                        value={signatureFile}
-                        onChange={setSignatureFile}
-                        error={signatureError || undefined}
-                        required={false}
-                    />
-                )}
-
-                {/* Case 3: Editing someone else who is a manager - show signature status only */}
-                {isOtherEdit && user.role === 'manager' && (
-                    <div className="space-y-2">
-                        <FormLabel>Chữ ký điện tử</FormLabel>
-                        <Alert>
-                            <Info className="h-4 w-4" />
-                            <AlertDescription className="text-sm">
-                                Người dùng này cần tự tải lên chữ ký điện tử của họ khi đăng nhập.
-                                Bạn không thể tải lên chữ ký thay họ để đảm bảo tuân thủ quy định.
-                            </AlertDescription>
-                        </Alert>
-                    </div>
-                )}
+                <UserFormSignatureSection
+                    isEdit={isEdit}
+                    isSelfEdit={isSelfEdit}
+                    isOtherEdit={isOtherEdit}
+                    selectedRole={selectedRole}
+                    signatureError={signatureError}
+                    signatureFile={signatureFile}
+                    userRole={user?.role}
+                    onSignatureFileChange={setSignatureFile}
+                />
 
                 {form.formState.errors.root && (
                     <div className="text-red-500 text-sm">

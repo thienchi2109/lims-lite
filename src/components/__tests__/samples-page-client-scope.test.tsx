@@ -25,8 +25,12 @@ vi.mock('@/components/sample-list-table', () => ({
     SampleListTable: () => null,
 }))
 
+const mockSampleBottomRow = vi.fn()
 vi.mock('@/components/sample-bottom-row', () => ({
-    SampleBottomRow: () => null,
+    SampleBottomRow: (props: Record<string, unknown>) => {
+        mockSampleBottomRow(props)
+        return null
+    },
 }))
 
 vi.mock('next/link', () => ({
@@ -117,6 +121,40 @@ describe('SamplesPageClient scope contract', () => {
                     sortBy: 'received_at',
                     sortOrder: 'asc',
                 }),
+            }),
+        )
+    })
+
+    it('forces doctor sample queries to completed-only regardless of URL scope/status filters', () => {
+        mockSearchParams = new URLSearchParams('scope=all&status=review&page=2')
+
+        render(
+            <SamplesPageClient
+                role="doctor"
+                permissions={{
+                    canDiscard: false,
+                    canEdit: false,
+                    canViewResults: false,
+                    canEnterResults: false,
+                }}
+                homeHref="/samples"
+                receiverOptions={[]}
+                specialties={[]}
+            />,
+        )
+
+        expect(mockUseSamples).toHaveBeenCalledWith(
+            expect.objectContaining({
+                params: expect.objectContaining({
+                    scope: 'all',
+                    status: 'completed',
+                    page: 2,
+                }),
+            }),
+        )
+        expect(mockSampleBottomRow).toHaveBeenCalledWith(
+            expect.objectContaining({
+                userRole: 'doctor',
             }),
         )
     })

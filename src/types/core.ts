@@ -4,7 +4,7 @@ import { z } from 'zod'
 // ENUMS
 // ============================================================================
 
-export const UserRole = z.enum(['analyst', 'manager'])
+export const UserRole = z.enum(['analyst', 'manager', 'doctor'])
 export type UserRole = z.infer<typeof UserRole>
 
 export const SampleStatus = z.enum(['received', 'assigned', 'in_progress', 'review', 'discarded', 'completed'])

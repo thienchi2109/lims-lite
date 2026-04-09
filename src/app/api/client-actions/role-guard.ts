@@ -1,0 +1,43 @@
+import { createClient } from '@/lib/supabase/server'
+import type { ClientActionName } from '@/lib/client-actions/types'
+
+const DOCTOR_ALLOWED_ACTIONS = new Set<ClientActionName>(['getSamples'])
+export const CLIENT_ACTION_FORBIDDEN_ERROR = 'Bạn không có quyền thực hiện thao tác này'
+
+export async function getDoctorActionDenial(action: ClientActionName) {
+    const supabase = await createClient()
+    const {
+        data: { user },
+        error: authError,
+    } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return null
+    }
+
+    const { data: userData, error: roleError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (roleError) {
+        return {
+            error: 'Không thể xác minh quyền truy cập',
+            status: 403,
+        }
+    }
+
+    if (userData?.role !== 'doctor') {
+        return null
+    }
+
+    if (DOCTOR_ALLOWED_ACTIONS.has(action)) {
+        return null
+    }
+
+    return {
+        error: CLIENT_ACTION_FORBIDDEN_ERROR,
+        status: 403,
+    }
+}

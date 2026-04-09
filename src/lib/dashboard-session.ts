@@ -2,7 +2,7 @@ import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { buildAuthenticatedPrincipalKey } from '@/lib/authenticated-query-cache'
 
-export type DashboardUserRole = 'analyst' | 'manager'
+export type DashboardUserRole = 'analyst' | 'manager' | 'doctor'
 
 export interface AuthenticatedDashboardSession {
     accessToken: string | null
@@ -17,7 +17,7 @@ export interface AuthenticatedDashboardSession {
 export function isDashboardUserRole(
     role: string | null | undefined,
 ): role is DashboardUserRole {
-    return role === 'analyst' || role === 'manager'
+    return role === 'analyst' || role === 'manager' || role === 'doctor'
 }
 
 export const getAuthenticatedDashboardSession = cache(

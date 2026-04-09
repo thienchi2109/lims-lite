@@ -25,6 +25,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { User, LogOut, Settings, ChevronDown } from 'lucide-react'
+import { getUserRoleLabel } from '@/lib/role-labels'
 
 interface UserProfileDropdownProps {
     user: {
@@ -58,6 +59,8 @@ export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
             .toUpperCase()
             .slice(0, 2)
         : 'U'
+    const roleLabel = getUserRoleLabel(user.role)
+    const showProfileLinks = user.role !== 'doctor'
 
     return (
         <>
@@ -84,7 +87,7 @@ export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
                                         <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
                                     </span>
                                     <p className="text-xs text-slate-500 dark:text-slate-400 capitalize font-medium leading-none">
-                                        {user.role}
+                                        {roleLabel}
                                     </p>
                                 </div>
                             </div>
@@ -97,22 +100,26 @@ export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
                         <div className="flex flex-col space-y-1">
                             <p className="text-sm font-medium leading-none">{user.full_name}</p>
                             <p className="text-xs leading-none text-muted-foreground capitalize">
-                                {user.role}
+                                {roleLabel}
                             </p>
                         </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                        <Link href="/profile" className="flex items-center cursor-pointer">
-                            <User className="mr-2 h-4 w-4" />
-                            <span>Hồ sơ</span>
-                        </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer">
-                        <Settings className="mr-2 h-4 w-4" />
-                        <span>Cài đặt</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
+                    {showProfileLinks && (
+                        <>
+                            <DropdownMenuItem asChild>
+                                <Link href="/profile" className="flex items-center cursor-pointer">
+                                    <User className="mr-2 h-4 w-4" />
+                                    <span>Hồ sơ</span>
+                                </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer">
+                                <Settings className="mr-2 h-4 w-4" />
+                                <span>Cài đặt</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                        </>
+                    )}
                     <DropdownMenuItem
                         onClick={() => setShowLogoutDialog(true)}
                         className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400 focus:bg-red-50 dark:focus:bg-red-950/50 cursor-pointer"

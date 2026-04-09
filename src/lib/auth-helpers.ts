@@ -5,7 +5,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 
-export type UserRole = 'analyst' | 'manager'
+export type UserRole = 'analyst' | 'manager' | 'doctor'
 
 export interface AuthenticatedUser {
     id: string

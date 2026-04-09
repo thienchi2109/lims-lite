@@ -4,7 +4,7 @@ import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { LoginSchema } from '@/types'
 import { redirect } from 'next/navigation'
 
-export async function login(prevState: any, formData: FormData) {
+export async function login(_prevState: unknown, formData: FormData) {
     const supabase = await createClient()
 
     // Validate input
@@ -95,6 +95,10 @@ export async function login(prevState: any, formData: FormData) {
     const role = userData?.role || 'analyst'
 
     // Redirect based on role
+    if (role === 'doctor') {
+        redirect('/samples')
+    }
+
     redirect(role === 'manager' ? '/manager' : '/analyst')
 }
 

@@ -15,7 +15,7 @@ import { ArrowLeft } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 
 interface SamplesPageClientProps {
-    role: 'analyst' | 'manager'
+    role: 'analyst' | 'manager' | 'doctor'
     permissions: {
         canDiscard: boolean
         canEdit: boolean
@@ -35,13 +35,18 @@ export function SamplesPageClient({
     specialties
 }: SamplesPageClientProps) {
     const searchParams = useSearchParams()
+    const isDoctor = role === 'doctor'
 
     // Parse URL params
     const searchTerm = searchParams.get('search') || ''
-    const scope = searchParams.get('scope') === 'all' ? 'all' : 'active'
+    const scope = isDoctor
+        ? 'all'
+        : searchParams.get('scope') === 'all' ? 'all' : 'active'
     const statusParam = searchParams.get('status') || 'all'
     const validStatuses: SampleStatus[] = ['received', 'assigned', 'in_progress', 'review', 'completed', 'discarded']
-    const status = validStatuses.includes(statusParam as SampleStatus)
+    const status = isDoctor
+        ? 'completed'
+        : validStatuses.includes(statusParam as SampleStatus)
         ? (statusParam as SampleStatus)
         : undefined
 
@@ -74,6 +79,7 @@ export function SamplesPageClient({
         isPlaceholderData,
     } = useSampleSelectionCore({
         sampleId,
+        includeResults: !isDoctor,
     })
 
     // Fetch samples with TanStack Query
@@ -134,7 +140,7 @@ export function SamplesPageClient({
                 <Link href={homeHref}>
                     <Button variant="ghost" size="sm">
                         <ArrowLeft className="h-4 w-4 mr-2" />
-                        Quay lại Bảng điều khiển
+                        {isDoctor ? 'Quản lý mẫu' : 'Quay lại Bảng điều khiển'}
                     </Button>
                 </Link>
             </div>
@@ -146,6 +152,7 @@ export function SamplesPageClient({
                         <SampleFilters
                             receiverOptions={receiverOptions}
                             specialties={specialties}
+                            completedOnly={isDoctor}
                         />
                     </Suspense>
                 </div>

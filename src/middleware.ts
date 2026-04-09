@@ -1,4 +1,4 @@
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { getSessionTimeboxSeconds } from '@/lib/auth-session-timebox'
 import { decodeJwtPayload } from '@/lib/jwt'
@@ -9,7 +9,7 @@ export async function middleware(request: NextRequest) {
     let supabaseResponse = NextResponse.next({
         request,
     })
-    const pendingCookies: Array<{ name: string; value: string; options: any }> = []
+    const pendingCookies: Array<{ name: string; value: string; options: CookieOptions }> = []
 
     // Prioritize internal Docker URL for middleware (server-side)
     const supabaseUrl = process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -26,7 +26,7 @@ export async function middleware(request: NextRequest) {
                     return request.cookies.getAll()
                 },
                 setAll(cookiesToSet) {
-                    cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+                    cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
                     pendingCookies.push(...cookiesToSet)
                     supabaseResponse = NextResponse.next({
                         request,
@@ -59,7 +59,9 @@ export async function middleware(request: NextRequest) {
 
     const isProtectedRoute =
         request.nextUrl.pathname.startsWith('/analyst') ||
-        request.nextUrl.pathname.startsWith('/manager')
+        request.nextUrl.pathname.startsWith('/manager') ||
+        request.nextUrl.pathname.startsWith('/samples') ||
+        request.nextUrl.pathname.startsWith('/profile')
     const isApiRoute = request.nextUrl.pathname.startsWith('/api')
     const isLoginRoute = request.nextUrl.pathname === '/login'
     const shouldEnforceTimebox = isProtectedRoute || isApiRoute || isLoginRoute
@@ -128,7 +130,7 @@ export async function middleware(request: NextRequest) {
         }
 
         if (sessionCreatedAtMs === null) {
-            const lastSignInAt = (user as any).last_sign_in_at as string | null | undefined
+            const lastSignInAt = (user as { last_sign_in_at?: string | null }).last_sign_in_at
             if (lastSignInAt) {
                 const lastSignInAtMs = Date.parse(lastSignInAt)
                 if (Number.isFinite(lastSignInAtMs)) {
@@ -165,10 +167,34 @@ export async function middleware(request: NextRequest) {
             return NextResponse.redirect(url)
         }
 
+        const redirectByRole = (fallbackPath = '/login') => {
+            const url = request.nextUrl.clone()
+            url.pathname = userRole === 'manager'
+                ? '/manager'
+                : userRole === 'analyst'
+                    ? '/analyst'
+                    : userRole === 'doctor'
+                        ? '/samples'
+                        : fallbackPath
+            return NextResponse.redirect(url)
+        }
+
         // Role-based route protection
         if (request.nextUrl.pathname.startsWith('/manager') && userRole !== 'manager') {
+            return redirectByRole()
+        }
+
+        if (request.nextUrl.pathname.startsWith('/analyst') && userRole !== 'analyst') {
+            return redirectByRole()
+        }
+
+        if (request.nextUrl.pathname.startsWith('/profile') && userRole === 'doctor') {
+            return redirectByRole()
+        }
+
+        if (request.nextUrl.pathname.startsWith('/samples') && !['analyst', 'manager', 'doctor'].includes(userRole ?? '')) {
             const url = request.nextUrl.clone()
-            url.pathname = '/analyst'
+            url.pathname = '/login'
             return NextResponse.redirect(url)
         }
     }
@@ -176,7 +202,11 @@ export async function middleware(request: NextRequest) {
     // Redirect logged-in users away from login page
     if (isLoginRoute && user) {
         const url = request.nextUrl.clone()
-        url.pathname = userRole === 'manager' ? '/manager' : '/analyst'
+        url.pathname = userRole === 'manager'
+            ? '/manager'
+            : userRole === 'doctor'
+                ? '/samples'
+                : '/analyst'
         return NextResponse.redirect(url)
     }
 

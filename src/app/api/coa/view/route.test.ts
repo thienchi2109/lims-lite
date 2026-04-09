@@ -37,10 +37,14 @@ function mockStaffViewRoute({
     canAccessConfidential,
     sampleIsConfidential,
     sampleExists = true,
+    role = 'analyst',
+    sampleStatus = 'completed',
 }: {
     canAccessConfidential: boolean
     sampleIsConfidential: boolean
     sampleExists?: boolean
+    role?: string
+    sampleStatus?: string
 }) {
     mockDownload.mockResolvedValue({
         data: {
@@ -60,7 +64,7 @@ function mockStaffViewRoute({
             if (table === 'users') {
                 return createThenableQuery({
                     data: {
-                        role: 'analyst',
+                        role,
                         can_access_confidential: canAccessConfidential,
                     },
                     error: null,
@@ -73,7 +77,7 @@ function mockStaffViewRoute({
                         ? {
                               id: 'sample-1',
                               sample_id: 'COA-0001',
-                              status: 'completed',
+                              status: sampleStatus,
                           }
                         : null,
                     error: sampleExists
@@ -191,6 +195,41 @@ describe('staff CoA view confidentiality', () => {
         expect(response.status).toBe(404)
         await expect(response.json()).resolves.toEqual({
             error: 'Không tìm thấy phiếu kết quả',
+        })
+        expect(mockDownload).not.toHaveBeenCalled()
+    })
+
+    it('allows doctors to preview ready CoA for completed samples', async () => {
+        mockStaffViewRoute({
+            role: 'doctor',
+            canAccessConfidential: false,
+            sampleIsConfidential: false,
+        })
+
+        const response = await GET(
+            new Request('http://localhost/api/coa/view?sample_id=sample-1') as Request,
+        )
+
+        expect(response.status).toBe(200)
+        await expect(response.text()).resolves.toContain('Confidential CoA')
+        expect(mockDownload).toHaveBeenCalledTimes(1)
+    })
+
+    it('denies doctors when the sample is not completed', async () => {
+        mockStaffViewRoute({
+            role: 'doctor',
+            canAccessConfidential: false,
+            sampleIsConfidential: false,
+            sampleStatus: 'review',
+        })
+
+        const response = await GET(
+            new Request('http://localhost/api/coa/view?sample_id=sample-1') as Request,
+        )
+
+        expect(response.status).toBe(400)
+        await expect(response.json()).resolves.toEqual({
+            error: 'Mẫu chưa hoàn thành xét nghiệm',
         })
         expect(mockDownload).not.toHaveBeenCalled()
     })

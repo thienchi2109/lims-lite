@@ -20,6 +20,16 @@ export default async function AnalystDashboard() {
         .eq('id', user.id)
         .single()
 
+    if (!userData || userData.role !== 'analyst') {
+        if (userData?.role === 'manager') {
+            redirect('/manager')
+        }
+        if (userData?.role === 'doctor') {
+            redirect('/samples')
+        }
+        redirect('/login')
+    }
+
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 relative overflow-hidden font-sans selection:bg-emerald-100 selection:text-emerald-900">
             {/* Background Decorations */}

@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'motion/react'
 import { SampleWithUser, type LabSpecialty, type ResultWithAssay } from '@/types'
 import { SampleDetailPanel } from '@/components/sample-detail-panel'
 import { AssignedTestsPanel } from '@/components/assigned-tests-panel'
+import { DoctorSampleMetadataPanel } from '@/components/doctor-sample-metadata-panel'
+import { DoctorCoAPanel } from '@/components/doctor-coa-panel'
 import { durations, fadeInScale } from '@/lib/motion'
 import { AlertCircle } from 'lucide-react'
 
@@ -21,7 +23,7 @@ interface SampleBottomRowProps {
         canEnterResults: boolean
     }
     specialties?: LabSpecialty[]
-    userRole?: 'analyst' | 'manager'
+    userRole?: 'analyst' | 'manager' | 'doctor'
 }
 
 export function SampleBottomRow({
@@ -29,12 +31,12 @@ export function SampleBottomRow({
     results,
     isLoadingSample = false,
     loadErrorMessage = null,
-    permissions,
     specialties = EMPTY_SPECIALTIES,
     userRole,
 }: SampleBottomRowProps) {
     const displayedSample = sample
     const displayedResults = results
+    const isDoctor = userRole === 'doctor'
 
     if (loadErrorMessage && !displayedSample) {
         return (
@@ -59,7 +61,7 @@ export function SampleBottomRow({
                     <div className="text-sm text-slate-500">Đang tải chi tiết mẫu...</div>
                 </div>
                 <div className="h-full min-h-0 flex items-center justify-center rounded-lg border border-slate-200 bg-white p-6">
-                    <div className="text-sm text-slate-500">Đang tải...</div>
+                    <div className="text-sm text-slate-500">{isDoctor ? 'Đang tải CoA...' : 'Đang tải...'}</div>
                 </div>
             </div>
         )
@@ -90,7 +92,11 @@ export function SampleBottomRow({
                             exit={{ opacity: 0 }}
                             transition={{ duration: durations.fast }}
                         >
-                            <SampleDetailPanel sample={displayedSample} />
+                            {isDoctor ? (
+                                <DoctorSampleMetadataPanel sample={displayedSample} />
+                            ) : (
+                                <SampleDetailPanel sample={displayedSample} />
+                            )}
                         </motion.div>
                     </AnimatePresence>
                 </motion.div>
@@ -111,16 +117,23 @@ export function SampleBottomRow({
                             exit={{ opacity: 0 }}
                             transition={{ duration: durations.fast }}
                         >
-                            {displayedSample ? (
+                            {displayedSample && isDoctor ? (
+                                <DoctorCoAPanel
+                                    sampleId={displayedSample.id}
+                                    sampleDisplayId={displayedSample.sample_id}
+                                />
+                            ) : displayedSample ? (
                                 <AssignedTestsPanel
                                     sampleId={displayedSample.id}
                                     specialties={specialties}
-                                    userRole={userRole}
+                                    userRole={userRole === 'doctor' ? undefined : userRole}
                                     initialResults={displayedResults}
                                 />
                             ) : (
                                 <div className="h-full flex items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-slate-400">
-                                    Chọn một mẫu để xem chi tiết và chỉ định xét nghiệm
+                                    {isDoctor
+                                        ? 'Chọn một mẫu đã hoàn thành để xem CoA'
+                                        : 'Chọn một mẫu để xem chi tiết và chỉ định xét nghiệm'}
                                 </div>
                             )}
                         </motion.div>
