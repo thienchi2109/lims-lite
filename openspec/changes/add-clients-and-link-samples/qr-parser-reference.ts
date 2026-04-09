@@ -22,6 +22,10 @@ export class QRParseError extends Error {
 
 const ALLOWED_GENDERS = ['Nam', 'Nữ', 'Khác'] as const;
 
+function isAllowedGender(value: string): value is ParsedQRData['gender'] {
+    return ALLOWED_GENDERS.some((gender) => gender === value);
+}
+
 /**
  * Parse Vietnamese ID card QR code payload
  * 
@@ -85,7 +89,7 @@ export function parseIDCardQR(qrPayload: string): ParsedQRData {
     const date_of_birth = parseDDMMYYYY(birthdateStr);
 
     // Step 6: Validate gender
-    if (!ALLOWED_GENDERS.includes(gender as any)) {
+    if (!isAllowedGender(gender)) {
         throw new QRParseError(
             `Invalid gender: "${gender}". Must be one of: ${ALLOWED_GENDERS.join(', ')}`
         );
@@ -95,7 +99,7 @@ export function parseIDCardQR(qrPayload: string): ParsedQRData {
         id_card_num,
         name,
         date_of_birth,
-        gender: gender as 'Nam' | 'Nữ' | 'Khác',
+        gender,
     };
 }
 

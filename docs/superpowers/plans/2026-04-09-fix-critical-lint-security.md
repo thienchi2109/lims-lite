@@ -546,15 +546,15 @@ git commit -m "fix: Remove runtime explicit any usage"
 - Modify: `scripts/sync-supabase-jwt-keys.js`
 - Modify: `openspec/changes/add-clients-and-link-samples/qr-parser-reference.ts`
 
-- [ ] **Step 1: Convert test `any` to typed mocks**
+- [x] **Step 1: Convert test `any` to typed mocks**
 
 Prefer `vi.mocked`, explicit mock function types, and `unknown` with narrow assertions.
 
-- [ ] **Step 2: Convert CommonJS script imports only if runtime supports ESM**
+- [x] **Step 2: Convert CommonJS script imports only if runtime supports ESM**
 
 If scripts are intended to remain CommonJS, prefer ESLint overrides for `scripts/*.js` instead of rewriting working operational scripts.
 
-- [ ] **Step 3: Run final full gates**
+- [x] **Step 3: Run final full gates**
 
 Run:
 
@@ -568,7 +568,7 @@ npm audit --json
 
 Expected: lint passes, core gates pass, audit has no high vulnerabilities.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Run:
 

@@ -4,7 +4,8 @@
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, act } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import { renderToString } from 'react-dom/server'
 
 // Mock the useMediaQuery hook
 vi.mock('@/hooks/use-media-query', () => ({
@@ -27,7 +28,6 @@ describe('MobileOnly', () => {
         mockUseMediaQuery.mockReturnValue(false)
 
         // renderToString does not run useEffect — simulates the SSR/initial paint
-        const { renderToString } = require('react-dom/server')
         const html = renderToString(
             <MobileOnly>
                 <div data-testid="child">Mobile content</div>

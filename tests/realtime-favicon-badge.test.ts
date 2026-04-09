@@ -282,7 +282,7 @@ describe('Helper Functions', () => {
 
     it('should return empty array in SSR environment', () => {
       const originalDocument = global.document
-      // @ts-ignore
+      // @ts-expect-error Simulate SSR by removing document from the test global.
       delete global.document
 
       const links = getFaviconLinks()
