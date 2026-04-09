@@ -333,7 +333,7 @@ git commit -m "fix: Resolve runtime React compiler lint errors"
 - Modify: `package.json`
 - Modify: `package-lock.json`
 
-- [ ] **Step 1: Confirm latest safe Next.js 16 patch**
+- [x] **Step 1: Confirm latest safe Next.js 16 patch**
 
 Run:
 
@@ -344,7 +344,7 @@ npm view eslint-config-next version
 
 Expected: identify a Next.js version at or above `16.1.7`. Keep `eslint-config-next` on a compatible 16.x version.
 
-- [ ] **Step 2: Upgrade Next.js patch line**
+- [x] **Step 2: Upgrade Next.js patch line**
 
 Run:
 
@@ -358,7 +358,7 @@ If latest is outside the intended major line, use the newest `16.x` version inst
 npm install next@16 eslint-config-next@16
 ```
 
-- [ ] **Step 3: Verify advisory reduction**
+- [x] **Step 3: Verify advisory reduction**
 
 Run:
 
@@ -376,7 +376,7 @@ Expected: Next.js moderate advisories are gone and build remains green.
 - Modify: `package.json`
 - Modify: `package-lock.json`
 
-- [ ] **Step 1: Inspect fix paths**
+- [x] **Step 1: Inspect fix paths**
 
 Run:
 
@@ -387,7 +387,7 @@ npm ls vite picomatch flatted brace-expansion
 
 Expected: identify whether fixes come through `vitest`, `@vitest/ui`, `eslint`, `eslint-config-next`, `typescript-eslint`, or transitive overrides.
 
-- [ ] **Step 2: Prefer normal package upgrades before overrides**
+- [x] **Step 2: Prefer normal package upgrades before overrides**
 
 Run:
 
@@ -397,11 +397,11 @@ npm install -D vitest@latest @vitest/ui@latest eslint@latest eslint-config-next@
 
 If this pulls incompatible majors or leaves advisories unresolved, stop and record the exact blocker before adding overrides.
 
-- [ ] **Step 3: Use overrides only if package upgrades cannot resolve transitive CVEs**
+- [x] **Step 3: Use overrides only if package upgrades cannot resolve transitive CVEs**
 
 Only if needed, add targeted npm `overrides` for patched transitive versions. Do not override React, Next, or core framework packages unless audit proves it is safe.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run:
 
@@ -414,7 +414,7 @@ npm run build
 
 Expected: `npm audit` has 0 high vulnerabilities. If moderate dev-only issues remain, document why and create a follow-up issue.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run:
 
