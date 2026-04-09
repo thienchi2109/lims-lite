@@ -362,6 +362,33 @@ function setupConfidentialSampleLookup(hasConfidential: boolean) {
             expect((result as any).blocked_count).toBe(1)
             expect(fromChain.update).not.toHaveBeenCalled()
         })
+
+        it('reports all requested results as blocked when the QC RPC returns a malformed payload', async () => {
+            setupManagerAuth()
+            setupReviewApprovalFlow(
+                [
+                    { id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID },
+                    { id: TEST_RESULT_ID_2, status: 'entered', sample_id: TEST_SAMPLE_ID },
+                ],
+                0
+            )
+
+            mockRpc.mockResolvedValueOnce({
+                data: { can_approve: true },
+                error: null,
+            })
+
+            const result = await approveResults({
+                sampleId: TEST_SAMPLE_ID,
+                resultIds: [TEST_RESULT_ID_1, TEST_RESULT_ID_2],
+            })
+
+            expect(result).toHaveProperty('error')
+            expect(result.error).toContain('Phản hồi kiểm tra QC không hợp lệ')
+            expect((result as any).qc_blocked).toBe(true)
+            expect((result as any).blocked_count).toBe(2)
+            expect(fromChain.update).not.toHaveBeenCalled()
+        })
     })
 
     describe('Allowed QC Sessions', () => {

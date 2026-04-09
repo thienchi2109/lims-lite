@@ -315,18 +315,42 @@ describe('useFaviconBadge - DOM restoration', () => {
 
     document.head.append(link1, link2)
 
-    const { unmount } = renderHook(() => useFaviconBadge(0))
-
     const originalHref1 = link1.href
     const originalHref2 = link2.href
+
+    const getContextSpy = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null)
+    const { unmount } = renderHook(() => useFaviconBadge(1))
+
     link1.href = 'data:image/png;base64,a'
     link2.href = 'data:image/png;base64,b'
     document.head.insertBefore(link2, link1)
 
-    unmount()
+    try {
+      unmount()
 
-    expect(link1.href).toBe(originalHref1)
-    expect(link2.href).toBe(originalHref2)
+      expect(link1.href).toBe(originalHref1)
+      expect(link2.href).toBe(originalHref2)
+    } finally {
+      getContextSpy.mockRestore()
+    }
+  })
+
+  it('captures the current favicon href on each mount after restoring', () => {
+    const link = document.createElement('link')
+    link.rel = 'icon'
+    link.href = '/favicon-a.ico'
+    document.head.append(link)
+
+    const firstRender = renderHook(() => useFaviconBadge(0))
+    firstRender.unmount()
+
+    const updatedHref = `${window.location.origin}/favicon-b.ico`
+    link.href = updatedHref
+
+    const secondRender = renderHook(() => useFaviconBadge(0))
+    secondRender.unmount()
+
+    expect(link.href).toBe(updatedHref)
   })
 })
 

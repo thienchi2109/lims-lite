@@ -32,6 +32,7 @@ function restoreFaviconLinks(links: HTMLLinkElement[]) {
     links.forEach((link) => {
         const originalHref = getOriginalFaviconHref(link)
         if (originalHref) link.href = originalHref
+        link.removeAttribute(ORIGINAL_FAVICON_HREF_ATTRIBUTE)
     })
 }
 

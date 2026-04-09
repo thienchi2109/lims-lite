@@ -169,7 +169,7 @@ export async function approveResults(data: ApproveResults) {
 
         if (qcCheck) {
             if (!Array.isArray(qcCheck)) {
-                return createInvalidQCApprovalStatusResponse(1)
+                return createInvalidQCApprovalStatusResponse(validatedData.resultIds.length)
             }
 
             const qcStatusRows = qcCheck.filter(isQCApprovalStatusRow)

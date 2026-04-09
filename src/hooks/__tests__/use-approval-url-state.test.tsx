@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useApprovalUrlState } from '../use-approval-url-state'
 
@@ -89,9 +89,10 @@ describe('useApprovalUrlState', () => {
 
         window.history.replaceState(null, '', '/manager/approvals?tab=completed&sampleId=sample-2')
         rerender({ tab: 'completed', sampleId: 'sample-2' })
-        expect(result.current.activeTab).toBe('completed')
-        expect(result.current.urlSampleId).toBe('sample-2')
-        await act(async () => {})
+        await waitFor(() => {
+            expect(result.current.activeTab).toBe('completed')
+            expect(result.current.urlSampleId).toBe('sample-2')
+        })
 
         window.history.replaceState(null, '', '/manager/approvals?tab=review')
         rerender({ tab: 'review', sampleId: null })

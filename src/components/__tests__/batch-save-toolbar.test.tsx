@@ -6,31 +6,33 @@ describe('BatchSaveToolbar', () => {
     it('shows a success state after saving clears all pending changes', async () => {
         vi.useFakeTimers()
 
-        const { rerender } = render(
-            <BatchSaveToolbar
-                pendingCount={2}
-                onSave={vi.fn()}
-                onDiscard={vi.fn()}
-                isSaving
-                isVisible
-            />
-        )
-        await act(async () => {})
+        try {
+            const { rerender } = render(
+                <BatchSaveToolbar
+                    pendingCount={2}
+                    onSave={vi.fn()}
+                    onDiscard={vi.fn()}
+                    isSaving
+                    isVisible
+                />
+            )
+            await act(async () => {})
 
-        rerender(
-            <BatchSaveToolbar
-                pendingCount={0}
-                onSave={vi.fn()}
-                onDiscard={vi.fn()}
-                isSaving={false}
-                isVisible={false}
-            />
-        )
+            rerender(
+                <BatchSaveToolbar
+                    pendingCount={0}
+                    onSave={vi.fn()}
+                    onDiscard={vi.fn()}
+                    isSaving={false}
+                    isVisible={false}
+                />
+            )
 
-        await act(async () => {})
+            await act(async () => {})
 
-        expect(screen.getByText('Đã lưu thay đổi thành công!')).toBeDefined()
-
-        vi.useRealTimers()
+            expect(screen.getByText('Đã lưu thay đổi thành công!')).toBeDefined()
+        } finally {
+            vi.useRealTimers()
+        }
     })
 })
