@@ -48,4 +48,20 @@ describe('SearchInput', () => {
 
         expect((screen.getByRole('searchbox') as HTMLInputElement).value).toBe('DEF')
     })
+
+    it('does not restore stale draft text when history returns to its original search query', async () => {
+        const { rerender } = render(<SearchInput />)
+
+        fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'XYZ' } })
+        expect((screen.getByRole('searchbox') as HTMLInputElement).value).toBe('XYZ')
+
+        mockSearchParams = new URLSearchParams('search=DEF&page=2')
+        rerender(<SearchInput />)
+        expect((screen.getByRole('searchbox') as HTMLInputElement).value).toBe('DEF')
+        await act(async () => {})
+
+        mockSearchParams = new URLSearchParams('search=ABC&page=3')
+        rerender(<SearchInput />)
+        expect((screen.getByRole('searchbox') as HTMLInputElement).value).toBe('ABC')
+    })
 })

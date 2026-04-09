@@ -303,6 +303,38 @@ describe('QC Approval Blocking Mechanism', () => {
             expect(result.error).toContain('Lý do 2')
             expect((result as any).blocked_count).toBe(2)
         })
+
+        it('blocks approval when the QC RPC returns malformed rows', async () => {
+            setupManagerAuth()
+            setupReviewApprovalFlow(
+                [
+                    { id: TEST_RESULT_ID_1, status: 'entered', sample_id: TEST_SAMPLE_ID },
+                ],
+                0
+            )
+
+            mockRpc.mockResolvedValueOnce({
+                data: [
+                    {
+                        result_id: TEST_RESULT_ID_1,
+                        qc_status: 'pass',
+                        blocking_reason: null,
+                    },
+                ],
+                error: null,
+            })
+
+            const result = await approveResults({
+                sampleId: TEST_SAMPLE_ID,
+                resultIds: [TEST_RESULT_ID_1],
+            })
+
+            expect(result).toHaveProperty('error')
+            expect(result.error).toContain('Phản hồi kiểm tra QC không hợp lệ')
+            expect((result as any).qc_blocked).toBe(true)
+            expect((result as any).blocked_count).toBe(1)
+            expect(fromChain.update).not.toHaveBeenCalled()
+        })
     })
 
     describe('Allowed QC Sessions', () => {

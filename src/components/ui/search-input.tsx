@@ -29,6 +29,22 @@ export function SearchInput({
     const term = searchDraft?.baseSearch === currentSearch ? searchDraft.value : currentSearch
 
     useEffect(() => {
+        let cancelled = false
+
+        queueMicrotask(() => {
+            if (cancelled) return
+            setSearchDraft((currentDraft) => {
+                if (!currentDraft || currentDraft.baseSearch === currentSearch) return currentDraft
+                return null
+            })
+        })
+
+        return () => {
+            cancelled = true
+        }
+    }, [currentSearch])
+
+    useEffect(() => {
         const timeoutId = setTimeout(() => {
             // Only update if the term in URL is different from current term
             if (term === currentSearch) return

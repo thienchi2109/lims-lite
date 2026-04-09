@@ -5,10 +5,15 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ViolationResolutionDialog } from './violation-resolution-dialog'
 import type { PendingViolation } from './qc-overview-tab'
-import { WestgardRule } from '@/types/qc'
+import { WestgardRule, type WestgardRule as WestgardRuleValue } from '@/types/qc'
 
 interface QCViolationsTabContentProps {
     violations: PendingViolation[]
+}
+
+function parseWestgardRule(rule: string): WestgardRuleValue {
+    const parsed = WestgardRule.safeParse(rule)
+    return parsed.success ? parsed.data : '1-2s'
 }
 
 export function QCViolationsTabContent({ violations }: QCViolationsTabContentProps) {
@@ -64,7 +69,7 @@ function QCViolationsList({ violations }: { violations: PendingViolation[] }) {
                     <ViolationResolutionDialog
                         violation={{
                             id: violation.id,
-                            rule_violated: WestgardRule.parse(violation.rule_violated),
+                            rule_violated: parseWestgardRule(violation.rule_violated),
                             z_score_at_violation: violation.z_score,
                             value: violation.value,
                             mean: violation.mean,

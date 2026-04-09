@@ -39,6 +39,28 @@ export function useApprovalUrlState({ tab, sampleId }: UseApprovalUrlStateOption
         urlStateRef.current = urlState
     }, [resolvedUrlState, urlState])
 
+    useEffect(() => {
+        let cancelled = false
+
+        queueMicrotask(() => {
+            if (cancelled) return
+            setLocalOverride((currentOverride) => {
+                if (!currentOverride) return currentOverride
+                if (
+                    currentOverride.base.tab === resolvedUrlState.tab &&
+                    currentOverride.base.sampleId === resolvedUrlState.sampleId
+                ) {
+                    return currentOverride
+                }
+                return null
+            })
+        })
+
+        return () => {
+            cancelled = true
+        }
+    }, [resolvedUrlState.sampleId, resolvedUrlState.tab])
+
     const setActiveTab = useCallback((nextTab: ApprovalTab) => {
         setLocalOverride({
             base: resolvedUrlStateRef.current,

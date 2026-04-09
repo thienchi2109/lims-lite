@@ -66,7 +66,11 @@ export function AddMethodToAssayDialog({ open, onOpenChange, assayId, existingMe
 
         if (open) {
             queueMicrotask(() => {
-                if (!cancelled) void loadMethods()
+                if (!cancelled) {
+                    loadMethods().catch((error: unknown) => {
+                        console.error('Error loading assay methods:', error)
+                    })
+                }
             })
         }
 

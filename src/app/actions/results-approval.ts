@@ -35,6 +35,14 @@ function isQCApprovalStatusRow(value: unknown): value is QCApprovalStatusRow {
         && (typeof row.blocking_reason === 'string' || row.blocking_reason === null)
 }
 
+function createInvalidQCApprovalStatusResponse(rowCount: number) {
+    return {
+        error: 'Không thể phê duyệt: QC bị chặn. Phản hồi kiểm tra QC không hợp lệ.',
+        qc_blocked: true,
+        blocked_count: rowCount,
+    }
+}
+
 async function sampleHasConfidentialResults(sampleIds: string[]) {
     if (sampleIds.length === 0) {
         return { hasConfidential: false as const }
@@ -159,8 +167,17 @@ export async function approveResults(data: ApproveResults) {
             p_result_ids: validatedData.resultIds,
         })
 
-        if (qcCheck && Array.isArray(qcCheck)) {
-            const blockedResults = qcCheck.filter(isQCApprovalStatusRow).filter((result) => !result.can_approve)
+        if (qcCheck) {
+            if (!Array.isArray(qcCheck)) {
+                return createInvalidQCApprovalStatusResponse(1)
+            }
+
+            const qcStatusRows = qcCheck.filter(isQCApprovalStatusRow)
+            if (qcStatusRows.length !== qcCheck.length) {
+                return createInvalidQCApprovalStatusResponse(qcCheck.length)
+            }
+
+            const blockedResults = qcStatusRows.filter((result) => !result.can_approve)
             if (blockedResults.length > 0) {
                 const reasons = blockedResults
                     .map((result) => result.blocking_reason)

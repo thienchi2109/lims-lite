@@ -1,8 +1,6 @@
 import { useEffect, useRef } from 'react'
 
-type FaviconSnapshot = {
-    originalHref: string
-}
+const ORIGINAL_FAVICON_HREF_ATTRIBUTE = 'data-lims-original-favicon-href'
 
 function clampToNonNegativeInteger(value: number) {
     if (!Number.isFinite(value)) return 0
@@ -18,10 +16,22 @@ function getFaviconLinks(): HTMLLinkElement[] {
     return links.filter((link) => Boolean(link.href))
 }
 
-function restoreFaviconLinks(links: HTMLLinkElement[], snapshots: FaviconSnapshot[]) {
-    links.forEach((link, index) => {
-        const snapshot = snapshots[index]
-        if (snapshot) link.href = snapshot.originalHref
+function getOriginalFaviconHref(link: HTMLLinkElement) {
+    return link.getAttribute(ORIGINAL_FAVICON_HREF_ATTRIBUTE)
+}
+
+function ensureOriginalFaviconHrefs(links: HTMLLinkElement[]) {
+    links.forEach((link) => {
+        if (!getOriginalFaviconHref(link)) {
+            link.setAttribute(ORIGINAL_FAVICON_HREF_ATTRIBUTE, link.href)
+        }
+    })
+}
+
+function restoreFaviconLinks(links: HTMLLinkElement[]) {
+    links.forEach((link) => {
+        const originalHref = getOriginalFaviconHref(link)
+        if (originalHref) link.href = originalHref
     })
 }
 
@@ -115,7 +125,6 @@ export function useFaviconBadge(
         textColor?: string
     }
 ) {
-    const snapshotsRef = useRef<FaviconSnapshot[] | null>(null)
     const cancelledRef = useRef(false)
     const renderVersionRef = useRef(0)
 
@@ -123,8 +132,7 @@ export function useFaviconBadge(
         cancelledRef.current = false
         return () => {
             cancelledRef.current = true
-            const snapshots = snapshotsRef.current ?? []
-            restoreFaviconLinks(getFaviconLinks(), snapshots)
+            restoreFaviconLinks(getFaviconLinks())
         }
     }, [])
 
@@ -132,16 +140,13 @@ export function useFaviconBadge(
         if (typeof document === 'undefined') return
 
         const links = getFaviconLinks()
-        if (snapshotsRef.current === null) {
-            snapshotsRef.current = links.map((link) => ({ originalHref: link.href }))
-        }
+        ensureOriginalFaviconHrefs(links)
 
-        const snapshots = snapshotsRef.current ?? []
         const normalizedCount = clampToNonNegativeInteger(count)
         const renderVersion = ++renderVersionRef.current
 
         if (normalizedCount === 0) {
-            restoreFaviconLinks(links, snapshots)
+            restoreFaviconLinks(links)
             return
         }
 
@@ -151,14 +156,14 @@ export function useFaviconBadge(
         const textColor = options?.textColor ?? '#ffffff'
 
         const update = async () => {
-            for (const [index, link] of links.entries()) {
-                const snapshot = snapshots[index]
-                if (!snapshot) continue
+            for (const link of links) {
+                const originalHref = getOriginalFaviconHref(link)
+                if (!originalHref) continue
 
                 const size = parseLinkIconSize(link)
                 try {
                     const dataUrl = await drawBadgeFavicon({
-                        src: snapshot.originalHref,
+                        src: originalHref,
                         size,
                         label,
                         badgeColor,

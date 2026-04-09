@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react'
 
 interface UseGridHighlightOptions {
   /** Time in ms before highlight fades (default: 2000) */
@@ -10,6 +10,56 @@ interface UseGridHighlightOptions {
 interface RowWithTimestamp {
   id: string
   updated_at: string | null
+}
+
+function createTimestampMap<T extends RowWithTimestamp>(rows: T[]) {
+  const nextMap = new Map<string, string | null>()
+  rows.forEach(row => nextMap.set(row.id, row.updated_at))
+  return nextMap
+}
+
+function findChangedRowIds<T extends RowWithTimestamp>(
+  rows: T[],
+  previousTimestamps: Map<string, string | null>,
+  shouldHighlightInitialRows: boolean
+) {
+  const changedIds: string[] = []
+  rows.forEach(row => {
+    const prevTimestamp = previousTimestamps.get(row.id)
+    if (
+      (shouldHighlightInitialRows && row.updated_at !== null) ||
+      (prevTimestamp !== undefined && prevTimestamp !== row.updated_at)
+    ) {
+      changedIds.push(row.id)
+    }
+  })
+  return changedIds
+}
+
+function addHighlightedIds(previousIds: Set<string>, changedIds: string[]) {
+  const next = new Set(previousIds)
+  changedIds.forEach(id => next.add(id))
+  return next
+}
+
+function removeHighlightedIds(previousIds: Set<string>, changedIds: string[]) {
+  const next = new Set(previousIds)
+  changedIds.forEach(id => next.delete(id))
+  return next
+}
+
+function scheduleHighlightCleanup(
+  changedIds: string[],
+  highlightDuration: number,
+  timeoutIdsRef: MutableRefObject<Set<NodeJS.Timeout>>,
+  setHighlightedIds: Dispatch<SetStateAction<Set<string>>>
+) {
+  const timeoutId = setTimeout(() => {
+    setHighlightedIds(prev => removeHighlightedIds(prev, changedIds))
+    timeoutIdsRef.current.delete(timeoutId)
+  }, highlightDuration)
+
+  timeoutIdsRef.current.add(timeoutId)
 }
 
 /**
@@ -44,30 +94,16 @@ export function useGridHighlight<T extends RowWithTimestamp>(
     if (isInitialMountRef.current) {
       isInitialMountRef.current = false
       // Store initial timestamps
-      const initialMap = new Map<string, string | null>()
-      rows.forEach(row => initialMap.set(row.id, row.updated_at))
-      prevTimestampsRef.current = initialMap
+      prevTimestampsRef.current = createTimestampMap(rows)
       return
     }
 
     // Find changed rows by comparing timestamps
-    const changedIds: string[] = []
     const shouldHighlightInitialRows = !skipInitialAnimation && prevTimestampsRef.current.size === 0
-    rows.forEach(row => {
-      const prevTimestamp = prevTimestampsRef.current.get(row.id)
-      // Use undefined check (not truthy) so null→value transitions are detected
-      if (
-        (shouldHighlightInitialRows && row.updated_at !== null) ||
-        (prevTimestamp !== undefined && prevTimestamp !== row.updated_at)
-      ) {
-        changedIds.push(row.id)
-      }
-    })
+    const changedIds = findChangedRowIds(rows, prevTimestampsRef.current, shouldHighlightInitialRows)
 
     // Update timestamps (for new rows and changed rows)
-    const newMap = new Map<string, string | null>()
-    rows.forEach(row => newMap.set(row.id, row.updated_at))
-    prevTimestampsRef.current = newMap
+    prevTimestampsRef.current = createTimestampMap(rows)
 
     if (changedIds.length > 0) {
       let isCancelled = false
@@ -76,24 +112,10 @@ export function useGridHighlight<T extends RowWithTimestamp>(
         if (isCancelled) return
 
         // Add changed IDs to highlighted set
-        setHighlightedIds(prev => {
-          const next = new Set(prev)
-          changedIds.forEach(id => next.add(id))
-          return next
-        })
+        setHighlightedIds(prev => addHighlightedIds(prev, changedIds))
 
         // Auto-clear highlights after duration
-        const timeoutId = setTimeout(() => {
-          setHighlightedIds(prev => {
-            const next = new Set(prev)
-            changedIds.forEach(id => next.delete(id))
-            return next
-          })
-          timeoutIdsRef.current.delete(timeoutId)
-        }, highlightDuration)
-
-        // Track timeout for cleanup
-        timeoutIdsRef.current.add(timeoutId)
+        scheduleHighlightCleanup(changedIds, highlightDuration, timeoutIdsRef, setHighlightedIds)
       })
 
       return () => {

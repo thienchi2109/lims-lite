@@ -69,4 +69,33 @@ describe('useApprovalUrlState', () => {
         expect(result.current.activeTab).toBe('completed')
         expect(result.current.urlSampleId).toBe('sample-2')
     })
+
+    it('does not resurrect a stale local override after navigating back to its base URL state', async () => {
+        const { result, rerender } = renderHook(
+            ({ tab, sampleId }: { tab: 'review' | 'completed'; sampleId?: string | null }) =>
+                useApprovalUrlState({ tab, sampleId }),
+            {
+                initialProps: {
+                    tab: 'review' as const,
+                    sampleId: null,
+                },
+            },
+        )
+
+        act(() => {
+            result.current.setUrlSampleId('sample-local')
+        })
+        expect(result.current.urlSampleId).toBe('sample-local')
+
+        window.history.replaceState(null, '', '/manager/approvals?tab=completed&sampleId=sample-2')
+        rerender({ tab: 'completed', sampleId: 'sample-2' })
+        expect(result.current.activeTab).toBe('completed')
+        expect(result.current.urlSampleId).toBe('sample-2')
+        await act(async () => {})
+
+        window.history.replaceState(null, '', '/manager/approvals?tab=review')
+        rerender({ tab: 'review', sampleId: null })
+        expect(result.current.activeTab).toBe('review')
+        expect(result.current.urlSampleId).toBeNull()
+    })
 })

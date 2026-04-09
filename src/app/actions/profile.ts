@@ -9,9 +9,7 @@ type UpdatePasswordState = {
     success?: boolean
 }
 
-export async function updatePassword(prevState: UpdatePasswordState | null, formData: FormData) {
-    void prevState
-
+export async function updatePassword(_prevState: UpdatePasswordState | null, formData: FormData) {
     const supabase = await createClient()
 
     // Validate input with Zod
