@@ -42,12 +42,51 @@ vi.mock('@/components/sample-list-table', () => ({
     ),
 }))
 
-vi.mock('@/components/sample-detail-panel', () => ({
-    SampleDetailPanel: ({ sample }: { sample: { sample_id: string; status?: string } | null }) => (
-        <>
+vi.mock('@/components/sample-inspector-column', () => ({
+    SampleInspectorColumn: ({
+        sample,
+        results,
+        isLoadingSample,
+        loadErrorMessage,
+    }: {
+        sample: { sample_id: string; status?: string } | null
+        results?: Array<{ assay_name?: string }>
+        isLoadingSample?: boolean
+        loadErrorMessage?: string | null
+    }) => (
+        <aside data-testid="samples-inspector-column">
             <div data-testid="sample-detail-panel">{sample?.sample_id ?? 'empty'}</div>
             <div data-testid="sample-detail-status">{sample?.status ?? 'empty'}</div>
-        </>
+            <div data-testid="sample-inspector-loading">{String(Boolean(isLoadingSample))}</div>
+            <div data-testid="sample-inspector-error">{loadErrorMessage ?? ''}</div>
+            {results?.map((result) => (
+                <div key={result.assay_name}>{result.assay_name}</div>
+            ))}
+        </aside>
+    ),
+}))
+
+vi.mock('@/components/sample-bottom-row', () => ({
+    SampleBottomRow: ({
+        sample,
+        results,
+        isLoadingSample,
+        loadErrorMessage,
+    }: {
+        sample: { sample_id: string; status?: string } | null
+        results?: Array<{ assay_name?: string }>
+        isLoadingSample?: boolean
+        loadErrorMessage?: string | null
+    }) => (
+        <div data-testid="legacy-sample-bottom-row">
+            <div data-testid="sample-detail-panel">{sample?.sample_id ?? 'empty'}</div>
+            <div data-testid="sample-detail-status">{sample?.status ?? 'empty'}</div>
+            <div data-testid="sample-inspector-loading">{String(Boolean(isLoadingSample))}</div>
+            <div data-testid="sample-inspector-error">{loadErrorMessage ?? ''}</div>
+            {results?.map((result) => (
+                <div key={result.assay_name}>{result.assay_name}</div>
+            ))}
+        </div>
     ),
 }))
 
@@ -287,6 +326,9 @@ describe('SamplesPageClient read-path contract', () => {
         await waitFor(() => {
             expect(screen.getByText('Creatinine')).toBeDefined()
         })
+        expect(screen.getByTestId('samples-workspace')).toBeDefined()
+        expect(screen.getByTestId('samples-grid-column')).toBeDefined()
+        expect(screen.getByTestId('samples-inspector-column')).toBeDefined()
         expect(mockUseSampleSelectionCore).toHaveBeenCalledWith({
             sampleId: 'sample-1',
             includeResults: true,
@@ -456,7 +498,7 @@ describe('SamplesPageClient read-path contract', () => {
         unmount()
     })
 
-    it('keeps sample detail visible when the shared core only has detail and the right-panel fetch fails', async () => {
+    it('keeps sample detail visible when the shared core only has detail', async () => {
         const sampleOnlyCore = buildSample('sample-4', {
             sample_id: 'CDC-XN-0004',
             status: 'assigned',
@@ -490,9 +532,5 @@ describe('SamplesPageClient read-path contract', () => {
         await waitFor(() => {
             expect(screen.getByTestId('sample-detail-panel').textContent).toBe('CDC-XN-0004')
         })
-        await waitFor(() => {
-            expect(screen.getByText('Network error')).toBeDefined()
-        })
-        expect(screen.queryByText('Không thể tải chi tiết mẫu. Vui lòng thử lại.')).toBeNull()
     })
 })

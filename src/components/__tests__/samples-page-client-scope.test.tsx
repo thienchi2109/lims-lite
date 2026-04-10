@@ -25,12 +25,16 @@ vi.mock('@/components/sample-list-table', () => ({
     SampleListTable: () => null,
 }))
 
-const mockSampleBottomRow = vi.fn()
-vi.mock('@/components/sample-bottom-row', () => ({
-    SampleBottomRow: (props: Record<string, unknown>) => {
-        mockSampleBottomRow(props)
+const mockSampleInspectorColumn = vi.fn()
+vi.mock('@/components/sample-inspector-column', () => ({
+    SampleInspectorColumn: (props: Record<string, unknown>) => {
+        mockSampleInspectorColumn(props)
         return null
     },
+}))
+
+vi.mock('@/components/sample-bottom-row', () => ({
+    SampleBottomRow: () => null,
 }))
 
 vi.mock('next/link', () => ({
@@ -152,7 +156,7 @@ describe('SamplesPageClient scope contract', () => {
                 }),
             }),
         )
-        expect(mockSampleBottomRow).toHaveBeenCalledWith(
+        expect(mockSampleInspectorColumn).toHaveBeenCalledWith(
             expect.objectContaining({
                 userRole: 'doctor',
             }),
