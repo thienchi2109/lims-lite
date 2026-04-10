@@ -54,7 +54,7 @@ vi.mock('@/components/sample-inspector-column', () => ({
         isLoadingSample?: boolean
         loadErrorMessage?: string | null
     }) => (
-        <aside data-testid="samples-inspector-column">
+        <div data-testid="sample-inspector-content">
             <div data-testid="sample-detail-panel">{sample?.sample_id ?? 'empty'}</div>
             <div data-testid="sample-detail-status">{sample?.status ?? 'empty'}</div>
             <div data-testid="sample-inspector-loading">{String(Boolean(isLoadingSample))}</div>
@@ -62,7 +62,7 @@ vi.mock('@/components/sample-inspector-column', () => ({
             {results?.map((result) => (
                 <div key={result.assay_name}>{result.assay_name}</div>
             ))}
-        </aside>
+        </div>
     ),
 }))
 
