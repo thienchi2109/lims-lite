@@ -4,8 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { ApprovalQueueTable } from '@/components/approval-queue-table'
-import { ApprovalBottomRow } from '@/components/approval-bottom-row'
+import { ApprovalQueueContent } from '@/components/approval-queue-content'
 import type { ApprovalQueueSample, ApprovalTab, ResultWithAssay, SampleWithUser } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import { fetchSamplesForApprovalCountClient } from '@/lib/api-client'
@@ -24,50 +23,6 @@ interface ApprovalTabsClientProps {
     selectedSampleId?: string
     initialSample: SampleWithUser | null
     initialResults: ResultWithAssay[]
-}
-
-interface ApprovalQueueContentProps {
-    samples: ApprovalQueueSample[]
-    selectedSampleId: string | null
-    onSelectSample: (sampleId: string) => void
-    sample: SampleWithUser | null
-    results: ResultWithAssay[]
-    isLoadingSample: boolean
-    sampleLoadError: string | null
-}
-
-function ApprovalQueueContent({
-    samples,
-    selectedSampleId,
-    onSelectSample,
-    sample,
-    results,
-    isLoadingSample,
-    sampleLoadError,
-}: ApprovalQueueContentProps) {
-    return (
-        <div className="flex flex-1 min-h-0 flex-col gap-2">
-            <div
-                id="tour-approval-queue"
-                className="h-[40vh] min-h-[250px] shrink-0 flex flex-col"
-            >
-                <ApprovalQueueTable
-                    data={samples}
-                    selectedSampleId={selectedSampleId}
-                    onSelectSample={onSelectSample}
-                />
-            </div>
-
-            <div id="tour-approval-detail" className="flex-1 min-h-0 overflow-hidden border-t pt-2">
-                <ApprovalBottomRow
-                    sample={sample}
-                    results={results}
-                    isLoadingSample={isLoadingSample}
-                    loadErrorMessage={sampleLoadError}
-                />
-            </div>
-        </div>
-    )
 }
 
 export function ApprovalTabsClient({

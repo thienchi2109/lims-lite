@@ -4,6 +4,7 @@ import { Suspense } from 'react'
 import { useSamples } from '@/hooks/use-samples'
 import { SampleListTable } from '@/components/sample-list-table'
 import { SampleFilters } from '@/components/sample-filters'
+import { DesktopMasterDetailShell } from '@/components/desktop-master-detail-shell'
 import { SampleInspectorColumn } from '@/components/sample-inspector-column'
 import { type SampleStatus } from '@/types'
 import { useSampleSelectionCore } from '@/hooks/use-sample-selection-core'
@@ -145,44 +146,40 @@ export function SamplesPageClient({
                 </Link>
             </div>
 
-            <div
-                data-testid="samples-workspace"
-                className="flex min-h-0 flex-1 flex-col gap-2 lg:grid lg:grid-cols-[minmax(0,1.86fr)_minmax(22rem,1fr)]"
-            >
-                <section
-                    data-testid="samples-grid-column"
-                    className="flex min-h-0 flex-col gap-2"
-                >
-                    <div className="shrink-0 flex flex-col gap-2">
-                        <Suspense fallback={<div className="text-sm text-slate-500">Đang tải bộ lọc...</div>}>
-                            <SampleFilters
-                                receiverOptions={receiverOptions}
-                                specialties={specialties}
-                                completedOnly={isDoctor}
+            <DesktopMasterDetailShell
+                workspaceTestId="samples-workspace"
+                gridColumnTestId="samples-grid-column"
+                inspectorColumnTestId="samples-inspector-column"
+                gridColumnClassName="gap-2"
+                left={(
+                    <>
+                        <div className="shrink-0 flex flex-col gap-2">
+                            <Suspense fallback={<div className="text-sm text-slate-500">Đang tải bộ lọc...</div>}>
+                                <SampleFilters
+                                    receiverOptions={receiverOptions}
+                                    specialties={specialties}
+                                    completedOnly={isDoctor}
+                                />
+                            </Suspense>
+                        </div>
+                        <div className="min-h-[400px] flex-1 min-h-0">
+                            <SampleListTable
+                                samples={samples}
+                                page={result?.page || page}
+                                pageSize={result?.pageSize || pageSize}
+                                totalPages={totalPages}
+                                totalCount={totalCount}
+                                searchParams={searchParams.toString()}
+                                error={result?.error || null}
+                                permissions={permissions}
+                                sortBy={sortBy}
+                                sortOrder={sortOrder as 'asc' | 'desc'}
+                                selectedSampleId={sampleId}
                             />
-                        </Suspense>
-                    </div>
-                    <div className="min-h-[400px] flex-1 min-h-0">
-                        <SampleListTable
-                            samples={samples}
-                            page={result?.page || page}
-                            pageSize={result?.pageSize || pageSize}
-                            totalPages={totalPages}
-                            totalCount={totalCount}
-                            searchParams={searchParams.toString()}
-                            error={result?.error || null}
-                            permissions={permissions}
-                            sortBy={sortBy}
-                            sortOrder={sortOrder as 'asc' | 'desc'}
-                            selectedSampleId={sampleId}
-                        />
-                    </div>
-                </section>
-
-                <aside
-                    data-testid="samples-inspector-column"
-                    className="min-h-0"
-                >
+                        </div>
+                    </>
+                )}
+                right={(
                     <SampleInspectorColumn
                         sample={activeSampleCore?.sample ?? null}
                         results={activeSampleCore?.results}
@@ -192,8 +189,8 @@ export function SamplesPageClient({
                         specialties={specialties}
                         userRole={role}
                     />
-                </aside>
-            </div>
+                )}
+            />
         </main>
     )
 }

@@ -29,6 +29,25 @@ vi.mock('@/components/doctor-coa-panel', () => ({
     ),
 }))
 
+vi.mock('@/components/ui/sticky-panel-shell', () => ({
+    StickyPanelShell: ({
+        children,
+        header,
+        bodyClassName,
+    }: {
+        children: React.ReactNode
+        header: React.ReactNode
+        bodyClassName?: string
+    }) => (
+        <div data-testid="sticky-panel-shell">
+            <div data-testid="sticky-panel-header">{header}</div>
+            <div data-testid="sticky-panel-body" className={bodyClassName}>
+                {children}
+            </div>
+        </div>
+    ),
+}))
+
 import { SampleInspectorColumn } from '../sample-inspector-column'
 
 const sample = {
@@ -51,21 +70,14 @@ describe('SampleInspectorColumn', () => {
         const { container } = render(<SampleInspectorColumn sample={sample} userRole="manager" />)
 
         const inspector = container.firstElementChild
-        const detailPanel = screen.getByTestId('sample-detail-panel')
-        const detailAnimatedContent = detailPanel.parentElement
-        const detailShell = detailAnimatedContent?.parentElement
-        const assignedPanel = screen.getByTestId('assigned-tests-panel')
-        const assignedAnimatedContent = assignedPanel.parentElement
-        const assignedShell = assignedAnimatedContent?.parentElement
+        const shells = screen.getAllByTestId('sticky-panel-shell')
+        const bodies = screen.getAllByTestId('sticky-panel-body')
 
         expect(inspector?.className).toContain('grid')
         expect(inspector?.className).toContain('min-h-0')
-        expect(detailShell?.className).toContain('flex')
-        expect(detailShell?.className).toContain('min-h-0')
-        expect(detailShell?.className).toContain('overflow-hidden')
-        expect(assignedShell?.className).toContain('flex')
-        expect(assignedShell?.className).toContain('min-h-0')
-        expect(assignedShell?.className).toContain('overflow-hidden')
+        expect(shells).toHaveLength(2)
+        expect(bodies[0]?.className).toContain('min-h-0')
+        expect(bodies[1]?.className).toContain('min-h-0')
     })
 
     it('keeps the visible sample mounted while the next sample is loading', () => {

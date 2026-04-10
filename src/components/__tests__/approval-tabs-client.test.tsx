@@ -1,6 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
@@ -86,13 +85,13 @@ vi.mock('@/components/approval-queue-table', () => ({
     ),
 }))
 
-vi.mock('@/components/approval-bottom-row', () => ({
-    ApprovalBottomRow: ({ sample, results, isLoadingSample, loadErrorMessage }: any) => (
+vi.mock('@/components/approval-inspector-column', () => ({
+    ApprovalInspectorColumn: ({ sample, results, isLoadingSample, loadErrorMessage }: any) => (
         <div>
-            <div data-testid="bottom-row-loading">{String(Boolean(isLoadingSample))}</div>
-            <div data-testid="bottom-row-error">{loadErrorMessage ?? ''}</div>
-            <div data-testid="bottom-row-sample">{sample?.sample_id ?? 'none'}</div>
-            <div data-testid="bottom-row-results">{results.map((result: any) => result.id).join(',')}</div>
+            <div data-testid="approval-inspector-loading">{String(Boolean(isLoadingSample))}</div>
+            <div data-testid="approval-inspector-error">{loadErrorMessage ?? ''}</div>
+            <div data-testid="approval-inspector-sample">{sample?.sample_id ?? 'none'}</div>
+            <div data-testid="approval-inspector-results">{results.map((result: any) => result.id).join(',')}</div>
         </div>
     ),
 }))
@@ -199,6 +198,7 @@ function deferredPromise<T>() {
 describe('ApprovalTabsClient', () => {
     const originalReplaceState = window.history.replaceState.bind(window.history)
     let historyReplaceSpy: ReturnType<typeof vi.spyOn> | null = null
+    let consoleErrorSpy: ReturnType<typeof vi.spyOn> | null = null
 
     beforeEach(() => {
         mockReplace.mockClear()
@@ -206,6 +206,7 @@ describe('ApprovalTabsClient', () => {
         mockFetchSampleDetail.mockReset()
         mockFetchSampleResultsClient.mockReset()
         mockUseFaviconBadge.mockClear()
+        consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
         mockUseApprovalQueue.mockImplementation(({ tab }: { tab: 'review' | 'completed' }) => ({
             data: tab === 'review' ? samples : completedSamples,
             isSuccess: true,
@@ -221,6 +222,8 @@ describe('ApprovalTabsClient', () => {
     })
 
     afterEach(() => {
+        consoleErrorSpy?.mockRestore()
+        consoleErrorSpy = null
         historyReplaceSpy?.mockRestore()
         historyReplaceSpy = null
     })
@@ -237,9 +240,12 @@ describe('ApprovalTabsClient', () => {
             />,
         )
 
+        expect(screen.getByTestId('approvals-workspace')).toBeDefined()
+        expect(screen.getByTestId('approvals-grid-column')).toBeDefined()
+        expect(screen.getByTestId('approvals-inspector-column')).toBeDefined()
         expect(screen.getAllByTestId('selected-sample-id')[0].textContent).toBe('sample-1')
-        expect(screen.getByTestId('bottom-row-sample').textContent).toBe('CDC-XN-0001')
-        expect(screen.getByTestId('bottom-row-results').textContent).toBe('result-1')
+        expect(screen.getByTestId('approval-inspector-sample').textContent).toBe('CDC-XN-0001')
+        expect(screen.getByTestId('approval-inspector-results').textContent).toBe('result-1')
     })
 
     it('updates the detail panel client-side when switching samples without queue navigation', async () => {
@@ -273,10 +279,10 @@ describe('ApprovalTabsClient', () => {
         )
 
         await waitFor(() => {
-            expect(screen.getByTestId('bottom-row-sample').textContent).toBe('CDC-XN-0002')
+            expect(screen.getByTestId('approval-inspector-sample').textContent).toBe('CDC-XN-0002')
         })
 
-        expect(screen.getByTestId('bottom-row-results').textContent).toBe('result-2')
+        expect(screen.getByTestId('approval-inspector-results').textContent).toBe('result-2')
         expect(mockFetchSampleDetail).toHaveBeenCalledWith('sample-2')
         expect(mockFetchSampleResultsClient).toHaveBeenCalledWith('sample-2')
     })
@@ -302,17 +308,17 @@ describe('ApprovalTabsClient', () => {
         fireEvent.click(screen.getAllByTestId('select-sample-2')[0])
 
         await waitFor(() => {
-            expect(screen.getByTestId('bottom-row-loading').textContent).toBe('true')
+            expect(screen.getByTestId('approval-inspector-loading').textContent).toBe('true')
         })
 
-        expect(screen.getByTestId('bottom-row-sample').textContent).toBe('CDC-XN-0001')
-        expect(screen.getByTestId('bottom-row-results').textContent).toBe('result-1')
+        expect(screen.getByTestId('approval-inspector-sample').textContent).toBe('CDC-XN-0001')
+        expect(screen.getByTestId('approval-inspector-results').textContent).toBe('result-1')
 
         sampleDeferred.resolve({ id: 'sample-2', sample_id: 'CDC-XN-0002' })
         resultsDeferred.resolve({ data: [{ id: 'result-2' }] })
 
         await waitFor(() => {
-            expect(screen.getByTestId('bottom-row-sample').textContent).toBe('CDC-XN-0002')
+            expect(screen.getByTestId('approval-inspector-sample').textContent).toBe('CDC-XN-0002')
         })
     })
 
@@ -337,7 +343,7 @@ describe('ApprovalTabsClient', () => {
         fireEvent.click(screen.getAllByTestId('select-sample-2')[0])
 
         await waitFor(() => {
-            expect(screen.getByTestId('bottom-row-loading').textContent).toBe('true')
+            expect(screen.getByTestId('approval-inspector-loading').textContent).toBe('true')
         })
 
         rerender(
@@ -355,11 +361,11 @@ describe('ApprovalTabsClient', () => {
         resultsDeferred.resolve({ data: [{ id: 'result-2' }] })
 
         await waitFor(() => {
-            expect(screen.getByTestId('bottom-row-loading').textContent).toBe('false')
+            expect(screen.getByTestId('approval-inspector-loading').textContent).toBe('false')
         })
 
-        expect(screen.getByTestId('bottom-row-sample').textContent).toBe('CDC-XN-0002')
-        expect(screen.getByTestId('bottom-row-results').textContent).toBe('result-2')
+        expect(screen.getByTestId('approval-inspector-sample').textContent).toBe('CDC-XN-0002')
+        expect(screen.getByTestId('approval-inspector-results').textContent).toBe('result-2')
     })
 
     it('surfaces an explicit error state when detail fetch fails', async () => {
@@ -380,7 +386,7 @@ describe('ApprovalTabsClient', () => {
         fireEvent.click(screen.getAllByTestId('select-sample-2')[0])
 
         await waitFor(() => {
-            expect(screen.getByTestId('bottom-row-error').textContent).toBe(
+            expect(screen.getByTestId('approval-inspector-error').textContent).toBe(
                 'Không thể tải chi tiết mẫu. Vui lòng thử lại.',
             )
         })
@@ -411,7 +417,7 @@ describe('ApprovalTabsClient', () => {
         fireEvent.click(screen.getAllByTestId('select-sample-2')[0])
 
         await waitFor(() => {
-            expect(screen.getByTestId('bottom-row-error').textContent).toBe(
+            expect(screen.getByTestId('approval-inspector-error').textContent).toBe(
                 'Không thể tải chi tiết mẫu. Vui lòng thử lại.',
             )
         })
@@ -419,10 +425,10 @@ describe('ApprovalTabsClient', () => {
         fireEvent.click(screen.getAllByTestId('select-sample-2')[0])
 
         await waitFor(() => {
-            expect(screen.getByTestId('bottom-row-sample').textContent).toBe('CDC-XN-0002')
+            expect(screen.getByTestId('approval-inspector-sample').textContent).toBe('CDC-XN-0002')
         })
 
-        expect(screen.getByTestId('bottom-row-error').textContent).toBe('')
+        expect(screen.getByTestId('approval-inspector-error').textContent).toBe('')
         expect(mockFetchSampleDetail).toHaveBeenCalledTimes(2)
         expect(mockFetchSampleResultsClient).toHaveBeenCalledTimes(2)
     })
@@ -456,8 +462,8 @@ describe('ApprovalTabsClient', () => {
             expect(screen.getAllByTestId('selected-sample-id')[0].textContent).toBe('sample-2')
         })
 
-        expect(screen.getByTestId('bottom-row-sample').textContent).toBe('CDC-XN-0002')
-        expect(screen.getByTestId('bottom-row-results').textContent).toBe('result-2')
+        expect(screen.getByTestId('approval-inspector-sample').textContent).toBe('CDC-XN-0002')
+        expect(screen.getByTestId('approval-inspector-results').textContent).toBe('result-2')
     })
 
     it('preserves client-selected detail when server refresh returns stale empty selection props', async () => {
@@ -484,7 +490,7 @@ describe('ApprovalTabsClient', () => {
         fireEvent.click(screen.getByTestId('select-sample-2'))
 
         await waitFor(() => {
-            expect(screen.getByTestId('bottom-row-sample').textContent).toBe('CDC-XN-0002')
+            expect(screen.getByTestId('approval-inspector-sample').textContent).toBe('CDC-XN-0002')
         })
 
         rerender(
@@ -498,11 +504,11 @@ describe('ApprovalTabsClient', () => {
             />,
         )
 
-        expect(screen.getByTestId('bottom-row-sample').textContent).toBe('CDC-XN-0002')
-        expect(screen.getByTestId('bottom-row-results').textContent).toBe('result-2')
+        expect(screen.getByTestId('approval-inspector-sample').textContent).toBe('CDC-XN-0002')
+        expect(screen.getByTestId('approval-inspector-results').textContent).toBe('result-2')
     })
 
-    it('switches tabs with local URL sync and clears stale sample selection', () => {
+    it('switches tabs with local URL sync and clears stale sample selection', async () => {
         renderWithQueryClient(
             <ApprovalTabsClient
                 tab="review"
@@ -514,7 +520,9 @@ describe('ApprovalTabsClient', () => {
             />,
         )
 
-        fireEvent.click(screen.getByRole('button', { name: 'Đã duyệt KQ' }))
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Đã duyệt KQ' }))
+        })
 
         expect(mockReplace).not.toHaveBeenCalled()
         expect(mockRefresh).not.toHaveBeenCalled()
@@ -523,8 +531,8 @@ describe('ApprovalTabsClient', () => {
             '',
             '/manager/approvals?tab=completed',
         )
-        expect(screen.getByTestId('bottom-row-sample').textContent).toBe('none')
-        expect(screen.getByTestId('bottom-row-results').textContent).toBe('')
+        expect(screen.getByTestId('approval-inspector-sample').textContent).toBe('none')
+        expect(screen.getByTestId('approval-inspector-results').textContent).toBe('')
         expect(screen.getAllByTestId('selected-sample-id')[0].textContent).toBe('none')
         expect(screen.getByTestId('select-sample-3')).toBeDefined()
         expect(screen.queryByTestId('select-sample-1')).toBeNull()
@@ -569,7 +577,7 @@ describe('ApprovalTabsClient', () => {
 
         expect(screen.getByTestId('select-sample-3')).toBeDefined()
         expect(screen.queryByTestId('select-sample-1')).toBeNull()
-        expect(screen.getByTestId('bottom-row-sample').textContent).toBe('none')
+        expect(screen.getByTestId('approval-inspector-sample').textContent).toBe('none')
         expect(screen.getAllByTestId('selected-sample-id')[0].textContent).toBe('none')
     })
 })
