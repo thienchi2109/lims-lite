@@ -146,38 +146,36 @@ export function SamplesPageClient({
                 </Link>
             </div>
 
+            <div className="shrink-0 flex flex-col gap-2">
+                <Suspense fallback={<div className="text-sm text-slate-500">Đang tải bộ lọc...</div>}>
+                    <SampleFilters
+                        receiverOptions={receiverOptions}
+                        specialties={specialties}
+                        completedOnly={isDoctor}
+                    />
+                </Suspense>
+            </div>
+
             <DesktopMasterDetailShell
                 workspaceTestId="samples-workspace"
                 gridColumnTestId="samples-grid-column"
                 inspectorColumnTestId="samples-inspector-column"
-                gridColumnClassName="gap-2"
                 left={(
-                    <>
-                        <div className="shrink-0 flex flex-col gap-2">
-                            <Suspense fallback={<div className="text-sm text-slate-500">Đang tải bộ lọc...</div>}>
-                                <SampleFilters
-                                    receiverOptions={receiverOptions}
-                                    specialties={specialties}
-                                    completedOnly={isDoctor}
-                                />
-                            </Suspense>
-                        </div>
-                        <div className="min-h-[400px] flex-1 min-h-0">
-                            <SampleListTable
-                                samples={samples}
-                                page={result?.page || page}
-                                pageSize={result?.pageSize || pageSize}
-                                totalPages={totalPages}
-                                totalCount={totalCount}
-                                searchParams={searchParams.toString()}
-                                error={result?.error || null}
-                                permissions={permissions}
-                                sortBy={sortBy}
-                                sortOrder={sortOrder as 'asc' | 'desc'}
-                                selectedSampleId={sampleId}
-                            />
-                        </div>
-                    </>
+                    <div className="min-h-[400px] flex-1 min-h-0">
+                        <SampleListTable
+                            samples={samples}
+                            page={result?.page || page}
+                            pageSize={result?.pageSize || pageSize}
+                            totalPages={totalPages}
+                            totalCount={totalCount}
+                            searchParams={searchParams.toString()}
+                            error={result?.error || null}
+                            permissions={permissions}
+                            sortBy={sortBy}
+                            sortOrder={sortOrder as 'asc' | 'desc'}
+                            selectedSampleId={sampleId}
+                        />
+                    </div>
                 )}
                 right={(
                     <SampleInspectorColumn

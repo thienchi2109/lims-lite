@@ -33,7 +33,7 @@ vi.mock('next/navigation', () => ({
 }))
 
 vi.mock('@/components/sample-filters', () => ({
-    SampleFilters: () => null,
+    SampleFilters: () => <div data-testid="sample-filters">filters</div>,
 }))
 
 vi.mock('@/components/sample-list-table', () => ({
@@ -326,9 +326,17 @@ describe('SamplesPageClient read-path contract', () => {
         await waitFor(() => {
             expect(screen.getByText('Creatinine')).toBeDefined()
         })
-        expect(screen.getByTestId('samples-workspace')).toBeDefined()
-        expect(screen.getByTestId('samples-grid-column')).toBeDefined()
-        expect(screen.getByTestId('samples-inspector-column')).toBeDefined()
+        const workspace = screen.getByTestId('samples-workspace')
+        const gridColumn = screen.getByTestId('samples-grid-column')
+        const inspectorColumn = screen.getByTestId('samples-inspector-column')
+        const filters = screen.getByTestId('sample-filters')
+
+        expect(workspace).toBeDefined()
+        expect(gridColumn).toBeDefined()
+        expect(inspectorColumn).toBeDefined()
+        expect(filters).toBeDefined()
+        expect(workspace.contains(filters)).toBe(false)
+        expect(gridColumn.contains(filters)).toBe(false)
         expect(mockUseSampleSelectionCore).toHaveBeenCalledWith({
             sampleId: 'sample-1',
             includeResults: true,
