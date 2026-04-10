@@ -52,11 +52,12 @@ export function SampleFilters({
     }
 
     return (
-        <div className="flex flex-col gap-3 w-full">
-            {/* Top Toolbar Row */}
-            <div className="flex flex-col lg:flex-row gap-3 w-full">
-                {/* Search Bar */}
-                <div className="relative flex-1 max-w-sm">
+        <div className="flex w-full flex-col gap-3">
+            <div data-testid="sample-filters-search-row" className="w-full">
+                <div
+                    data-testid="sample-filters-search-shell"
+                    className="relative flex w-full items-center overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/70 ring-1 ring-slate-950/5 transition-all duration-200 focus-within:border-sky-300 focus-within:shadow-sky-100/80 focus-within:ring-sky-100"
+                >
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70 pointer-events-none" />
                     <Input
                         ref={searchInputRef}
@@ -64,24 +65,28 @@ export function SampleFilters({
                         placeholder={completedOnly ? 'Tìm kiếm mẫu đã hoàn thành...' : 'Tìm kiếm mẫu, khách hàng, mã...'}
                         value={filters.search}
                         onChange={(e) => handlers.setSearch(e.target.value)}
-                        className="pl-9 pr-12 h-10 w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 shadow-sm focus-visible:ring-1 focus-visible:ring-sky-500/20"
+                        className="h-12 w-full border-0 bg-transparent pl-11 pr-14 text-sm font-medium text-slate-700 placeholder:text-slate-400 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                     <Button
                         type="button"
                         variant="ghost"
                         size="icon-sm"
                         onClick={() => setIsScannerOpen(true)}
-                        className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50 dark:hover:text-sky-400 dark:hover:bg-sky-900/20 rounded-md"
+                        className="absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2 rounded-xl text-slate-500 transition-colors hover:bg-sky-50 hover:text-sky-600"
                         title="Quét mã QR"
                     >
                         <QrCode className="h-4 w-4" />
                     </Button>
                 </div>
+            </div>
 
-                {/* Right Actions */}
-                <div className="flex items-center gap-2 shrink-0">
+            <div
+                data-testid="sample-filters-controls-toolbar"
+                className="flex w-full flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/85 p-2 shadow-sm shadow-slate-200/60"
+            >
+                <div className="flex flex-wrap items-center gap-2">
                     {completedOnly ? (
-                        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+                        <div className="rounded-xl border border-emerald-200 bg-emerald-50/90 px-4 py-2.5 text-sm font-medium text-emerald-700 shadow-sm shadow-emerald-100/70">
                             Chỉ mẫu đã hoàn thành
                         </div>
                     ) : (
@@ -90,7 +95,7 @@ export function SampleFilters({
                                 type="button"
                                 variant={filters.scope === 'all' ? 'secondary' : 'outline'}
                                 onClick={() => handlers.setScope(filters.scope === 'all' ? 'active' : 'all')}
-                                className="h-10 gap-2 font-normal"
+                                className="h-10 rounded-xl border-slate-200 bg-white px-4 font-medium text-slate-700 shadow-none hover:bg-slate-100"
                                 aria-pressed={filters.scope === 'all'}
                             >
                                 <span>Hiển thị tất cả</span>
@@ -117,13 +122,20 @@ export function SampleFilters({
                             />
                         </>
                     )}
+                </div>
 
-                    <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1" />
+                <div className="hidden h-8 w-px bg-slate-200 md:block" />
 
-                    {/* Sort */}
+                <div className="ml-auto flex flex-wrap items-center gap-2">
                     <Select value={sort.currentSortValue} onValueChange={sort.setSortValue}>
-                        <SelectTrigger className="h-10 w-[140px] text-sm hidden sm:flex">
-                            <SlidersHorizontal className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+                        <SelectTrigger
+                            data-testid="sample-filters-sort-trigger"
+                            className="hidden h-10 min-w-[13rem] justify-between rounded-xl border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-none sm:flex"
+                        >
+                            <div className="flex min-w-0 items-center gap-2">
+                                <SlidersHorizontal className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                                <span className="truncate">Sắp xếp</span>
+                            </div>
                             <SelectValue placeholder="Sắp xếp" />
                         </SelectTrigger>
                         <SelectContent side="bottom" align="end">
@@ -135,9 +147,8 @@ export function SampleFilters({
                         </SelectContent>
                     </Select>
 
-                    {/* Page Size */}
                     <Select value={String(sort.pageSize)} onValueChange={sort.setPageSize}>
-                        <SelectTrigger className="h-10 w-[70px] text-sm">
+                        <SelectTrigger className="h-10 min-w-[5.5rem] rounded-xl border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-none">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent side="bottom" align="end">

@@ -74,8 +74,8 @@ export function FilterPopover({
                 <Button
                     variant={activeFiltersCount > 0 ? "secondary" : "outline"}
                     className={cn(
-                        "h-10 gap-2 font-normal",
-                        activeFiltersCount > 0 && "bg-sky-100/50 text-sky-700 hover:bg-sky-100 dark:bg-sky-900/30 dark:text-sky-400"
+                        "h-10 rounded-xl border-slate-200 bg-white px-4 font-medium text-slate-700 shadow-none hover:bg-slate-100",
+                        activeFiltersCount > 0 && "bg-sky-100/60 text-sky-700 hover:bg-sky-100"
                     )}
                 >
                     <Filter className="h-4 w-4" />
