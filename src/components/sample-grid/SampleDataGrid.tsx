@@ -24,6 +24,8 @@ interface SampleDataGridProps<T extends SampleGridRow> {
   onRowClick?: (row: T, event: React.MouseEvent<HTMLTableRowElement>) => void
   /** Loading state */
   isLoading?: boolean
+  /** Lightweight overlay while server pagination is transitioning */
+  isTransitioning?: boolean
   /** Empty state message */
   emptyMessage?: string
   /** Empty state icon */
@@ -62,6 +64,7 @@ export function SampleDataGrid<T extends SampleGridRow>({
   selectedRowId,
   onRowClick,
   isLoading = false,
+  isTransitioning = false,
   emptyMessage = GRID_LABELS.empty.noSamples,
   emptyIcon: EmptyIcon,
   highlightedRowIds = EMPTY_HIGHLIGHTED_SET,
@@ -169,6 +172,15 @@ export function SampleDataGrid<T extends SampleGridRow>({
             </TableHeader>
             <TableBody>{rows.map(renderRow)}</TableBody>
           </table>
+        )}
+
+        {isTransitioning && hasData && !isLoading && (
+          <div className="absolute inset-0 z-20 flex items-start justify-center bg-white/55 px-4 py-8 backdrop-blur-[1px]">
+            <div className="flex items-center gap-2 rounded-full border border-sky-100 bg-white px-4 py-2 text-sm font-medium text-sky-700 shadow-sm">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Đang chuyển trang...</span>
+            </div>
+          </div>
         )}
       </div>
 

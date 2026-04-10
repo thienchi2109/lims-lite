@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { GRID_LABELS } from './constants'
 import type { ServerPagination, ClientPagination } from './types'
 
@@ -13,7 +13,7 @@ function assertNever(x: never): never {
 
 export function SampleGridPagination<T>(props: SampleGridPaginationProps<T>) {
   if (props.mode === 'server') {
-    const { page, totalPages, totalCount, pageSize, onPageChange } = props
+    const { page, totalPages, totalCount, pageSize, onPageChange, isPending = false } = props
     const from = Math.min((page - 1) * pageSize + 1, totalCount)
     const to = Math.min(page * pageSize, totalCount)
 
@@ -30,11 +30,17 @@ export function SampleGridPagination<T>(props: SampleGridPaginationProps<T>) {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          {isPending && (
+            <div className="flex items-center gap-1.5 text-xs font-medium text-sky-700">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <span>Đang chuyển trang...</span>
+            </div>
+          )}
           <Button
             variant="outline"
             size="sm"
             onClick={() => onPageChange(page - 1)}
-            disabled={page <= 1}
+            disabled={isPending || page <= 1}
             className="h-8 w-8 p-0"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -46,7 +52,7 @@ export function SampleGridPagination<T>(props: SampleGridPaginationProps<T>) {
             variant="outline"
             size="sm"
             onClick={() => onPageChange(page + 1)}
-            disabled={page >= totalPages}
+            disabled={isPending || page >= totalPages}
             className="h-8 w-8 p-0"
           >
             <ChevronRight className="h-4 w-4" />

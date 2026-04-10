@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 
 const mockReplace = vi.fn()
 const mockPush = vi.fn()
@@ -64,7 +64,21 @@ vi.mock('@/components/sample-grid', async () => {
     const { flexRender } = await import('@tanstack/react-table')
 
     return {
-        SampleDataGrid: ({ table }: { table: MockTable }) => (
+        SampleDataGrid: ({
+            table,
+            pagination,
+            isTransitioning,
+        }: {
+            table: MockTable
+            pagination?: {
+                mode: 'server'
+                page: number
+                totalPages: number
+                onPageChange: (page: number) => void
+                isPending?: boolean
+            }
+            isTransitioning?: boolean
+        }) => (
             <div data-testid="sample-data-grid">
                 {table.getRowModel().rows.map((row: MockTableRow) => (
                     <div key={row.id} data-testid={`row-${row.id}`}>
@@ -75,6 +89,28 @@ vi.mock('@/components/sample-grid', async () => {
                         ))}
                     </div>
                 ))}
+                {pagination?.mode === 'server' && (
+                    <div>
+                        <div data-testid="pagination-pending">{String(Boolean(pagination.isPending))}</div>
+                        <button
+                            type="button"
+                            data-testid="pagination-prev"
+                            disabled={Boolean(pagination.isPending) || pagination.page <= 1}
+                            onClick={() => pagination.onPageChange(pagination.page - 1)}
+                        >
+                            prev
+                        </button>
+                        <button
+                            type="button"
+                            data-testid="pagination-next"
+                            disabled={Boolean(pagination.isPending) || pagination.page >= pagination.totalPages}
+                            onClick={() => pagination.onPageChange(pagination.page + 1)}
+                        >
+                            next
+                        </button>
+                    </div>
+                )}
+                <div data-testid="grid-transitioning">{String(Boolean(isTransitioning))}</div>
             </div>
         ),
         SampleIdCell: ({ value }: ValueCellProps) => <span>{value}</span>,
@@ -180,5 +216,32 @@ describe('SampleListTable discard action visibility', () => {
         )
 
         expect(container.querySelector('[data-stop-row-click="true"]')).not.toBeNull()
+    })
+
+    it('shows a pending pagination state immediately after requesting the next server page', () => {
+        render(
+            <SampleListTable
+                samples={[buildSample('completed')]}
+                page={1}
+                pageSize={10}
+                totalPages={3}
+                totalCount={25}
+                searchParams="page=1"
+                permissions={{
+                    canDiscard: false,
+                    canEdit: false,
+                    canViewResults: false,
+                    canEnterResults: false,
+                }}
+            />,
+        )
+
+        fireEvent.click(screen.getByTestId('pagination-next'))
+
+        expect(mockReplace).toHaveBeenCalledWith('/manager/samples?page=2', { scroll: false })
+        expect(screen.getByTestId('pagination-pending').textContent).toBe('true')
+        expect(screen.getByTestId('pagination-next').hasAttribute('disabled')).toBe(true)
+        expect(screen.getByTestId('pagination-prev').hasAttribute('disabled')).toBe(true)
+        expect(screen.getByTestId('grid-transitioning').textContent).toBe('true')
     })
 })

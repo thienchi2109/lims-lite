@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type MouseEvent } from 'react'
+import { useEffect, useState, type MouseEvent } from 'react'
 import {
     useReactTable,
     getCoreRowModel,
@@ -64,6 +64,7 @@ export function SampleListTable({
     const [selectedSampleForEdit, setSelectedSampleForEdit] = useState<SampleWithUser | null>(null)
     const [discardDialogOpen, setDiscardDialogOpen] = useState(false)
     const [selectedSampleForDiscard, setSelectedSampleForDiscard] = useState<string | null>(null)
+    const [pendingPage, setPendingPage] = useState<number | null>(null)
 
     const router = useRouter()
     const pathname = usePathname()
@@ -84,6 +85,10 @@ export function SampleListTable({
         const query = params.toString()
         router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
     }
+
+    useEffect(() => {
+        setPendingPage(null)
+    }, [searchParams])
 
     const handleSort = (column: string) => {
         const isAsc = sortBy === column && sortOrder === 'asc'
@@ -117,6 +122,11 @@ export function SampleListTable({
     }
 
     const handlePageChange = (newPage: number) => {
+        if (newPage === page || pendingPage !== null) {
+            return
+        }
+
+        setPendingPage(newPage)
         updateQuery({ page: String(newPage) })
     }
 
@@ -287,6 +297,7 @@ export function SampleListTable({
         <>
             <SampleDataGrid
                 table={table}
+                isTransitioning={pendingPage !== null}
                 pagination={{
                     mode: 'server',
                     page,
@@ -294,6 +305,7 @@ export function SampleListTable({
                     totalCount,
                     pageSize,
                     onPageChange: handlePageChange,
+                    isPending: pendingPage !== null,
                 }}
                 selectedRowId={selectedSampleId}
                 onRowClick={handleRowClick}
