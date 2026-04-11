@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect, useCallback } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { type SampleStatus } from '@/types'
 import { SEARCH_DEBOUNCE_MS } from './constants'
+import type { PendingQueryAction } from '@/components/sample-grid/hooks/usePendingQueryNavigation'
 
 export type FilterState = {
     search: string
@@ -37,6 +38,11 @@ export type SortState = {
     setPageSize: (value: string) => void
 }
 
+type QueryUpdateHandler = (
+    updates: Record<string, string | null>,
+    action: PendingQueryAction,
+) => void
+
 type SearchDraft = {
     baseSearch: string
     value: string
@@ -46,12 +52,16 @@ type UseFilterParamsProps = {
     defaultSortBy?: string
     defaultSortOrder?: 'asc' | 'desc'
     defaultPageSize?: number
+    updateQuery?: QueryUpdateHandler
+    isPending?: boolean
 }
 
 export function useFilterParams({
     defaultSortBy = 'updated_at',
     defaultSortOrder = 'desc',
     defaultPageSize = 20,
+    updateQuery,
+    isPending = false,
 }: UseFilterParamsProps = {}) {
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -98,6 +108,18 @@ export function useFilterParams({
         router.replace(query ? `${pathname}?${query}` : pathname)
     }, [searchParamsString, router, pathname])
 
+    const applyQueryUpdate = useCallback((
+        updates: Record<string, string | null>,
+        action: PendingQueryAction = 'filter',
+    ) => {
+        if (updateQuery) {
+            updateQuery(updates, action)
+            return
+        }
+
+        updateUrl(updates)
+    }, [updateQuery, updateUrl])
+
     // Isolated debounce effect - fixes Bug #3 (Search Debounce Interference)
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -105,20 +127,12 @@ export function useFilterParams({
             const currentSearch = params.get('search') || ''
 
             if (currentSearch !== searchValue) {
-                const newParams = new URLSearchParams(window.location.search)
-                if (searchValue) {
-                    newParams.set('search', searchValue)
-                } else {
-                    newParams.delete('search')
-                }
-                newParams.set('page', '1')
-                const query = newParams.toString()
-                router.replace(query ? `${pathname}?${query}` : pathname)
+                applyQueryUpdate({ search: searchValue || null }, 'filter')
             }
         }, SEARCH_DEBOUNCE_MS)
 
         return () => clearTimeout(timer)
-    }, [searchValue, pathname, router])
+    }, [searchValue, pathname, router, applyQueryUpdate])
 
     // Handler implementations
     const handlers: FilterHandlers = useMemo(() => ({
@@ -130,11 +144,11 @@ export function useFilterParams({
         },
 
         setScope: (value: 'active' | 'all') => {
-            updateUrl({ scope: value === 'all' ? value : null })
+            applyQueryUpdate({ scope: value === 'all' ? value : null }, 'filter')
         },
 
         setStatus: (value: SampleStatus | 'all') => {
-            updateUrl({ status: value === 'all' ? null : value })
+            applyQueryUpdate({ status: value === 'all' ? null : value }, 'filter')
         },
 
         // Fixes Bug #2 (Date Preset Logic) - always sets BOTH dates
@@ -163,26 +177,26 @@ export function useFilterParams({
 
             const fromStr = from.toISOString().split('T')[0]
             const toStr = to.toISOString().split('T')[0]
-            updateUrl({ fromDate: fromStr, toDate: toStr })
+            applyQueryUpdate({ fromDate: fromStr, toDate: toStr }, 'filter')
         },
 
         setFromDate: (value: string) => {
-            updateUrl({ fromDate: value || null })
+            applyQueryUpdate({ fromDate: value || null }, 'filter')
         },
 
         setToDate: (value: string) => {
-            updateUrl({ toDate: value || null })
+            applyQueryUpdate({ toDate: value || null }, 'filter')
         },
 
         setReceiver: (value: string) => {
-            updateUrl({ receiverId: value === 'all' ? null : value })
+            applyQueryUpdate({ receiverId: value === 'all' ? null : value }, 'filter')
         },
 
         toggleSpecialty: (id: string) => {
             const newIds = filters.selectedSpecialtyIds.includes(id)
                 ? filters.selectedSpecialtyIds.filter(sid => sid !== id)
                 : [...filters.selectedSpecialtyIds, id]
-            updateUrl({ specialtyIds: newIds.length > 0 ? newIds.join(',') : null })
+            applyQueryUpdate({ specialtyIds: newIds.length > 0 ? newIds.join(',') : null }, 'filter')
         },
 
         // Fixes Bug #1 (Aggressive Reset) - preserves pageSize & sortBy
@@ -206,9 +220,9 @@ export function useFilterParams({
         },
 
         clearDates: () => {
-            updateUrl({ fromDate: null, toDate: null })
+            applyQueryUpdate({ fromDate: null, toDate: null }, 'filter')
         },
-    }), [updateUrl, filters.selectedSpecialtyIds, filters.search, searchParamsString, router, pathname])
+    }), [applyQueryUpdate, filters.selectedSpecialtyIds, filters.search, searchParamsString, router, pathname])
 
     // Sort state
     const sort: SortState = useMemo(() => {
@@ -224,13 +238,13 @@ export function useFilterParams({
             currentSortValue: `${sortBy}-${sortOrder}`,
             setSortValue: (value: string) => {
                 const [newSortBy, newSortOrder] = value.split('-')
-                updateUrl({ sortBy: newSortBy, sortOrder: newSortOrder })
+                applyQueryUpdate({ sortBy: newSortBy, sortOrder: newSortOrder }, 'filter')
             },
             setPageSize: (value: string) => {
-                updateUrl({ pageSize: value })
+                applyQueryUpdate({ pageSize: value }, 'filter')
             },
         }
-    }, [searchParamsString, defaultSortBy, defaultSortOrder, defaultPageSize, updateUrl])
+    }, [searchParamsString, defaultSortBy, defaultSortOrder, defaultPageSize, applyQueryUpdate])
 
     // Active filters count
     const activeFiltersCount = useMemo(() => {
@@ -248,5 +262,6 @@ export function useFilterParams({
         handlers,
         sort,
         activeFiltersCount,
+        isPending,
     }
 }

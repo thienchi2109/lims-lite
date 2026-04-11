@@ -1,7 +1,8 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { PendingStatePill } from '@/components/pending-state-pill'
 import { GRID_LABELS } from './constants'
 import type { ServerPagination, ClientPagination } from './types'
 
@@ -13,7 +14,7 @@ function assertNever(x: never): never {
 
 export function SampleGridPagination<T>(props: SampleGridPaginationProps<T>) {
   if (props.mode === 'server') {
-    const { page, totalPages, totalCount, pageSize, onPageChange, isPending = false } = props
+    const { page, totalPages, totalCount, pageSize, onPageChange, isPending = false, pendingLabel } = props
     const from = Math.min((page - 1) * pageSize + 1, totalCount)
     const to = Math.min(page * pageSize, totalCount)
 
@@ -30,12 +31,7 @@ export function SampleGridPagination<T>(props: SampleGridPaginationProps<T>) {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {isPending && (
-            <div className="flex items-center gap-1.5 text-xs font-medium text-sky-700">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              <span>Đang chuyển trang...</span>
-            </div>
-          )}
+          {isPending && pendingLabel && <PendingStatePill label={pendingLabel} />}
           <Button
             variant="outline"
             size="sm"

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type MouseEvent } from 'react'
+import { useState, type MouseEvent } from 'react'
 import {
     useReactTable,
     getCoreRowModel,
@@ -27,6 +27,7 @@ import {
     GRID_LABELS,
     type SortDirection,
 } from '@/components/sample-grid'
+import type { PendingQueryAction } from '@/components/sample-grid/hooks/usePendingQueryNavigation'
 
 interface SampleListTableProps {
     samples: SampleWithUser[]
@@ -45,6 +46,11 @@ interface SampleListTableProps {
     sortBy?: string
     sortOrder?: 'asc' | 'desc'
     selectedSampleId?: string | null
+    pendingAction?: PendingQueryAction | null
+    onQueryUpdate?: (
+        updates: Record<string, string | null>,
+        action: PendingQueryAction,
+    ) => void
 }
 
 export function SampleListTable({
@@ -59,12 +65,13 @@ export function SampleListTable({
     sortBy = 'updated_at',
     sortOrder = 'desc',
     selectedSampleId,
+    pendingAction = null,
+    onQueryUpdate,
 }: SampleListTableProps) {
     const [editDialogOpen, setEditDialogOpen] = useState(false)
     const [selectedSampleForEdit, setSelectedSampleForEdit] = useState<SampleWithUser | null>(null)
     const [discardDialogOpen, setDiscardDialogOpen] = useState(false)
     const [selectedSampleForDiscard, setSelectedSampleForDiscard] = useState<string | null>(null)
-    const [pendingPage, setPendingPage] = useState<number | null>(null)
 
     const router = useRouter()
     const pathname = usePathname()
@@ -86,16 +93,24 @@ export function SampleListTable({
         router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
     }
 
-    useEffect(() => {
-        setPendingPage(null)
-    }, [searchParams])
+    const updateListQuery = (
+        updates: Record<string, string | null>,
+        action: PendingQueryAction,
+    ) => {
+        if (onQueryUpdate) {
+            onQueryUpdate(updates, action)
+            return
+        }
+
+        updateQuery(updates)
+    }
 
     const handleSort = (column: string) => {
         const isAsc = sortBy === column && sortOrder === 'asc'
-        updateQuery({
+        updateListQuery({
             sortBy: column,
             sortOrder: isAsc ? 'desc' : 'asc',
-        })
+        }, 'filter')
     }
 
     const handleEditSample = (sample: SampleWithUser) => {
@@ -122,12 +137,11 @@ export function SampleListTable({
     }
 
     const handlePageChange = (newPage: number) => {
-        if (newPage === page || pendingPage !== null) {
+        if (newPage === page || pendingAction !== null) {
             return
         }
 
-        setPendingPage(newPage)
-        updateQuery({ page: String(newPage) })
+        updateListQuery({ page: String(newPage) }, 'page')
     }
 
     // Helper to get sort direction for a column
@@ -297,7 +311,12 @@ export function SampleListTable({
         <>
             <SampleDataGrid
                 table={table}
-                isTransitioning={pendingPage !== null}
+                isTransitioning={pendingAction !== null}
+                transitionLabel={
+                    pendingAction === 'filter'
+                        ? GRID_LABELS.pagination.loadingFilter
+                        : GRID_LABELS.pagination.loadingPage
+                }
                 pagination={{
                     mode: 'server',
                     page,
@@ -305,7 +324,8 @@ export function SampleListTable({
                     totalCount,
                     pageSize,
                     onPageChange: handlePageChange,
-                    isPending: pendingPage !== null,
+                    isPending: pendingAction !== null,
+                    pendingLabel: pendingAction === 'page' ? GRID_LABELS.pagination.loadingPage : null,
                 }}
                 selectedRowId={selectedSampleId}
                 onRowClick={handleRowClick}

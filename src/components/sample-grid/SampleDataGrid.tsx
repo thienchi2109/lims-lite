@@ -1,44 +1,17 @@
 'use client'
 
-import { flexRender, type Table } from '@tanstack/react-table'
+import { flexRender } from '@tanstack/react-table'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 import { Loader2 } from 'lucide-react'
+import { PendingStatePill } from '@/components/pending-state-pill'
 import { MotionTableRow } from './MotionTableRow'
 import { SampleGridPagination } from './SampleGridPagination'
 import { GRID_LABELS } from './constants'
-import type { SampleGridRow, PaginationProps } from './types'
-import type { LucideIcon } from 'lucide-react'
+import type { SampleDataGridProps, SampleGridRow } from './types'
 
 // Module-level constant to avoid creating new Set on each render
 const EMPTY_HIGHLIGHTED_SET: Set<string> = new Set()
-
-interface SampleDataGridProps<T extends SampleGridRow> {
-  /** TanStack Table instance (consumer owns this) */
-  table: Table<T>
-  /** Pagination configuration */
-  pagination: PaginationProps<T>
-  /** Currently selected row ID */
-  selectedRowId?: string | null
-  /** Row click handler */
-  onRowClick?: (row: T, event: React.MouseEvent<HTMLTableRowElement>) => void
-  /** Loading state */
-  isLoading?: boolean
-  /** Lightweight overlay while server pagination is transitioning */
-  isTransitioning?: boolean
-  /** Empty state message */
-  emptyMessage?: string
-  /** Empty state icon */
-  emptyIcon?: LucideIcon
-  /** Row IDs to highlight (for realtime updates) */
-  highlightedRowIds?: Set<string>
-  /** Enable Framer Motion animations (default: true) */
-  animatedRows?: boolean
-  /** Additional className for container */
-  className?: string
-  /** Sticky header (default: true) */
-  stickyHeader?: boolean
-}
 
 /**
  * Shared data grid component for sample tables.
@@ -65,6 +38,7 @@ export function SampleDataGrid<T extends SampleGridRow>({
   onRowClick,
   isLoading = false,
   isTransitioning = false,
+  transitionLabel = GRID_LABELS.pagination.loadingPage,
   emptyMessage = GRID_LABELS.empty.noSamples,
   emptyIcon: EmptyIcon,
   highlightedRowIds = EMPTY_HIGHLIGHTED_SET,
@@ -176,10 +150,10 @@ export function SampleDataGrid<T extends SampleGridRow>({
 
         {isTransitioning && hasData && !isLoading && (
           <div className="absolute inset-0 z-20 flex items-start justify-center bg-white/55 px-4 py-8 backdrop-blur-[1px]">
-            <div className="flex items-center gap-2 rounded-full border border-sky-100 bg-white px-4 py-2 text-sm font-medium text-sky-700 shadow-sm">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Đang chuyển trang...</span>
-            </div>
+            <PendingStatePill
+              label={transitionLabel}
+              className="flex items-center gap-2 rounded-full border border-sky-100 bg-white px-4 py-2 text-sm font-medium text-sky-700 shadow-sm"
+            />
           </div>
         )}
       </div>

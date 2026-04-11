@@ -97,6 +97,7 @@ describe('SampleFilters scope toolbar', () => {
                 setPageSize: vi.fn(),
             },
             activeFiltersCount: 0,
+            isPending: false,
         })
 
         render(<SampleFilters specialties={[]} receiverOptions={[]} />)
@@ -127,6 +128,7 @@ describe('SampleFilters scope toolbar', () => {
                 setPageSize: vi.fn(),
             },
             activeFiltersCount: 1,
+            isPending: false,
         })
 
         render(<SampleFilters specialties={[]} receiverOptions={[]} />)
@@ -161,6 +163,7 @@ describe('SampleFilters scope toolbar', () => {
                 setPageSize: vi.fn(),
             },
             activeFiltersCount: 3,
+            isPending: false,
         })
 
         render(<SampleFilters specialties={[]} receiverOptions={[]} />)
@@ -196,6 +199,7 @@ describe('SampleFilters scope toolbar', () => {
                 setPageSize: vi.fn(),
             },
             activeFiltersCount: 0,
+            isPending: false,
         })
 
         render(<SampleFilters specialties={[]} receiverOptions={[]} />)
@@ -226,6 +230,7 @@ describe('SampleFilters scope toolbar', () => {
                 setPageSize: vi.fn(),
             },
             activeFiltersCount: 0,
+            isPending: false,
         })
 
         render(<SampleFilters specialties={[]} receiverOptions={[]} />)
@@ -242,5 +247,35 @@ describe('SampleFilters scope toolbar', () => {
         expect(controlsToolbar.className).toContain('flex-wrap')
         expect(sortTrigger.className).toContain('min-w-')
         expect(sortTrigger.className).not.toContain('w-[140px]')
+    })
+
+    it('shows a pending label and disables the search input while filters are refreshing', () => {
+        mockUseFilterParams.mockReturnValue({
+            filters: {
+                search: 'ABC',
+                scope: 'active',
+                status: 'all',
+                fromDate: '',
+                toDate: '',
+                receiverId: '',
+                selectedSpecialtyIds: [],
+            },
+            handlers: defaultHandlers,
+            sort: {
+                sortBy: 'updated_at',
+                sortOrder: 'desc',
+                pageSize: 20,
+                currentSortValue: 'updated_at-desc',
+                setSortValue: vi.fn(),
+                setPageSize: vi.fn(),
+            },
+            activeFiltersCount: 0,
+            isPending: true,
+        })
+
+        render(<SampleFilters specialties={[]} receiverOptions={[]} />)
+
+        expect(screen.getByText('Đang cập nhật danh sách...')).toBeDefined()
+        expect(screen.getByPlaceholderText('Tìm kiếm mẫu, khách hàng, mã...')).toHaveProperty('disabled', true)
     })
 })

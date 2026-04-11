@@ -20,10 +20,12 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog'
 import { QRScanner } from '@/components/qr-scanner'
+import { PendingStatePill } from '@/components/pending-state-pill'
 import { useFilterParams } from './use-filter-params'
 import { FilterPopover } from './FilterPopover'
 import { ActiveFilterBadges } from './ActiveFilterBadges'
 import { sortOptions, pageSizeOptions } from './constants'
+import type { PendingQueryAction } from '@/components/sample-grid/hooks/usePendingQueryNavigation'
 
 const EMPTY_SPECIALTIES: LabSpecialty[] = []
 const EMPTY_RECEIVERS: Array<{ id: string; name: string }> = []
@@ -32,18 +34,31 @@ type SampleFiltersProps = {
     specialties?: LabSpecialty[]
     receiverOptions?: Array<{ id: string; name: string }>
     completedOnly?: boolean
+    updateQuery?: (
+        updates: Record<string, string | null>,
+        action: PendingQueryAction,
+    ) => void
+    isPending?: boolean
 }
 
 export function SampleFilters({
     specialties = EMPTY_SPECIALTIES,
     receiverOptions = EMPTY_RECEIVERS,
     completedOnly = false,
+    updateQuery,
+    isPending = false,
 }: SampleFiltersProps) {
     const [isFilterOpen, setIsFilterOpen] = useState(false)
     const [isScannerOpen, setIsScannerOpen] = useState(false)
     const searchInputRef = useRef<HTMLInputElement | null>(null)
 
-    const { filters, handlers, sort, activeFiltersCount } = useFilterParams()
+    const {
+        filters,
+        handlers,
+        sort,
+        activeFiltersCount,
+        isPending: isRefreshing,
+    } = useFilterParams({ updateQuery, isPending })
 
     const handleQRScan = (decodedText: string) => {
         handlers.setSearch(decodedText)
@@ -65,6 +80,7 @@ export function SampleFilters({
                         placeholder={completedOnly ? 'Tìm kiếm mẫu đã hoàn thành...' : 'Tìm kiếm mẫu, khách hàng, mã...'}
                         value={filters.search}
                         onChange={(e) => handlers.setSearch(e.target.value)}
+                        disabled={isRefreshing}
                         className="h-12 w-full border-0 bg-transparent pl-11 pr-14 text-sm font-medium text-slate-700 placeholder:text-slate-400 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                     <Button
@@ -72,6 +88,7 @@ export function SampleFilters({
                         variant="ghost"
                         size="icon-sm"
                         onClick={() => setIsScannerOpen(true)}
+                        disabled={isRefreshing}
                         className="absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2 rounded-xl text-slate-500 transition-colors hover:bg-sky-50 hover:text-sky-600"
                         title="Quét mã QR"
                     >
@@ -95,6 +112,7 @@ export function SampleFilters({
                                 type="button"
                                 variant={filters.scope === 'all' ? 'secondary' : 'outline'}
                                 onClick={() => handlers.setScope(filters.scope === 'all' ? 'active' : 'all')}
+                                disabled={isRefreshing}
                                 className="h-10 rounded-xl border-slate-200 bg-white px-4 font-medium text-slate-700 shadow-none hover:bg-slate-100"
                                 aria-pressed={filters.scope === 'all'}
                             >
@@ -119,6 +137,7 @@ export function SampleFilters({
                                 onDateRangePreset={handlers.setDateRange}
                                 onReset={handlers.resetFilters}
                                 activeFiltersCount={activeFiltersCount}
+                                disabled={isRefreshing}
                             />
                         </>
                     )}
@@ -126,11 +145,14 @@ export function SampleFilters({
 
                 <div className="hidden h-8 w-px bg-slate-200 md:block" />
 
+                {isRefreshing && <PendingStatePill label="Đang cập nhật danh sách..." />}
+
                 <div className="ml-auto flex flex-wrap items-center gap-2">
-                    <Select value={sort.currentSortValue} onValueChange={sort.setSortValue}>
+                    <Select value={sort.currentSortValue} onValueChange={sort.setSortValue} disabled={isRefreshing}>
                         <SelectTrigger
                             data-testid="sample-filters-sort-trigger"
                             className="hidden h-10 min-w-[13rem] justify-between rounded-xl border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-none sm:flex"
+                            disabled={isRefreshing}
                         >
                             <div className="flex min-w-0 items-center gap-2">
                                 <SlidersHorizontal className="h-3.5 w-3.5 shrink-0 text-slate-500" />
@@ -147,8 +169,8 @@ export function SampleFilters({
                         </SelectContent>
                     </Select>
 
-                    <Select value={String(sort.pageSize)} onValueChange={sort.setPageSize}>
-                        <SelectTrigger className="h-10 min-w-[5.5rem] rounded-xl border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-none">
+                    <Select value={String(sort.pageSize)} onValueChange={sort.setPageSize} disabled={isRefreshing}>
+                        <SelectTrigger className="h-10 min-w-[5.5rem] rounded-xl border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-none" disabled={isRefreshing}>
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent side="bottom" align="end">
@@ -178,6 +200,7 @@ export function SampleFilters({
                     onClearReceiver={() => handlers.setReceiver('all')}
                     onClearDates={handlers.clearDates}
                     onResetAll={handlers.resetFilters}
+                    disabled={isRefreshing}
                 />
             )}
 

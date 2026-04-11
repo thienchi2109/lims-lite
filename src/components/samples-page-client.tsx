@@ -13,7 +13,8 @@ import { isValidUUID } from '@/lib/utils-lims'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
-import { useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePendingQueryNavigation } from '@/components/sample-grid/hooks/usePendingQueryNavigation'
 
 interface SamplesPageClientProps {
     role: 'analyst' | 'manager' | 'doctor'
@@ -36,6 +37,8 @@ export function SamplesPageClient({
     specialties
 }: SamplesPageClientProps) {
     const searchParams = useSearchParams()
+    const pathname = usePathname()
+    const router = useRouter()
     const isDoctor = role === 'doctor'
 
     // Parse URL params
@@ -84,7 +87,7 @@ export function SamplesPageClient({
     })
 
     // Fetch samples with TanStack Query
-    const { data: result, isLoading, error } = useSamples({
+    const { data: result, isLoading, isFetching, error } = useSamples({
         params: {
             page,
             pageSize,
@@ -98,6 +101,13 @@ export function SamplesPageClient({
             receiverId: receiverId || undefined,
             specialtyIds: specialtyIds.length > 0 ? specialtyIds.join(',') : undefined,
         }
+    })
+
+    const queryNavigation = usePendingQueryNavigation({
+        currentQuery: searchParams.toString(),
+        pathname,
+        replace: (url) => router.replace(url, { scroll: false }),
+        isFetching,
     })
 
     // Handle loading and error states
@@ -152,6 +162,8 @@ export function SamplesPageClient({
                         receiverOptions={receiverOptions}
                         specialties={specialties}
                         completedOnly={isDoctor}
+                        updateQuery={queryNavigation.updateQuery}
+                        isPending={queryNavigation.isFilterPending}
                     />
                 </Suspense>
             </div>
@@ -174,6 +186,8 @@ export function SamplesPageClient({
                             sortBy={sortBy}
                             sortOrder={sortOrder as 'asc' | 'desc'}
                             selectedSampleId={sampleId}
+                            pendingAction={queryNavigation.pendingAction}
+                            onQueryUpdate={queryNavigation.updateQuery}
                         />
                     </div>
                 )}

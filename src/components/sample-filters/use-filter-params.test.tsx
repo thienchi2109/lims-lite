@@ -167,4 +167,25 @@ describe('useFilterParams scope state', () => {
         expect(result.current.filters.search).toBe('LOCAL')
         focusedInput.remove()
     })
+
+    it('delegates filter updates through the shared query updater and exposes pending state', () => {
+        const updateQuery = vi.fn()
+
+        const { result } = renderHook(() =>
+            useFilterParams({
+                updateQuery,
+                isPending: true,
+            }),
+        )
+
+        act(() => {
+            result.current.handlers.setReceiver('11111111-1111-4111-8111-111111111111')
+        })
+
+        expect(updateQuery).toHaveBeenCalledWith(
+            { receiverId: '11111111-1111-4111-8111-111111111111' },
+            'filter',
+        )
+        expect(result.current.isPending).toBe(true)
+    })
 })

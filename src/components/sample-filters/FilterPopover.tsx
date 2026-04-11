@@ -44,6 +44,7 @@ type FilterPopoverProps = {
     onDateRangePreset: (range: 'today' | 'yesterday' | 'week' | 'month') => void
     onReset: () => void
     activeFiltersCount: number
+    disabled?: boolean
 }
 
 export function FilterPopover({
@@ -64,6 +65,7 @@ export function FilterPopover({
     onDateRangePreset,
     onReset,
     activeFiltersCount,
+    disabled = false,
 }: FilterPopoverProps) {
     const sortedSpecialties = [...specialties].sort((a, b) => a.display_order - b.display_order)
     const receiverValue = receiverId || 'all'
@@ -73,6 +75,7 @@ export function FilterPopover({
             <PopoverTrigger asChild>
                 <Button
                     variant={activeFiltersCount > 0 ? "secondary" : "outline"}
+                    disabled={disabled}
                     className={cn(
                         "h-10 rounded-xl border-slate-200 bg-white px-4 font-medium text-slate-700 shadow-none hover:bg-slate-100",
                         activeFiltersCount > 0 && "bg-sky-100/60 text-sky-700 hover:bg-sky-100"
@@ -96,6 +99,7 @@ export function FilterPopover({
                                 variant="ghost"
                                 size="sm"
                                 onClick={onReset}
+                                disabled={disabled}
                                 className="h-auto p-0 text-xs text-muted-foreground hover:text-destructive"
                             >
                                 Xóa tất cả
@@ -117,6 +121,7 @@ export function FilterPopover({
                                                     <button
                                                         type="button"
                                                         onClick={() => onToggleSpecialty(specialty.id)}
+                                                        disabled={disabled}
                                                         className={cn(
                                                             "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
                                                             isSelected
@@ -143,7 +148,7 @@ export function FilterPopover({
                         <div className="space-y-1.5">
                             <Label className="text-xs font-medium text-slate-500">Trạng thái</Label>
                             <Select value={status} onValueChange={(val) => onStatusChange(val as SampleStatus | 'all')}>
-                                <SelectTrigger className="w-full h-9 text-sm">
+                                <SelectTrigger className="w-full h-9 text-sm" disabled={disabled}>
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -162,8 +167,8 @@ export function FilterPopover({
                         {/* Receiver Filter */}
                         <div className="space-y-1.5">
                             <Label className="text-xs font-medium text-slate-500">Người nhận</Label>
-                            <Select value={receiverValue} onValueChange={onReceiverChange}>
-                                <SelectTrigger className="w-full h-9 text-sm">
+                            <Select value={receiverValue} onValueChange={onReceiverChange} disabled={disabled}>
+                                <SelectTrigger className="w-full h-9 text-sm" disabled={disabled}>
                                     <SelectValue placeholder="Chọn người nhận" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -181,8 +186,8 @@ export function FilterPopover({
                         <div className="space-y-1.5">
                             <Label className="text-xs font-medium text-slate-500">Ngày nhận mẫu</Label>
                             <div className="grid grid-cols-2 gap-2 mb-2">
-                                <Button variant="outline" size="sm" onClick={() => onDateRangePreset('today')} className="text-xs h-7">Hôm nay</Button>
-                                <Button variant="outline" size="sm" onClick={() => onDateRangePreset('week')} className="text-xs h-7">Tuần này</Button>
+                                <Button variant="outline" size="sm" onClick={() => onDateRangePreset('today')} className="text-xs h-7" disabled={disabled}>Hôm nay</Button>
+                                <Button variant="outline" size="sm" onClick={() => onDateRangePreset('week')} className="text-xs h-7" disabled={disabled}>Tuần này</Button>
                             </div>
                             <div className="grid grid-cols-2 gap-2">
                                 <div className="space-y-1">
@@ -191,6 +196,7 @@ export function FilterPopover({
                                         type="date"
                                         value={fromDate}
                                         onChange={(e) => onFromDateChange(e.target.value)}
+                                        disabled={disabled}
                                         className="h-8 text-xs"
                                     />
                                 </div>
@@ -200,6 +206,7 @@ export function FilterPopover({
                                         type="date"
                                         value={toDate}
                                         onChange={(e) => onToDateChange(e.target.value)}
+                                        disabled={disabled}
                                         className="h-8 text-xs"
                                     />
                                 </div>

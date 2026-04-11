@@ -26,6 +26,7 @@ type ActiveFilterBadgesProps = {
     onClearReceiver: () => void
     onClearDates: () => void
     onResetAll: () => void
+    disabled?: boolean
 }
 
 export function ActiveFilterBadges({
@@ -42,6 +43,7 @@ export function ActiveFilterBadges({
     onClearReceiver,
     onClearDates,
     onResetAll,
+    disabled = false,
 }: ActiveFilterBadgesProps) {
     const isActiveScope = scope === 'active' && status === 'all'
     const hasExplicitFilters = status !== 'all' || receiverId !== '' || fromDate || toDate || selectedSpecialtyIds.length > 0
@@ -77,6 +79,7 @@ export function ActiveFilterBadges({
                                             variant="ghost"
                                             size="icon-sm"
                                             onClick={() => onRemoveSpecialty(id)}
+                                            disabled={disabled}
                                             className="h-4 w-4 ml-1 hover:bg-transparent text-muted-foreground hover:text-foreground"
                                         >
                                             <X className="h-3 w-3" />
@@ -103,6 +106,7 @@ export function ActiveFilterBadges({
                         variant="ghost"
                         size="icon-sm"
                         onClick={onClearStatus}
+                        disabled={disabled}
                         className="h-4 w-4 ml-1 hover:bg-transparent text-muted-foreground hover:text-foreground"
                     >
                         <X className="h-3 w-3" />
@@ -121,6 +125,7 @@ export function ActiveFilterBadges({
                         variant="ghost"
                         size="icon-sm"
                         onClick={onClearReceiver}
+                        disabled={disabled}
                         className="h-4 w-4 ml-1 hover:bg-transparent text-muted-foreground hover:text-foreground"
                     >
                         <X className="h-3 w-3" />
@@ -139,6 +144,7 @@ export function ActiveFilterBadges({
                         variant="ghost"
                         size="icon-sm"
                         onClick={onClearDates}
+                        disabled={disabled}
                         className="h-4 w-4 ml-1 hover:bg-transparent text-muted-foreground hover:text-foreground"
                     >
                         <X className="h-3 w-3" />
@@ -152,6 +158,7 @@ export function ActiveFilterBadges({
                     variant="ghost"
                     size="sm"
                     onClick={onResetAll}
+                    disabled={disabled}
                     className="h-7 text-xs text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 px-2"
                 >
                     Xóa tất cả

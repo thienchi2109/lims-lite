@@ -15,6 +15,8 @@ export const GRID_LABELS = {
     showing: 'Hiển thị',
     of: 'của',
     samples: 'mẫu',
+    loadingPage: 'Đang chuyển trang...',
+    loadingFilter: 'Đang cập nhật danh sách...',
   },
   empty: {
     noSamples: 'Không tìm thấy mẫu nào',

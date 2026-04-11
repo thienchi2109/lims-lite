@@ -15,6 +15,7 @@ const mockUseCoaActions = vi.fn()
 const mockUsePrintHandlers = vi.fn()
 const mockInvalidateQueries = vi.fn()
 const mockRouterPush = vi.fn()
+const mockRouterReplace = vi.fn()
 const mockUseSampleSelectionCore = vi.fn()
 
 vi.mock('@/hooks/use-samples', () => ({
@@ -28,7 +29,9 @@ vi.mock('@/hooks/use-sample-selection-core', () => ({
 vi.mock('next/navigation', () => ({
     useRouter: () => ({
         push: mockRouterPush,
+        replace: mockRouterReplace,
     }),
+    usePathname: () => '/manager/samples',
     useSearchParams: () => mockSearchParams,
 }))
 
@@ -234,6 +237,7 @@ describe('SamplesPageClient read-path contract', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockSearchParams = new URLSearchParams()
+        mockRouterReplace.mockClear()
 
         mockUseSamples.mockReturnValue({
             data: {

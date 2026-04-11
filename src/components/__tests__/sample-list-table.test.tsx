@@ -130,6 +130,10 @@ vi.mock('@/components/sample-grid', async () => {
                 updatedAt: 'Cập nhật',
                 actions: 'Thao tác',
             },
+            pagination: {
+                loadingPage: 'Đang chuyển trang...',
+                loadingFilter: 'Đang cập nhật danh sách...',
+            },
         },
     }
 })
@@ -218,7 +222,9 @@ describe('SampleListTable discard action visibility', () => {
         expect(container.querySelector('[data-stop-row-click="true"]')).not.toBeNull()
     })
 
-    it('shows a pending pagination state immediately after requesting the next server page', () => {
+    it('uses the shared pending contract for pagination transitions', () => {
+        const onQueryUpdate = vi.fn()
+
         render(
             <SampleListTable
                 samples={[buildSample('completed')]}
@@ -227,6 +233,41 @@ describe('SampleListTable discard action visibility', () => {
                 totalPages={3}
                 totalCount={25}
                 searchParams="page=1"
+                pendingAction="page"
+                onQueryUpdate={onQueryUpdate}
+                permissions={{
+                    canDiscard: false,
+                    canEdit: false,
+                    canViewResults: false,
+                    canEnterResults: false,
+                }}
+            />,
+        )
+
+        expect(screen.getByTestId('pagination-pending').textContent).toBe('true')
+        expect(screen.getByTestId('grid-transitioning').textContent).toBe('true')
+        expect(screen.getByTestId('pagination-next').hasAttribute('disabled')).toBe(true)
+        expect(screen.getByTestId('pagination-prev').hasAttribute('disabled')).toBe(true)
+
+        fireEvent.click(screen.getByTestId('pagination-next'))
+
+        expect(onQueryUpdate).not.toHaveBeenCalled()
+        expect(mockReplace).not.toHaveBeenCalled()
+    })
+
+    it('delegates page changes to the shared updater when no transition is active', () => {
+        const onQueryUpdate = vi.fn()
+
+        render(
+            <SampleListTable
+                samples={[buildSample('completed')]}
+                page={1}
+                pageSize={10}
+                totalPages={3}
+                totalCount={25}
+                searchParams="page=1"
+                pendingAction={null}
+                onQueryUpdate={onQueryUpdate}
                 permissions={{
                     canDiscard: false,
                     canEdit: false,
@@ -238,10 +279,7 @@ describe('SampleListTable discard action visibility', () => {
 
         fireEvent.click(screen.getByTestId('pagination-next'))
 
-        expect(mockReplace).toHaveBeenCalledWith('/manager/samples?page=2', { scroll: false })
-        expect(screen.getByTestId('pagination-pending').textContent).toBe('true')
-        expect(screen.getByTestId('pagination-next').hasAttribute('disabled')).toBe(true)
-        expect(screen.getByTestId('pagination-prev').hasAttribute('disabled')).toBe(true)
-        expect(screen.getByTestId('grid-transitioning').textContent).toBe('true')
+        expect(onQueryUpdate).toHaveBeenCalledWith({ page: '2' }, 'page')
+        expect(mockReplace).not.toHaveBeenCalled()
     })
 })

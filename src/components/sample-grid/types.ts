@@ -19,6 +19,7 @@ export interface ServerPagination {
   pageSize: number
   onPageChange: (page: number) => void
   isPending?: boolean
+  pendingLabel?: string | null
 }
 
 /** Client-side pagination props */
@@ -43,6 +44,7 @@ export interface SampleDataGridProps<T extends SampleGridRow> {
   // Optional features
   isLoading?: boolean
   isTransitioning?: boolean
+  transitionLabel?: string
   emptyMessage?: string
   emptyIcon?: LucideIcon
   highlightedRowIds?: Set<string>

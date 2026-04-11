@@ -3,6 +3,9 @@ import { render } from '@testing-library/react'
 
 const mockUseSamples = vi.fn()
 const mockUseSampleSelectionCore = vi.fn()
+const mockUsePendingQueryNavigation = vi.fn()
+const mockSampleFilters = vi.fn()
+const mockSampleListTable = vi.fn()
 let mockSearchParams = new URLSearchParams()
 
 vi.mock('@/hooks/use-samples', () => ({
@@ -13,16 +16,28 @@ vi.mock('@/hooks/use-sample-selection-core', () => ({
     useSampleSelectionCore: (...args: unknown[]) => mockUseSampleSelectionCore(...args),
 }))
 
+vi.mock('@/components/sample-grid/hooks/usePendingQueryNavigation', () => ({
+    usePendingQueryNavigation: (...args: unknown[]) => mockUsePendingQueryNavigation(...args),
+}))
+
 vi.mock('next/navigation', () => ({
     useSearchParams: () => mockSearchParams,
+    usePathname: () => '/manager/samples',
+    useRouter: () => ({ replace: vi.fn() }),
 }))
 
 vi.mock('@/components/sample-filters', () => ({
-    SampleFilters: () => null,
+    SampleFilters: (props: Record<string, unknown>) => {
+        mockSampleFilters(props)
+        return null
+    },
 }))
 
 vi.mock('@/components/sample-list-table', () => ({
-    SampleListTable: () => null,
+    SampleListTable: (props: Record<string, unknown>) => {
+        mockSampleListTable(props)
+        return null
+    },
 }))
 
 const mockSampleInspectorColumn = vi.fn()
@@ -64,6 +79,13 @@ describe('SamplesPageClient scope contract', () => {
             isLoading: false,
             isFetching: false,
             error: null,
+        })
+        mockUsePendingQueryNavigation.mockReturnValue({
+            pendingAction: null,
+            isPending: false,
+            isPagePending: false,
+            isFilterPending: false,
+            updateQuery: vi.fn(),
         })
     })
 
@@ -159,6 +181,46 @@ describe('SamplesPageClient scope contract', () => {
         expect(mockSampleInspectorColumn).toHaveBeenCalledWith(
             expect.objectContaining({
                 userRole: 'doctor',
+            }),
+        )
+    })
+
+    it('threads shared pending navigation state into filters and the sample grid', () => {
+        const updateQuery = vi.fn()
+
+        mockUsePendingQueryNavigation.mockReturnValue({
+            pendingAction: 'filter',
+            isPending: true,
+            isPagePending: false,
+            isFilterPending: true,
+            updateQuery,
+        })
+
+        render(
+            <SamplesPageClient
+                role="analyst"
+                permissions={{
+                    canDiscard: false,
+                    canEdit: false,
+                    canViewResults: false,
+                    canEnterResults: false,
+                }}
+                homeHref="/"
+                receiverOptions={[]}
+                specialties={[]}
+            />,
+        )
+
+        expect(mockSampleFilters).toHaveBeenCalledWith(
+            expect.objectContaining({
+                isPending: true,
+                updateQuery,
+            }),
+        )
+        expect(mockSampleListTable).toHaveBeenCalledWith(
+            expect.objectContaining({
+                pendingAction: 'filter',
+                onQueryUpdate: updateQuery,
             }),
         )
     })
