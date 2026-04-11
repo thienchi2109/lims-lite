@@ -108,4 +108,43 @@ describe('usePendingQueryNavigation', () => {
         expect(result.current.isPending).toBe(false)
         expect(result.current.pendingAction).toBe(null)
     })
+
+    it('does not revive a settled page transition when selecting a sample row changes detail params', () => {
+        const replace = vi.fn()
+
+        const { result, rerender } = renderHook(
+            ({ currentQuery, isFetching }: { currentQuery: string; isFetching: boolean }) =>
+                usePendingQueryNavigation({
+                    currentQuery,
+                    pathname: '/manager/samples',
+                    replace,
+                    isFetching,
+                }),
+            {
+                initialProps: {
+                    currentQuery: 'page=1',
+                    isFetching: false,
+                },
+            },
+        )
+
+        act(() => {
+            result.current.updateQuery({ page: '2' }, 'page')
+        })
+
+        rerender({
+            currentQuery: 'page=2',
+            isFetching: false,
+        })
+
+        expect(result.current.pendingAction).toBe(null)
+
+        rerender({
+            currentQuery: 'page=2&sampleId=sample-2',
+            isFetching: false,
+        })
+
+        expect(result.current.pendingAction).toBe(null)
+        expect(result.current.isPending).toBe(false)
+    })
 })

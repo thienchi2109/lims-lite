@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from 'react'
 export type PendingQueryAction = 'page' | 'filter'
 
 type QueryUpdates = Record<string, string | null | undefined>
+const DETAIL_QUERY_PARAMS = ['sampleId', 'view']
 
 interface UsePendingQueryNavigationOptions {
     currentQuery: string
@@ -32,6 +33,12 @@ function buildQueryString(currentQuery: string, updates: QueryUpdates) {
     return params.toString()
 }
 
+function normalizeListQuery(query: string) {
+    const params = new URLSearchParams(query)
+    DETAIL_QUERY_PARAMS.forEach((param) => params.delete(param))
+    return params.toString()
+}
+
 export function usePendingQueryNavigation({
     currentQuery,
     pathname,
@@ -43,8 +50,12 @@ export function usePendingQueryNavigation({
         targetQuery: string
     } | null>(null)
 
+    const currentListQuery = useMemo(() => normalizeListQuery(currentQuery), [currentQuery])
+    const targetListQuery = pendingRequest
+        ? normalizeListQuery(pendingRequest.targetQuery)
+        : null
     const isSettled = pendingRequest !== null &&
-        pendingRequest.targetQuery === currentQuery &&
+        targetListQuery === currentListQuery &&
         !isFetching
     const pendingAction = isSettled ? null : pendingRequest?.action ?? null
 
