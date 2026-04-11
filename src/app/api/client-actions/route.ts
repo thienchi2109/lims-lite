@@ -50,7 +50,7 @@ import { generateCoA, regenerateCoA } from '@/app/actions/coa'
 import { isIsoDateString } from '@/lib/iso-date'
 import type { ClientActionName, ClientActionRequest } from '@/lib/client-actions/types'
 import { isAllowedOrigin, mapErrorToStatus } from './route-helpers'
-import { getDoctorActionDenial } from './role-guard'
+import { getClientActionDenial } from './role-guard'
 
 // The JSON client-action bridge intentionally accepts heterogeneous payloads.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -308,9 +308,9 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: `Action không được hỗ trợ: ${body.action}` }, { status: 400 })
     }
 
-    const doctorDenial = await getDoctorActionDenial(body.action as ClientActionName)
-    if (doctorDenial) {
-        return NextResponse.json({ error: doctorDenial.error }, { status: doctorDenial.status })
+    const actionDenial = await getClientActionDenial(body.action as ClientActionName)
+    if (actionDenial) {
+        return NextResponse.json({ error: actionDenial.error }, { status: actionDenial.status })
     }
 
     try {

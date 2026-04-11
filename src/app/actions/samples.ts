@@ -7,7 +7,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { requireAuth, isAuthError } from '@/lib/auth-helpers'
+import { requireAuth, requireRole, isAuthError } from '@/lib/auth-helpers'
 import {
     CreateSampleSchema,
     CreateSampleWithAssignmentsSchema,
@@ -29,7 +29,7 @@ import {
  */
 export async function createSample(data: CreateSample) {
     try {
-        const auth = await requireAuth()
+        const auth = await requireRole('analyst')
         if (isAuthError(auth)) return auth
 
         const supabase = await createClient()
@@ -65,7 +65,7 @@ export async function createSample(data: CreateSample) {
  */
 export async function accessionAndAssignTests(data: CreateSampleWithAssignments) {
     try {
-        const auth = await requireAuth()
+        const auth = await requireRole('analyst')
         if (isAuthError(auth)) return auth
 
         const supabase = await createClient()

@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
     getSamples: vi.fn(),
     updateSample: vi.fn(),
+    createSample: vi.fn(),
+    accessionAndAssignTests: vi.fn(),
     globalSearch: vi.fn(),
     createClient: vi.fn(),
 }))
@@ -14,8 +16,8 @@ vi.mock('@/lib/supabase/server', () => ({
 vi.mock('@/app/actions/samples', () => ({
     getSamples: (...args: unknown[]) => mocks.getSamples(...args),
     updateSample: (...args: unknown[]) => mocks.updateSample(...args),
-    createSample: vi.fn(),
-    accessionAndAssignTests: vi.fn(),
+    createSample: (...args: unknown[]) => mocks.createSample(...args),
+    accessionAndAssignTests: (...args: unknown[]) => mocks.accessionAndAssignTests(...args),
 }))
 
 vi.mock('@/app/actions/sample-tests', () => ({
@@ -140,6 +142,8 @@ describe('client action role guard', () => {
         vi.clearAllMocks()
         mocks.getSamples.mockResolvedValue({ data: [] })
         mocks.updateSample.mockResolvedValue({ data: { id: 'sample-1' } })
+        mocks.createSample.mockResolvedValue({ data: { id: 'sample-1' } })
+        mocks.accessionAndAssignTests.mockResolvedValue({ data: { sample: { id: 'sample-1' } } })
         mocks.globalSearch.mockResolvedValue({ data: [] })
     })
 
@@ -174,5 +178,29 @@ describe('client action role guard', () => {
             error: 'Bạn không có quyền thực hiện thao tác này',
         })
         expect(mocks.globalSearch).not.toHaveBeenCalled()
+    })
+
+    it('denies manager sample creation before the handler runs', async () => {
+        mockRole('manager')
+
+        const response = await POST(buildRequest('createSample', { client_id: 'sample-1' }))
+
+        expect(response.status).toBe(403)
+        await expect(response.json()).resolves.toEqual({
+            error: 'Bạn không có quyền thực hiện thao tác này',
+        })
+        expect(mocks.createSample).not.toHaveBeenCalled()
+    })
+
+    it('denies manager accession before the handler runs', async () => {
+        mockRole('manager')
+
+        const response = await POST(buildRequest('accessionAndAssignTests', { client_id: 'sample-1', tests: [] }))
+
+        expect(response.status).toBe(403)
+        await expect(response.json()).resolves.toEqual({
+            error: 'Bạn không có quyền thực hiện thao tác này',
+        })
+        expect(mocks.accessionAndAssignTests).not.toHaveBeenCalled()
     })
 })

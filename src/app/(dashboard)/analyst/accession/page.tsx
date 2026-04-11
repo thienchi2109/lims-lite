@@ -25,6 +25,16 @@ export default async function AccessionPage() {
         .eq('id', user.id)
         .single()
 
+    if (!userData || userData.role !== 'analyst') {
+        if (userData?.role === 'manager') {
+            redirect('/manager')
+        }
+        if (userData?.role === 'doctor') {
+            redirect('/samples')
+        }
+        redirect('/login')
+    }
+
     const { data: specialties } = await getSpecialties()
 
     return (

@@ -439,7 +439,6 @@ END $$;
 DO $$
 DECLARE
     v_analyst_id UUID;
-    v_manager_id UUID;
     v_sample_id UUID;
     i INTEGER;
     sample_types TEXT[] := ARRAY['Drinking Water', 'Wastewater', 'Surface Water', 'Groundwater', 'Industrial Effluent', 'Stormwater'];
@@ -449,7 +448,6 @@ DECLARE
 BEGIN
     -- Get user IDs
     SELECT id INTO v_analyst_id FROM public.users WHERE username = 'analyst';
-    SELECT id INTO v_manager_id FROM public.users WHERE username = 'manager';
     
     -- Create 30 diverse samples
     FOR i IN 1..30 LOOP
@@ -464,7 +462,7 @@ BEGIN
             'LAB-' || TO_CHAR(CURRENT_DATE, 'YYYY') || '-' || LPAD((1000 + i)::TEXT, 4, '0'),
             sample_types[(i % 6) + 1] || ' - ' || locations[(i % 9) + 1],
             statuses[(i % 3) + 1],
-            CASE WHEN i % 2 = 0 THEN v_analyst_id ELSE v_manager_id END,
+            v_analyst_id,
             CURRENT_TIMESTAMP - ((i * 3) || ' hours')::INTERVAL
         )
         ON CONFLICT (sample_id) DO NOTHING
