@@ -34,6 +34,7 @@ export default async function UnifiedSamplesPage() {
             supabase
                 .from('users')
                 .select('id, full_name')
+                .eq('role', 'analyst')
                 .order('full_name', { ascending: true }),
             getSpecialties(),
         ])
