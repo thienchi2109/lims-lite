@@ -201,28 +201,28 @@ export function useFilterParams({
 
         // Fixes Bug #1 (Aggressive Reset) - preserves pageSize & sortBy
         resetFilters: () => {
-            const params = new URLSearchParams(searchParamsString)
-            params.delete('search')
-            params.delete('scope')
-            params.delete('status')
-            params.delete('fromDate')
-            params.delete('toDate')
-            params.delete('receiverId')
-            params.delete('specialtyIds')
-            params.set('page', '1')
-            // Preserve: pageSize, sortBy, sortOrder
-            const query = params.toString()
-            router.replace(query ? `${pathname}?${query}` : pathname)
             setSearchDraft({
                 baseSearch: filters.search,
                 value: '',
             })
+            applyQueryUpdate(
+                {
+                    search: null,
+                    scope: null,
+                    status: null,
+                    fromDate: null,
+                    toDate: null,
+                    receiverId: null,
+                    specialtyIds: null,
+                },
+                'filter',
+            )
         },
 
         clearDates: () => {
             applyQueryUpdate({ fromDate: null, toDate: null }, 'filter')
         },
-    }), [applyQueryUpdate, filters.selectedSpecialtyIds, filters.search, searchParamsString, router, pathname])
+    }), [applyQueryUpdate, filters.search, filters.selectedSpecialtyIds])
 
     // Sort state
     const sort: SortState = useMemo(() => {

@@ -188,4 +188,36 @@ describe('useFilterParams scope state', () => {
         )
         expect(result.current.isPending).toBe(true)
     })
+
+    it('routes resetFilters through the shared query updater instead of replacing the URL directly', () => {
+        const updateQuery = vi.fn()
+        mockSearchParams = new URLSearchParams(
+            'search=ABC&scope=all&status=completed&fromDate=2026-01-01&toDate=2026-01-31&receiverId=11111111-1111-4111-8111-111111111111&specialtyIds=22222222-2222-4222-8222-222222222222&sortBy=received_at&sortOrder=asc&pageSize=50&page=3',
+        )
+
+        const { result } = renderHook(() =>
+            useFilterParams({
+                updateQuery,
+            }),
+        )
+
+        act(() => {
+            result.current.handlers.resetFilters()
+        })
+
+        expect(updateQuery).toHaveBeenCalledWith(
+            {
+                search: null,
+                scope: null,
+                status: null,
+                fromDate: null,
+                toDate: null,
+                receiverId: null,
+                specialtyIds: null,
+            },
+            'filter',
+        )
+        expect(mockReplace).not.toHaveBeenCalled()
+        expect(result.current.filters.search).toBe('')
+    })
 })
