@@ -48,13 +48,15 @@ type SampleRealtimePayload = {
     old: { id?: string | null } | null
 }
 
+const SAMPLES_VISIBILITY_CATCH_UP_STALE_TIME_MS = 5 * 60 * 1000
+
 function getRealtimeSampleId(payload: SampleRealtimePayload) {
     return payload.new?.id ?? payload.old?.id ?? null
 }
 
 export function useSamples({ params, enabled = true }: UseSamplesOptions) {
     const queryClient = useQueryClient()
-    const needsVisibilityCatchUpRef = useRef(false)
+    const hiddenAtRef = useRef<number | null>(null)
 
     // Setup realtime subscription for samples table changes
     useEffect(() => {
@@ -74,13 +76,15 @@ export function useSamples({ params, enabled = true }: UseSamplesOptions) {
 
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'hidden') {
-                needsVisibilityCatchUpRef.current = true
+                hiddenAtRef.current = Date.now()
                 return
             }
 
-            if (!needsVisibilityCatchUpRef.current) return
+            const hiddenAt = hiddenAtRef.current
+            hiddenAtRef.current = null
+            if (hiddenAt === null) return
 
-            needsVisibilityCatchUpRef.current = false
+            if (Date.now() - hiddenAt < SAMPLES_VISIBILITY_CATCH_UP_STALE_TIME_MS) return
             scheduleRefetch()
         }
 
@@ -104,7 +108,7 @@ export function useSamples({ params, enabled = true }: UseSamplesOptions) {
         document.addEventListener('visibilitychange', handleVisibilityChange)
 
         return () => {
-            needsVisibilityCatchUpRef.current = false
+            hiddenAtRef.current = null
             if (timeoutId) clearTimeout(timeoutId)
             document.removeEventListener('visibilitychange', handleVisibilityChange)
             void supabase.removeChannel(channel)

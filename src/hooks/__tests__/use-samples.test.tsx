@@ -115,7 +115,7 @@ describe('useSamples', () => {
         }, { timeout: 1000 })
     })
 
-    it('refetches when the tab becomes visible again after being hidden', async () => {
+    it('does not refetch when the tab becomes visible again before the samples stale window', async () => {
         const { Wrapper } = createWrapper()
         let visibilityState: DocumentVisibilityState = 'visible'
 
@@ -123,6 +123,8 @@ describe('useSamples', () => {
             configurable: true,
             get: () => visibilityState,
         })
+        let currentTimestamp = 0
+        const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => currentTimestamp)
 
         renderHook(
             () =>
@@ -143,6 +145,50 @@ describe('useSamples', () => {
             visibilityState = 'hidden'
             document.dispatchEvent(new Event('visibilitychange'))
 
+            currentTimestamp = 4 * 60 * 1000
+            visibilityState = 'visible'
+            document.dispatchEvent(new Event('visibilitychange'))
+        })
+
+        await act(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 350))
+        })
+
+        expect(mockFetchSamplesClient).toHaveBeenCalledTimes(1)
+        nowSpy.mockRestore()
+    })
+
+    it('refetches when the tab becomes visible again after the samples stale window', async () => {
+        const { Wrapper } = createWrapper()
+        let visibilityState: DocumentVisibilityState = 'visible'
+
+        Object.defineProperty(document, 'visibilityState', {
+            configurable: true,
+            get: () => visibilityState,
+        })
+        let currentTimestamp = 0
+        const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => currentTimestamp)
+
+        renderHook(
+            () =>
+                useSamples({
+                    params: {
+                        page: 1,
+                        pageSize: 20,
+                    },
+                }),
+            { wrapper: Wrapper },
+        )
+
+        await waitFor(() => {
+            expect(mockFetchSamplesClient).toHaveBeenCalledTimes(1)
+        })
+
+        await act(async () => {
+            visibilityState = 'hidden'
+            document.dispatchEvent(new Event('visibilitychange'))
+
+            currentTimestamp = 5 * 60 * 1000
             visibilityState = 'visible'
             document.dispatchEvent(new Event('visibilitychange'))
         })
@@ -150,6 +196,7 @@ describe('useSamples', () => {
         await waitFor(() => {
             expect(mockFetchSamplesClient).toHaveBeenCalledTimes(2)
         }, { timeout: 1000 })
+        nowSpy.mockRestore()
     })
 
     it('ignores realtime echoes immediately after a local samples mutation', async () => {
