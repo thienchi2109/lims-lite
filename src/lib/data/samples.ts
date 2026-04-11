@@ -18,8 +18,7 @@ interface FetchSamplesRpcPayload {
 }
 
 function normalizeReceiverId(receiverId: SampleListParams['receiverId']) {
-    return typeof receiverId === 'string' &&
-        receiverId.match(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/)
+    return typeof receiverId === 'string' && isValidUUID(receiverId)
         ? receiverId
         : undefined
 }

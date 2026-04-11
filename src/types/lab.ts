@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { SampleStatus, SampleType, ResultStatus, PaginationSchema, Gender } from './core'
+import { UUID_REGEX } from '@/lib/utils-lims'
 
 // ============================================================================
 // LAB SPECIALTY SCHEMAS
@@ -195,7 +196,7 @@ export const SampleListParamsSchema = PaginationSchema.extend({
     status: SampleStatus.optional(),
     fromDate: z.string().optional(),
     toDate: z.string().optional(),
-    receiverId: z.string().uuid().optional(),
+    receiverId: z.string().regex(UUID_REGEX, 'Invalid UUID format').optional(),
     specialtyIds: z.string().optional(),
 })
 

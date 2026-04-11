@@ -14,6 +14,7 @@ vi.mock('@/lib/supabase/server', () => ({
 import { fetchSamples } from './samples'
 
 const TEST_RECEIVER_ID = '11111111-1111-4111-8111-111111111111'
+const TEST_SEED_STYLE_RECEIVER_ID = 'd0000000-0000-0000-0000-000000000001'
 const TEST_SPECIALTY_ID_1 = '22222222-2222-4222-8222-222222222222'
 const TEST_SPECIALTY_ID_2 = '33333333-3333-4333-8333-333333333333'
 
@@ -115,6 +116,28 @@ describe('fetchSamples query optimization', () => {
             p_sort_order: 'asc',
             p_page: 2,
             p_page_size: 10,
+        })
+    })
+
+    it('preserves seed-style receiver ids when calling the RPC', async () => {
+        await fetchSamples({
+            page: 1,
+            pageSize: 20,
+            receiverId: TEST_SEED_STYLE_RECEIVER_ID,
+        })
+
+        expect(mockRpc).toHaveBeenCalledWith('get_samples_page', {
+            p_search: null,
+            p_scope: 'active',
+            p_status: null,
+            p_from_date: null,
+            p_to_date: null,
+            p_receiver_id: TEST_SEED_STYLE_RECEIVER_ID,
+            p_specialty_ids: null,
+            p_sort_by: 'updated_at',
+            p_sort_order: 'desc',
+            p_page: 1,
+            p_page_size: 20,
         })
     })
 
