@@ -46,8 +46,8 @@ describe('patchCoAStampHtml', () => {
     )
     expect(result.html).toContain('class="signature-image manager-signature-image"')
     expect(result.html).toContain('.manager-stamp-image {')
-    expect(result.html).toContain('left: -66px;')
-    expect(result.html).toContain('width: 150px;')
+    expect(result.html).toContain('left: -156px;')
+    expect(result.html).toContain('width: 240px;')
     expect(result.html).toContain('z-index: 2;')
   })
 
@@ -65,8 +65,8 @@ describe('patchCoAStampHtml', () => {
 
   it('refreshes manager stamp styles in already stamped CoA HTML', () => {
     const oldStampedHtml = patchCoAStampHtml(createLegacyCoAHtml(), STAMP_SRC)
-      .html.replace('left: -66px;', 'left: -36px;')
-      .replace('width: 150px;', 'width: 120px;')
+      .html.replace('left: -156px;', 'left: -66px;')
+      .replace('width: 240px;', 'width: 150px;')
 
     const result = patchCoAStampHtml(oldStampedHtml, STAMP_SRC)
 
@@ -76,10 +76,10 @@ describe('patchCoAStampHtml', () => {
         reason: 'styles_refreshed',
       }),
     )
-    expect(result.html).toContain('left: -66px;')
-    expect(result.html).toContain('width: 150px;')
-    expect(result.html).not.toContain('left: -36px;')
-    expect(result.html).not.toContain('width: 120px;')
+    expect(result.html).toContain('left: -156px;')
+    expect(result.html).toContain('width: 240px;')
+    expect(result.html).not.toContain('left: -66px;')
+    expect(result.html).not.toContain('width: 150px;')
   })
 
   it('skips HTML when the manager signature block cannot be identified', () => {
