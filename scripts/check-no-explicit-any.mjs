@@ -13,6 +13,8 @@ const EXPLICIT_ANY_PATTERNS = [
   /=\s*any\b/,
 ]
 
+const GIT_EXECUTABLE = '/usr/bin/git'
+
 function getAddedLines(diffText) {
   const violations = []
   let currentFilePath = null
@@ -49,7 +51,7 @@ export function findExplicitAnyViolations(diffText) {
 }
 
 function runGit(args) {
-  return execFileSync('git', args, {
+  return execFileSync(GIT_EXECUTABLE, args, {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   })

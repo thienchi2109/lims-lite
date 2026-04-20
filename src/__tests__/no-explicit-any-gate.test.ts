@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest'
 import { findExplicitAnyViolations } from '../../scripts/check-no-explicit-any.mjs'
 
 const ANY_KEYWORD = 'any'
+const GIT_EXECUTABLE = '/usr/bin/git'
 
 describe('findExplicitAnyViolations', () => {
   it('reports explicit any usages added in a diff', () => {
@@ -65,7 +66,7 @@ describe('findExplicitAnyViolations', () => {
     const repoPath = mkdtempSync(join(tmpdir(), 'no-explicit-any-'))
     const scriptPath = join(process.cwd(), 'scripts/check-no-explicit-any.mjs')
 
-    execFileSync('git', ['init'], { cwd: repoPath, stdio: 'ignore' })
+    execFileSync(GIT_EXECUTABLE, ['init'], { cwd: repoPath, stdio: 'ignore' })
     writeFileSync(join(repoPath, 'scratch.ts'), `const value: ${ANY_KEYWORD} = 1\n`)
 
     const output = execFileSync(process.execPath, [scriptPath, '--staged'], {
