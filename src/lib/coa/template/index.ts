@@ -17,6 +17,10 @@ import { renderSignatures } from './signatures'
 import { renderAbsoluteFooter } from './footer'
 import { renderMetadata } from './metadata'
 
+export interface CoATemplateRenderOptions {
+    managerStampSrc?: string
+}
+
 // Re-export section functions for testing and direct usage
 export { getStylesheet, renderWatermark } from './styles'
 export { renderHeader } from './header'
@@ -30,7 +34,10 @@ export { renderMetadata } from './metadata'
  * Generate HTML from CoA template
  * Production-ready Vietnamese CDC lab CoA format with blue theme
  */
-export function renderCoATemplate(coaData: CoAData): string {
+export function renderCoATemplate(
+    coaData: CoAData,
+    options: CoATemplateRenderOptions = {}
+): string {
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(coaData.sample.sample_id_display)}&margin=0`
     const logoUrl = "https://i.postimg.cc/8zFZ52j1/cdc-logo-150.png"
     const dateStr = coaData.approvalDate
@@ -65,7 +72,9 @@ export function renderCoATemplate(coaData: CoAData): string {
             ${renderHeader(coaData, logoUrl, qrCodeUrl)}
             ${renderPatientInfo(coaData)}
             ${renderResultsTable(coaData.results)}
-            ${renderSignatures(coaData, footerDateStr)}
+            ${renderSignatures(coaData, footerDateStr, {
+                managerStampSrc: options.managerStampSrc,
+            })}
         </div>
         ${renderAbsoluteFooter()}
         ${renderMetadata(coaData)}

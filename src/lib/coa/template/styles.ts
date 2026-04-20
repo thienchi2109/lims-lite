@@ -81,6 +81,12 @@ export function getStylesheet(): string {
         .sig-title { font-weight: 600; margin-bottom: 96px; }
         .sig-name { font-weight: bold; }
         .signature-image { max-width: 200px; max-height: 80px; display: block; margin: -88px auto 8px auto; }
+        .manager-signature-stack { position: relative; width: 220px; min-height: 80px; margin: -88px auto 8px auto; }
+        .manager-signature-image { margin: 0 auto 8px auto; position: relative; z-index: 1; }
+        .manager-stamp-image {
+            position: absolute; left: -36px; top: 50%; transform: translateY(-50%);
+            width: 120px; height: auto; z-index: 2; pointer-events: none;
+        }
 
         .absolute-footer {
             position: absolute; left: 32px; right: 32px; bottom: 32px;
