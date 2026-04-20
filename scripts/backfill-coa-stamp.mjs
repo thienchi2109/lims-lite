@@ -2,8 +2,8 @@
 
 import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { dirname, join } from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
 
 const MANAGER_STAMP_MARKER = 'data-coa-stamp="manager"'
@@ -16,9 +16,22 @@ const MANAGER_STAMP_STYLES = `
             width: 150px; height: auto; z-index: 2; pointer-events: none;
         }`
 
+const MANAGER_STAMP_STYLES_PATTERN =
+  /\.manager-signature-stack\s*\{[^}]*\}\s*\.manager-signature-image\s*\{[^}]*\}\s*\.manager-stamp-image\s*\{[^}]*\}/
+
+function normalizeStyleBlock(value) {
+  return value.replace(/\s+/g, ' ').trim()
+}
+
 function addManagerStampStyles(html) {
-  if (html.includes('.manager-stamp-image')) {
-    return html
+  const existingStyles = html.match(MANAGER_STAMP_STYLES_PATTERN)?.[0]
+
+  if (existingStyles) {
+    if (normalizeStyleBlock(existingStyles) === normalizeStyleBlock(MANAGER_STAMP_STYLES)) {
+      return html
+    }
+
+    return html.replace(MANAGER_STAMP_STYLES_PATTERN, MANAGER_STAMP_STYLES.trimStart())
   }
 
   if (html.includes('</style>')) {
@@ -40,6 +53,12 @@ function addManagerSignatureClass(signatureImageHtml) {
 
 export function patchCoAStampHtml(html, managerStampSrc) {
   if (html.includes(MANAGER_STAMP_MARKER)) {
+    const refreshedHtml = addManagerStampStyles(html)
+
+    if (refreshedHtml !== html) {
+      return { html: refreshedHtml, patched: true, reason: 'styles_refreshed' }
+    }
+
     return { html, patched: false, reason: 'already_stamped' }
   }
 
@@ -69,21 +88,41 @@ export function patchCoAStampHtml(html, managerStampSrc) {
   }
 }
 
-function parseArgs(argv) {
+export function parseArgs(argv) {
   const apply = argv.includes('--apply')
   const dryRun = argv.includes('--dry-run') || !apply
+  const allowReadyUpdate = argv.includes('--allow-ready-update')
   const limitIndex = argv.indexOf('--limit')
-  const limit = limitIndex === -1 ? null : Number.parseInt(argv[limitIndex + 1], 10)
+  let limit = null
+
+  if (limitIndex !== -1) {
+    const rawLimit = argv[limitIndex + 1]
+    const parsedLimit = Number.parseInt(rawLimit ?? '', 10)
+
+    if (!rawLimit || !/^[1-9]\d*$/.test(rawLimit) || !Number.isFinite(parsedLimit)) {
+      throw new Error(`Invalid --limit value: ${JSON.stringify(rawLimit)}`)
+    }
+
+    limit = parsedLimit
+  }
+
+  if (apply && !allowReadyUpdate) {
+    throw new Error(
+      'Applying updates to ready CoAs requires --allow-ready-update. Use dry-run first.',
+    )
+  }
 
   return {
     apply,
     dryRun,
-    limit: Number.isFinite(limit) && limit > 0 ? limit : null,
+    limit,
+    allowReadyUpdate,
   }
 }
 
 async function loadStampDataUri() {
-  const stampPath = join(process.cwd(), 'public', 'Stamp.png')
+  const scriptDir = dirname(fileURLToPath(import.meta.url))
+  const stampPath = join(scriptDir, '..', 'public', 'Stamp.png')
   const stampBytes = await readFile(stampPath)
   return `data:image/png;base64,${stampBytes.toString('base64')}`
 }
@@ -107,7 +146,7 @@ function createSupabaseAdminClient() {
   })
 }
 
-function sha256(value) {
+export function sha256(value) {
   return createHash('sha256').update(value, 'utf8').digest('hex')
 }
 
@@ -132,7 +171,25 @@ async function fetchReadyCoAReports(supabase, limit) {
   return data || []
 }
 
-async function backfillReport({ supabase, report, stampDataUri, dryRun }) {
+async function updateReportHash({ supabase, reportId, fileHash }) {
+  return supabase
+    .from('coa_reports')
+    .update({
+      file_hash: fileHash,
+    })
+    .eq('id', reportId)
+}
+
+async function uploadReportHtml({ supabase, filePath, html }) {
+  return supabase.storage
+    .from('coa-reports')
+    .upload(filePath, html, {
+      contentType: 'text/html',
+      upsert: true,
+    })
+}
+
+export async function backfillReport({ supabase, report, stampDataUri, dryRun }) {
   const { data: fileData, error: downloadError } = await supabase.storage
     .from('coa-reports')
     .download(report.file_path)
@@ -149,8 +206,45 @@ async function backfillReport({ supabase, report, stampDataUri, dryRun }) {
 
   const originalHtml = await fileData.text()
   const patch = patchCoAStampHtml(originalHtml, stampDataUri)
+  const fileHash = sha256(patch.html)
 
   if (!patch.patched) {
+    if (patch.reason === 'already_stamped' && report.file_hash !== fileHash) {
+      if (dryRun) {
+        return {
+          id: report.id,
+          filePath: report.file_path,
+          patched: true,
+          reason: 'metadata_sync_dry_run',
+          fileHash,
+        }
+      }
+
+      const { error: updateError } = await updateReportHash({
+        supabase,
+        reportId: report.id,
+        fileHash,
+      })
+
+      if (updateError) {
+        return {
+          id: report.id,
+          filePath: report.file_path,
+          patched: false,
+          reason: 'metadata_update_failed',
+          error: updateError.message,
+        }
+      }
+
+      return {
+        id: report.id,
+        filePath: report.file_path,
+        patched: true,
+        reason: 'metadata_synced',
+        fileHash,
+      }
+    }
+
     return {
       id: report.id,
       filePath: report.file_path,
@@ -158,8 +252,6 @@ async function backfillReport({ supabase, report, stampDataUri, dryRun }) {
       reason: patch.reason,
     }
   }
-
-  const fileHash = sha256(patch.html)
 
   if (dryRun) {
     return {
@@ -171,12 +263,11 @@ async function backfillReport({ supabase, report, stampDataUri, dryRun }) {
     }
   }
 
-  const { error: uploadError } = await supabase.storage
-    .from('coa-reports')
-    .upload(report.file_path, patch.html, {
-      contentType: 'text/html',
-      upsert: true,
-    })
+  const { error: uploadError } = await uploadReportHtml({
+    supabase,
+    filePath: report.file_path,
+    html: patch.html,
+  })
 
   if (uploadError) {
     return {
@@ -188,20 +279,27 @@ async function backfillReport({ supabase, report, stampDataUri, dryRun }) {
     }
   }
 
-  const { error: updateError } = await supabase
-    .from('coa_reports')
-    .update({
-      file_hash: fileHash,
-    })
-    .eq('id', report.id)
+  const { error: updateError } = await updateReportHash({
+    supabase,
+    reportId: report.id,
+    fileHash,
+  })
 
   if (updateError) {
+    const { error: rollbackError } = await uploadReportHtml({
+      supabase,
+      filePath: report.file_path,
+      html: originalHtml,
+    })
+
     return {
       id: report.id,
       filePath: report.file_path,
       patched: false,
       reason: 'metadata_update_failed',
       error: updateError.message,
+      rollbackAttempted: true,
+      rollbackError: rollbackError?.message,
     }
   }
 

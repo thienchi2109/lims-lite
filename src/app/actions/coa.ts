@@ -272,16 +272,6 @@ export async function generateCoA(
             performerSignatureMeaning,
         }
 
-        let managerStampSrc: string
-        try {
-            managerStampSrc = await getCoAStampDataUri()
-        } catch {
-            return { success: false, error: 'Không thể tải con dấu điện tử để tạo CoA' }
-        }
-
-        const html = renderCoATemplate(coaData, { managerStampSrc })
-        const htmlHash = generateHtmlHash(html)
-
         // Step 9: Check for existing CoA record (excluding soft-deleted)
         const version = 1 // TODO Phase 4: Implement versioning logic
         const { data: existingCoa, error: checkError } = await supabase
@@ -307,6 +297,16 @@ export async function generateCoA(
                 error: 'CoA đã được tạo cho mẫu này. Sử dụng chức năng tạo lại CoA nếu cần cập nhật.'
             }
         }
+
+        let managerStampSrc: string
+        try {
+            managerStampSrc = await getCoAStampDataUri()
+        } catch {
+            return { success: false, error: 'Không thể tải con dấu điện tử để tạo CoA' }
+        }
+
+        const html = renderCoATemplate(coaData, { managerStampSrc })
+        const htmlHash = generateHtmlHash(html)
 
         // Step 10: Upload HTML to storage
         const timestamp = new Date().toISOString()

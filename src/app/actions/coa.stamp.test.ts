@@ -75,7 +75,9 @@ function createThenableQuery(result: QueryResult) {
     return query
 }
 
-function mockSuccessfulClient() {
+function mockSuccessfulClient(
+    existingCoa: { id: string; status: string; file_path: string | null } | null = null,
+) {
     const userResults: QueryResult[] = [
         { data: { role: 'analyst' }, error: null },
         { data: { full_name: 'Nguyễn Quản Lý' }, error: null },
@@ -90,7 +92,7 @@ function mockSuccessfulClient() {
 
         if (table === 'coa_reports') {
             return {
-                select: vi.fn(() => createThenableQuery({ data: null, error: null })),
+                select: vi.fn(() => createThenableQuery({ data: existingCoa, error: null })),
                 insert: vi.fn(() =>
                     createThenableQuery({ data: { id: 'coa-1' }, error: null }),
                 ),
@@ -174,5 +176,26 @@ describe('generateCoA stamp rendering', () => {
                 managerStampSrc: 'data:image/png;base64,stamp-data',
             },
         )
+    })
+
+    it('returns ALREADY_READY before loading the manager stamp', async () => {
+        mockSuccessfulClient({
+            id: 'coa-existing',
+            status: 'ready',
+            file_path: 'sample/existing.html',
+        })
+        mockGetCoAStampDataUri.mockRejectedValue(new Error('missing stamp'))
+
+        const result = await generateCoA('sample-1')
+
+        expect(result).toEqual(
+            expect.objectContaining({
+                success: false,
+                code: 'ALREADY_READY',
+                shouldRecordFailure: false,
+            }),
+        )
+        expect(mockGetCoAStampDataUri).not.toHaveBeenCalled()
+        expect(mockRenderCoATemplate).not.toHaveBeenCalled()
     })
 })

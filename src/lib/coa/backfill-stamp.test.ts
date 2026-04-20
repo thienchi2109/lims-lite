@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { patchCoAStampHtml } from '../../../scripts/backfill-coa-stamp.mjs'
+import {
+  backfillReport,
+  parseArgs,
+  patchCoAStampHtml,
+  sha256,
+} from '../../../scripts/backfill-coa-stamp.mjs'
 
 const STAMP_SRC = 'data:image/png;base64,stamp-data'
 
@@ -47,10 +52,7 @@ describe('patchCoAStampHtml', () => {
   })
 
   it('skips HTML that already contains the manager stamp marker', () => {
-    const stampedHtml = createLegacyCoAHtml().replace(
-      '</body>',
-      '<img data-coa-stamp="manager" /></body>',
-    )
+    const stampedHtml = patchCoAStampHtml(createLegacyCoAHtml(), STAMP_SRC).html
 
     const result = patchCoAStampHtml(stampedHtml, STAMP_SRC)
 
@@ -61,6 +63,25 @@ describe('patchCoAStampHtml', () => {
     })
   })
 
+  it('refreshes manager stamp styles in already stamped CoA HTML', () => {
+    const oldStampedHtml = patchCoAStampHtml(createLegacyCoAHtml(), STAMP_SRC)
+      .html.replace('left: -66px;', 'left: -36px;')
+      .replace('width: 150px;', 'width: 120px;')
+
+    const result = patchCoAStampHtml(oldStampedHtml, STAMP_SRC)
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        patched: true,
+        reason: 'styles_refreshed',
+      }),
+    )
+    expect(result.html).toContain('left: -66px;')
+    expect(result.html).toContain('width: 150px;')
+    expect(result.html).not.toContain('left: -36px;')
+    expect(result.html).not.toContain('width: 120px;')
+  })
+
   it('skips HTML when the manager signature block cannot be identified', () => {
     const result = patchCoAStampHtml('<html><body>No manager block</body></html>', STAMP_SRC)
 
@@ -68,6 +89,121 @@ describe('patchCoAStampHtml', () => {
       html: '<html><body>No manager block</body></html>',
       patched: false,
       reason: 'manager_signature_not_found',
+    })
+  })
+})
+
+describe('parseArgs', () => {
+  it('requires explicit confirmation before applying updates to ready CoAs', () => {
+    expect(() => parseArgs(['--apply'])).toThrow('--allow-ready-update')
+    expect(parseArgs(['--apply', '--allow-ready-update'])).toEqual({
+      apply: true,
+      dryRun: false,
+      limit: null,
+      allowReadyUpdate: true,
+    })
+  })
+
+  it('rejects missing or invalid limit values', () => {
+    expect(() => parseArgs(['--limit'])).toThrow('Invalid --limit value')
+    expect(() => parseArgs(['--limit', 'abc'])).toThrow('Invalid --limit value')
+    expect(() => parseArgs(['--limit', '0'])).toThrow('Invalid --limit value')
+  })
+})
+
+type FakeSupabaseOptions = {
+  html: string
+  updateError?: { message: string } | null
+}
+
+function createFakeSupabase(options: FakeSupabaseOptions) {
+  const uploads: Array<{ filePath: string; html: string }> = []
+  const updates: Array<{ file_hash: string }> = []
+
+  const supabase = {
+    storage: {
+      from: () => ({
+        download: async () => ({
+          data: {
+            text: async () => options.html,
+          },
+          error: null,
+        }),
+        upload: async (filePath: string, html: string) => {
+          uploads.push({ filePath, html })
+          return { error: null }
+        },
+      }),
+    },
+    from: () => ({
+      update: (payload: { file_hash: string }) => {
+        updates.push(payload)
+        return {
+          eq: async () => ({ error: options.updateError ?? null }),
+        }
+      },
+    }),
+  }
+
+  return { supabase, uploads, updates }
+}
+
+describe('backfillReport', () => {
+  it('syncs metadata when retrying an already stamped file with a stale hash', async () => {
+    const stampedHtml = patchCoAStampHtml(createLegacyCoAHtml(), STAMP_SRC).html
+    const { supabase, uploads, updates } = createFakeSupabase({ html: stampedHtml })
+
+    const result = await backfillReport({
+      supabase,
+      report: {
+        id: 'coa-1',
+        file_path: 'sample/1.html',
+        file_hash: 'stale-hash',
+      },
+      stampDataUri: STAMP_SRC,
+      dryRun: false,
+    })
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        patched: true,
+        reason: 'metadata_synced',
+        fileHash: sha256(stampedHtml),
+      }),
+    )
+    expect(uploads).toEqual([])
+    expect(updates).toEqual([{ file_hash: sha256(stampedHtml) }])
+  })
+
+  it('rolls back storage content when metadata update fails after upload', async () => {
+    const legacyHtml = createLegacyCoAHtml()
+    const { supabase, uploads } = createFakeSupabase({
+      html: legacyHtml,
+      updateError: { message: 'permission denied' },
+    })
+
+    const result = await backfillReport({
+      supabase,
+      report: {
+        id: 'coa-1',
+        file_path: 'sample/1.html',
+        file_hash: 'old-hash',
+      },
+      stampDataUri: STAMP_SRC,
+      dryRun: false,
+    })
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        patched: false,
+        reason: 'metadata_update_failed',
+        rollbackAttempted: true,
+      }),
+    )
+    expect(uploads).toHaveLength(2)
+    expect(uploads[1]).toEqual({
+      filePath: 'sample/1.html',
+      html: legacyHtml,
     })
   })
 })

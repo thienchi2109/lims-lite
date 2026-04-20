@@ -23,7 +23,11 @@ function getAddedLines(diffText) {
       continue
     }
 
-    if (!rawLine.startsWith('+') || rawLine.startsWith('+++')) {
+    if (
+      !rawLine.startsWith('+') ||
+      rawLine.startsWith('+++ b/') ||
+      rawLine.startsWith('+++ /dev/null')
+    ) {
       continue
     }
 
@@ -49,6 +53,14 @@ function runGit(args) {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   })
+}
+
+function tryRunGit(args) {
+  try {
+    return runGit(args).trim()
+  } catch {
+    return null
+  }
 }
 
 function getUntrackedTypeScriptDiffText() {
@@ -82,10 +94,7 @@ function getUntrackedTypeScriptDiffText() {
 
 function getDiffText(argv) {
   if (argv.includes('--staged')) {
-    return [
-      runGit(['diff', '--cached', '-U0', '--', '*.ts', '*.tsx', '*.mts']),
-      getUntrackedTypeScriptDiffText(),
-    ].join('\n')
+    return runGit(['diff', '--cached', '-U0', '--', '*.ts', '*.tsx', '*.mts'])
   }
 
   const baseFlagIndex = argv.indexOf('--base')
@@ -94,10 +103,13 @@ function getDiffText(argv) {
       ? process.env.NO_EXPLICIT_ANY_BASE || 'origin/main'
       : argv[baseFlagIndex + 1]
 
-  const mergeBase = runGit(['merge-base', 'HEAD', baseRef]).trim()
+  const mergeBase =
+    tryRunGit(['merge-base', 'HEAD', baseRef]) || tryRunGit(['rev-parse', 'HEAD'])
 
   return [
-    runGit(['diff', '-U0', `${mergeBase}...HEAD`, '--', '*.ts', '*.tsx', '*.mts']),
+    mergeBase
+      ? runGit(['diff', '-U0', `${mergeBase}...HEAD`, '--', '*.ts', '*.tsx', '*.mts'])
+      : '',
     runGit(['diff', '--cached', '-U0', '--', '*.ts', '*.tsx', '*.mts']),
     runGit(['diff', '-U0', '--', '*.ts', '*.tsx', '*.mts']),
     getUntrackedTypeScriptDiffText(),
