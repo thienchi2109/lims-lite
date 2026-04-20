@@ -41,7 +41,8 @@ describe('patchCoAStampHtml', () => {
     )
     expect(result.html).toContain('class="signature-image manager-signature-image"')
     expect(result.html).toContain('.manager-stamp-image {')
-    expect(result.html).toContain('left: -36px;')
+    expect(result.html).toContain('left: -66px;')
+    expect(result.html).toContain('width: 150px;')
     expect(result.html).toContain('z-index: 2;')
   })
 

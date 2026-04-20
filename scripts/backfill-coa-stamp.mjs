@@ -12,8 +12,8 @@ const MANAGER_STAMP_STYLES = `
         .manager-signature-stack { position: relative; width: 220px; min-height: 80px; margin: -88px auto 8px auto; }
         .manager-signature-image { margin: 0 auto 8px auto; position: relative; z-index: 1; }
         .manager-stamp-image {
-            position: absolute; left: -36px; top: 50%; transform: translateY(-50%);
-            width: 120px; height: auto; z-index: 2; pointer-events: none;
+            position: absolute; left: -66px; top: 50%; transform: translateY(-50%);
+            width: 150px; height: auto; z-index: 2; pointer-events: none;
         }`
 
 function addManagerStampStyles(html) {
