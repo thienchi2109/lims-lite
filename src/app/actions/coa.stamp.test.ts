@@ -66,10 +66,6 @@ function createThenableQuery(result: QueryResult) {
         is: vi.fn(() => query),
         maybeSingle: vi.fn(async () => result),
         single: vi.fn(async () => result),
-        then: (
-            onFulfilled: (value: QueryResult) => unknown,
-            onRejected?: (reason: unknown) => unknown,
-        ) => Promise.resolve(result).then(onFulfilled, onRejected),
     }
 
     return query

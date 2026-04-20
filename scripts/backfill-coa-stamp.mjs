@@ -20,7 +20,7 @@ const MANAGER_STAMP_STYLES_PATTERN =
   /\.manager-signature-stack\s*\{[^}]*\}\s*\.manager-signature-image\s*\{[^}]*\}\s*\.manager-stamp-image\s*\{[^}]*\}/
 
 function normalizeStyleBlock(value) {
-  return value.replace(/\s+/g, ' ').trim()
+  return value.replaceAll(/\s+/g, ' ').trim()
 }
 
 function addManagerStampStyles(html) {
@@ -373,8 +373,10 @@ async function main() {
 const isDirectRun = import.meta.url === pathToFileURL(process.argv[1] || '').href
 
 if (isDirectRun) {
-  main().catch((error) => {
+  try {
+    await main()
+  } catch (error) {
     console.error(error)
     process.exitCode = 1
-  })
+  }
 }

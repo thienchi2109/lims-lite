@@ -159,7 +159,7 @@ export async function GET(request: NextRequest) {
             status: 200,
             headers: {
                 'Content-Type': 'text/html; charset=utf-8',
-                'Cache-Control': 'private, max-age=3600',
+                'Cache-Control': 'private, no-store',
             },
         })
 

@@ -162,6 +162,7 @@ describe('staff CoA view confidentiality', () => {
         )
 
         expect(response.status).toBe(200)
+        expect(response.headers.get('Cache-Control')).toBe('private, no-store')
         await expect(response.text()).resolves.toContain('Confidential CoA')
         expect(mockDownload).toHaveBeenCalledTimes(1)
     })
@@ -177,6 +178,7 @@ describe('staff CoA view confidentiality', () => {
         )
 
         expect(response.status).toBe(200)
+        expect(response.headers.get('Cache-Control')).toBe('private, no-store')
         await expect(response.text()).resolves.toContain('Confidential CoA')
         expect(mockDownload).toHaveBeenCalledTimes(1)
     })
