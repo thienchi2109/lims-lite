@@ -3,16 +3,16 @@ import { describe, expect, it } from 'vitest'
 import { getCoAStampDataUri } from './stamp'
 
 describe('getCoAStampDataUri', () => {
-  it('loads the transparent PNG stamp as a data URI', async () => {
+  it('loads the approved SVG stamp as a data URI', async () => {
     const dataUri = await getCoAStampDataUri()
 
-    expect(dataUri).toMatch(/^data:image\/png;base64,/)
+    expect(dataUri).toMatch(/^data:image\/svg\+xml;base64,/)
 
-    const encodedPng = dataUri.replace('data:image/png;base64,', '')
-    const pngBytes = Buffer.from(encodedPng, 'base64')
+    const encodedSvg = dataUri.replace('data:image/svg+xml;base64,', '')
+    const svgMarkup = Buffer.from(encodedSvg, 'base64').toString('utf8')
 
-    expect([...pngBytes.subarray(0, 8)]).toEqual([
-      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-    ])
+    expect(svgMarkup).toContain('<svg')
+    expect(svgMarkup).toContain('TRUNG TÂM KIỂM SOÁT BỆNH TẬT')
+    expect(svgMarkup).toContain('filter="url(#ink-texture)"')
   })
 })

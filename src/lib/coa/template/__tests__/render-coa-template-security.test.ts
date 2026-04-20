@@ -65,12 +65,12 @@ describe('renderCoATemplate security', () => {
 
   it('renders the manager stamp over the approver signature when provided', () => {
     const html = renderCoATemplate(createMaliciousCoAData(), {
-      managerStampSrc: 'data:image/png;base64,stamp-data',
+      managerStampSrc: 'data:image/svg+xml;base64,stamp-data',
     })
 
     expect(html).toContain('class="manager-signature-stack"')
     expect(html).toContain(
-      '<img src="data:image/png;base64,stamp-data" alt="Con dấu" class="manager-stamp-image" data-coa-stamp="manager" />',
+      '<img src="data:image/svg+xml;base64,stamp-data" alt="Con dấu" class="manager-stamp-image" data-coa-stamp="manager" />',
     )
     expect(html).toContain('alt="Chữ ký" class="signature-image manager-signature-image"')
     expect(html).not.toContain('data-coa-stamp="performer"')
@@ -78,7 +78,7 @@ describe('renderCoATemplate security', () => {
 
   it('includes manager stamp overlay styles', () => {
     const html = renderCoATemplate(createMaliciousCoAData(), {
-      managerStampSrc: 'data:image/png;base64,stamp-data',
+      managerStampSrc: 'data:image/svg+xml;base64,stamp-data',
     })
 
     expect(html).toContain('.manager-signature-stack { position: relative;')

@@ -122,9 +122,9 @@ export function parseArgs(argv) {
 
 async function loadStampDataUri() {
   const scriptDir = dirname(fileURLToPath(import.meta.url))
-  const stampPath = join(scriptDir, '..', 'public', 'Stamp.png')
+  const stampPath = join(scriptDir, '..', 'public', 'Stamp.svg')
   const stampBytes = await readFile(stampPath)
-  return `data:image/png;base64,${stampBytes.toString('base64')}`
+  return `data:image/svg+xml;base64,${stampBytes.toString('base64')}`
 }
 
 function createSupabaseAdminClient() {

@@ -1,0 +1,58 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="920"
+  height="560"
+  viewBox="0 0 920 560"
+  role="img"
+  aria-labelledby="stamp-title"
+>
+  <title id="stamp-title">Con dấu khoa xét nghiệm CDC Cần Thơ</title>
+  <defs>
+    <filter id="ink-texture" x="-8%" y="-10%" width="116%" height="120%">
+      <feTurbulence
+        type="fractalNoise"
+        baseFrequency="0.9"
+        numOctaves="2"
+        seed="8"
+        result="noise"
+      />
+      <feColorMatrix
+        in="noise"
+        type="matrix"
+        values="1 0 0 0 0
+                0 1 0 0 0
+                0 0 1 0 0
+                0 0 0 12 -5.4"
+        result="alphaNoise"
+      />
+      <feComposite in="SourceGraphic" in2="alphaNoise" operator="in" result="textured" />
+      <feGaussianBlur in="alphaNoise" stdDeviation="0.22" result="blurNoise" />
+      <feComposite in="textured" in2="blurNoise" operator="arithmetic" k2="1" k3="0.12" />
+    </filter>
+  </defs>
+
+  <g transform="translate(58 36) rotate(-2 402 230)" opacity="0.92" filter="url(#ink-texture)">
+    <rect
+      x="26"
+      y="24"
+      width="748"
+      height="420"
+      rx="2"
+      fill="none"
+      stroke="#df2027"
+      stroke-width="14"
+    />
+
+    <g
+      fill="#df2027"
+      text-anchor="middle"
+      font-family="'Times New Roman', Times, serif"
+      style="letter-spacing:-0.015em"
+    >
+      <text x="400" y="122" font-size="48" font-weight="400">TRUNG TÂM KIỂM SOÁT BỆNH TẬT</text>
+      <text x="400" y="180" font-size="48" font-weight="400">THÀNH PHỐ CẦN THƠ</text>
+      <text x="400" y="266" font-size="54" font-weight="700">KHOA XÉT NGHIỆM - CHẨN ĐOÁN</text>
+      <text x="400" y="334" font-size="54" font-weight="700">HÌNH ẢNH - THĂM DÒ CHỨC NĂNG</text>
+    </g>
+  </g>
+</svg>

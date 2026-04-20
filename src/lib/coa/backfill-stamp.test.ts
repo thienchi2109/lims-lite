@@ -7,7 +7,7 @@ import {
   sha256,
 } from '../../../scripts/backfill-coa-stamp.mjs'
 
-const STAMP_SRC = 'data:image/png;base64,stamp-data'
+const STAMP_SRC = 'data:image/svg+xml;base64,stamp-data'
 
 function createLegacyCoAHtml() {
   return `
@@ -42,7 +42,7 @@ describe('patchCoAStampHtml', () => {
     )
     expect(result.html).toContain('class="manager-signature-stack"')
     expect(result.html).toContain(
-      '<img src="data:image/png;base64,stamp-data" alt="Con dấu" class="manager-stamp-image" data-coa-stamp="manager" />',
+      '<img src="data:image/svg+xml;base64,stamp-data" alt="Con dấu" class="manager-stamp-image" data-coa-stamp="manager" />',
     )
     expect(result.html).toContain('class="signature-image manager-signature-image"')
     expect(result.html).toContain('.manager-stamp-image {')

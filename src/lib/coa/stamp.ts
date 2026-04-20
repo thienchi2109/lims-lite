@@ -1,7 +1,7 @@
 /**
  * CoA stamp asset loader.
  *
- * Reads the approved transparent PNG stamp from public assets and embeds it
+ * Reads the approved SVG stamp from public assets and embeds it
  * into generated CoA HTML so stored reports remain self-contained.
  */
 
@@ -15,11 +15,11 @@ export async function getCoAStampDataUri(): Promise<string> {
         return cachedStampDataUri
     }
 
-    const stampPath = join(process.cwd(), 'public', 'Stamp.png')
+    const stampPath = join(process.cwd(), 'public', 'Stamp.svg')
 
     try {
         const stampBytes = await readFile(stampPath)
-        cachedStampDataUri = `data:image/png;base64,${stampBytes.toString('base64')}`
+        cachedStampDataUri = `data:image/svg+xml;base64,${stampBytes.toString('base64')}`
         return cachedStampDataUri
     } catch (error) {
         console.error('Failed to load CoA stamp asset:', error)

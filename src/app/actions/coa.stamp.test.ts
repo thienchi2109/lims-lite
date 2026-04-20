@@ -152,7 +152,7 @@ describe('generateCoA stamp rendering', () => {
         mockFetchLatestSubmission.mockResolvedValue(null)
         mockFetchTestResults.mockResolvedValue([])
         mockFetchTestingDate.mockResolvedValue('2026-04-20')
-        mockGetCoAStampDataUri.mockResolvedValue('data:image/png;base64,stamp-data')
+        mockGetCoAStampDataUri.mockResolvedValue('data:image/svg+xml;base64,stamp-data')
         mockRenderCoATemplate.mockReturnValue('<html>stamped coa</html>')
         mockGenerateHtmlHash.mockReturnValue('html-hash')
     })
@@ -169,7 +169,7 @@ describe('generateCoA stamp rendering', () => {
                 approverSignature: 'data:image/png;base64,signature-data',
             }),
             {
-                managerStampSrc: 'data:image/png;base64,stamp-data',
+                managerStampSrc: 'data:image/svg+xml;base64,stamp-data',
             },
         )
     })
