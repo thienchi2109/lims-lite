@@ -1,7 +1,7 @@
 /**
  * CoA stamp asset loader.
  *
- * Reads the approved SVG stamp from public assets and embeds it
+ * Reads the approved transparent SVG stamp from public assets and embeds it
  * into generated CoA HTML so stored reports remain self-contained.
  */
 

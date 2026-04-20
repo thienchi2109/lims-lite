@@ -4,6 +4,7 @@ import {
   backfillReport,
   parseArgs,
   patchCoAStampHtml,
+  resolveServiceRoleKey,
   sha256,
 } from '../../../scripts/backfill-coa-stamp.mjs'
 
@@ -82,6 +83,22 @@ describe('patchCoAStampHtml', () => {
     expect(result.html).not.toContain('width: 150px;')
   })
 
+  it('replaces the existing manager stamp source when already stamped HTML uses an older asset', () => {
+    const oldStampedHtml = patchCoAStampHtml(createLegacyCoAHtml(), 'data:image/svg+xml;base64,old-stamp')
+      .html
+
+    const result = patchCoAStampHtml(oldStampedHtml, STAMP_SRC)
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        patched: true,
+        reason: 'stamp_refreshed',
+      }),
+    )
+    expect(result.html).toContain('data:image/svg+xml;base64,stamp-data')
+    expect(result.html).not.toContain('data:image/svg+xml;base64,old-stamp')
+  })
+
   it('skips HTML when the manager signature block cannot be identified', () => {
     const result = patchCoAStampHtml('<html><body>No manager block</body></html>', STAMP_SRC)
 
@@ -108,6 +125,25 @@ describe('parseArgs', () => {
     expect(() => parseArgs(['--limit'])).toThrow('Invalid --limit value')
     expect(() => parseArgs(['--limit', 'abc'])).toThrow('Invalid --limit value')
     expect(() => parseArgs(['--limit', '0'])).toThrow('Invalid --limit value')
+  })
+})
+
+describe('resolveServiceRoleKey', () => {
+  it('falls back to SERVICE_ROLE_KEY when SUPABASE_SERVICE_ROLE_KEY is absent', () => {
+    expect(
+      resolveServiceRoleKey({
+        SERVICE_ROLE_KEY: 'service-role-key',
+      }),
+    ).toBe('service-role-key')
+  })
+
+  it('prefers SUPABASE_SERVICE_ROLE_KEY when both names are present', () => {
+    expect(
+      resolveServiceRoleKey({
+        SUPABASE_SERVICE_ROLE_KEY: 'supabase-key',
+        SERVICE_ROLE_KEY: 'service-role-key',
+      }),
+    ).toBe('supabase-key')
   })
 })
 

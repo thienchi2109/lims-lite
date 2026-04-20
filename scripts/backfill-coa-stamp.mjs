@@ -44,6 +44,13 @@ function addManagerStampStyles(html) {
   )
 }
 
+function refreshManagerStampSrc(html, managerStampSrc) {
+  return html.replace(
+    /<img\b(?=[^>]*class="manager-stamp-image")(?=[^>]*data-coa-stamp="manager")[^>]*\/>/,
+    (tag) => tag.replace(/src="[^"]+"/, `src="${managerStampSrc}"`),
+  )
+}
+
 function addManagerSignatureClass(signatureImageHtml) {
   return signatureImageHtml.replace(
     'class="signature-image"',
@@ -53,10 +60,14 @@ function addManagerSignatureClass(signatureImageHtml) {
 
 export function patchCoAStampHtml(html, managerStampSrc) {
   if (html.includes(MANAGER_STAMP_MARKER)) {
-    const refreshedHtml = addManagerStampStyles(html)
+    const refreshedHtml = addManagerStampStyles(refreshManagerStampSrc(html, managerStampSrc))
 
     if (refreshedHtml !== html) {
-      return { html: refreshedHtml, patched: true, reason: 'styles_refreshed' }
+      const reason = refreshedHtml.includes(managerStampSrc) && !html.includes(managerStampSrc)
+        ? 'stamp_refreshed'
+        : 'styles_refreshed'
+
+      return { html: refreshedHtml, patched: true, reason }
     }
 
     return { html, patched: false, reason: 'already_stamped' }
@@ -127,14 +138,18 @@ async function loadStampDataUri() {
   return `data:image/svg+xml;base64,${stampBytes.toString('base64')}`
 }
 
+export function resolveServiceRoleKey(env = process.env) {
+  return env.SUPABASE_SERVICE_ROLE_KEY || env.SERVICE_ROLE_KEY || null
+}
+
 function createSupabaseAdminClient() {
   const supabaseUrl =
     process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const serviceRoleKey = resolveServiceRoleKey()
 
   if (!supabaseUrl || !serviceRoleKey) {
     throw new Error(
-      'Missing SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY',
+      'Missing SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY/SERVICE_ROLE_KEY',
     )
   }
 
