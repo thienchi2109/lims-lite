@@ -11,10 +11,18 @@
 import type { CoAData } from '@/types'
 import { escapeHtml } from './escape'
 
+export interface SignatureRenderOptions {
+    managerStampSrc?: string
+}
+
 /**
  * Render signatures section with performer (left) and approver (right) columns
  */
-export function renderSignatures(coaData: CoAData, footerDateStr: string): string {
+export function renderSignatures(
+    coaData: CoAData,
+    footerDateStr: string,
+    options: SignatureRenderOptions = {}
+): string {
     // Performer (analyst) signature - left column
     const performerSignatureHtml = coaData.performerSignature
         ? `<img src="${escapeHtml(coaData.performerSignature)}" alt="Chữ ký người thực hiện" class="signature-image" />`
@@ -26,7 +34,11 @@ export function renderSignatures(coaData: CoAData, footerDateStr: string): strin
 
     // Approver (manager) signature - right column
     const approverSignatureHtml = coaData.approverSignature
-        ? `<img src="${escapeHtml(coaData.approverSignature)}" alt="Chữ ký" class="signature-image" />`
+        ? `<img src="${escapeHtml(coaData.approverSignature)}" alt="Chữ ký" class="signature-image manager-signature-image" />`
+        : ''
+
+    const managerStampHtml = options.managerStampSrc
+        ? `<img src="${escapeHtml(options.managerStampSrc)}" alt="Con dấu" class="manager-stamp-image" data-coa-stamp="manager" />`
         : ''
 
     return `
@@ -41,7 +53,10 @@ export function renderSignatures(coaData: CoAData, footerDateStr: string): strin
             <div class="sig-col">
                 <div class="sig-date">Cần Thơ, ${escapeHtml(footerDateStr)}</div>
                 <div class="sig-title">Lãnh đạo khoa Xét nghiệm</div>
-                ${approverSignatureHtml}
+                <div class="manager-signature-stack">
+                    ${approverSignatureHtml}
+                    ${managerStampHtml}
+                </div>
                 <div class="sig-name">${escapeHtml(coaData.approverName)}</div>
             </div>
         </div>

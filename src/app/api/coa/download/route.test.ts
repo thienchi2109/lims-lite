@@ -173,6 +173,7 @@ describe('public CoA download confidentiality', () => {
         const response = await GET(createRequest('sample-1'))
 
         expect(response.status).toBe(200)
+        expect(response.headers.get('Cache-Control')).toBe('private, no-store')
         await expect(response.text()).resolves.toContain('Client CoA')
         expect(mockStorageDownload).toHaveBeenCalledTimes(1)
     })

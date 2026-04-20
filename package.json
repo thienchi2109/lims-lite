@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "check:no-explicit-any": "node scripts/check-no-explicit-any.mjs",
     "typecheck": "tsc --noEmit",
     "react-doctor": "npm run lint && react-doctor . --verbose --offline --yes --no-lint",
     "react-doctor:diff": "npm run lint && react-doctor . --verbose --offline --yes --diff --no-lint",
