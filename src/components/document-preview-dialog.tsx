@@ -29,7 +29,6 @@ interface DocumentPreviewDialogProps {
   loading: boolean
   error: string | null
   html: string | null
-  documentUrl: string
   onRetry: () => void
   errorActionLabel?: string
   onErrorAction?: () => void
@@ -43,7 +42,6 @@ export function DocumentPreviewDialog({
   loading,
   error,
   html,
-  documentUrl,
   onRetry,
   errorActionLabel,
   onErrorAction,
@@ -119,7 +117,19 @@ export function DocumentPreviewDialog({
   }
 
   const handleOpenInNewTab = () => {
-    window.open(documentUrl, '_blank', 'noopener,noreferrer')
+    if (!html) {
+      return
+    }
+
+    const documentWindow = window.open('', '_blank')
+    if (!documentWindow) {
+      return
+    }
+
+    documentWindow.opener = null
+    documentWindow.document.open()
+    documentWindow.document.write(html)
+    documentWindow.document.close()
   }
 
   const hasReadyDocument = Boolean(html && !loading && !error)

@@ -151,7 +151,6 @@ export function CoAPreviewDialog({
       loading={loading}
       error={error}
       html={html}
-      documentUrl={documentUrl}
       onRetry={() => setRetryToken((value) => value + 1)}
       errorActionLabel={hasUnauthorizedRecovery ? 'Đăng nhập lại' : undefined}
       onErrorAction={

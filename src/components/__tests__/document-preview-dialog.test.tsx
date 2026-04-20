@@ -28,7 +28,6 @@ describe('DocumentPreviewDialog', () => {
         loading
         error={null}
         html={null}
-        documentUrl="/api/coa/view?sample_id=sample-1"
         onRetry={vi.fn()}
       />,
     )
@@ -39,9 +38,18 @@ describe('DocumentPreviewDialog', () => {
     expect(screen.queryByTitle('Phiếu kết quả')).toBeNull()
   })
 
-  it('renders the html document and supports print and open-in-new-tab actions', () => {
-    const openSpy = vi.spyOn(window, 'open').mockReturnValue({} as Window)
+  it('renders the html document and opens the fetched document in a new tab', () => {
+    const newTab = {
+      opener: window,
+      document: {
+        open: vi.fn(),
+        write: vi.fn(),
+        close: vi.fn(),
+      },
+    }
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(newTab as unknown as Window)
     const onOpenChange = vi.fn()
+    const html = '<html><body><h1>CoA</h1></body></html>'
 
     render(
       <DocumentPreviewDialog
@@ -50,8 +58,7 @@ describe('DocumentPreviewDialog', () => {
         title="Phiếu kết quả"
         loading={false}
         error={null}
-        html="<html><body><h1>CoA</h1></body></html>"
-        documentUrl="/api/coa/view?sample_id=sample-1"
+        html={html}
         onRetry={vi.fn()}
       />,
     )
@@ -75,11 +82,11 @@ describe('DocumentPreviewDialog', () => {
 
     expect(focusSpy).toHaveBeenCalledTimes(1)
     expect(printSpy).toHaveBeenCalledTimes(1)
-    expect(openSpy).toHaveBeenCalledWith(
-      '/api/coa/view?sample_id=sample-1',
-      '_blank',
-      'noopener,noreferrer',
-    )
+    expect(openSpy).toHaveBeenCalledWith('', '_blank')
+    expect(newTab.opener).toBeNull()
+    expect(newTab.document.open).toHaveBeenCalledTimes(1)
+    expect(newTab.document.write).toHaveBeenCalledWith(html)
+    expect(newTab.document.close).toHaveBeenCalledTimes(1)
 
     fireEvent.click(screen.getByRole('button', { name: 'Đóng' }))
     expect(onOpenChange).toHaveBeenCalledWith(false)
@@ -94,7 +101,6 @@ describe('DocumentPreviewDialog', () => {
         loading={false}
         error={null}
         html="<html><body><h1>CoA</h1></body></html>"
-        documentUrl="/api/coa/view?sample_id=sample-1"
         onRetry={vi.fn()}
       />,
     )
@@ -127,7 +133,6 @@ describe('DocumentPreviewDialog', () => {
         loading={false}
         error={null}
         html="<html><body><h1>CoA</h1></body></html>"
-        documentUrl="/api/coa/view?sample_id=sample-1"
         onRetry={vi.fn()}
       />,
     )
@@ -154,7 +159,6 @@ describe('DocumentPreviewDialog', () => {
         loading={false}
         error={null}
         html="<html><body><h1>CoA</h1></body></html>"
-        documentUrl="/api/coa/view?sample_id=sample-1"
         onRetry={vi.fn()}
       />,
     )
@@ -183,7 +187,6 @@ describe('DocumentPreviewDialog', () => {
         loading={false}
         error={null}
         html="<html><body><h1>CoA</h1></body></html>"
-        documentUrl="/api/coa/view?sample_id=sample-1"
         onRetry={vi.fn()}
       />,
     )
@@ -207,7 +210,6 @@ describe('DocumentPreviewDialog', () => {
         loading={false}
         error="Không thể tải phiếu kết quả"
         html={null}
-        documentUrl="/api/coa/view?sample_id=sample-1"
         onRetry={onRetry}
       />,
     )
