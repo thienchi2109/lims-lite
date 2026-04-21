@@ -4,7 +4,7 @@ services:
     container_name: lims-postgres
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}
       POSTGRES_DB: postgres
@@ -41,17 +41,17 @@ services:
       GOTRUE_DB_DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}@postgres:5432/postgres?search_path=auth
       GOTRUE_SITE_URL: ${SITE_URL:-http://localhost:3000}
       GOTRUE_URI_ALLOW_LIST: ${ADDITIONAL_REDIRECT_URLS:-}
-      GOTRUE_DISABLE_SIGNUP: ${DISABLE_SIGNUP:-false}
+      GOTRUE_DISABLE_SIGNUP: ${DISABLE_SIGNUP:-true}
       GOTRUE_JWT_ADMIN_ROLES: service_role
       GOTRUE_JWT_AUD: authenticated
       GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
       GOTRUE_JWT_EXP: ${JWT_EXPIRY:-3600}
       GOTRUE_REFRESH_TOKEN_EXPIRY: ${GOTRUE_REFRESH_TOKEN_EXPIRY:-14400}
       GOTRUE_JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-token-with-at-least-32-characters-long}
-      GOTRUE_EXTERNAL_EMAIL_ENABLED: ${ENABLE_EMAIL_SIGNUP:-true}
-      GOTRUE_MAILER_AUTOCONFIRM: ${ENABLE_EMAIL_AUTOCONFIRM:-true}
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: ${ENABLE_EMAIL_SIGNUP:-false}
+      GOTRUE_MAILER_AUTOCONFIRM: ${ENABLE_EMAIL_AUTOCONFIRM:-false}
     ports:
-      - "9999:9999"
+      - "127.0.0.1:9999:9999"
 
   rest:
     image: postgrest/postgrest:v12.0.2
@@ -69,7 +69,7 @@ services:
       PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-token-with-at-least-32-characters-long}
       PGRST_APP_SETTINGS_JWT_EXP: ${JWT_EXPIRY:-3600}
     ports:
-      - "3001:3000"
+      - "127.0.0.1:3001:3000"
 
   storage:
     image: supabase/storage-api:v0.46.4
@@ -95,7 +95,7 @@ services:
     volumes:
       - storage-data:/var/lib/storage
     ports:
-      - "5000:5000"
+      - "127.0.0.1:5000:5000"
 
   realtime:
     image: supabase/realtime:v2.33.66
@@ -128,7 +128,7 @@ services:
       DNS_NODES: "''"
       RLIMIT_NOFILE: 100000
     ports:
-      - "4000:4000"
+      - "127.0.0.1:4000:4000"
 
   kong:
     image: kong:2.8.1
@@ -152,7 +152,7 @@ services:
       timeout: 10s
       retries: 10
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./supabase/kong.yml:/var/lib/kong/kong.yml:ro
 
@@ -173,7 +173,7 @@ services:
       PG_META_DB_USER: postgres
       PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
 
   studio:
     image: supabase/studio:latest
@@ -206,7 +206,7 @@ services:
       timeout: 5s
       retries: 5
     ports:
-      - "3002:3000"
+      - "127.0.0.1:3002:3000"
 
   app:
     container_name: lims-app
