@@ -312,8 +312,62 @@ For production deployment:
 
 1. **Generate strong passwords** for `POSTGRES_PASSWORD`
 2. **Generate a strong JWT secret** (at least 32 characters) for `JWT_SECRET`
-3. **Generate new Supabase keys** using the Supabase CLI or JWT generator
+3. **Generate new Supabase keys** (`ANON_KEY`, `SERVICE_ROLE_KEY`) instead of demo values
 4. **Use environment-specific .env files** and never commit them to git
+5. **Keep internal services loopback-only** (`127.0.0.1:...`) and expose only Nginx/Tunnel
+
+### Public API Protection Baseline
+
+`nginx/nginx.conf` now enforces per-IP rate limiting for public Supabase paths:
+- `/auth/v1` (stricter limit for login/signup/token flows)
+- `/rest/v1`
+- `/storage/v1`
+- `/realtime/v1`
+
+This is an origin-side control and should be combined with edge protection.
+
+### seccomp Compatibility Status
+
+`realtime`, `meta`, and `studio` were evaluated with the default Docker seccomp profile on this VPS runtime.  
+Current result: those services crash-loop without `seccomp=unconfined`, so the override is intentionally kept in `docker-compose.yml` until image/runtime compatibility is resolved.
+
+### Cloudflare Edge Hardening (Required in Production)
+
+Apply these rules at Cloudflare for your public host:
+
+1. **Access policy**
+   - Protect admin routes (`/studio/*`, `/meta/*`, any future admin path) with Cloudflare Access.
+2. **WAF managed rules**
+   - Enable OWASP/managed rulesets for the LIMS hostname.
+3. **Rate limiting rules**
+   - Add dedicated rate limits for:
+     - `^/auth/v1/token`
+     - `^/auth/v1/signup`
+     - `^/(auth|rest|storage|realtime)/v1`
+4. **Alerting**
+   - Send alerts for repeated 401/403/429 spikes and unusual auth bursts.
+
+### Secret Rotation Runbook
+
+When rotating secrets, rotate **all linked values together**:
+- `JWT_SECRET`
+- `ANON_KEY`
+- `SERVICE_ROLE_KEY`
+- `POSTGRES_PASSWORD`
+
+Suggested sequence:
+
+```bash
+# 1) Update secrets in deployment environment/.env
+# 2) Recreate services so all processes load new values
+docker compose up -d --force-recreate auth rest storage kong app studio meta realtime postgres
+
+# 3) Verify services and auth behavior
+docker compose ps
+docker compose logs --tail=100 auth kong app
+```
+
+If JWT-related values are rotated, all active sessions/tokens should be treated as invalid and users must sign in again.
 
 ## 📚 Next Steps
 

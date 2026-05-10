@@ -47,6 +47,20 @@ You need to set the following environment variables in the **Variables** tab of 
 
 > **Note**: You won't know your `API_EXTERNAL_URL` until *after* the first deployment attempts to start. You can deploy first, get the domain, update the variable, and redeploy.
 
+### Security requirements for production variables
+
+- Do not use demo/fallback credentials for `JWT_SECRET`, `ANON_KEY`, `SERVICE_ROLE_KEY`, or `POSTGRES_PASSWORD`.
+- Store all secrets in Railway Variables (never in Git).
+- Rotate related auth/database secrets together during a maintenance window.
+
+#### Rotation checklist
+
+1. Generate new values for `JWT_SECRET`, `ANON_KEY`, `SERVICE_ROLE_KEY`, and `POSTGRES_PASSWORD`.
+2. Update Railway Variables for affected services.
+3. Redeploy all Supabase services so no process keeps stale secrets.
+4. Verify `/auth/v1/token` login works and old tokens are rejected.
+5. Keep an incident note with rotation time, operator, and verification result.
+
 ## Step 5: Expose the Kong Service
 
 The `kong` service acts as the API Gateway (the single entry point) for Supabase.
@@ -64,6 +78,20 @@ Once the deployment finishes (all services are green):
 1.  Check the logs of the `kong` service to ensure it started correctly.
 2.  Visit your Kong URL: `https://your-kong-url.up.railway.app`. You should see a 404 from Kong (which is normal for the root path) or a specific response depending on configuration.
 3.  Test the health endpoint: `https://your-kong-url.up.railway.app/rest/v1/` (should return Supabase API documentation or info).
+
+### Cloudflare hardening for public API paths
+
+If Railway service is internet-facing, add Cloudflare protections for:
+- `/auth/v1`
+- `/rest/v1`
+- `/storage/v1`
+- `/realtime/v1`
+
+Minimum policy set:
+1. WAF managed rules enabled.
+2. Rate limiting on `/auth/v1/token` and `/auth/v1/signup`.
+3. Alerting for high 401/403/429 rates.
+4. Access control for any admin-only routes if exposed.
 
 ## Step 7: Run Migrations
 

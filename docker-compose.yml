@@ -102,6 +102,7 @@ services:
     image: supabase/realtime:v2.33.66
     container_name: lims-realtime
     restart: unless-stopped
+    # Compatibility note: default seccomp profile crashes in current VPS runtime.
     security_opt:
       - seccomp=unconfined
     depends_on:
@@ -161,6 +162,7 @@ services:
     image: supabase/postgres-meta:v0.84.2
     container_name: lims-meta
     restart: unless-stopped
+    # Compatibility note: default seccomp profile crashes in current VPS runtime.
     security_opt:
       - seccomp=unconfined
     depends_on:
@@ -180,6 +182,7 @@ services:
     image: supabase/studio:latest
     container_name: lims-studio
     restart: unless-stopped
+    # Compatibility note: default seccomp profile crashes in current VPS runtime.
     security_opt:
       - seccomp=unconfined
     depends_on:
