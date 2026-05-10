@@ -17,12 +17,14 @@ type ActiveFilterBadgesProps = {
     selectedSpecialtyIds: string[]
     scope: 'active' | 'all'
     status: SampleStatus | 'all'
+    rejectedOnly: boolean
     receiverId: string
     receiverOptions: Array<{ id: string; name: string }>
     fromDate: string
     toDate: string
     onRemoveSpecialty: (id: string) => void
     onClearStatus: () => void
+    onClearRejectedOnly: () => void
     onClearReceiver: () => void
     onClearDates: () => void
     onResetAll: () => void
@@ -34,19 +36,22 @@ export function ActiveFilterBadges({
     selectedSpecialtyIds,
     scope,
     status,
+    rejectedOnly,
     receiverId,
     receiverOptions,
     fromDate,
     toDate,
     onRemoveSpecialty,
     onClearStatus,
+    onClearRejectedOnly,
     onClearReceiver,
     onClearDates,
     onResetAll,
     disabled = false,
 }: ActiveFilterBadgesProps) {
     const isActiveScope = scope === 'active' && status === 'all'
-    const hasExplicitFilters = status !== 'all' || receiverId !== '' || fromDate || toDate || selectedSpecialtyIds.length > 0
+    const hasExplicitFilters =
+        status !== 'all' || rejectedOnly || receiverId !== '' || fromDate || toDate || selectedSpecialtyIds.length > 0
     const hasActiveFilters = isActiveScope || hasExplicitFilters
 
     if (!hasActiveFilters) return null
@@ -106,6 +111,25 @@ export function ActiveFilterBadges({
                         variant="ghost"
                         size="icon-sm"
                         onClick={onClearStatus}
+                        disabled={disabled}
+                        className="h-4 w-4 ml-1 hover:bg-transparent text-muted-foreground hover:text-foreground"
+                    >
+                        <X className="h-3 w-3" />
+                    </Button>
+                </Badge>
+            )}
+
+            {/* Rejected-only Badge */}
+            {rejectedOnly && (
+                <Badge variant="outline" className="h-7 gap-1 bg-white dark:bg-slate-900 border-dashed border-rose-300 dark:border-rose-800 pl-2 pr-1">
+                    <span className="font-normal text-muted-foreground">Chế độ:</span>
+                    <span className="font-medium text-foreground">
+                        Mẫu bị từ chối
+                    </span>
+                    <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={onClearRejectedOnly}
                         disabled={disabled}
                         className="h-4 w-4 ml-1 hover:bg-transparent text-muted-foreground hover:text-foreground"
                     >

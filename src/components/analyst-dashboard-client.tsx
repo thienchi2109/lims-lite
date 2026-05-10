@@ -76,7 +76,7 @@ export function AnalystDashboardClient({ user }: AnalystDashboardClientProps) {
                 variant="error"
                 message="Bạn có {count} mẫu bị từ chối"
                 linkText="Mở danh sách mẫu"
-                linkHref="/samples"
+                linkHref="/samples?status=in_progress&rejectedOnly=true"
             />
 
             <div

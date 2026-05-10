@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect, useCallback } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { type SampleStatus } from '@/types'
+import { parseBooleanSearchParam } from '@/lib/utils-lims'
 import { SEARCH_DEBOUNCE_MS } from './constants'
 import type { PendingQueryAction } from '@/components/sample-grid/hooks/usePendingQueryNavigation'
 
@@ -10,6 +11,7 @@ export type FilterState = {
     search: string
     scope: 'active' | 'all'
     status: SampleStatus | 'all'
+    rejectedOnly: boolean
     fromDate: string
     toDate: string
     receiverId: string
@@ -20,6 +22,7 @@ export type FilterHandlers = {
     setSearch: (value: string) => void
     setScope: (value: 'active' | 'all') => void
     setStatus: (value: SampleStatus | 'all') => void
+    setRejectedOnly: (value: boolean) => void
     setDateRange: (range: 'today' | 'yesterday' | 'week' | 'month') => void
     setFromDate: (value: string) => void
     setToDate: (value: string) => void
@@ -75,6 +78,7 @@ export function useFilterParams({
             search: params.get('search') || '',
             scope: params.get('scope') === 'all' ? 'all' : 'active',
             status: (params.get('status') as SampleStatus) || 'all',
+            rejectedOnly: parseBooleanSearchParam(params.get('rejectedOnly')),
             fromDate: params.get('fromDate') || '',
             toDate: params.get('toDate') || '',
             receiverId: params.get('receiverId') || '',
@@ -151,6 +155,10 @@ export function useFilterParams({
             applyQueryUpdate({ status: value === 'all' ? null : value }, 'filter')
         },
 
+        setRejectedOnly: (value: boolean) => {
+            applyQueryUpdate({ rejectedOnly: value ? 'true' : null }, 'filter')
+        },
+
         // Fixes Bug #2 (Date Preset Logic) - always sets BOTH dates
         setDateRange: (range: 'today' | 'yesterday' | 'week' | 'month') => {
             const today = new Date()
@@ -210,6 +218,7 @@ export function useFilterParams({
                     search: null,
                     scope: null,
                     status: null,
+                    rejectedOnly: null,
                     fromDate: null,
                     toDate: null,
                     receiverId: null,
@@ -250,6 +259,7 @@ export function useFilterParams({
     const activeFiltersCount = useMemo(() => {
         return [
             filters.status !== 'all',
+            filters.rejectedOnly,
             filters.receiverId !== '',
             filters.fromDate !== '',
             filters.toDate !== '',

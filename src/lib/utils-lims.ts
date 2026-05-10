@@ -19,6 +19,14 @@ export function isValidUUID(id: string): boolean {
 }
 
 /**
+ * Parses a URL search parameter as a boolean flag.
+ * Treats "true" and "1" as enabled; all other values are disabled.
+ */
+export function parseBooleanSearchParam(value: string | null | undefined): boolean {
+    return value === 'true' || value === '1'
+}
+
+/**
  * Generates a unique sample ID in the format: CDC-XN-ddmmyyyy-000x
  * @param existingCount - Number of samples already created today
  * @returns Generated sample ID

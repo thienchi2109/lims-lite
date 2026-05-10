@@ -191,12 +191,14 @@ export function SampleFilters({
                     selectedSpecialtyIds={filters.selectedSpecialtyIds}
                     scope={filters.scope}
                     status={filters.status}
+                    rejectedOnly={filters.rejectedOnly}
                     receiverId={filters.receiverId}
                     receiverOptions={receiverOptions}
                     fromDate={filters.fromDate}
                     toDate={filters.toDate}
                     onRemoveSpecialty={handlers.toggleSpecialty}
                     onClearStatus={() => handlers.setStatus('all')}
+                    onClearRejectedOnly={() => handlers.setRejectedOnly(false)}
                     onClearReceiver={() => handlers.setReceiver('all')}
                     onClearDates={handlers.clearDates}
                     onResetAll={handlers.resetFilters}

@@ -148,6 +148,14 @@ describe('useFilterParams scope state', () => {
         expect(result.current.filters.search).toBe('DEF')
     })
 
+    it('parses rejectedOnly=true from URL filter state', () => {
+        mockSearchParams = new URLSearchParams('rejectedOnly=true')
+
+        const { result } = renderHook(() => useFilterParams())
+
+        expect(result.current.filters.rejectedOnly).toBe(true)
+    })
+
     it('preserves the local search draft while the search input is focused', () => {
         mockSearchParams = new URLSearchParams('search=ABC')
         const focusedInput = document.createElement('input')
@@ -192,7 +200,7 @@ describe('useFilterParams scope state', () => {
     it('routes resetFilters through the shared query updater instead of replacing the URL directly', () => {
         const updateQuery = vi.fn()
         mockSearchParams = new URLSearchParams(
-            'search=ABC&scope=all&status=completed&fromDate=2026-01-01&toDate=2026-01-31&receiverId=11111111-1111-4111-8111-111111111111&specialtyIds=22222222-2222-4222-8222-222222222222&sortBy=received_at&sortOrder=asc&pageSize=50&page=3',
+            'search=ABC&scope=all&status=completed&rejectedOnly=true&fromDate=2026-01-01&toDate=2026-01-31&receiverId=11111111-1111-4111-8111-111111111111&specialtyIds=22222222-2222-4222-8222-222222222222&sortBy=received_at&sortOrder=asc&pageSize=50&page=3',
         )
 
         const { result } = renderHook(() =>
@@ -210,6 +218,7 @@ describe('useFilterParams scope state', () => {
                 search: null,
                 scope: null,
                 status: null,
+                rejectedOnly: null,
                 fromDate: null,
                 toDate: null,
                 receiverId: null,

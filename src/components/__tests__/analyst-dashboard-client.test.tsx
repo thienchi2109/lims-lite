@@ -23,6 +23,9 @@ describe('AnalystDashboardClient', () => {
         expect(screen.getByText('Nguyen Van A')).toBeDefined()
         expect(screen.getByRole('alert')).toBeDefined()
         expect(screen.getByText('Bạn có 4 mẫu bị từ chối')).toBeDefined()
+        expect(
+            screen.getByRole('link', { name: 'Mở danh sách mẫu' }).getAttribute('href'),
+        ).toBe('/samples?status=in_progress&rejectedOnly=true')
 
         const sampleCard = screen.getByText('Danh sách mẫu').closest('a')
         expect(sampleCard).not.toBeNull()

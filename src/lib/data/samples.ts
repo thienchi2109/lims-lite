@@ -73,6 +73,7 @@ export async function fetchSamples(params: SampleListParams) {
         p_search: validatedParams.search ?? null,
         p_scope: resolvedScope,
         p_status: validatedParams.status ?? null,
+        p_rejected_only: validatedParams.rejectedOnly ?? false,
         p_from_date: validatedParams.fromDate ?? null,
         p_to_date: toDate,
         p_receiver_id: validatedParams.receiverId ?? null,

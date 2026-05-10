@@ -545,4 +545,26 @@ describe('SamplesPageClient read-path contract', () => {
             expect(screen.getByTestId('sample-detail-panel').textContent).toBe('CDC-XN-0004')
         })
     })
+
+    it('passes rejectedOnly=true to useSamples when deep-link query includes rejectedOnly=true', () => {
+        mockSearchParams = new URLSearchParams('status=in_progress&rejectedOnly=true')
+
+        render(
+            <SamplesPageClient
+                role="analyst"
+                permissions={basePermissions}
+                homeHref="/"
+                receiverOptions={[]}
+                specialties={[]}
+            />,
+        )
+
+        const firstCallArgs = mockUseSamples.mock.calls.at(0)?.[0]
+        expect(firstCallArgs).toMatchObject({
+            params: expect.objectContaining({
+                status: 'in_progress',
+                rejectedOnly: true,
+            }),
+        })
+    })
 })

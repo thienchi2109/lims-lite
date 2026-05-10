@@ -194,6 +194,7 @@ export type AssignTests = z.infer<typeof AssignTestsSchema>
 export const SampleListParamsSchema = PaginationSchema.extend({
     scope: z.enum(['active', 'all']).optional(),
     status: SampleStatus.optional(),
+    rejectedOnly: z.boolean().optional(),
     fromDate: z.string().optional(),
     toDate: z.string().optional(),
     receiverId: z.string().regex(UUID_REGEX, 'Invalid UUID format').optional(),

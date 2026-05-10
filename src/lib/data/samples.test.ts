@@ -83,6 +83,7 @@ describe('fetchSamples query optimization', () => {
             p_search: null,
             p_scope: 'active',
             p_status: null,
+            p_rejected_only: false,
             p_from_date: null,
             p_to_date: null,
             p_receiver_id: null,
@@ -108,6 +109,7 @@ describe('fetchSamples query optimization', () => {
             p_search: null,
             p_scope: 'active',
             p_status: null,
+            p_rejected_only: false,
             p_from_date: null,
             p_to_date: null,
             p_receiver_id: TEST_RECEIVER_ID,
@@ -130,6 +132,7 @@ describe('fetchSamples query optimization', () => {
             p_search: null,
             p_scope: 'active',
             p_status: null,
+            p_rejected_only: false,
             p_from_date: null,
             p_to_date: null,
             p_receiver_id: TEST_SEED_STYLE_RECEIVER_ID,
@@ -161,6 +164,7 @@ describe('fetchSamples query optimization', () => {
             p_search: 'S-0001',
             p_scope: 'active',
             p_status: null,
+            p_rejected_only: false,
             p_from_date: null,
             p_to_date: null,
             p_receiver_id: null,
@@ -176,6 +180,30 @@ describe('fetchSamples query optimization', () => {
             page: 1,
             pageSize: 20,
             totalPages: 1,
+        })
+    })
+
+    it('passes rejectedOnly through to the RPC payload when enabled', async () => {
+        await fetchSamples({
+            page: 1,
+            pageSize: 20,
+            status: 'in_progress',
+            rejectedOnly: true,
+        })
+
+        expect(mockRpc).toHaveBeenCalledWith('get_samples_page', {
+            p_search: null,
+            p_scope: 'active',
+            p_status: 'in_progress',
+            p_rejected_only: true,
+            p_from_date: null,
+            p_to_date: null,
+            p_receiver_id: null,
+            p_specialty_ids: null,
+            p_sort_by: 'updated_at',
+            p_sort_order: 'desc',
+            p_page: 1,
+            p_page_size: 20,
         })
     })
 })

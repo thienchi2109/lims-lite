@@ -9,7 +9,7 @@ import { SampleInspectorColumn } from '@/components/sample-inspector-column'
 import { type SampleStatus } from '@/types'
 import { useSampleSelectionCore } from '@/hooks/use-sample-selection-core'
 import type { LabSpecialty } from '@/types'
-import { isValidUUID } from '@/lib/utils-lims'
+import { isValidUUID, parseBooleanSearchParam } from '@/lib/utils-lims'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
@@ -53,6 +53,7 @@ export function SamplesPageClient({
         : validStatuses.includes(statusParam as SampleStatus)
         ? (statusParam as SampleStatus)
         : undefined
+    const rejectedOnly = !isDoctor && parseBooleanSearchParam(searchParams.get('rejectedOnly'))
 
     const pageParam = Number(searchParams.get('page') || '1')
     const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1
@@ -100,6 +101,7 @@ export function SamplesPageClient({
             sortOrder: sortOrder as 'asc' | 'desc',
             receiverId: receiverId || undefined,
             specialtyIds: specialtyIds.length > 0 ? specialtyIds.join(',') : undefined,
+            rejectedOnly: rejectedOnly || undefined,
         }
     })
 
