@@ -383,3 +383,4 @@ After Docker is running:
 - [Supabase Self-Hosting Guide](https://supabase.com/docs/guides/self-hosting)
 - [Docker Compose Documentation](https://docs.docker.com/compose/)
 - [Kong Gateway Documentation](https://docs.konghq.com/)
+- [Cloudflare Edge Hardening Runbook](./security/cloudflare-edge-hardening-runbook.md)
