@@ -300,7 +300,13 @@ describe('SampleAccessionForm', () => {
             expect(screen.getByRole('button', { name: 'In nhãn barcode' })).toBeDefined()
         })
 
-        fireEvent.click(screen.getByRole('button', { name: 'In nhãn barcode' }))
+        const printButton = screen.getByRole('button', { name: 'In nhãn barcode' })
+        const newAccessionButton = screen.getByRole('button', { name: 'Tiếp nhận mẫu mới' })
+        expect(printButton.parentElement?.className).not.toContain('sm:flex-row')
+        expect(printButton.className).toContain('whitespace-normal')
+        expect(newAccessionButton.className).toContain('whitespace-normal')
+
+        fireEvent.click(printButton)
 
         expect(accessionFormMocks.printSampleBarcodeLabel).toHaveBeenCalledWith('sample-created-1', {
             preset: 'small-tube',

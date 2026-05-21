@@ -323,12 +323,12 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
                         <CheckCircle2 className="h-4 w-4" />
                         {submitSuccess}
                     </div>
-                    <div className="flex flex-col gap-2 sm:flex-row">
+                    <div className="flex flex-col gap-2">
                         {createdSampleId && (
                             <Button
                                 type="button"
                                 variant="default"
-                                className="w-full sm:w-auto"
+                                className="w-full min-w-0 whitespace-normal"
                                 onClick={handlePrintBarcodeLabel}
                             >
                                 <Barcode className="mr-2 h-4 w-4" />
@@ -338,7 +338,7 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
                         <Button
                             type="button"
                             variant="outline"
-                            className="w-full sm:w-auto"
+                            className="w-full min-w-0 whitespace-normal"
                             onClick={handleResetForm}
                         >
                             Tiếp nhận mẫu mới
