@@ -134,8 +134,10 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
                 } else {
                     const sampleData = result.data
                     const sampleCode = sampleData?.sample_id
+                    const successMessage = `Mẫu ${sampleCode || ''} đã được tạo.`.trim()
                     setCreatedSampleId(sampleData?.id ?? null)
-                    setSubmitSuccess(`Mẫu ${sampleCode || ''} đã được tạo.`.trim())
+                    setSubmitSuccess(successMessage)
+                    toast.success(successMessage)
                 }
             } else {
                 // Create sample WITH tests (existing flow)
@@ -159,8 +161,10 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
                     const sampleData = payload?.sample
                     const sampleCode = sampleData?.sample_id
                     const assignedCount = payload?.results?.length || selectedTests.length
+                    const successMessage = `Mẫu ${sampleCode || ''} đã được tạo và chỉ định ${assignedCount} xét nghiệm.`.trim()
                     setCreatedSampleId(sampleData?.id ?? null)
-                    setSubmitSuccess(`Mẫu ${sampleCode || ''} đã được tạo và chỉ định ${assignedCount} xét nghiệm.`.trim())
+                    setSubmitSuccess(successMessage)
+                    toast.success(successMessage)
                 }
             }
         } catch {
@@ -329,27 +333,27 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
                         {submitSuccess}
                     </div>
                     <div className="flex flex-col gap-2">
-                        {createdSampleId && (
-                            <Button
-                                type="button"
-                                variant="default"
-                                className="w-full min-w-0 whitespace-normal"
-                                onClick={handlePrintBarcodeLabel}
-                            >
-                                <Barcode className="mr-2 h-4 w-4" />
-                                In nhãn barcode
-                            </Button>
-                        )}
                         {createdSampleHref && (
                             <Button
                                 asChild
-                                variant="outline"
+                                variant="default"
                                 className="w-full min-w-0 whitespace-normal"
                             >
                                 <Link href={createdSampleHref}>
                                     <Eye className="mr-2 h-4 w-4" />
                                     Xem mẫu vừa tạo
                                 </Link>
+                            </Button>
+                        )}
+                        {createdSampleId && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full min-w-0 whitespace-normal"
+                                onClick={handlePrintBarcodeLabel}
+                            >
+                                <Barcode className="mr-2 h-4 w-4" />
+                                In nhãn barcode
                             </Button>
                         )}
                         <Button

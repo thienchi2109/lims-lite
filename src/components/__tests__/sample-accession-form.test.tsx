@@ -6,12 +6,14 @@ const accessionFormMocks = vi.hoisted(() => {
     const accessionAndAssignTestsClient = vi.fn()
     const findClientByIdentityClient = vi.fn()
     const printSampleBarcodeLabel = vi.fn()
+    const toastSuccess = vi.fn()
 
     return {
         createSampleClient,
         accessionAndAssignTestsClient,
         findClientByIdentityClient,
         printSampleBarcodeLabel,
+        toastSuccess,
         mockClient: {
             id: '11111111-1111-1111-1111-111111111111',
             id_card_num: '012345678901',
@@ -180,7 +182,7 @@ vi.mock('@/lib/qr/parse-client-identity-qr', () => ({
 vi.mock('sonner', () => ({
     toast: {
         error: vi.fn(),
-        success: vi.fn(),
+        success: accessionFormMocks.toastSuccess,
     },
 }))
 
@@ -251,6 +253,9 @@ describe('SampleAccessionForm', () => {
         expect(screen.getByTestId('submit-success').textContent).toBe(
             'Mẫu SMP-002 đã được tạo và chỉ định 1 xét nghiệm.',
         )
+        expect(accessionFormMocks.toastSuccess).toHaveBeenCalledWith(
+            'Mẫu SMP-002 đã được tạo và chỉ định 1 xét nghiệm.',
+        )
         expect(screen.getByTestId('selected-client').textContent).toBe(
             accessionFormMocks.mockClient.name,
         )
@@ -276,6 +281,7 @@ describe('SampleAccessionForm', () => {
         })
 
         expect(screen.getByTestId('submit-success').textContent).toBe('Mẫu SMP-001 đã được tạo.')
+        expect(accessionFormMocks.toastSuccess).toHaveBeenCalledWith('Mẫu SMP-001 đã được tạo.')
         expect(screen.getByTestId('selected-client').textContent).toBe(
             accessionFormMocks.mockClient.name,
         )
@@ -303,6 +309,11 @@ describe('SampleAccessionForm', () => {
         const printButton = screen.getByRole('button', { name: 'In nhãn barcode' })
         const viewSampleLink = screen.getByRole('link', { name: 'Xem mẫu vừa tạo' })
         const newAccessionButton = screen.getByRole('button', { name: 'Tiếp nhận mẫu mới' })
+        expect(
+            Array.from(printButton.parentElement?.children ?? []).map((element) =>
+                element.textContent?.replace(/\s+/g, ' ').trim(),
+            ),
+        ).toEqual(['Xem mẫu vừa tạo', 'In nhãn barcode', 'Tiếp nhận mẫu mới'])
         expect(viewSampleLink.getAttribute('href')).toBe('/samples?sampleId=sample-created-1')
         expect(printButton.parentElement?.className).not.toContain('sm:flex-row')
         expect(printButton.className).toContain('whitespace-normal')
