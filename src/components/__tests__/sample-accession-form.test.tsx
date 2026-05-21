@@ -301,7 +301,9 @@ describe('SampleAccessionForm', () => {
         })
 
         const printButton = screen.getByRole('button', { name: 'In nhãn barcode' })
+        const viewSampleLink = screen.getByRole('link', { name: 'Xem mẫu vừa tạo' })
         const newAccessionButton = screen.getByRole('button', { name: 'Tiếp nhận mẫu mới' })
+        expect(viewSampleLink.getAttribute('href')).toBe('/samples?sampleId=sample-created-1')
         expect(printButton.parentElement?.className).not.toContain('sm:flex-row')
         expect(printButton.className).toContain('whitespace-normal')
         expect(newAccessionButton.className).toContain('whitespace-normal')

@@ -23,7 +23,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { TestAssignmentGrid } from '@/components/test-assignment-grid'
-import { CheckCircle2, AlertCircle, QrCode, Scan, Calendar, Barcode } from 'lucide-react'
+import { CheckCircle2, AlertCircle, QrCode, Scan, Calendar, Barcode, Eye } from 'lucide-react'
+import Link from 'next/link'
 import { ClientSelector } from '@/components/client-selector'
 import { SampleTypeSelector } from '@/components/sample-type-selector'
 import { useCccdSerialController } from '@/hooks/use-cccd-serial-controller'
@@ -227,6 +228,10 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
         void printSampleBarcodeLabel(createdSampleId, { preset: 'small-tube' })
     }, [createdSampleId])
 
+    const createdSampleHref = createdSampleId
+        ? `/samples?sampleId=${encodeURIComponent(createdSampleId)}`
+        : null
+
     // Context Content (Card Style)
     const contextContent = (
         <div className="space-y-6 lg:space-y-6">
@@ -333,6 +338,18 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
                             >
                                 <Barcode className="mr-2 h-4 w-4" />
                                 In nhãn barcode
+                            </Button>
+                        )}
+                        {createdSampleHref && (
+                            <Button
+                                asChild
+                                variant="outline"
+                                className="w-full min-w-0 whitespace-normal"
+                            >
+                                <Link href={createdSampleHref}>
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    Xem mẫu vừa tạo
+                                </Link>
                             </Button>
                         )}
                         <Button
