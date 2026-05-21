@@ -8,6 +8,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { requireAuth, requireRole, isAuthError } from '@/lib/auth-helpers'
+import { z } from 'zod'
 import {
     CreateSampleSchema,
     CreateSampleWithAssignmentsSchema,
@@ -23,6 +24,14 @@ import {
     getUserConfidentialAccess,
     SAMPLE_NOT_FOUND_ERROR,
 } from '@/lib/data/confidential-samples'
+
+const RecordSampleLabelPrintSchema = z.object({
+    sampleId: z.string().uuid(),
+    copies: z.number().int().min(1).max(20).default(1),
+    preset: z.enum(['small-tube', 'container']).default('small-tube'),
+})
+
+export type RecordSampleLabelPrintInput = z.input<typeof RecordSampleLabelPrintSchema>
 
 /**
  * Creates a new sample with auto-generated sample ID
@@ -137,6 +146,32 @@ export async function updateSample(data: UpdateSample) {
     } catch (error) {
         console.error('Error in updateSample:', error)
         return { error: error instanceof Error ? error.message : 'Failed to update sample' }
+    }
+}
+
+export async function recordSampleLabelPrint(data: RecordSampleLabelPrintInput) {
+    try {
+        const auth = await requireAuth()
+        if (isAuthError(auth)) return auth
+
+        const supabase = await createClient()
+        const validatedData = RecordSampleLabelPrintSchema.parse(data)
+
+        const { data: result, error } = await supabase.rpc('record_sample_label_print', {
+            p_sample_id: validatedData.sampleId,
+            p_copies: validatedData.copies,
+            p_label_preset: validatedData.preset,
+        })
+
+        if (error) {
+            console.error('Error recording sample label print:', error)
+            return { error: error.message }
+        }
+
+        return { data: result }
+    } catch (error) {
+        console.error('Error in recordSampleLabelPrint:', error)
+        return { error: error instanceof Error ? error.message : 'Failed to record sample label print' }
     }
 }
 

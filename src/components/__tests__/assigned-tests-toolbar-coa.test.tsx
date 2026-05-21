@@ -89,6 +89,7 @@ describe('AssignedTestsToolbar CoA desktop actions', () => {
                 signatureLoading={false}
                 isGeneratingCoA={false}
                 onPrint={vi.fn()}
+                onPrintBarcodeLabel={vi.fn()}
                 onGenerateCoA={vi.fn()}
                 onSubmitForReview={vi.fn()}
                 onOpenAssignment={vi.fn()}
@@ -112,5 +113,34 @@ describe('AssignedTestsToolbar CoA desktop actions', () => {
 
         expect(onPreviewCoA).toHaveBeenCalledTimes(1)
         expect(onPrintCoABody).toHaveBeenCalledTimes(1)
+    })
+
+    it('shows a desktop barcode label print action beside the requisition print action', () => {
+        const onPrintBarcodeLabel = vi.fn()
+
+        render(
+            <AssignedTestsToolbar
+                resultsCount={3}
+                sampleStatus="assigned"
+                coaStatus={null}
+                canSubmitForReview={false}
+                hasPendingChanges={false}
+                hasSignature={true}
+                signatureLoading={false}
+                isGeneratingCoA={false}
+                onPrint={vi.fn()}
+                onPrintBarcodeLabel={onPrintBarcodeLabel}
+                onGenerateCoA={vi.fn()}
+                onSubmitForReview={vi.fn()}
+                onOpenAssignment={vi.fn()}
+                onPreviewCoA={vi.fn()}
+                onPrintCoABody={vi.fn()}
+                userRole="analyst"
+            />,
+        )
+
+        fireEvent.click(screen.getAllByRole('button', { name: 'In nhãn barcode' })[0])
+
+        expect(onPrintBarcodeLabel).toHaveBeenCalledTimes(1)
     })
 })

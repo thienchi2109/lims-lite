@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { type CreateSampleWithAssignments, type CreateSample, type Client, type CreateClient, type LabSpecialty, type SampleType, type SelectedTest } from '@/types'
 import { accessionAndAssignTestsClient, createSampleClient, findClientByIdentityClient } from '@/lib/api-client'
+import { printSampleBarcodeLabel } from '@/lib/sample-label-print-client'
 import { parseClientIdentityQr } from '@/lib/qr/parse-client-identity-qr'
 import { ClientQrScannerDialog } from '@/components/client-qr-scanner-dialog'
 import {
@@ -22,7 +23,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { TestAssignmentGrid } from '@/components/test-assignment-grid'
-import { CheckCircle2, AlertCircle, QrCode, Scan, Calendar } from 'lucide-react'
+import { CheckCircle2, AlertCircle, QrCode, Scan, Calendar, Barcode } from 'lucide-react'
 import { ClientSelector } from '@/components/client-selector'
 import { SampleTypeSelector } from '@/components/sample-type-selector'
 import { useCccdSerialController } from '@/hooks/use-cccd-serial-controller'
@@ -38,6 +39,7 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [submitError, setSubmitError] = useState<string | null>(null)
     const [submitSuccess, setSubmitSuccess] = useState<string | null>(null)
+    const [createdSampleId, setCreatedSampleId] = useState<string | null>(null)
     const [selectedTests, setSelectedTests] = useState<SelectedTest[]>([])
     const [showConfirmation, setShowConfirmation] = useState(false)
 
@@ -111,6 +113,7 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
         setIsSubmitting(true)
         setSubmitError(null)
         setSubmitSuccess(null)
+        setCreatedSampleId(null)
         setShowConfirmation(false)
 
         try {
@@ -130,6 +133,7 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
                 } else {
                     const sampleData = result.data
                     const sampleCode = sampleData?.sample_id
+                    setCreatedSampleId(sampleData?.id ?? null)
                     setSubmitSuccess(`Mẫu ${sampleCode || ''} đã được tạo.`.trim())
                 }
             } else {
@@ -154,6 +158,7 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
                     const sampleData = payload?.sample
                     const sampleCode = sampleData?.sample_id
                     const assignedCount = payload?.results?.length || selectedTests.length
+                    setCreatedSampleId(sampleData?.id ?? null)
                     setSubmitSuccess(`Mẫu ${sampleCode || ''} đã được tạo và chỉ định ${assignedCount} xét nghiệm.`.trim())
                 }
             }
@@ -214,7 +219,13 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
         setClientFormData(undefined)
         setSubmitSuccess(null)
         setSubmitError(null)
+        setCreatedSampleId(null)
     }, [reset])
+
+    const handlePrintBarcodeLabel = useCallback(() => {
+        if (!createdSampleId) return
+        void printSampleBarcodeLabel(createdSampleId, { preset: 'small-tube' })
+    }, [createdSampleId])
 
     // Context Content (Card Style)
     const contextContent = (
@@ -312,14 +323,27 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
                         <CheckCircle2 className="h-4 w-4" />
                         {submitSuccess}
                     </div>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full sm:w-auto"
-                        onClick={handleResetForm}
-                    >
-                        Tiếp nhận mẫu mới
-                    </Button>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                        {createdSampleId && (
+                            <Button
+                                type="button"
+                                variant="default"
+                                className="w-full sm:w-auto"
+                                onClick={handlePrintBarcodeLabel}
+                            >
+                                <Barcode className="mr-2 h-4 w-4" />
+                                In nhãn barcode
+                            </Button>
+                        )}
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full sm:w-auto"
+                            onClick={handleResetForm}
+                        >
+                            Tiếp nhận mẫu mới
+                        </Button>
+                    </div>
                 </div>
             )}
 

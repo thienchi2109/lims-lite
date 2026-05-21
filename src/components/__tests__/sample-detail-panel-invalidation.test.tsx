@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mockUseClient = vi.fn()
 const mockInvalidateQueries = vi.fn()
 const mockMarkLocalSamplesMutation = vi.fn()
+const mockPrintSampleBarcodeLabel = vi.fn()
 
 vi.mock('@/hooks/use-client', () => ({
     useClient: (...args: unknown[]) => mockUseClient(...args),
@@ -17,6 +18,10 @@ vi.mock('@tanstack/react-query', () => ({
 
 vi.mock('@/lib/samples-realtime', () => ({
     markLocalSamplesMutation: (...args: unknown[]) => mockMarkLocalSamplesMutation(...args),
+}))
+
+vi.mock('@/lib/sample-label-print-client', () => ({
+    printSampleBarcodeLabel: (...args: unknown[]) => mockPrintSampleBarcodeLabel(...args),
 }))
 
 vi.mock('@/components/sample-edit-dialog', () => ({
@@ -70,6 +75,16 @@ describe('SampleDetailPanel invalidation contract', () => {
         })
         expect(mockInvalidateQueries).toHaveBeenCalledWith({
             queryKey: clientKeys.detail('client-1'),
+        })
+    })
+
+    it('prints a barcode label from the selected sample detail header', () => {
+        render(<SampleDetailPanel sample={sample} />)
+
+        fireEvent.click(screen.getByRole('button', { name: 'In nhãn barcode' }))
+
+        expect(mockPrintSampleBarcodeLabel).toHaveBeenCalledWith('sample-1', {
+            preset: 'small-tube',
         })
     })
 })

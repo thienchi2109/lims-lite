@@ -67,7 +67,7 @@ export function AssignedTestsPanel({
         qcStatuses, coaStatus, enrichmentLoading, enrichmentError, setCoaStatus, fetchTests,
     } = useAssignedTestsData(sampleId, { initialResults })
     const { isGeneratingCoA, handleGenerateCoA } = useCoaActions(sampleId, setCoaStatus)
-    const { handlePrint, handlePrintCoABody } = usePrintHandlers(sampleId, results)
+    const { handlePrint, handlePrintCoABody, handlePrintBarcodeLabel } = usePrintHandlers(sampleId, results)
     const [showSubmitDialog, setShowSubmitDialog] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [showAssignmentDialog, setShowAssignmentDialog] = useState(false)
@@ -175,6 +175,7 @@ export function AssignedTestsPanel({
                 signatureLoading={signatureLoading}
                 isGeneratingCoA={isGeneratingCoA}
                 onPrint={handlePrint}
+                onPrintBarcodeLabel={handlePrintBarcodeLabel}
                 onGenerateCoA={handleGenerateCoA}
                 onSubmitForReview={() => setShowSubmitDialog(true)}
                 onOpenAssignment={() => setShowAssignmentDialog(true)}

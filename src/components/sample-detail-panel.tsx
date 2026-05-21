@@ -12,6 +12,7 @@ import {
     User,
     ChevronRight,
     Copy,
+    Barcode,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
@@ -21,6 +22,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { markLocalSamplesMutation } from '@/lib/samples-realtime'
 import { sampleKeys, clientKeys } from '@/types/query-keys'
 import { cn } from '@/lib/utils'
+import { printSampleBarcodeLabel } from '@/lib/sample-label-print-client'
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -109,6 +111,10 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
         )
     }
 
+    const handlePrintBarcodeLabel = () => {
+        void printSampleBarcodeLabel(sample.id, { preset: 'small-tube' })
+    }
+
     const handleEditSuccess = () => {
         markLocalSamplesMutation(sample.id)
         queryClient.invalidateQueries({ queryKey: sampleKeys.all })
@@ -145,6 +151,15 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
                                 title={copied ? 'Đã sao chép!' : 'Sao chép mã mẫu'}
                             >
                                 <Copy className="h-3.5 w-3.5" />
+                                <span className="sr-only">{copied ? 'Đã sao chép!' : 'Sao chép mã mẫu'}</span>
+                            </button>
+                            <button
+                                onClick={handlePrintBarcodeLabel}
+                                className="text-slate-400 hover:text-sky-600 transition-colors duration-200 cursor-pointer shrink-0"
+                                title="In nhãn barcode"
+                                aria-label="In nhãn barcode"
+                            >
+                                <Barcode className="h-3.5 w-3.5" />
                             </button>
                         </div>
                     </div>

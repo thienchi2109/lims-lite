@@ -26,7 +26,7 @@ vi.mock('next/cache', () => ({
     revalidatePath: (...args: unknown[]) => mockRevalidatePath(...args),
 }))
 
-import { accessionAndAssignTests, createSample, updateSample } from './samples'
+import { accessionAndAssignTests, createSample, recordSampleLabelPrint, updateSample } from './samples'
 
 const TEST_ANALYST = { id: '11111111-1111-4111-8111-111111111111', role: 'analyst' }
 const TEST_MANAGER = { id: '22222222-2222-4222-8222-222222222222', role: 'manager' }
@@ -102,5 +102,21 @@ describe('sample mutation authorization', () => {
                 client_name: 'Updated client',
             }),
         })
+    })
+
+    it('records sample label print requests through the audited RPC for authenticated staff', async () => {
+        const result = await recordSampleLabelPrint({
+            sampleId: '77777777-7777-4777-8777-777777777777',
+            copies: 1,
+            preset: 'small-tube',
+        })
+
+        expect(mockRequireAuth).toHaveBeenCalled()
+        expect(mockRpc).toHaveBeenCalledWith('record_sample_label_print', {
+            p_sample_id: '77777777-7777-4777-8777-777777777777',
+            p_copies: 1,
+            p_label_preset: 'small-tube',
+        })
+        expect(result).toEqual({ data: { id: 'sample-1' } })
     })
 })

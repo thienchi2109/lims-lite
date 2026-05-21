@@ -153,6 +153,14 @@ export function accessionAndAssignTestsClient(data: CreateSampleWithAssignments)
     return callClientAction('accessionAndAssignTests', data)
 }
 
+export function recordSampleLabelPrintClient(data: {
+    sampleId: string
+    copies: number
+    preset: 'small-tube' | 'container'
+}) {
+    return callClientAction('recordSampleLabelPrint', data)
+}
+
 export function fetchSampleTestsClient(sampleId: string) {
     return callClientAction('getSampleTests', { sampleId })
 }

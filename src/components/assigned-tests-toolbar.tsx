@@ -21,10 +21,10 @@ import {
     Plus,
     CheckCircle,
     Printer,
+    Barcode,
     FileText,
     FileSearch,
     RefreshCw,
-    ExternalLink,
     Activity,
     MoreHorizontal,
     HelpCircle,
@@ -42,6 +42,7 @@ interface AssignedTestsToolbarProps {
     signatureLoading: boolean
     isGeneratingCoA: boolean
     onPrint: () => void
+    onPrintBarcodeLabel: () => void
     onGenerateCoA: () => void
     onSubmitForReview: () => void
     onOpenAssignment: () => void
@@ -60,6 +61,7 @@ export function AssignedTestsToolbar({
     signatureLoading,
     isGeneratingCoA,
     onPrint,
+    onPrintBarcodeLabel,
     onGenerateCoA,
     onSubmitForReview,
     onOpenAssignment,
@@ -106,6 +108,23 @@ export function AssignedTestsToolbar({
                         autoShowTooltip={false}
                         showTooltip={false}
                     />
+                </span>
+
+                <span className="hidden sm:inline-flex">
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-slate-500 transition-transform hover:scale-105 hover:bg-slate-100 hover:text-sky-600 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-sky-400"
+                                onClick={onPrintBarcodeLabel}
+                            >
+                                <Barcode className="h-4 w-4" />
+                                <span className="sr-only">In nhãn barcode</span>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>In nhãn barcode</TooltipContent>
+                    </Tooltip>
                 </span>
             </div>
 
@@ -283,6 +302,10 @@ export function AssignedTestsToolbar({
                         <DropdownMenuItem onClick={onPrint} disabled={resultsCount === 0}>
                             <Printer className="mr-2 h-4 w-4" />
                             In Phiếu chỉ định
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={onPrintBarcodeLabel}>
+                            <Barcode className="mr-2 h-4 w-4" />
+                            In nhãn barcode
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                             <Link href={qcHref}>

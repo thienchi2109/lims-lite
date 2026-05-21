@@ -6,6 +6,7 @@ export type ClientActionName =
     | 'updateSample'
     | 'createSample'
     | 'accessionAndAssignTests'
+    | 'recordSampleLabelPrint'
     | 'getSampleTests'
     | 'getResultsBySample'
     | 'saveBatchResults'

@@ -5,11 +5,13 @@ const accessionFormMocks = vi.hoisted(() => {
     const createSampleClient = vi.fn()
     const accessionAndAssignTestsClient = vi.fn()
     const findClientByIdentityClient = vi.fn()
+    const printSampleBarcodeLabel = vi.fn()
 
     return {
         createSampleClient,
         accessionAndAssignTestsClient,
         findClientByIdentityClient,
+        printSampleBarcodeLabel,
         mockClient: {
             id: '11111111-1111-1111-1111-111111111111',
             id_card_num: '012345678901',
@@ -43,6 +45,10 @@ vi.mock('@/lib/api-client', () => ({
     createSampleClient: accessionFormMocks.createSampleClient,
     accessionAndAssignTestsClient: accessionFormMocks.accessionAndAssignTestsClient,
     findClientByIdentityClient: accessionFormMocks.findClientByIdentityClient,
+}))
+
+vi.mock('@/lib/sample-label-print-client', () => ({
+    printSampleBarcodeLabel: accessionFormMocks.printSampleBarcodeLabel,
 }))
 
 vi.mock('@/components/test-assignment-grid', () => ({
@@ -185,11 +191,11 @@ describe('SampleAccessionForm', () => {
         vi.clearAllMocks()
         accessionFormMocks.findClientByIdentityClient.mockResolvedValue({ data: null })
         accessionFormMocks.createSampleClient.mockResolvedValue({
-            data: { sample_id: 'SMP-001' },
+            data: { id: 'sample-created-1', sample_id: 'SMP-001' },
         })
         accessionFormMocks.accessionAndAssignTestsClient.mockResolvedValue({
             data: {
-                sample: { sample_id: 'SMP-002' },
+                sample: { id: 'sample-created-2', sample_id: 'SMP-002' },
                 results: [{ id: 'result-1' }],
             },
         })
@@ -275,6 +281,30 @@ describe('SampleAccessionForm', () => {
         )
         expect(screen.getByTestId('selected-sample-type').textContent).toBe('Nước tiểu')
         expect(screen.getByTestId('selected-count').textContent).toBe('0')
+    })
+
+    it('offers barcode label printing after creating a sample', async () => {
+        render(<SampleAccessionForm specialties={[]} />)
+
+        fireEvent.click(screen.getByRole('button', { name: 'Chọn khách hàng' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Chọn Nước tiểu' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Lưu mẫu' }))
+
+        await waitFor(() => {
+            expect(screen.getByTestId('confirm-dialog')).toBeDefined()
+        })
+
+        fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục tạo mẫu' }))
+
+        await waitFor(() => {
+            expect(screen.getByRole('button', { name: 'In nhãn barcode' })).toBeDefined()
+        })
+
+        fireEvent.click(screen.getByRole('button', { name: 'In nhãn barcode' }))
+
+        expect(accessionFormMocks.printSampleBarcodeLabel).toHaveBeenCalledWith('sample-created-1', {
+            preset: 'small-tube',
+        })
     })
 
     it('requires an explicit desktop reset before another save after success', async () => {

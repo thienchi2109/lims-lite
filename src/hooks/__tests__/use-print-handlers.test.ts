@@ -17,16 +17,22 @@ vi.mock('@/lib/print-template', () => ({
     generatePrintTemplate: vi.fn(),
 }))
 
+vi.mock('@/lib/sample-label-print-client', () => ({
+    printSampleBarcodeLabel: vi.fn(),
+}))
+
 vi.mock('sonner', () => ({
     toast: { error: vi.fn() },
 }))
 
 import { fetchSampleDetail } from '@/hooks/use-sample-detail'
 import { generatePrintTemplate } from '@/lib/print-template'
+import { printSampleBarcodeLabel } from '@/lib/sample-label-print-client'
 import { toast } from 'sonner'
 
 const mockFetchDetail = vi.mocked(fetchSampleDetail)
 const mockTemplate = vi.mocked(generatePrintTemplate)
+const mockPrintSampleBarcodeLabel = vi.mocked(printSampleBarcodeLabel)
 
 describe('usePrintHandlers', () => {
     const results = [{ id: 'r1', assay_name: 'Glucose', value: '5.0' }] as any[]
@@ -138,6 +144,20 @@ describe('usePrintHandlers', () => {
             await act(async () => { await result.current.handlePrintCoABody() })
 
             expect(toast.error).toHaveBeenCalledWith('Trình duyệt đã chặn cửa sổ in')
+        })
+    })
+
+    describe('handlePrintBarcodeLabel', () => {
+        it('delegates to the audited sample barcode label print flow', async () => {
+            mockPrintSampleBarcodeLabel.mockResolvedValueOnce(undefined)
+
+            const { result } = renderHook(() => usePrintHandlers('sample-1', results))
+
+            await act(async () => { await result.current.handlePrintBarcodeLabel() })
+
+            expect(mockPrintSampleBarcodeLabel).toHaveBeenCalledWith('sample-1', {
+                preset: 'small-tube',
+            })
         })
     })
 })

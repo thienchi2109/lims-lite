@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
     updateSample: vi.fn(),
     createSample: vi.fn(),
     accessionAndAssignTests: vi.fn(),
+    recordSampleLabelPrint: vi.fn(),
     globalSearch: vi.fn(),
     createClient: vi.fn(),
 }))
@@ -18,6 +19,7 @@ vi.mock('@/app/actions/samples', () => ({
     updateSample: (...args: unknown[]) => mocks.updateSample(...args),
     createSample: (...args: unknown[]) => mocks.createSample(...args),
     accessionAndAssignTests: (...args: unknown[]) => mocks.accessionAndAssignTests(...args),
+    recordSampleLabelPrint: (...args: unknown[]) => mocks.recordSampleLabelPrint(...args),
 }))
 
 vi.mock('@/app/actions/sample-tests', () => ({

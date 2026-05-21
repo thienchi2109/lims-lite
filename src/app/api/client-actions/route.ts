@@ -3,6 +3,7 @@ import {
     updateSample,
     createSample,
     accessionAndAssignTests,
+    recordSampleLabelPrint,
     getSamples,
 } from '@/app/actions/samples'
 import {
@@ -83,6 +84,7 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
     updateSample: async (payload) => updateSample(payload),
     createSample: async (payload) => createSample(payload),
     accessionAndAssignTests: async (payload) => accessionAndAssignTests(payload),
+    recordSampleLabelPrint: async (payload) => recordSampleLabelPrint(payload),
     getSampleTests: async (payload) => {
         if (!payload?.sampleId) {
             return { error: 'Sample ID is required' }

@@ -11,12 +11,14 @@
 import { useCallback } from 'react'
 import { fetchSampleDetail } from '@/hooks/use-sample-detail'
 import { generatePrintTemplate } from '@/lib/print-template'
+import { printSampleBarcodeLabel } from '@/lib/sample-label-print-client'
 import { toast } from 'sonner'
 import type { ResultWithAssay } from '@/types'
 
 export interface UsePrintHandlersReturn {
     handlePrint: () => Promise<void>
     handlePrintCoABody: () => Promise<void>
+    handlePrintBarcodeLabel: () => Promise<void>
 }
 
 export function usePrintHandlers(
@@ -94,5 +96,9 @@ export function usePrintHandlers(
         }
     }, [sampleId])
 
-    return { handlePrint, handlePrintCoABody }
+    const handlePrintBarcodeLabel = useCallback(async () => {
+        await printSampleBarcodeLabel(sampleId, { preset: 'small-tube' })
+    }, [sampleId])
+
+    return { handlePrint, handlePrintCoABody, handlePrintBarcodeLabel }
 }
