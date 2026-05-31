@@ -1,18 +1,52 @@
 ## ADDED Requirements
 
 ### Requirement: Manager email OTP step-up is required after password login
-The system SHALL require users with role `manager` to complete email OTP step-up after successful password authentication before accessing manager routes or manager-only operations.
+The system SHALL require configured manager cohorts to complete email OTP step-up after successful password authentication before accessing manager routes or manager-only operations.
 
 #### Scenario: Manager password login requires OTP verification
 - **GIVEN** a user with role `manager` has successfully authenticated with username and password
+- **AND** the user's manager cohort has email OTP enabled by environment configuration
 - **AND** the current session does not have valid manager email OTP step-up state
 - **WHEN** the user attempts to access `/manager` or a manager-only operation
 - **THEN** the system SHALL redirect the user to the Vietnamese email OTP verification flow instead of granting access
+
+#### Scenario: Manager OTP disabled for cohort allows password-only manager session
+- **GIVEN** a user with role `manager` has successfully authenticated with username and password
+- **AND** the user's manager cohort has email OTP disabled by environment configuration
+- **WHEN** the user accesses manager routes or manager-only operations
+- **THEN** the system SHALL NOT require email OTP step-up
 
 #### Scenario: Non-manager login is not blocked by manager OTP
 - **GIVEN** a user with role `analyst` or `doctor` has successfully authenticated
 - **WHEN** the user accesses routes allowed for their role
 - **THEN** the system SHALL NOT require manager email OTP step-up
+
+### Requirement: Manager OTP enforcement is controlled by cohort flags
+The system SHALL support independent `TRUE`/`FALSE` environment flags for standard managers and confidential/HIV managers.
+
+#### Scenario: Standard manager flag applies only to standard managers
+- **GIVEN** `MANAGER_EMAIL_OTP_ENABLED` is `TRUE`
+- **AND** `MANAGER_HIV_EMAIL_OTP_ENABLED` is `FALSE`
+- **WHEN** a standard manager with `can_access_confidential != true` logs in
+- **THEN** the system SHALL require email OTP step-up
+
+#### Scenario: Confidential manager flag applies only to confidential managers
+- **GIVEN** `MANAGER_EMAIL_OTP_ENABLED` is `FALSE`
+- **AND** `MANAGER_HIV_EMAIL_OTP_ENABLED` is `TRUE`
+- **WHEN** a manager with `can_access_confidential = true` logs in
+- **THEN** the system SHALL require email OTP step-up
+
+#### Scenario: Both flags enabled require OTP for both manager cohorts
+- **GIVEN** `MANAGER_EMAIL_OTP_ENABLED` is `TRUE`
+- **AND** `MANAGER_HIV_EMAIL_OTP_ENABLED` is `TRUE`
+- **WHEN** any user with role `manager` logs in
+- **THEN** the system SHALL require email OTP step-up
+
+#### Scenario: Both flags disabled do not require manager OTP
+- **GIVEN** `MANAGER_EMAIL_OTP_ENABLED` is `FALSE`
+- **AND** `MANAGER_HIV_EMAIL_OTP_ENABLED` is `FALSE`
+- **WHEN** any user with role `manager` logs in
+- **THEN** the system SHALL NOT require email OTP step-up
 
 ### Requirement: Manager OTP destination email is admin-managed
 The system SHALL allow personal email addresses for manager OTP delivery in the MVP, but the destination email MUST be configured and changed only through an admin-controlled workflow.

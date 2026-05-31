@@ -4,11 +4,14 @@ CDC-LIMS currently authenticates users with Supabase email/password and enforces
 
 Email OTP is therefore a pragmatic manager step-up control. It is not phishing-resistant MFA, but it raises the bar above password-only access while fitting current hardware and budget constraints. The OTP email can be personal for the MVP, but it must be configured by an admin and must not be self-service editable by the manager.
 
+The repo models HIV/confidential access as `users.can_access_confidential = true`, not as a separate `manager-hiv` role. This design treats "manager-hiv" as a manager user with confidential access.
+
 ## Goals / Non-Goals
 
 **Goals:**
 
 - Require managers to complete email OTP step-up after password login before accessing manager routes or manager-only actions.
+- Allow operators to enable or disable email OTP independently for standard managers and confidential/HIV managers through explicit environment flags.
 - Keep the OTP destination admin-managed, auditable, and separate from manager self-service profile changes.
 - Store only hashed OTP challenge values with short TTL, one-time use, resend cooldown, attempt limits, and lockout.
 - Preserve the existing Supabase session timebox and clear step-up state on logout/session expiry.
@@ -38,6 +41,22 @@ The manager OTP destination will be set and changed only through an admin-contro
 
 This reduces account-takeover risk where a compromised manager session changes the OTP email before performing privileged actions.
 
+### Split enforcement by manager cohort using environment flags
+
+The implementation will classify manager sessions into mutually exclusive cohorts:
+
+- Standard manager: `role = manager` and `can_access_confidential != true`
+- Confidential/HIV manager: `role = manager` and `can_access_confidential = true`
+
+Two boolean environment flags will control enforcement independently, for example:
+
+- `MANAGER_EMAIL_OTP_ENABLED`
+- `MANAGER_HIV_EMAIL_OTP_ENABLED`
+
+Accepted values should be strict `TRUE` or `FALSE` to match the requested operator workflow. Invalid or missing values should resolve through an explicit documented default rather than silently guessing. The implementation plan should choose the default; for production rollout, operators should set both flags explicitly.
+
+This supports all required combinations: enabled for both cohorts, enabled only for confidential/HIV managers, enabled only for standard managers, or disabled for both.
+
 ### Step-up state is short-lived and server-verifiable
 
 After OTP verification succeeds, the app will set a server-verifiable manager step-up state tied to the authenticated user/session. The state must expire no later than the base session timebox and must be invalidated on logout, session expiry, role changes, and manager OTP email changes.
@@ -52,7 +71,8 @@ OTP lifecycle events are security-relevant and must be written to immutable audi
 
 - **Email account compromise bypasses the second factor** -> Make the risk explicit in operator documentation and roadmap stronger factors when hardware allows.
 - **Email delivery failure blocks manager access** -> Provide resend cooldown, clear Vietnamese error states, and admin recovery/reset procedure.
-- **Custom step-up can be bypassed if enforcement is incomplete** -> Enforce in middleware, manager Server Actions, and `/api/client-actions` role guard; add regression tests for route and action denial.
+- **Custom step-up can be bypassed if enforcement is incomplete** -> Enforce in middleware, manager Server Actions, and `/api/client-actions` role guard; add regression tests for route and action denial across both configured cohorts.
+- **Configuration ambiguity creates unexpected access behavior** -> Parse flags strictly, document defaults, and add tests for all four TRUE/FALSE combinations.
 - **OTP code leakage through logs** -> Never log plaintext OTP values; store only hashes and redact all user-facing/audit details.
 - **Shared lab desktop sessions linger** -> Tie step-up state to session and clear it on logout/session expiry; preserve the hard timebox behavior.
 
@@ -61,13 +81,15 @@ OTP lifecycle events are security-relevant and must be written to immutable audi
 1. Add database structures for admin-managed OTP email metadata and hashed OTP challenges, with RLS/security comments and audit coverage.
 2. Add server-side OTP generation, hashing, send, verify, resend, lockout, and cleanup paths.
 3. Add middleware and API/server-action guards that require manager step-up before manager access.
-4. Add Vietnamese UI for manager OTP verification and admin email configuration.
-5. Apply migrations via Docker, run `run_security_tests()`, run focused regression tests, `npm run typecheck`, and strict OpenSpec validation.
+4. Add environment flag parsing and tests for standard manager and confidential/HIV manager combinations.
+5. Add Vietnamese UI for manager OTP verification and admin email configuration.
+6. Apply migrations via Docker, run `run_security_tests()`, run focused regression tests, `npm run typecheck`, and strict OpenSpec validation.
 
 Rollback: disable the manager step-up guard behind configuration or revert the middleware/API guard changes while keeping audit/challenge tables inert until a cleanup migration is approved.
 
 ## Open Questions
 
 - Which SMTP provider and sender identity will production use for OTP delivery?
+- Should missing environment flags default to disabled for safer rollout control, or enabled for confidential/HIV managers for stricter security?
 - Should the step-up window last until the base session expires, or use a shorter window such as 30-60 minutes for privileged manager actions?
 - Should failed OTP lockout notify admins immediately, or only appear in audit/reporting for MVP?
