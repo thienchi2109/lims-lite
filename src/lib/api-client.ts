@@ -47,14 +47,23 @@ type ClientActionErrorObject = {
     message?: unknown
 }
 
+interface CallClientActionOptions {
+    signal?: AbortSignal
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function callClientAction<T = any>(action: ClientActionName, payload?: unknown): Promise<T> {
+async function callClientAction<T = any>(
+    action: ClientActionName,
+    payload?: unknown,
+    options: CallClientActionOptions = {},
+): Promise<T> {
     const response = await fetch(ENDPOINT, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
         credentials: 'include',
+        signal: options.signal,
         body: JSON.stringify({ action, payload }),
     })
 
@@ -165,8 +174,8 @@ export function fetchSampleTestsClient(sampleId: string) {
     return callClientAction('getSampleTests', { sampleId })
 }
 
-export function fetchSampleResultsClient(sampleId: string) {
-    return callClientAction('getResultsBySample', { sampleId })
+export function fetchSampleResultsClient(sampleId: string, options?: CallClientActionOptions) {
+    return callClientAction('getResultsBySample', { sampleId }, options)
 }
 
 export function saveBatchResultsClient(data: SaveBatchResults) {

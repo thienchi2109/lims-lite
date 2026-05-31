@@ -55,6 +55,11 @@ describe('SampleDetailPanel enrichment isolation', () => {
     it('keeps snapshot client detail visible while client enrichment fails', () => {
         render(<SampleDetailPanel sample={sample} />)
 
+        expect(mockUseClient).toHaveBeenCalledWith({
+            clientId: 'client-1',
+            initialData: sample.client,
+        })
+
         expect(screen.getByText('CDC-XN-0001')).toBeDefined()
         expect(screen.getByText('Thông tin bệnh nhân')).toBeDefined()
         expect(screen.getByText('Khach hang A')).toBeDefined()

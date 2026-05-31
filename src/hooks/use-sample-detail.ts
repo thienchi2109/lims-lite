@@ -35,10 +35,18 @@ interface UseSampleDetailOptions {
 
 type SampleDetailResponse = { data: SampleWithUser } | { error: string }
 
-export async function fetchSampleDetail(sampleId: string): Promise<SampleWithUser> {
+interface FetchSampleDetailOptions {
+    signal?: AbortSignal
+}
+
+export async function fetchSampleDetail(
+    sampleId: string,
+    options: FetchSampleDetailOptions = {},
+): Promise<SampleWithUser> {
     const response = await fetch(`/api/samples/${sampleId}`, {
         credentials: 'include',
         cache: 'no-store',
+        signal: options.signal,
         headers: {
             Accept: 'application/json',
         },

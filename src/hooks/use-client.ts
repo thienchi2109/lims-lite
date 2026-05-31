@@ -28,12 +28,12 @@ interface UseClientOptions {
     clientId: string | null
 
     /**
-     * Immediate placeholder data to render while the fresh client query loads.
+     * Seeded client detail from the parent sample payload.
      */
-    placeholderData?: Client
+    initialData?: Client
 }
 
-export function useClient({ clientId, placeholderData }: UseClientOptions) {
+export function useClient({ clientId, initialData }: UseClientOptions) {
     return useQuery({
         queryKey: clientKeys.detail(clientId),
         queryFn: async (): Promise<Client> => {
@@ -59,6 +59,6 @@ export function useClient({ clientId, placeholderData }: UseClientOptions) {
         staleTime: 5 * 60 * 1000,
         // Refetch on window focus to ensure fresh data
         refetchOnWindowFocus: true,
-        placeholderData,
+        initialData,
     })
 }

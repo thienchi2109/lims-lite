@@ -188,4 +188,42 @@ describe('useSampleSelectionCore', () => {
 
         expect(setQueryDataSpy).toHaveBeenCalledTimes(1)
     })
+
+    it('passes the TanStack query abort signal to sample detail and results reads', async () => {
+        let capturedQueryFn: ((context: { signal?: AbortSignal }) => Promise<unknown>) | undefined
+        const abortController = new AbortController()
+
+        mockUseQuery.mockImplementation((options: {
+            queryFn: (context: { signal?: AbortSignal }) => Promise<unknown>
+        }) => {
+            capturedQueryFn = options.queryFn
+            return {
+                data: undefined,
+                error: null,
+                isLoading: false,
+            }
+        })
+        mockFetchSampleDetail.mockResolvedValue({
+            id: 'sample-4',
+            sample_id: 'CDC-XN-0004',
+        })
+        mockFetchSampleResultsClient.mockResolvedValue({
+            data: [],
+            error: null,
+        })
+
+        const { Wrapper } = createWrapper()
+        renderHook(() => useSampleSelectionCore({ sampleId: 'sample-4' }), {
+            wrapper: Wrapper,
+        })
+
+        await capturedQueryFn?.({ signal: abortController.signal })
+
+        expect(mockFetchSampleDetail).toHaveBeenCalledWith('sample-4', {
+            signal: abortController.signal,
+        })
+        expect(mockFetchSampleResultsClient).toHaveBeenCalledWith('sample-4', {
+            signal: abortController.signal,
+        })
+    })
 })

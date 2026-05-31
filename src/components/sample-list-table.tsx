@@ -15,6 +15,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { markLocalSamplesMutation } from '@/lib/samples-realtime'
 import { sampleKeys } from '@/types/query-keys'
+import { replaceUrlWithHistory } from '@/lib/native-history'
 import {
     SampleDataGrid,
     SampleIdCell,
@@ -51,6 +52,7 @@ interface SampleListTableProps {
         updates: Record<string, string | null>,
         action: PendingQueryAction,
     ) => void
+    onDetailQueryUpdate?: (updates: Record<string, string | null>) => void
 }
 
 export function SampleListTable({
@@ -67,6 +69,7 @@ export function SampleListTable({
     selectedSampleId,
     pendingAction = null,
     onQueryUpdate,
+    onDetailQueryUpdate,
 }: SampleListTableProps) {
     const [editDialogOpen, setEditDialogOpen] = useState(false)
     const [selectedSampleForEdit, setSelectedSampleForEdit] = useState<SampleWithUser | null>(null)
@@ -90,7 +93,7 @@ export function SampleListTable({
             }
         })
         const query = params.toString()
-        router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
+        replaceUrlWithHistory(query ? `${pathname}?${query}` : pathname)
     }
 
     const updateListQuery = (
@@ -99,6 +102,15 @@ export function SampleListTable({
     ) => {
         if (onQueryUpdate) {
             onQueryUpdate(updates, action)
+            return
+        }
+
+        updateQuery(updates)
+    }
+
+    const updateDetailQuery = (updates: Record<string, string | null>) => {
+        if (onDetailQueryUpdate) {
+            onDetailQueryUpdate(updates)
             return
         }
 
@@ -133,7 +145,7 @@ export function SampleListTable({
     }
 
     const handleRowClick = (sample: SampleWithUser) => {
-        updateQuery({ sampleId: sample.id })
+        updateDetailQuery({ sampleId: sample.id })
     }
 
     const handlePageChange = (newPage: number) => {
@@ -243,7 +255,7 @@ export function SampleListTable({
                                 size="icon-sm"
                                 onClick={(event) => {
                                     stopRowClick(event)
-                                    updateQuery({ sampleId: row.original.id, view: 'results' })
+                                    updateDetailQuery({ sampleId: row.original.id, view: 'results' })
                                 }}
                                 title="Nhập kết quả"
                                 className="h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50"
@@ -259,7 +271,7 @@ export function SampleListTable({
                                 size="icon-sm"
                                 onClick={(event) => {
                                     stopRowClick(event)
-                                    updateQuery({ sampleId: row.original.id, view: 'results' })
+                                    updateDetailQuery({ sampleId: row.original.id, view: 'results' })
                                 }}
                                 title="Xem kết quả"
                                 className="h-8 w-8 text-slate-500 hover:text-sky-600 hover:bg-sky-50"

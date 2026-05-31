@@ -13,8 +13,9 @@ import { isValidUUID, parseBooleanSearchParam } from '@/lib/utils-lims'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { usePendingQueryNavigation } from '@/components/sample-grid/hooks/usePendingQueryNavigation'
+import { replaceUrlWithHistory } from '@/lib/native-history'
 
 interface SamplesPageClientProps {
     role: 'analyst' | 'manager' | 'doctor'
@@ -38,7 +39,6 @@ export function SamplesPageClient({
 }: SamplesPageClientProps) {
     const searchParams = useSearchParams()
     const pathname = usePathname()
-    const router = useRouter()
     const isDoctor = role === 'doctor'
 
     // Parse URL params
@@ -108,9 +108,23 @@ export function SamplesPageClient({
     const queryNavigation = usePendingQueryNavigation({
         currentQuery: searchParams.toString(),
         pathname,
-        replace: (url) => router.replace(url, { scroll: false }),
+        replace: replaceUrlWithHistory,
         isFetching,
     })
+
+    const updateDetailQuery = (updates: Record<string, string | null>) => {
+        const params = new URLSearchParams(searchParams.toString())
+        Object.entries(updates).forEach(([key, value]) => {
+            if (value === null || value === undefined) {
+                params.delete(key)
+                return
+            }
+
+            params.set(key, value)
+        })
+        const query = params.toString()
+        replaceUrlWithHistory(query ? `${pathname}?${query}` : pathname)
+    }
 
     // Handle loading and error states
     if (isLoading) {
@@ -190,6 +204,7 @@ export function SamplesPageClient({
                             selectedSampleId={sampleId}
                             pendingAction={queryNavigation.pendingAction}
                             onQueryUpdate={queryNavigation.updateQuery}
+                            onDetailQueryUpdate={updateDetailQuery}
                         />
                     </div>
                 )}

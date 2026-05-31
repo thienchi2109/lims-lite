@@ -68,6 +68,7 @@ vi.mock('@/components/sample-grid', async () => {
             table,
             pagination,
             isTransitioning,
+            onRowClick,
         }: {
             table: MockTable
             pagination?: {
@@ -78,10 +79,15 @@ vi.mock('@/components/sample-grid', async () => {
                 isPending?: boolean
             }
             isTransitioning?: boolean
+            onRowClick?: (sample: SampleWithUser) => void
         }) => (
             <div data-testid="sample-data-grid">
                 {table.getRowModel().rows.map((row: MockTableRow) => (
-                    <div key={row.id} data-testid={`row-${row.id}`}>
+                    <div
+                        key={row.id}
+                        data-testid={`row-${row.id}`}
+                        onClick={() => onRowClick?.((row as unknown as { original: SampleWithUser }).original)}
+                    >
                         {row.getVisibleCells().map((cell: MockTableCell) => (
                             <div key={cell.id}>
                                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -281,5 +287,40 @@ describe('SampleListTable discard action visibility', () => {
 
         expect(onQueryUpdate).toHaveBeenCalledWith({ page: '2' }, 'page')
         expect(mockReplace).not.toHaveBeenCalled()
+    })
+
+    it('uses native history for detail-only row selection without App Router navigation', () => {
+        const originalReplaceState = window.history.replaceState.bind(window.history)
+        const historyReplaceSpy = vi
+            .spyOn(window.history, 'replaceState')
+            .mockImplementation((...args) => Reflect.apply(originalReplaceState, window.history, args))
+
+        render(
+            <SampleListTable
+                samples={[buildSample('completed')]}
+                page={1}
+                pageSize={10}
+                totalPages={1}
+                totalCount={1}
+                searchParams="page=1"
+                permissions={{
+                    canDiscard: false,
+                    canEdit: false,
+                    canViewResults: false,
+                    canEnterResults: false,
+                }}
+            />,
+        )
+
+        fireEvent.click(screen.getByTestId('row-0'))
+
+        expect(historyReplaceSpy).toHaveBeenCalledWith(
+            null,
+            '',
+            '/manager/samples?page=1&sampleId=sample-completed',
+        )
+        expect(mockReplace).not.toHaveBeenCalled()
+
+        historyReplaceSpy.mockRestore()
     })
 })
