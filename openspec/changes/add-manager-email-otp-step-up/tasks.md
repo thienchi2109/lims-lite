@@ -1,11 +1,11 @@
 ## 1. RED: Tests and Contracts First
 
-- [ ] 1.1 Add failing tests for manager password login redirecting to email OTP verification before `/manager` access.
-- [ ] 1.2 Add failing middleware/API guard tests proving password-only manager sessions cannot access manager routes or manager-only client actions.
-- [ ] 1.3 Add failing configuration tests for all four manager/manager-hiv flag combinations.
-- [ ] 1.4 Add failing OTP challenge tests for hash-only storage, five-minute TTL, single-use verification, resend cooldown, attempt limit, and lockout.
-- [ ] 1.5 Add failing admin user-management tests proving admins can configure manager OTP email and managers cannot self-change it.
-- [ ] 1.6 Add failing audit tests for OTP send, resend, verify success, verify failure, expiration, lockout, and admin email changes.
+- [x] 1.1 Add failing tests for manager password login redirecting to email OTP verification before `/manager` access.
+- [x] 1.2 Add failing middleware/API guard tests proving password-only manager sessions cannot access manager routes or manager-only client actions.
+- [x] 1.3 Add failing configuration tests for all four manager/manager-hiv flag combinations.
+- [x] 1.4 Add failing OTP challenge tests for hash-only storage, five-minute TTL, single-use verification, resend cooldown, attempt limit, and lockout.
+- [x] 1.5 Add failing admin user-management tests proving admins can configure manager OTP email and managers cannot self-change it.
+- [x] 1.6 Add failing audit tests for OTP send, resend, verify success, verify failure, expiration, lockout, and admin email changes.
 
 ## 2. Database and Audit Model
 
