@@ -13,6 +13,7 @@ The repo models HIV/confidential access as `users.can_access_confidential = true
 - Require managers to complete email OTP step-up after password login before accessing manager routes or manager-only actions.
 - Allow operators to enable or disable email OTP independently for standard managers and confidential/HIV managers through explicit environment flags.
 - Keep the OTP destination admin-managed, auditable, and separate from manager self-service profile changes.
+- Use Resend as the default MVP email provider through an app-owned delivery adapter.
 - Store only hashed OTP challenge values with short TTL, one-time use, resend cooldown, attempt limits, and lockout.
 - Preserve the existing Supabase session timebox and clear step-up state on logout/session expiry.
 - Provide Vietnamese UI copy for setup, verification, resend, failure, and lockout states.
@@ -40,6 +41,20 @@ Alternatives considered:
 The manager OTP destination will be set and changed only through an admin-controlled user-management workflow. The manager can see a masked destination during verification, but cannot edit it from self-service profile screens.
 
 This reduces account-takeover risk where a compromised manager session changes the OTP email before performing privileged actions.
+
+### Use Resend through an internal email adapter
+
+The MVP will use Resend for manager OTP delivery. Resend's published free transactional quota is currently 3,000 emails per month with a 100 emails per day limit, which is enough for the expected manager OTP volume. The implementation must still treat this as an operational quota, not a security guarantee, because pricing and limits can change.
+
+The app should own a small email delivery adapter instead of introducing a separate microservice for MVP. The adapter will hide provider details from OTP challenge code, centralize Vietnamese OTP email rendering, and return structured provider outcomes for audit and retry decisions.
+
+Initial adapter shape:
+
+- `resend`: production default, configured with `RESEND_API_KEY`, verified sender/domain, and optional reply-to/support metadata.
+- `noop` or `log`: local/test adapter that never sends real OTP emails and must not be selectable in production.
+- future `smtp` or `ses`: optional adapter if operations later require another provider.
+
+The OTP lifecycle remains app-managed: challenge creation, hashing, verification, attempt limits, lockout, step-up state, and audit logging stay in CDC-LIMS. Resend only delivers the email body. Supabase Auth email templates should not be used for this custom manager OTP flow because they do not own the app-specific challenge lifecycle or manager cohort enforcement.
 
 ### Split enforcement by manager cohort using environment flags
 
@@ -71,6 +86,7 @@ OTP lifecycle events are security-relevant and must be written to immutable audi
 
 - **Email account compromise bypasses the second factor** -> Make the risk explicit in operator documentation and roadmap stronger factors when hardware allows.
 - **Email delivery failure blocks manager access** -> Provide resend cooldown, clear Vietnamese error states, and admin recovery/reset procedure.
+- **Resend quota or provider outage blocks manager access** -> Track failed sends, expose admin recovery guidance, and keep the adapter boundary provider-agnostic for later SMTP/SES fallback.
 - **Custom step-up can be bypassed if enforcement is incomplete** -> Enforce in middleware, manager Server Actions, and `/api/client-actions` role guard; add regression tests for route and action denial across both configured cohorts.
 - **Configuration ambiguity creates unexpected access behavior** -> Parse flags strictly, document defaults, and add tests for all four TRUE/FALSE combinations.
 - **OTP code leakage through logs** -> Never log plaintext OTP values; store only hashes and redact all user-facing/audit details.
@@ -79,7 +95,7 @@ OTP lifecycle events are security-relevant and must be written to immutable audi
 ## Migration Plan
 
 1. Add database structures for admin-managed OTP email metadata and hashed OTP challenges, with RLS/security comments and audit coverage.
-2. Add server-side OTP generation, hashing, send, verify, resend, lockout, and cleanup paths.
+2. Add server-side OTP generation, hashing, Resend-backed send, verify, resend, lockout, and cleanup paths.
 3. Add middleware and API/server-action guards that require manager step-up before manager access.
 4. Add environment flag parsing and tests for standard manager and confidential/HIV manager combinations.
 5. Add Vietnamese UI for manager OTP verification and admin email configuration.
@@ -89,7 +105,7 @@ Rollback: disable the manager step-up guard behind configuration or revert the m
 
 ## Open Questions
 
-- Which SMTP provider and sender identity will production use for OTP delivery?
+- Which verified Resend sender/domain will production use for OTP delivery?
 - Should missing environment flags default to disabled for safer rollout control, or enabled for confidential/HIV managers for stricter security?
 - Should the step-up window last until the base session expires, or use a shorter window such as 30-60 minutes for privileged manager actions?
 - Should failed OTP lockout notify admins immediately, or only appear in audit/reporting for MVP?

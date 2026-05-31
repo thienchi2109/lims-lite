@@ -9,6 +9,7 @@ Manager accounts can approve results, manage users, and perform other high-impac
 - Allow personal email addresses for the MVP, but require the OTP destination email to be configured and changed only by an admin-controlled workflow.
 - Prevent managers from self-changing the OTP email without admin approval.
 - Store OTP challenges server-side as hashed, single-use, short-lived records with retry limits, resend cooldown, and lockout behavior.
+- Send OTP email through an app-owned email delivery adapter, using Resend as the default MVP provider.
 - Set a server-verifiable manager step-up state only after OTP verification succeeds, and require it before allowing manager routes and manager-only mutations.
 - Audit OTP send, verify success, verify failure, expiration, lockout, and admin email changes.
 - Keep all UI copy in Vietnamese and clearly explain that the email OTP is an additional verification step.
@@ -29,4 +30,4 @@ Manager accounts can approve results, manage users, and perform other high-impac
 - **Backend/API:** affects manager-only Server Actions and the `/api/client-actions` role guard so password-only manager sessions cannot perform manager actions.
 - **Frontend:** adds Vietnamese enrollment/verification screens for manager email OTP and an admin-managed user email configuration path.
 - **Compliance/security:** all OTP challenge lifecycle events and admin email changes must be auditable; OTP values must never be stored in plaintext or logged.
-- **Operations:** requires production SMTP/email delivery configuration and monitoring for failed sends. Email OTP is accepted as an MVP step-up mechanism, not as phishing-resistant MFA.
+- **Operations:** requires Resend API key, verified sender/domain configuration, delivery monitoring, and an upgrade path if daily/monthly quota is exceeded. Email OTP is accepted as an MVP step-up mechanism, not as phishing-resistant MFA.

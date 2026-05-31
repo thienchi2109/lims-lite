@@ -19,7 +19,7 @@
 - [ ] 3.1 Add strict environment flag parsing for `MANAGER_EMAIL_OTP_ENABLED` and `MANAGER_HIV_EMAIL_OTP_ENABLED`.
 - [ ] 3.2 Add manager cohort resolution for standard managers and managers with `can_access_confidential = true`.
 - [ ] 3.3 Add OTP generation, hashing, verification, resend, expiration, and lockout helpers with strict TypeScript and zod validation.
-- [ ] 3.4 Add email delivery adapter for OTP messages using production SMTP configuration and Vietnamese message content.
+- [ ] 3.4 Add an app-owned email delivery adapter for OTP messages with Resend as the production default, Vietnamese message content, and a non-sending test/local adapter.
 - [ ] 3.5 Add manager step-up state creation, validation, and invalidation tied to the authenticated session.
 - [ ] 3.6 Update logout/session-expiry paths to clear manager step-up state.
 - [ ] 3.7 Update middleware to redirect password-only manager sessions to the OTP verification flow only when their cohort flag is enabled.
@@ -39,4 +39,4 @@
 - [ ] 5.3 Run focused app tests for login redirect, OTP verification, manager route guard, client-action guard, environment flag combinations, admin email configuration, and manager self-service denial.
 - [ ] 5.4 Run `npm run lint` and `npm run typecheck`.
 - [ ] 5.5 Validate OpenSpec with `openspec validate add-manager-email-otp-step-up --strict`.
-- [ ] 5.6 Document operational requirements for SMTP configuration, admin recovery, email-change review, and the MVP limitation that email OTP is not phishing-resistant MFA.
+- [ ] 5.6 Document operational requirements for Resend API key, verified sender/domain, quota monitoring, admin recovery, email-change review, and the MVP limitation that email OTP is not phishing-resistant MFA.

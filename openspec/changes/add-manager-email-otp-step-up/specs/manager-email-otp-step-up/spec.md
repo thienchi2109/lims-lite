@@ -93,6 +93,28 @@ The system SHALL store OTP challenges only as server-side hashes, enforce short 
 - **WHEN** the manager requests another OTP before the resend cooldown has elapsed
 - **THEN** the system SHALL reject the resend request with a Vietnamese cooldown message
 
+### Requirement: OTP email delivery uses the app-owned Resend adapter
+The system SHALL send manager OTP messages through an app-owned email delivery adapter with Resend as the default production provider.
+
+#### Scenario: Resend provider sends manager OTP email
+- **GIVEN** a manager OTP challenge has been created
+- **AND** the production email adapter is configured with Resend credentials and a verified sender
+- **WHEN** the system sends the OTP email
+- **THEN** it SHALL send the email through Resend
+- **AND** it SHALL return a structured provider result for audit and error handling
+
+#### Scenario: Provider failure does not grant step-up
+- **GIVEN** a manager OTP challenge has been created
+- **WHEN** the configured email provider rejects or fails the send
+- **THEN** the system SHALL NOT create manager step-up state
+- **AND** it SHALL audit the failed send without storing or logging the plaintext OTP
+- **AND** it SHALL show a Vietnamese recovery or retry message
+
+#### Scenario: Test adapter cannot be used in production
+- **GIVEN** the app is running in a production environment
+- **WHEN** email delivery configuration selects a non-sending adapter
+- **THEN** the system SHALL fail closed or refuse startup/configuration validation for manager OTP delivery
+
 ### Requirement: Successful OTP verification creates manager step-up state
 The system SHALL create server-verifiable manager step-up state only after a valid OTP verification and SHALL tie that state to the authenticated manager session.
 
