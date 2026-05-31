@@ -113,18 +113,57 @@ END $$;
 
 DO $$
 DECLARE
-    v_has_audit_table BOOLEAN;
+    v_missing_events TEXT[];
+    v_plaintext_audit_count INTEGER;
 BEGIN
-    SELECT to_regclass('public.audit_logs') IS NOT NULL
-    INTO v_has_audit_table;
+    IF to_regclass('public.audit_logs') IS NULL THEN
+        INSERT INTO manager_otp_contract_results
+        VALUES (
+            'manager OTP lifecycle events are auditable',
+            FALSE,
+            'missing public.audit_logs'
+        );
+        RETURN;
+    END IF;
+
+    SELECT array_agg(event_type ORDER BY event_type)
+    INTO v_missing_events
+    FROM unnest(ARRAY[
+        'manager_otp_send',
+        'manager_otp_resend',
+        'manager_otp_verify_success',
+        'manager_otp_verify_failure',
+        'manager_otp_expired',
+        'manager_otp_lockout',
+        'manager_otp_email_changed'
+    ]) AS expected(event_type)
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM public.audit_logs al
+        WHERE al.table_name IN ('manager_otp_challenges', 'users')
+          AND al.new_values->>'event_type' = expected.event_type
+    );
+
+    SELECT count(*)
+    INTO v_plaintext_audit_count
+    FROM public.audit_logs al
+    WHERE al.table_name IN ('manager_otp_challenges', 'users')
+      AND (
+        coalesce(al.old_values, '{}'::jsonb) ?| ARRAY['code', 'plain_code', 'otp', 'otp_code', 'token']
+        OR coalesce(al.new_values, '{}'::jsonb) ?| ARRAY['code', 'plain_code', 'otp', 'otp_code', 'token']
+      );
 
     INSERT INTO manager_otp_contract_results
     VALUES (
         'manager OTP lifecycle events are auditable',
-        v_has_audit_table,
+        coalesce(array_length(v_missing_events, 1), 0) = 0
+            AND v_plaintext_audit_count = 0,
         CASE
-            WHEN v_has_audit_table THEN 'audit_logs table is available for OTP lifecycle events'
-            ELSE 'missing public.audit_logs'
+            WHEN coalesce(array_length(v_missing_events, 1), 0) > 0 THEN
+                format('missing OTP audit event metadata: %s', array_to_string(v_missing_events, ', '))
+            WHEN v_plaintext_audit_count > 0 THEN
+                format('found %s OTP audit rows with plaintext-like OTP keys', v_plaintext_audit_count)
+            ELSE 'all expected OTP audit event metadata exists without plaintext OTP keys'
         END
     );
 END $$;

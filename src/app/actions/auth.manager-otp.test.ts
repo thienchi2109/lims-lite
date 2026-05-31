@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
     createClient: vi.fn(),
@@ -18,6 +18,8 @@ vi.mock('next/navigation', () => ({
 }))
 
 import { login } from './auth'
+
+const originalEnv = { ...process.env }
 
 function createLoginFormData() {
     const formData = new FormData()
@@ -64,6 +66,10 @@ describe('manager email OTP login contract', () => {
             },
             from: vi.fn(() => usersQuery),
         })
+    })
+
+    afterEach(() => {
+        process.env = { ...originalEnv }
     })
 
     it('redirects a password-authenticated manager to email OTP verification before /manager access', async () => {

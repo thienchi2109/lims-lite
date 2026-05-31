@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
     createServerClient: vi.fn(),
@@ -23,6 +23,8 @@ vi.mock('@/lib/supabase/edge-admin', () => ({
 }))
 
 import { middleware } from './middleware'
+
+const originalEnv = { ...process.env }
 
 function createRequest(pathname: string) {
     return new NextRequest(`http://localhost${pathname}`)
@@ -68,6 +70,10 @@ describe('manager email OTP middleware contract', () => {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'anon-key'
         process.env.MANAGER_EMAIL_OTP_ENABLED = 'TRUE'
         process.env.MANAGER_HIV_EMAIL_OTP_ENABLED = 'FALSE'
+    })
+
+    afterEach(() => {
+        process.env = { ...originalEnv }
     })
 
     it('redirects password-only manager sessions away from /manager until OTP step-up succeeds', async () => {
