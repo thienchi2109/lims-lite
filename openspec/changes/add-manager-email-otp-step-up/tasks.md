@@ -9,10 +9,10 @@
 
 ## 2. Database and Audit Model
 
-- [ ] 2.1 Add migration for admin-managed manager OTP email metadata with security-impact comments, RLS/role checks, and no self-service manager update path.
-- [ ] 2.2 Add migration for OTP challenge storage with hashed code, expiration, used/locked status, attempt counters, resend tracking, and cleanup support.
-- [ ] 2.3 Add audit-log RPC or server action integration for OTP lifecycle events and admin OTP email changes without plaintext OTP values.
-- [ ] 2.4 Add SQL regression coverage for RLS, role boundaries, challenge lifecycle, and audit behavior.
+- [x] 2.1 Add migration for admin-managed manager OTP email metadata with security-impact comments, RLS/role checks, and no self-service manager update path.
+- [x] 2.2 Add migration for OTP challenge storage with hashed code, expiration, used/locked status, attempt counters, resend tracking, and cleanup support.
+- [ ] 2.3 Add audit-log RPC or server action integration for OTP lifecycle events and admin OTP email changes without plaintext OTP values. Deferred for MVP because OTP email is configured directly by a DB admin in the self-hosted Supabase Dashboard.
+- [x] 2.4 Add SQL regression coverage for RLS, role boundaries, and challenge lifecycle. Audit regression coverage remains deferred with 2.3.
 
 ## 3. Server-Side OTP and Step-Up Enforcement
 
@@ -34,8 +34,8 @@
 
 ## 5. Verification and Rollout
 
-- [ ] 5.1 Apply migrations through Docker and run `SELECT * FROM run_security_tests();`.
-- [ ] 5.2 Run focused SQL regression tests for OTP metadata, challenge lifecycle, RLS, and audit behavior.
+- [x] 5.1 Apply migrations through Docker and run `SELECT * FROM run_security_tests();`.
+- [x] 5.2 Run focused SQL regression tests for OTP metadata, challenge lifecycle, and RLS. Audit regression coverage remains deferred with 2.3.
 - [ ] 5.3 Run focused app tests for login redirect, OTP verification, manager route guard, client-action guard, environment flag combinations, admin email configuration, and manager self-service denial.
 - [ ] 5.4 Run `npm run lint` and `npm run typecheck`.
 - [ ] 5.5 Validate OpenSpec with `openspec validate add-manager-email-otp-step-up --strict`.
