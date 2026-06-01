@@ -180,6 +180,16 @@ BEGIN
     IF v_result->>'status' <> 'expired' THEN
         RAISE EXCEPTION 'expired OTP should not verify, got %', v_result;
     END IF;
+
+    SELECT public.verify_manager_otp_challenge(
+        '00000000-0000-0000-0000-000000000000'::UUID,
+        '123456'
+    )
+    INTO v_result;
+
+    IF v_result->>'status' <> 'not_found' THEN
+        RAISE EXCEPTION 'missing OTP challenge should return not_found, got %', v_result;
+    END IF;
 END $$;
 
 ROLLBACK;

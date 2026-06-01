@@ -55,7 +55,10 @@ ALTER TABLE public.manager_otp_challenges ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Managers can read manager OTP settings" ON public.manager_otp_settings;
 CREATE POLICY "Managers can read manager OTP settings"
 ON public.manager_otp_settings FOR SELECT
-USING (public.get_user_role() = 'manager'::public.user_role);
+USING (
+    user_id = auth.uid()
+    AND public.get_user_role() = 'manager'::public.user_role
+);
 
 DROP POLICY IF EXISTS "No app access to manager OTP challenges" ON public.manager_otp_challenges;
 CREATE POLICY "No app access to manager OTP challenges"
@@ -100,7 +103,17 @@ DECLARE
     v_challenge public.manager_otp_challenges%ROWTYPE;
     v_attempt_count INTEGER;
 BEGIN
-    SELECT *
+    SELECT
+        id,
+        user_id,
+        session_id,
+        code_hash,
+        expires_at,
+        used_at,
+        locked_at,
+        attempt_count,
+        resend_available_at,
+        created_at
     INTO v_challenge
     FROM public.manager_otp_challenges
     WHERE id = p_challenge_id
