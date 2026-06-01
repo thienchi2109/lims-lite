@@ -76,4 +76,23 @@ describe('manager email OTP login contract', () => {
         await expect(login(null, createLoginFormData())).rejects.toThrow('NEXT_REDIRECT:/manager/otp')
         expect(mocks.redirect).toHaveBeenCalledWith('/manager/otp')
     })
+
+    it('still redirects a manager to email OTP verification when session ID lookup fails', async () => {
+        mocks.createAdminClient.mockReturnValue({
+            rpc: vi.fn(async (name: string) => {
+                if (name === 'get_user_email_by_username') {
+                    return { data: 'manager@cdc-lims.local', error: null }
+                }
+
+                if (name === 'get_latest_session_id') {
+                    return { data: null, error: { message: 'session lookup failed' } }
+                }
+
+                return { data: null, error: null }
+            }),
+        })
+
+        await expect(login(null, createLoginFormData())).rejects.toThrow('NEXT_REDIRECT:/manager/otp')
+        expect(mocks.redirect).toHaveBeenCalledWith('/manager/otp')
+    })
 })

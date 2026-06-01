@@ -62,8 +62,6 @@ export async function login(_prevState: unknown, formData: FormData) {
 
     // Prevent concurrent sessions: invalidate all OTHER sessions for this user
     // SECURITY: This runs AFTER successful authentication to prevent DoS
-    let currentSessionId: string | null = null
-
     try {
         const adminClient = createAdminClient()
 
@@ -75,7 +73,6 @@ export async function login(_prevState: unknown, formData: FormData) {
             )
 
             if (!sessionError && sessionId) {
-                currentSessionId = sessionId
                 // Invalidate all OTHER sessions, keeping the current one
                 await adminClient.rpc('invalidate_other_user_sessions', {
                     p_user_id: data.user.id,
@@ -103,8 +100,7 @@ export async function login(_prevState: unknown, formData: FormData) {
         managerRequiresOtp({
             role,
             can_access_confidential: userData?.can_access_confidential === true,
-        }) &&
-        currentSessionId
+        })
     ) {
         redirect('/manager/otp')
     }
