@@ -2,6 +2,11 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { getSessionTimeboxSeconds } from '@/lib/auth-session-timebox'
 import { decodeJwtPayload } from '@/lib/jwt'
+import { shouldRequireManagerStepUp } from '@/lib/manager-email-otp/guards'
+import {
+    MANAGER_STEP_UP_COOKIE_NAME,
+    getManagerStepUpCookieOptions,
+} from '@/lib/manager-email-otp/step-up'
 import { createEdgeAdminClient } from '@/lib/supabase/edge-admin'
 import { SUPABASE_COOKIE_NAME } from '@/lib/supabase/constants'
 
@@ -57,6 +62,14 @@ export async function middleware(request: NextRequest) {
         return response
     }
 
+    const clearManagerStepUpCookie = (response: NextResponse) => {
+        response.cookies.set(MANAGER_STEP_UP_COOKIE_NAME, '', {
+            ...getManagerStepUpCookieOptions(),
+            maxAge: 0,
+        })
+        return response
+    }
+
     const isProtectedRoute =
         request.nextUrl.pathname.startsWith('/analyst') ||
         request.nextUrl.pathname.startsWith('/manager') ||
@@ -65,6 +78,7 @@ export async function middleware(request: NextRequest) {
     const isApiRoute = request.nextUrl.pathname.startsWith('/api')
     const isLoginRoute = request.nextUrl.pathname === '/login'
     const shouldEnforceTimebox = isProtectedRoute || isApiRoute || isLoginRoute
+    let sessionId: string | null | undefined = null
 
     if (shouldEnforceTimebox && user) {
         const {
@@ -75,7 +89,7 @@ export async function middleware(request: NextRequest) {
         const payload = accessToken
             ? decodeJwtPayload<{ session_id?: string; sid?: string }>(accessToken)
             : null
-        const sessionId = payload?.session_id ?? payload?.sid
+        sessionId = payload?.session_id ?? payload?.sid
         const timeboxSeconds = getSessionTimeboxSeconds()
 
         const signOutAndExpire = async () => {
@@ -92,6 +106,7 @@ export async function middleware(request: NextRequest) {
                 )
                 applyCookies(response)
                 clearSupabaseAuthCookies(response)
+                clearManagerStepUpCookie(response)
                 return response
             }
 
@@ -102,6 +117,7 @@ export async function middleware(request: NextRequest) {
             const response = NextResponse.redirect(url)
             applyCookies(response)
             clearSupabaseAuthCookies(response)
+            clearManagerStepUpCookie(response)
             return response
         }
 
@@ -149,14 +165,25 @@ export async function middleware(request: NextRequest) {
 
     // Get user role from database
     let userRole: string | null = null
+    let canAccessConfidential = false
+    let otpEmailUpdatedAt: string | null = null
     if (user) {
         const { data: userData } = await supabase
             .from('users')
-            .select('role')
+            .select('role, can_access_confidential, manager_otp_settings(updated_at)')
             .eq('id', user.id)
             .single()
 
         userRole = userData?.role || null
+        canAccessConfidential = userData?.can_access_confidential === true
+        const otpSettings = userData?.manager_otp_settings as
+            | { updated_at?: string | null }
+            | Array<{ updated_at?: string | null }>
+            | null
+            | undefined
+        otpEmailUpdatedAt = Array.isArray(otpSettings)
+            ? otpSettings[0]?.updated_at ?? null
+            : otpSettings?.updated_at ?? null
     }
 
     // Protect dashboard routes
@@ -182,6 +209,26 @@ export async function middleware(request: NextRequest) {
         // Role-based route protection
         if (request.nextUrl.pathname.startsWith('/manager') && userRole !== 'manager') {
             return redirectByRole()
+        }
+
+        if (
+            request.nextUrl.pathname.startsWith('/manager') &&
+            request.nextUrl.pathname !== '/manager/otp' &&
+            userRole === 'manager' &&
+            shouldRequireManagerStepUp(
+                {
+                    userId: user.id,
+                    role: userRole,
+                    can_access_confidential: canAccessConfidential,
+                    sessionId,
+                    otpEmailUpdatedAt: otpEmailUpdatedAt ?? 'unconfigured',
+                },
+                request.cookies,
+            )
+        ) {
+            const url = request.nextUrl.clone()
+            url.pathname = '/manager/otp'
+            return applyCookies(NextResponse.redirect(url))
         }
 
         if (request.nextUrl.pathname.startsWith('/analyst') && userRole !== 'analyst') {

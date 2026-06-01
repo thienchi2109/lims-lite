@@ -16,14 +16,14 @@
 
 ## 3. Server-Side OTP and Step-Up Enforcement
 
-- [ ] 3.1 Add strict environment flag parsing for `MANAGER_EMAIL_OTP_ENABLED` and `MANAGER_HIV_EMAIL_OTP_ENABLED`.
-- [ ] 3.2 Add manager cohort resolution for standard managers and managers with `can_access_confidential = true`.
-- [ ] 3.3 Add OTP generation, hashing, verification, resend, expiration, and lockout helpers with strict TypeScript and zod validation.
-- [ ] 3.4 Add an app-owned email delivery adapter for OTP messages with Resend as the production default, Vietnamese message content, and a non-sending test/local adapter.
-- [ ] 3.5 Add manager step-up state creation, validation, and invalidation tied to the authenticated session.
-- [ ] 3.6 Update logout/session-expiry paths to clear manager step-up state.
-- [ ] 3.7 Update middleware to redirect password-only manager sessions to the OTP verification flow only when their cohort flag is enabled.
-- [ ] 3.8 Update server actions and `/api/client-actions` role guard to deny manager-only operations without valid step-up state only when the user's cohort flag is enabled.
+- [x] 3.1 Add strict environment flag parsing for `MANAGER_EMAIL_OTP_ENABLED` and `MANAGER_HIV_EMAIL_OTP_ENABLED`.
+- [x] 3.2 Add manager cohort resolution for standard managers and managers with `can_access_confidential = true`.
+- [x] 3.3 Add OTP generation, hashing, verification, resend, expiration, and lockout helpers with strict TypeScript and zod validation.
+- [x] 3.4 Add an app-owned email delivery adapter for OTP messages with Resend as the production default, Vietnamese message content, and a non-sending test/local adapter.
+- [x] 3.5 Add manager step-up state creation, validation, and invalidation tied to the authenticated session.
+- [x] 3.6 Update logout/session-expiry paths to clear manager step-up state.
+- [x] 3.7 Update middleware to redirect password-only manager sessions to the OTP verification flow only when their cohort flag is enabled.
+- [x] 3.8 Update server actions and `/api/client-actions` role guard to deny manager-only operations without valid step-up state only when the user's cohort flag is enabled.
 
 ## 4. Vietnamese UI and Admin Workflow
 

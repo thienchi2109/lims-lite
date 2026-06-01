@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import type { ClientActionName } from '@/lib/client-actions/types'
+import { MANAGER_OTP_REQUIRED_ERROR, managerRequiresOtp } from '@/lib/manager-email-otp/guards'
 
 const DOCTOR_ALLOWED_ACTIONS = new Set<ClientActionName>(['getSamples'])
 const MANAGER_FORBIDDEN_ACTIONS = new Set<ClientActionName>(['createSample', 'accessionAndAssignTests'])
@@ -18,7 +19,7 @@ export async function getClientActionDenial(action: ClientActionName) {
 
     const { data: userData, error: roleError } = await supabase
         .from('users')
-        .select('role')
+        .select('role, can_access_confidential')
         .eq('id', user.id)
         .single()
 
@@ -36,6 +37,13 @@ export async function getClientActionDenial(action: ClientActionName) {
 
         return {
             error: CLIENT_ACTION_FORBIDDEN_ERROR,
+            status: 403,
+        }
+    }
+
+    if (userData?.role === 'manager' && managerRequiresOtp(userData)) {
+        return {
+            error: MANAGER_OTP_REQUIRED_ERROR,
             status: 403,
         }
     }

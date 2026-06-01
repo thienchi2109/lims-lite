@@ -1,6 +1,7 @@
 'use server'
 
 import { createAdminClient, createClient } from '@/lib/supabase/server'
+import { managerRequiresOtp } from '@/lib/manager-email-otp/guards'
 import { LoginSchema } from '@/types'
 import { redirect } from 'next/navigation'
 
@@ -61,6 +62,8 @@ export async function login(_prevState: unknown, formData: FormData) {
 
     // Prevent concurrent sessions: invalidate all OTHER sessions for this user
     // SECURITY: This runs AFTER successful authentication to prevent DoS
+    let currentSessionId: string | null = null
+
     try {
         const adminClient = createAdminClient()
 
@@ -72,6 +75,7 @@ export async function login(_prevState: unknown, formData: FormData) {
             )
 
             if (!sessionError && sessionId) {
+                currentSessionId = sessionId
                 // Invalidate all OTHER sessions, keeping the current one
                 await adminClient.rpc('invalidate_other_user_sessions', {
                     p_user_id: data.user.id,
@@ -88,11 +92,22 @@ export async function login(_prevState: unknown, formData: FormData) {
     // Get user role
     const { data: userData } = await supabase
         .from('users')
-        .select('role')
+        .select('role, can_access_confidential')
         .eq('id', data.user.id)
         .single()
 
     const role = userData?.role || 'analyst'
+
+    if (
+        role === 'manager' &&
+        managerRequiresOtp({
+            role,
+            can_access_confidential: userData?.can_access_confidential === true,
+        }) &&
+        currentSessionId
+    ) {
+        redirect('/manager/otp')
+    }
 
     // Redirect based on role
     if (role === 'doctor') {
