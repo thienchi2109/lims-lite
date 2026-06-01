@@ -295,5 +295,3 @@ export async function deleteUser(userId: string) {
     revalidatePath('/manager/users')
     return { success: true }
 }
-
-export { configureManagerOtpEmail, getMaskedManagerOtpEmail } from './users-manager-otp'

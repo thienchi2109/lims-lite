@@ -1,6 +1,6 @@
 import { DashboardHeader } from '@/components/dashboard-header'
+import { LogoutButton } from '@/components/logout-button'
 import { createClient } from '@/lib/supabase/server'
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 export default async function ManagerOtpPage() {
@@ -43,12 +43,7 @@ export default async function ManagerOtpPage() {
                     </p>
                 </div>
 
-                <Link
-                    href="/logout"
-                    className="inline-flex w-fit items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-                >
-                    Đăng xuất
-                </Link>
+                <LogoutButton />
             </main>
         </div>
     )

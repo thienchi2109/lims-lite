@@ -27,13 +27,13 @@ vi.mock('@/lib/auth-helpers', () => ({
 }))
 
 type ManagerOtpUserActions = {
-    configureManagerOtpEmail?: unknown
-    getMaskedManagerOtpEmail?: unknown
     updateOwnManagerOtpEmail?: unknown
+    configureManagerOtpEmail: (input: { userId: string; otpEmail: string }) => Promise<unknown>
+    getMaskedManagerOtpEmail: (userId: string) => Promise<unknown>
 }
 
 async function loadUserActions() {
-    const modulePath = './users'
+    const modulePath = './users-manager-otp'
     return import(modulePath) as Promise<ManagerOtpUserActions>
 }
 
@@ -97,10 +97,7 @@ describe('manager OTP email user-management contract', () => {
     it('validates UUID and email input before configuring manager OTP email', async () => {
         mocks.createAdminClient.mockReturnValue(createAdminOtpSettingsClient())
         const actions = await loadUserActions()
-        const configureManagerOtpEmail = actions.configureManagerOtpEmail as (input: {
-            userId: string
-            otpEmail: string
-        }) => Promise<unknown>
+        const { configureManagerOtpEmail } = actions
 
         await expect(
             configureManagerOtpEmail({ userId: 'not-a-uuid', otpEmail: 'not-an-email' }),
@@ -111,10 +108,7 @@ describe('manager OTP email user-management contract', () => {
     it('prevents managers from changing their own OTP destination email', async () => {
         mocks.createAdminClient.mockReturnValue(createAdminOtpSettingsClient())
         const actions = await loadUserActions()
-        const configureManagerOtpEmail = actions.configureManagerOtpEmail as (input: {
-            userId: string
-            otpEmail: string
-        }) => Promise<unknown>
+        const { configureManagerOtpEmail } = actions
 
         await expect(
             configureManagerOtpEmail({ userId: managerId, otpEmail: 'manager@example.com' }),
@@ -126,10 +120,7 @@ describe('manager OTP email user-management contract', () => {
         const adminClient = createAdminOtpSettingsClient()
         mocks.createAdminClient.mockReturnValue(adminClient)
         const actions = await loadUserActions()
-        const configureManagerOtpEmail = actions.configureManagerOtpEmail as (input: {
-            userId: string
-            otpEmail: string
-        }) => Promise<unknown>
+        const { configureManagerOtpEmail } = actions
 
         await expect(
             configureManagerOtpEmail({ userId: targetManagerId, otpEmail: 'otp@example.com' }),
@@ -147,10 +138,7 @@ describe('manager OTP email user-management contract', () => {
         const adminClient = createAdminOtpSettingsClient({ targetRole: 'analyst' })
         mocks.createAdminClient.mockReturnValue(adminClient)
         const actions = await loadUserActions()
-        const configureManagerOtpEmail = actions.configureManagerOtpEmail as (input: {
-            userId: string
-            otpEmail: string
-        }) => Promise<unknown>
+        const { configureManagerOtpEmail } = actions
 
         await expect(
             configureManagerOtpEmail({ userId: targetManagerId, otpEmail: 'otp@example.com' }),
@@ -163,7 +151,7 @@ describe('manager OTP email user-management contract', () => {
             data: { otp_email: 'manager@example.com' },
         }))
         const actions = await loadUserActions()
-        const getMaskedManagerOtpEmail = actions.getMaskedManagerOtpEmail as (userId: string) => Promise<unknown>
+        const { getMaskedManagerOtpEmail } = actions
 
         await expect(getMaskedManagerOtpEmail(targetManagerId)).resolves.toEqual({ otpEmail: 'ma***@example.com' })
         expect(mocks.createAdminClient).toHaveBeenCalled()

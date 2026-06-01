@@ -33,6 +33,10 @@ vi.mock('@/components/dashboard-header', () => ({
     ),
 }))
 
+vi.mock('@/components/logout-button', () => ({
+    LogoutButton: () => <button type="button">Đăng xuất</button>,
+}))
+
 import ManagerOtpPage from './page'
 
 describe('ManagerOtpPage', () => {
@@ -49,6 +53,7 @@ describe('ManagerOtpPage', () => {
         expect(screen.getByRole('heading', { name: 'Xác thực email quản lý' })).toBeDefined()
         expect(screen.getByText(/liên hệ quản trị viên/i)).toBeDefined()
         expect(screen.getByText(/Quản lý người dùng/i)).toBeDefined()
-        expect(screen.getByRole('link', { name: 'Đăng xuất' }).getAttribute('href')).toBe('/logout')
+        expect(screen.getByRole('button', { name: 'Đăng xuất' })).toBeDefined()
+        expect(screen.queryByRole('link', { name: 'Đăng xuất' })).toBeNull()
     })
 })
