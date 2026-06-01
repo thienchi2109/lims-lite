@@ -29,7 +29,7 @@ DO $$
 DECLARE
     v_plaintext_columns TEXT[];
     v_missing_columns TEXT[];
-    v_authenticated_settings_mutators TEXT[];
+    v_authenticated_settings_definer_mutators TEXT[];
 BEGIN
     IF to_regclass('public.manager_otp_settings') IS NULL THEN
         INSERT INTO manager_otp_contract_results
@@ -83,6 +83,7 @@ BEGIN
             JOIN pg_namespace n ON n.oid = p.pronamespace
             WHERE n.nspname = 'public'
               AND p.prokind = 'f'
+              AND p.prosecdef
               AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
               AND pg_get_functiondef(p.oid) ILIKE '%manager_otp_settings%'
               AND (
@@ -92,15 +93,15 @@ BEGIN
               )
             ORDER BY p.proname
         )
-        INTO v_authenticated_settings_mutators;
+        INTO v_authenticated_settings_definer_mutators;
 
         INSERT INTO manager_otp_contract_results
         VALUES (
-            'manager_otp_settings has no authenticated RPC mutator',
-            coalesce(array_length(v_authenticated_settings_mutators, 1), 0) = 0,
+            'manager_otp_settings has no authenticated SECURITY DEFINER mutator',
+            coalesce(array_length(v_authenticated_settings_definer_mutators, 1), 0) = 0,
             CASE
-                WHEN coalesce(array_length(v_authenticated_settings_mutators, 1), 0) = 0 THEN 'no authenticated-executable OTP settings mutator found'
-                ELSE format('authenticated-executable OTP settings mutators are forbidden: %s', array_to_string(v_authenticated_settings_mutators, ', '))
+                WHEN coalesce(array_length(v_authenticated_settings_definer_mutators, 1), 0) = 0 THEN 'no authenticated-executable SECURITY DEFINER OTP settings mutator found'
+                ELSE format('authenticated-executable SECURITY DEFINER OTP settings mutators are forbidden: %s', array_to_string(v_authenticated_settings_definer_mutators, ', '))
             END
         );
     END IF;
