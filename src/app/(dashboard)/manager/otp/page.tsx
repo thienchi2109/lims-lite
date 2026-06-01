@@ -9,6 +9,10 @@ export default function ManagerOtpPage() {
                     Tính năng xác thực OTP email đang được bật cho tài khoản quản lý. Vui lòng liên hệ quản trị viên
                     nếu bạn chưa được cấp email nhận mã OTP.
                 </p>
+                <p className="text-sm leading-6 text-slate-600">
+                    Quản trị viên cần vào Quản lý người dùng để cấu hình email nhận OTP cho tài khoản của bạn trước
+                    khi bạn có thể tiếp tục.
+                </p>
             </div>
 
             <Link

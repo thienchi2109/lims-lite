@@ -228,7 +228,10 @@ export async function middleware(request: NextRequest) {
         ) {
             const url = request.nextUrl.clone()
             url.pathname = '/manager/otp'
-            return applyCookies(NextResponse.redirect(url))
+            const response = NextResponse.redirect(url)
+            applyCookies(response)
+            clearManagerStepUpCookie(response)
+            return response
         }
 
         if (request.nextUrl.pathname.startsWith('/analyst') && userRole !== 'analyst') {
