@@ -161,6 +161,7 @@ export async function resendManagerOtpChallenge(input: {
     const plainCode = generateOtpCode()
     challenge.codeHash = hashOtpCode(plainCode)
     challenge.attemptCount = 0
+    challenge.expiresAt = addMs(input.now, CHALLENGE_TTL_MS)
     challenge.resendAvailableAt = addMs(input.now, RESEND_COOLDOWN_MS)
     audit(input.store, { event: 'manager_otp_challenge_resent', challengeId: challenge.id })
 

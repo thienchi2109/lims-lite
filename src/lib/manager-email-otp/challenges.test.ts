@@ -175,6 +175,7 @@ describe('manager email OTP challenge contract', () => {
         expect(resendResult).toEqual({ ok: true, plainCode: expect.stringMatching(/^\d{6}$/) })
         if (!resendResult.ok) throw new Error('expected resend success')
         expect(challenge.codeHash).not.toBe(originalHash)
+        expect(challenge.expiresAt.toISOString()).toBe('2026-05-31T00:06:01.000Z')
         expect(JSON.stringify(challenge)).not.toContain(resendResult.plainCode)
         await expect(
             verifyManagerOtpChallenge({ challengeId: challenge.id, code: plainCode, now: resendAt, store }),

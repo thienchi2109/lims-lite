@@ -3,28 +3,29 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
-import { createAdminClient, createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
+import { isAuthError, requireRole } from '@/lib/auth-helpers'
 import { ConfigureManagerOtpEmailSchema } from '@/types'
 
 async function requireCurrentManager() {
-    const supabase = await createClient()
-    const {
-        data: { user: currentUser },
-    } = await supabase.auth.getUser()
-
-    if (!currentUser) throw new Error('Unauthorized')
-
-    const { data: roleCheck } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', currentUser.id)
-        .single()
-
-    if (roleCheck?.role !== 'manager') {
-        throw new Error('Unauthorized: Only managers can configure manager OTP email')
+    const auth = await requireRole('manager')
+    if (isAuthError(auth)) {
+        throw new Error(auth.error)
     }
 
-    return currentUser
+    return auth
+}
+
+async function requireTargetManager(adminClient: ReturnType<typeof createAdminClient>, userId: string) {
+    const { data, error } = await adminClient
+        .from('users')
+        .select('role')
+        .eq('id', userId)
+        .single()
+
+    if (error || data?.role !== 'manager') {
+        throw new Error('Only manager users can receive a manager OTP email')
+    }
 }
 
 export async function configureManagerOtpEmail(input: { userId: string; otpEmail: string }) {
@@ -36,6 +37,8 @@ export async function configureManagerOtpEmail(input: { userId: string; otpEmail
     }
 
     const adminClient = createAdminClient()
+    await requireTargetManager(adminClient, validated.userId)
+
     const { error } = await adminClient
         .from('manager_otp_settings')
         .upsert({

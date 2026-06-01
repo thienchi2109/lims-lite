@@ -14,7 +14,11 @@ function createCookieReader(request?: Request) {
     cookieHeader.split(';').forEach((entry) => {
         const [rawName, ...rawValue] = entry.trim().split('=')
         if (!rawName || rawValue.length === 0) return
-        cookies.set(rawName, decodeURIComponent(rawValue.join('=')))
+        try {
+            cookies.set(rawName, decodeURIComponent(rawValue.join('=')))
+        } catch {
+            cookies.set(rawName, rawValue.join('='))
+        }
     })
 
     return {

@@ -1,5 +1,5 @@
 import { createHmac } from 'crypto'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
     createManagerStepUpCookieValue,
@@ -17,6 +17,10 @@ const baseInput = {
 }
 
 describe('manager OTP step-up cookie contract', () => {
+    afterEach(() => {
+        vi.unstubAllEnvs()
+    })
+
     it('accepts a signed cookie tied to the authenticated user and session', () => {
         const cookieValue = createManagerStepUpCookieValue(baseInput)
 
@@ -77,15 +81,10 @@ describe('manager OTP step-up cookie contract', () => {
     })
 
     it('fails fast in production when no step-up signing secret is configured', () => {
-        const originalEnv = { ...process.env }
-        try {
-            delete process.env.MANAGER_OTP_STEP_UP_SECRET
-            delete process.env.JWT_SECRET
-            process.env.NODE_ENV = 'production'
+        vi.stubEnv('MANAGER_OTP_STEP_UP_SECRET', undefined)
+        vi.stubEnv('JWT_SECRET', undefined)
+        vi.stubEnv('NODE_ENV', 'production')
 
-            expect(() => getManagerStepUpSecret()).toThrow(/MANAGER_OTP_STEP_UP_SECRET|JWT_SECRET/)
-        } finally {
-            process.env = originalEnv
-        }
+        expect(() => getManagerStepUpSecret()).toThrow(/MANAGER_OTP_STEP_UP_SECRET|JWT_SECRET/)
     })
 })

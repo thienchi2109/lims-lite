@@ -112,4 +112,18 @@ describe('manager email OTP client action guard contract', () => {
 
         await expect(getClientActionDenial('createUser', request)).resolves.toBeNull()
     })
+
+    it('handles malformed cookie percent-encoding without crashing the guard', async () => {
+        mockSteppedUpManager()
+        const request = new Request('http://localhost/api/client-actions', {
+            headers: {
+                cookie: `${MANAGER_STEP_UP_COOKIE_NAME}=%E0%A4%A`,
+            },
+        })
+
+        await expect(getClientActionDenial('createUser', request)).resolves.toEqual({
+            error: 'Yêu cầu xác thực OTP email quản lý trước khi tiếp tục',
+            status: 403,
+        })
+    })
 })

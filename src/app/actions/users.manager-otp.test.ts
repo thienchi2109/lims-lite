@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
     createClient: vi.fn(),
     createAdminClient: vi.fn(),
     revalidatePath: vi.fn(),
+    requireRole: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -13,6 +14,16 @@ vi.mock('@/lib/supabase/server', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: (...args: unknown[]) => mocks.revalidatePath(...args),
+}))
+
+vi.mock('@/lib/auth-helpers', () => ({
+    requireRole: (...args: unknown[]) => mocks.requireRole(...args),
+    isAuthError: (result: unknown) => (
+        typeof result === 'object' &&
+        result !== null &&
+        'error' in result &&
+        typeof (result as { error?: unknown }).error === 'string'
+    ),
 }))
 
 type ManagerOtpUserActions = {
@@ -29,41 +40,37 @@ async function loadUserActions() {
 const managerId = '11111111-1111-4111-8111-111111111111'
 const targetManagerId = '22222222-2222-4222-8222-222222222222'
 
-function createRoleClient(role = 'manager', currentUserId = managerId) {
-    const roleQuery = {
-        select: vi.fn(() => roleQuery),
-        eq: vi.fn(() => roleQuery),
-        single: vi.fn(async () => ({ data: { role }, error: null })),
-    }
-
-    return {
-        auth: {
-            getUser: vi.fn(async () => ({
-                data: { user: { id: currentUserId } },
-                error: null,
-            })),
-        },
-        from: vi.fn(() => roleQuery),
-    }
-}
-
-function createAdminOtpSettingsClient(result: { data?: unknown; error?: { message: string } | null } = {}) {
-    const query = {
+function createAdminOtpSettingsClient(result: {
+    data?: unknown
+    error?: { message: string } | null
+    targetRole?: string | null
+} = {}) {
+    const settingsQuery = {
         upsert: vi.fn(async () => ({ error: result.error ?? null })),
-        select: vi.fn(() => query),
-        eq: vi.fn(() => query),
+        select: vi.fn(() => settingsQuery),
+        eq: vi.fn(() => settingsQuery),
         single: vi.fn(async () => ({
             data: result.data ?? { otp_email: 'manager@example.com' },
             error: result.error ?? null,
         })),
     }
+    const usersQuery = {
+        select: vi.fn(() => usersQuery),
+        eq: vi.fn(() => usersQuery),
+        single: vi.fn(async () => ({
+            data: result.targetRole === undefined ? { role: 'manager' } : { role: result.targetRole },
+            error: null,
+        })),
+    }
 
     return {
         from: vi.fn((table: string) => {
-            expect(table).toBe('manager_otp_settings')
-            return query
+            if (table === 'manager_otp_settings') return settingsQuery
+            if (table === 'users') return usersQuery
+            throw new Error(`Unexpected table: ${table}`)
         }),
-        query,
+        query: settingsQuery,
+        usersQuery,
     }
 }
 
@@ -71,6 +78,7 @@ describe('manager OTP email user-management contract', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         vi.resetModules()
+        mocks.requireRole.mockResolvedValue({ id: managerId, role: 'manager' })
     })
 
     it('exposes an admin-only action for configuring a manager OTP email destination', async () => {
@@ -87,7 +95,6 @@ describe('manager OTP email user-management contract', () => {
     })
 
     it('validates UUID and email input before configuring manager OTP email', async () => {
-        mocks.createClient.mockResolvedValue(createRoleClient())
         mocks.createAdminClient.mockReturnValue(createAdminOtpSettingsClient())
         const actions = await loadUserActions()
         const configureManagerOtpEmail = actions.configureManagerOtpEmail as (input: {
@@ -102,7 +109,6 @@ describe('manager OTP email user-management contract', () => {
     })
 
     it('prevents managers from changing their own OTP destination email', async () => {
-        mocks.createClient.mockResolvedValue(createRoleClient('manager', managerId))
         mocks.createAdminClient.mockReturnValue(createAdminOtpSettingsClient())
         const actions = await loadUserActions()
         const configureManagerOtpEmail = actions.configureManagerOtpEmail as (input: {
@@ -117,7 +123,6 @@ describe('manager OTP email user-management contract', () => {
     })
 
     it('uses the service-role client for manager OTP email writes after manager authorization', async () => {
-        mocks.createClient.mockResolvedValue(createRoleClient())
         const adminClient = createAdminOtpSettingsClient()
         mocks.createAdminClient.mockReturnValue(adminClient)
         const actions = await loadUserActions()
@@ -130,14 +135,30 @@ describe('manager OTP email user-management contract', () => {
             configureManagerOtpEmail({ userId: targetManagerId, otpEmail: 'otp@example.com' }),
         ).resolves.toEqual({ success: true })
         expect(mocks.createAdminClient).toHaveBeenCalled()
+        expect(mocks.requireRole).toHaveBeenCalledWith('manager')
+        expect(adminClient.usersQuery.single).toHaveBeenCalled()
         expect(adminClient.query.upsert).toHaveBeenCalledWith(
             expect.objectContaining({ user_id: targetManagerId, otp_email: 'otp@example.com' }),
         )
         expect(mocks.revalidatePath).toHaveBeenCalledWith('/manager/users')
     })
 
+    it('rejects non-manager OTP email targets before writing settings', async () => {
+        const adminClient = createAdminOtpSettingsClient({ targetRole: 'analyst' })
+        mocks.createAdminClient.mockReturnValue(adminClient)
+        const actions = await loadUserActions()
+        const configureManagerOtpEmail = actions.configureManagerOtpEmail as (input: {
+            userId: string
+            otpEmail: string
+        }) => Promise<unknown>
+
+        await expect(
+            configureManagerOtpEmail({ userId: targetManagerId, otpEmail: 'otp@example.com' }),
+        ).rejects.toThrow(/manager/i)
+        expect(adminClient.query.upsert).not.toHaveBeenCalled()
+    })
+
     it('requires manager authorization and service-role reads before returning a masked OTP email', async () => {
-        mocks.createClient.mockResolvedValue(createRoleClient())
         mocks.createAdminClient.mockReturnValue(createAdminOtpSettingsClient({
             data: { otp_email: 'manager@example.com' },
         }))
