@@ -23,6 +23,7 @@ export type VerifyChallengeResult =
 
 export type ChallengeStore = {
     savedChallenge: ManagerOtpChallenge | null
+    savedChallenges?: Map<string, ManagerOtpChallenge>
     auditPayloads: unknown[]
 }
 
@@ -55,6 +56,11 @@ function audit(store: ChallengeStore, payload: unknown) {
 }
 
 function findChallenge(store: ChallengeStore, challengeId: string) {
+    const mappedChallenge = store.savedChallenges?.get(challengeId)
+    if (mappedChallenge) {
+        return mappedChallenge
+    }
+
     const challenge = store.savedChallenge
     return challenge?.id === challengeId ? challenge : null
 }
@@ -79,6 +85,7 @@ export async function createManagerOtpChallenge(input: {
     }
 
     input.store.savedChallenge = challenge
+    input.store.savedChallenges?.set(challenge.id, challenge)
     audit(input.store, {
         event: 'manager_otp_challenge_created',
         challengeId: challenge.id,
@@ -132,7 +139,7 @@ export async function resendManagerOtpChallenge(input: {
     challengeId: string
     now: Date
     store: ChallengeStore
-}): Promise<{ ok: true } | { ok: false; reason: 'cooldown' | 'locked' | 'expired' }> {
+}): Promise<{ ok: true; plainCode: string } | { ok: false; reason: 'cooldown' | 'locked' | 'expired' | 'used' }> {
     const challenge = findChallenge(input.store, input.challengeId)
 
     if (!challenge || challenge.lockedAt) {
@@ -143,12 +150,19 @@ export async function resendManagerOtpChallenge(input: {
         return { ok: false, reason: 'expired' }
     }
 
+    if (challenge.usedAt) {
+        return { ok: false, reason: 'used' }
+    }
+
     if (challenge.resendAvailableAt > input.now) {
         return { ok: false, reason: 'cooldown' }
     }
 
+    const plainCode = generateOtpCode()
+    challenge.codeHash = hashOtpCode(plainCode)
+    challenge.attemptCount = 0
     challenge.resendAvailableAt = addMs(input.now, RESEND_COOLDOWN_MS)
     audit(input.store, { event: 'manager_otp_challenge_resent', challengeId: challenge.id })
 
-    return { ok: true }
+    return { ok: true, plainCode }
 }

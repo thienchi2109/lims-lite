@@ -23,6 +23,7 @@ type VerifyChallengeResult =
 
 type ChallengeStore = {
     savedChallenge: ManagerOtpChallenge | null
+    savedChallenges?: Map<string, ManagerOtpChallenge>
     auditPayloads: unknown[]
 }
 
@@ -43,7 +44,7 @@ type ChallengeModule = {
         challengeId: string
         now: Date
         store: ChallengeStore
-    }) => Promise<{ ok: true } | { ok: false; reason: 'cooldown' | 'locked' | 'expired' }>
+    }) => Promise<{ ok: true; plainCode: string } | { ok: false; reason: 'cooldown' | 'locked' | 'expired' | 'used' }>
 }
 
 async function loadChallengeContract() {
@@ -54,6 +55,7 @@ async function loadChallengeContract() {
 function createStore(): ChallengeStore {
     return {
         savedChallenge: null,
+        savedChallenges: new Map(),
         auditPayloads: [],
     }
 }
@@ -121,5 +123,87 @@ describe('manager email OTP challenge contract', () => {
             verifyManagerOtpChallenge({ challengeId: challenge.id, code: plainCode, now, store })
         ).resolves.toEqual({ ok: false, reason: 'locked' })
         expect(JSON.stringify(store.auditPayloads)).not.toContain(plainCode)
+    })
+
+    it('keeps concurrent manager challenges isolated by challenge id', async () => {
+        const { createManagerOtpChallenge, verifyManagerOtpChallenge } = await loadChallengeContract()
+        const store = createStore()
+        const now = new Date('2026-05-31T00:00:00.000Z')
+        const first = await createManagerOtpChallenge({
+            userId: 'manager-1',
+            sessionId: 'session-1',
+            now,
+            store,
+        })
+        await createManagerOtpChallenge({
+            userId: 'manager-2',
+            sessionId: 'session-2',
+            now,
+            store,
+        })
+
+        await expect(
+            verifyManagerOtpChallenge({
+                challengeId: first.challenge.id,
+                code: first.plainCode,
+                now,
+                store,
+            }),
+        ).resolves.toEqual({ ok: true, stepUpSessionId: 'session-1' })
+    })
+
+    it('resends by replacing the stored OTP hash and returning the new plaintext code once cooldown passes', async () => {
+        const { createManagerOtpChallenge, resendManagerOtpChallenge, verifyManagerOtpChallenge } =
+            await loadChallengeContract()
+        const store = createStore()
+        const now = new Date('2026-05-31T00:00:00.000Z')
+        const { challenge, plainCode } = await createManagerOtpChallenge({
+            userId: 'manager-1',
+            sessionId: 'session-1',
+            now,
+            store,
+        })
+        const originalHash = challenge.codeHash
+
+        const resendAt = new Date('2026-05-31T00:01:01.000Z')
+        const resendResult = await resendManagerOtpChallenge({
+            challengeId: challenge.id,
+            now: resendAt,
+            store,
+        })
+
+        expect(resendResult).toEqual({ ok: true, plainCode: expect.stringMatching(/^\d{6}$/) })
+        if (!resendResult.ok) throw new Error('expected resend success')
+        expect(challenge.codeHash).not.toBe(originalHash)
+        expect(JSON.stringify(challenge)).not.toContain(resendResult.plainCode)
+        await expect(
+            verifyManagerOtpChallenge({ challengeId: challenge.id, code: plainCode, now: resendAt, store }),
+        ).resolves.toEqual({ ok: false, reason: 'invalid_code' })
+        await expect(
+            verifyManagerOtpChallenge({ challengeId: challenge.id, code: resendResult.plainCode, now: resendAt, store }),
+        ).resolves.toEqual({ ok: true, stepUpSessionId: 'session-1' })
+    })
+
+    it('does not resend an already-used challenge', async () => {
+        const { createManagerOtpChallenge, resendManagerOtpChallenge, verifyManagerOtpChallenge } =
+            await loadChallengeContract()
+        const store = createStore()
+        const now = new Date('2026-05-31T00:00:00.000Z')
+        const { challenge, plainCode } = await createManagerOtpChallenge({
+            userId: 'manager-1',
+            sessionId: 'session-1',
+            now,
+            store,
+        })
+
+        await verifyManagerOtpChallenge({ challengeId: challenge.id, code: plainCode, now, store })
+
+        await expect(
+            resendManagerOtpChallenge({
+                challengeId: challenge.id,
+                now: new Date('2026-05-31T00:01:01.000Z'),
+                store,
+            }),
+        ).resolves.toEqual({ ok: false, reason: 'used' })
     })
 })

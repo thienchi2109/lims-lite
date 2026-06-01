@@ -36,6 +36,8 @@ type DeliveryConfig = {
     resendClient?: ResendClientLike
 }
 
+const RESEND_TIMEOUT_MS = 10_000
+
 export function renderManagerOtpEmail(input: { code: string; expiresInMinutes: number }) {
     const subject = 'Mã xác thực email quản lý CDC-LIMS'
     const text = [
@@ -54,8 +56,8 @@ export function renderManagerOtpEmail(input: { code: string; expiresInMinutes: n
 }
 
 export function createManagerOtpEmailDelivery(config: DeliveryConfig = {}): ManagerOtpEmailDelivery {
-    const provider = config.provider ?? process.env.MANAGER_OTP_EMAIL_PROVIDER ?? 'noop'
     const nodeEnv = config.nodeEnv ?? process.env.NODE_ENV
+    const provider = config.provider ?? process.env.MANAGER_OTP_EMAIL_PROVIDER ?? (nodeEnv === 'production' ? 'resend' : 'noop')
 
     if (provider === 'noop') {
         if (nodeEnv === 'production') {
@@ -88,15 +90,20 @@ export function createManagerOtpEmailDelivery(config: DeliveryConfig = {}): Mana
 
     return {
         async sendOtp(input) {
-            const message = renderManagerOtpEmail(input)
-            const result = await resendClient.emails.send({
-                from,
-                to: [input.to],
-                subject: message.subject,
-                html: message.html,
-                text: message.text,
-                replyTo: config.replyTo ?? process.env.MANAGER_OTP_EMAIL_REPLY_TO,
-            })
+            let result: ResendSendResult
+            try {
+                const message = renderManagerOtpEmail(input)
+                result = await resendClient.emails.send({
+                    from,
+                    to: [input.to],
+                    subject: message.subject,
+                    html: message.html,
+                    text: message.text,
+                    replyTo: config.replyTo ?? process.env.MANAGER_OTP_EMAIL_REPLY_TO,
+                })
+            } catch (error) {
+                return { ok: false, reason: 'provider_failed', error }
+            }
 
             if (result.error) {
                 return { ok: false, reason: 'provider_failed', error: result.error }
@@ -112,17 +119,25 @@ function createResendClient(apiKey: string): ResendClientLike {
         emails: {
             async send(input) {
                 const { replyTo, ...rest } = input
-                const response = await fetch('https://api.resend.com/emails', {
-                    method: 'POST',
-                    headers: {
-                        Authorization: `Bearer ${apiKey}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        ...rest,
-                        ...(replyTo ? { reply_to: replyTo } : {}),
-                    }),
-                })
+                const controller = new AbortController()
+                const timeout = setTimeout(() => controller.abort(), RESEND_TIMEOUT_MS)
+                let response: Response
+                try {
+                    response = await fetch('https://api.resend.com/emails', {
+                        method: 'POST',
+                        headers: {
+                            Authorization: `Bearer ${apiKey}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            ...rest,
+                            ...(replyTo ? { reply_to: replyTo } : {}),
+                        }),
+                        signal: controller.signal,
+                    })
+                } finally {
+                    clearTimeout(timeout)
+                }
 
                 const payload = await response.json().catch(() => null)
 

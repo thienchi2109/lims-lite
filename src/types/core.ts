@@ -76,6 +76,23 @@ export const UpdateUserSchema = z.object({
 
 export type UpdateUser = z.infer<typeof UpdateUserSchema>
 
+export const ConfigureManagerOtpEmailSchema = z.object({
+    userId: z.string().uuid('ID người dùng không hợp lệ'),
+    otpEmail: z.string().email('Email OTP không hợp lệ'),
+})
+
+export type ConfigureManagerOtpEmail = z.infer<typeof ConfigureManagerOtpEmailSchema>
+
+export const ManagerStepUpPayloadSchema = z.object({
+    userId: z.string().min(1),
+    sessionId: z.string().min(1),
+    cohort: z.enum(['standard', 'confidential']),
+    otpEmailUpdatedAt: z.string().min(1),
+    expiresAt: z.string().datetime(),
+})
+
+export type ManagerStepUpPayload = z.infer<typeof ManagerStepUpPayloadSchema>
+
 // ============================================================================
 // CLIENT SCHEMAS
 // ============================================================================

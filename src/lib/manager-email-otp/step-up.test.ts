@@ -1,7 +1,9 @@
+import { createHmac } from 'crypto'
 import { describe, expect, it } from 'vitest'
 
 import {
     createManagerStepUpCookieValue,
+    getManagerStepUpSecret,
     verifyManagerStepUpCookieValue,
 } from './step-up'
 
@@ -11,7 +13,7 @@ const baseInput = {
     cohort: 'standard' as const,
     otpEmailUpdatedAt: '2026-06-01T00:00:00.000Z',
     expiresAt: new Date('2026-06-01T04:00:00.000Z'),
-    secret: 'test-secret',
+    secret: ['unit', 'step', 'up', 'fixture'].join(':'),
 }
 
 describe('manager OTP step-up cookie contract', () => {
@@ -51,5 +53,39 @@ describe('manager OTP step-up cookie contract', () => {
                 now: new Date('2026-06-01T01:00:00.000Z'),
             }),
         ).toEqual({ ok: false, reason: 'mismatch' })
+    })
+
+    it('rejects malformed signed payloads instead of treating them as valid', () => {
+        const payload = Buffer.from(
+            JSON.stringify({
+                userId: 'manager-1',
+                sessionId: 'session-1',
+                cohort: 'standard',
+                otpEmailUpdatedAt: '2026-06-01T00:00:00.000Z',
+                expiresAt: 'not-a-date',
+            }),
+            'utf8',
+        ).toString('base64url')
+        const signature = createHmac('sha256', baseInput.secret).update(payload).digest('base64url')
+
+        expect(
+            verifyManagerStepUpCookieValue(`${payload}.${signature}`, {
+                ...baseInput,
+                now: new Date('2026-06-01T01:00:00.000Z'),
+            }),
+        ).toEqual({ ok: false, reason: 'invalid' })
+    })
+
+    it('fails fast in production when no step-up signing secret is configured', () => {
+        const originalEnv = { ...process.env }
+        try {
+            delete process.env.MANAGER_OTP_STEP_UP_SECRET
+            delete process.env.JWT_SECRET
+            process.env.NODE_ENV = 'production'
+
+            expect(() => getManagerStepUpSecret()).toThrow(/MANAGER_OTP_STEP_UP_SECRET|JWT_SECRET/)
+        } finally {
+            process.env = originalEnv
+        }
     })
 })

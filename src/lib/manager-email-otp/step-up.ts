@@ -1,16 +1,9 @@
 import { createHmac, timingSafeEqual } from 'crypto'
+import { ManagerStepUpPayloadSchema, type ManagerStepUpPayload } from '@/types'
 
 export const MANAGER_STEP_UP_COOKIE_NAME = 'manager_otp_step_up'
 
 type ManagerStepUpCohort = 'standard' | 'confidential'
-
-type StepUpPayload = {
-    userId: string
-    sessionId: string
-    cohort: ManagerStepUpCohort
-    otpEmailUpdatedAt: string
-    expiresAt: string
-}
 
 type CreateInput = {
     userId: string
@@ -45,7 +38,7 @@ function signaturesMatch(left: string, right: string) {
 }
 
 export function createManagerStepUpCookieValue(input: CreateInput) {
-    const payload: StepUpPayload = {
+    const payload: ManagerStepUpPayload = {
         userId: input.userId,
         sessionId: input.sessionId,
         cohort: input.cohort,
@@ -75,14 +68,19 @@ export function verifyManagerStepUpCookieValue(
         return { ok: false, reason: 'invalid' }
     }
 
-    let payload: StepUpPayload
+    let payload: ManagerStepUpPayload
     try {
-        payload = JSON.parse(decodeBase64Url(encodedPayload)) as StepUpPayload
+        payload = ManagerStepUpPayloadSchema.parse(JSON.parse(decodeBase64Url(encodedPayload)))
     } catch {
         return { ok: false, reason: 'invalid' }
     }
 
-    if (Date.parse(payload.expiresAt) <= input.now.getTime()) {
+    const expiresAt = Date.parse(payload.expiresAt)
+    if (!Number.isFinite(expiresAt)) {
+        return { ok: false, reason: 'invalid' }
+    }
+
+    if (expiresAt <= input.now.getTime()) {
         return { ok: false, reason: 'expired' }
     }
 
@@ -109,5 +107,14 @@ export function getManagerStepUpCookieOptions(expiresAt?: Date) {
 }
 
 export function getManagerStepUpSecret() {
-    return process.env.MANAGER_OTP_STEP_UP_SECRET || process.env.JWT_SECRET || 'dev-manager-otp-step-up-secret'
+    const secret = process.env.MANAGER_OTP_STEP_UP_SECRET || process.env.JWT_SECRET
+    if (secret) {
+        return secret
+    }
+
+    if (process.env.NODE_ENV === 'production') {
+        throw new Error('MANAGER_OTP_STEP_UP_SECRET or JWT_SECRET is required in production')
+    }
+
+    return 'dev-manager-otp-step-up-secret'
 }

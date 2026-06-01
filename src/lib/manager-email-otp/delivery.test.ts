@@ -27,6 +27,23 @@ describe('manager OTP email delivery contract', () => {
         ).toThrow(/không được dùng noop/i)
     })
 
+    it('uses Resend as the default production provider', () => {
+        const originalEnv = { ...process.env }
+        try {
+            delete process.env.MANAGER_OTP_EMAIL_PROVIDER
+            process.env.RESEND_API_KEY = ''
+            process.env.MANAGER_OTP_EMAIL_FROM = 'CDC-LIMS <otp@send.cdclims.cloud>'
+
+            expect(() =>
+                createManagerOtpEmailDelivery({
+                    nodeEnv: 'production',
+                }),
+            ).toThrow(/RESEND_API_KEY/)
+        } finally {
+            process.env = originalEnv
+        }
+    })
+
     it('sends through the Resend provider adapter with configured sender fields', async () => {
         const send = vi.fn(async () => ({ data: { id: 'email-1' }, error: null }))
         const delivery = createManagerOtpEmailDelivery({
@@ -53,5 +70,29 @@ describe('manager OTP email delivery contract', () => {
                 subject: expect.stringContaining('Mã xác thực'),
             }),
         )
+    })
+
+    it('returns provider_failed when the Resend adapter rejects', async () => {
+        const providerError = new Error('network down')
+        const delivery = createManagerOtpEmailDelivery({
+            provider: 'resend',
+            apiKey: 're_test',
+            from: 'CDC-LIMS <otp@send.cdclims.cloud>',
+            resendClient: {
+                emails: {
+                    send: vi.fn(async () => {
+                        throw providerError
+                    }),
+                },
+            },
+        })
+
+        await expect(
+            delivery.sendOtp({
+                to: 'manager@example.com',
+                code: '123456',
+                expiresInMinutes: 5,
+            }),
+        ).resolves.toEqual({ ok: false, reason: 'provider_failed', error: providerError })
     })
 })

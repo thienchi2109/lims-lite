@@ -310,7 +310,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: `Action không được hỗ trợ: ${body.action}` }, { status: 400 })
     }
 
-    const actionDenial = await getClientActionDenial(body.action as ClientActionName)
+    const actionDenial = await getClientActionDenial(body.action as ClientActionName, request)
     if (actionDenial) {
         return NextResponse.json({ error: actionDenial.error }, { status: actionDenial.status })
     }
