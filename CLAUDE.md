@@ -124,6 +124,17 @@ If catching yourself thinking:
 > **This is NOT optional.** Context engineering determines whether tasks succeed or fail at scale.
 > **Invoke `Skill` tool with `context-engineering`** AT THE START of any session involving complex work.
 
+## Context-Mode Usage (CRITICAL)
+
+**MANDATORY:** Use context-mode for repo work in this workspace.
+
+- Use `ctx_batch_execute` for grouped reads, searches, status checks, `gh`/`git` inspection, and multi-command context gathering.
+- Use `ctx_execute` for tests, typecheck, lint, builds, and any command that can produce more than a few lines of output.
+- Use `ctx_execute_file` when analyzing a file without editing it.
+- Use `apply_patch` for file edits.
+- Do not use direct shell/`exec_command` for repo exploration, tests, lint/typecheck, `git status`, `git diff`, `gh pr view`, or long command output unless context-mode cannot perform the action.
+- Direct shell is acceptable only for truly tiny commands with fixed short output or interactive/process-control cases; still prefix commands with `rtk`.
+
 ### ❌ STOP Signs - You MUST Invoke Context Engineering Skill When:
 
 | Situation | Why It Matters |
