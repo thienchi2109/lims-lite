@@ -1,7 +1,13 @@
 'use server'
 
 import { createAdminClient, createClient } from '@/lib/supabase/server'
+import { managerRequiresOtp } from '@/lib/manager-email-otp/guards'
+import {
+    MANAGER_STEP_UP_COOKIE_NAME,
+    getManagerStepUpCookieOptions,
+} from '@/lib/manager-email-otp/step-up'
 import { LoginSchema } from '@/types'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 export async function login(_prevState: unknown, formData: FormData) {
@@ -88,11 +94,21 @@ export async function login(_prevState: unknown, formData: FormData) {
     // Get user role
     const { data: userData } = await supabase
         .from('users')
-        .select('role')
+        .select('role, can_access_confidential')
         .eq('id', data.user.id)
         .single()
 
     const role = userData?.role || 'analyst'
+
+    if (
+        role === 'manager' &&
+        managerRequiresOtp({
+            role,
+            can_access_confidential: userData?.can_access_confidential === true,
+        })
+    ) {
+        redirect('/manager/otp')
+    }
 
     // Redirect based on role
     if (role === 'doctor') {
@@ -105,5 +121,10 @@ export async function login(_prevState: unknown, formData: FormData) {
 export async function logout() {
     const supabase = await createClient()
     await supabase.auth.signOut()
+    const cookieStore = await cookies()
+    cookieStore.set(MANAGER_STEP_UP_COOKIE_NAME, '', {
+        ...getManagerStepUpCookieOptions(),
+        maxAge: 0,
+    })
     redirect('/login')
 }

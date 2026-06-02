@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { MANAGER_STEP_UP_COOKIE_NAME } from './lib/manager-email-otp/step-up'
 
 const mocks = vi.hoisted(() => ({
     createServerClient: vi.fn(),
@@ -26,8 +27,10 @@ import { middleware } from './middleware'
 
 const originalEnv = { ...process.env }
 
-function createRequest(pathname: string) {
-    return new NextRequest(`http://localhost${pathname}`)
+function createRequest(pathname: string, cookie?: string) {
+    return new NextRequest(`http://localhost${pathname}`, {
+        headers: cookie ? { cookie } : undefined,
+    })
 }
 
 function mockPasswordOnlyManagerSession() {
@@ -84,5 +87,15 @@ describe('manager email OTP middleware contract', () => {
 
         expect(location).not.toBeNull()
         expect(new URL(location ?? '').pathname).toBe('/manager/otp')
+    })
+
+    it('clears stale manager step-up cookies when redirecting back to OTP verification', async () => {
+        mockPasswordOnlyManagerSession()
+
+        const response = await middleware(createRequest('/manager', `${MANAGER_STEP_UP_COOKIE_NAME}=stale-cookie`))
+
+        expect(new URL(response.headers.get('location') ?? '').pathname).toBe('/manager/otp')
+        expect(response.headers.get('set-cookie')).toContain(`${MANAGER_STEP_UP_COOKIE_NAME}=;`)
+        expect(response.headers.get('set-cookie')).toContain('Max-Age=0')
     })
 })

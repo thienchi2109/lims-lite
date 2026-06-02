@@ -136,7 +136,7 @@ BEGIN
         'session-issue-44-lock',
         crypt('654321', gen_salt('bf')),
         now() + interval '5 minutes',
-        4,
+        2,
         now()
     )
     RETURNING id INTO v_challenge_id;
@@ -145,7 +145,7 @@ BEGIN
     INTO v_result;
 
     IF v_result->>'status' <> 'locked' THEN
-        RAISE EXCEPTION 'fifth wrong OTP should lock challenge, got %', v_result;
+        RAISE EXCEPTION 'third wrong OTP should lock challenge, got %', v_result;
     END IF;
 
     SELECT locked_at

@@ -2,7 +2,7 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { CreateUserSchema, UpdateUserSchema, PaginationSchema, UserRole } from '@/types'
+import { CreateUserSchema, UpdateUserSchema, PaginationSchema } from '@/types'
 import { z } from 'zod'
 import type { UserAttributes } from '@supabase/supabase-js'
 
