@@ -2,15 +2,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
     getManagerOtpRouteContext: vi.fn(),
-    createManagerOtpChallengeRecord: vi.fn(),
-    deleteManagerOtpChallengeRecord: vi.fn(),
+    resendManagerOtpChallengeRecord: vi.fn(),
+    restoreManagerOtpChallengeRecord: vi.fn(),
     sendOtp: vi.fn(),
 }))
 
 vi.mock('@/lib/manager-email-otp/server-records', () => ({
     getManagerOtpRouteContext: (...args: unknown[]) => mocks.getManagerOtpRouteContext(...args),
-    createManagerOtpChallengeRecord: (...args: unknown[]) => mocks.createManagerOtpChallengeRecord(...args),
-    deleteManagerOtpChallengeRecord: (...args: unknown[]) => mocks.deleteManagerOtpChallengeRecord(...args),
+    resendManagerOtpChallengeRecord: (...args: unknown[]) => mocks.resendManagerOtpChallengeRecord(...args),
+    restoreManagerOtpChallengeRecord: (...args: unknown[]) => mocks.restoreManagerOtpChallengeRecord(...args),
 }))
 
 vi.mock('@/lib/manager-email-otp/delivery', () => ({
@@ -21,7 +21,9 @@ vi.mock('@/lib/manager-email-otp/delivery', () => ({
 
 import { POST } from './route'
 
-describe('manager OTP challenge route', () => {
+const requestBody = { challengeId: '33333333-3333-4333-8333-333333333333' }
+
+describe('manager OTP resend route', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mocks.getManagerOtpRouteContext.mockResolvedValue({
@@ -31,51 +33,53 @@ describe('manager OTP challenge route', () => {
             otpEmail: 'manager@example.com',
             maskedEmail: 'ma***@example.com',
         })
-        mocks.createManagerOtpChallengeRecord.mockResolvedValue({
+        mocks.resendManagerOtpChallengeRecord.mockResolvedValue({
             ok: true,
             plainCode: '123456',
             challenge: {
-                id: '33333333-3333-4333-8333-333333333333',
+                id: requestBody.challengeId,
                 expires_at: '2026-06-02T04:05:00.000Z',
                 resend_available_at: '2026-06-02T04:01:00.000Z',
             },
+            rollback: {
+                id: requestBody.challengeId,
+                code_hash: 'old-hash',
+                expires_at: '2026-06-02T04:00:00.000Z',
+                attempt_count: 0,
+                resend_available_at: '2026-06-02T04:00:00.000Z',
+            },
         })
+        mocks.sendOtp.mockResolvedValue({ ok: true })
     })
 
-    it('deletes the created challenge when delivery throws', async () => {
-        mocks.sendOtp.mockRejectedValue(new Error('provider timeout'))
+    it('returns 429 when resend is still in cooldown', async () => {
+        mocks.resendManagerOtpChallengeRecord.mockResolvedValue({
+            ok: false,
+            status: 'cooldown',
+        })
 
-        const response = await POST(new Request('http://localhost/api/manager/otp/challenge', {
+        const response = await POST(new Request('http://localhost/api/manager/otp/resend', {
             method: 'POST',
             headers: { origin: 'http://localhost' },
+            body: JSON.stringify(requestBody),
         }))
 
         await expect(response.json()).resolves.toEqual({
             ok: false,
-            status: 'provider_failed',
+            status: 'cooldown',
             maskedEmail: 'ma***@example.com',
         })
-        expect(response.status).toBe(503)
-        expect(mocks.deleteManagerOtpChallengeRecord).toHaveBeenCalledWith('33333333-3333-4333-8333-333333333333')
+        expect(response.status).toBe(429)
     })
 
-    it('rejects POST requests without an Origin header', async () => {
-        const response = await POST(new Request('http://localhost/api/manager/otp/challenge', {
-            method: 'POST',
-        }))
-
-        await expect(response.json()).resolves.toEqual({ ok: false, status: 'invalid_origin' })
-        expect(response.status).toBe(403)
-        expect(mocks.createManagerOtpChallengeRecord).not.toHaveBeenCalled()
-    })
-
-    it('reports persistence failure when provider-error cleanup fails', async () => {
+    it('reports persistence failure when provider-error rollback fails', async () => {
         mocks.sendOtp.mockRejectedValue(new Error('provider timeout'))
-        mocks.deleteManagerOtpChallengeRecord.mockRejectedValue(new Error('delete failed'))
+        mocks.restoreManagerOtpChallengeRecord.mockRejectedValue(new Error('rollback failed'))
 
-        const response = await POST(new Request('http://localhost/api/manager/otp/challenge', {
+        const response = await POST(new Request('http://localhost/api/manager/otp/resend', {
             method: 'POST',
             headers: { origin: 'http://localhost' },
+            body: JSON.stringify(requestBody),
         }))
 
         await expect(response.json()).resolves.toEqual({

@@ -14,21 +14,12 @@ import {
     verifyManagerOtpChallengeRecord,
 } from '@/lib/manager-email-otp/server-records'
 import { isSameOriginRequest } from '../request-guards'
+import { contextErrorResponse } from '../responses'
 
 const VerifyOtpSchema = z.object({
     challengeId: z.string().uuid(),
     code: z.string().regex(/^\d{6}$/),
 })
-
-function contextErrorResponse(context: Exclude<Awaited<ReturnType<typeof getManagerOtpRouteContext>>, { ok: true }>) {
-    const status = context.status === 'unauthenticated' || context.status === 'session_expired'
-        ? 401
-        : context.status === 'forbidden'
-            ? 403
-            : 400
-
-    return NextResponse.json({ ok: false, status: context.status, maskedEmail: context.maskedEmail ?? null }, { status })
-}
 
 export async function POST(request: Request) {
     if (!isSameOriginRequest(request)) {

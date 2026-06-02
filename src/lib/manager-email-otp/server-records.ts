@@ -33,6 +33,14 @@ type ChallengeRecord = {
     resend_available_at: string
 }
 
+type PublicChallengeRecord = Pick<ChallengeRecord, 'id' | 'expires_at' | 'resend_available_at'>
+
+type ChallengeRpcResult = {
+    ok?: boolean
+    status?: 'cooldown' | 'locked'
+    challenge?: PublicChallengeRecord
+}
+
 function hashOtpCode(code: string) {
     return createHash('sha256').update(code).digest('hex')
 }
@@ -119,51 +127,35 @@ export function getManagerOtpStepUpCohort(context: Extract<ManagerOtpRouteContex
 
 export async function createManagerOtpChallengeRecord(context: Extract<ManagerOtpRouteContext, { ok: true }>) {
     const now = new Date()
-    const adminClient = createAdminClient()
-    const { data: existingChallenge } = await adminClient
-        .from('manager_otp_challenges')
-        .select('id, expires_at, resend_available_at')
-        .eq('user_id', context.userId)
-        .eq('session_id', context.sessionId)
-        .is('used_at', null)
-        .is('locked_at', null)
-        .gt('expires_at', now.toISOString())
-        .gt('resend_available_at', now.toISOString())
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-    if (existingChallenge) {
-        return {
-            ok: false as const,
-            status: 'cooldown',
-            challenge: existingChallenge as Pick<ChallengeRecord, 'id' | 'expires_at' | 'resend_available_at'>,
-        }
-    }
-
     const plainCode = generateOtpCode()
-    const { data, error } = await adminClient
-        .from('manager_otp_challenges')
-        .insert({
-            id: randomUUID(),
-            user_id: context.userId,
-            session_id: context.sessionId,
-            code_hash: hashOtpCode(plainCode),
-            expires_at: addMs(now, CHALLENGE_TTL_MS).toISOString(),
-            resend_available_at: addMs(now, RESEND_COOLDOWN_MS).toISOString(),
-        })
-        .select('id, expires_at, resend_available_at')
-        .single()
+    const { data, error } = await createAdminClient().rpc('create_manager_otp_challenge', {
+        p_challenge_id: randomUUID(),
+        p_user_id: context.userId,
+        p_session_id: context.sessionId,
+        p_code_hash: hashOtpCode(plainCode),
+        p_expires_at: addMs(now, CHALLENGE_TTL_MS).toISOString(),
+        p_resend_available_at: addMs(now, RESEND_COOLDOWN_MS).toISOString(),
+    })
+    const result = data as ChallengeRpcResult | null
 
-    if (error || !data) {
+    if (error || !result?.challenge) {
         throw new Error(error?.message ?? 'Không thể tạo mã OTP')
     }
 
-    return { ok: true as const, plainCode, challenge: data as Pick<ChallengeRecord, 'id' | 'expires_at' | 'resend_available_at'> }
+    if (result.ok === true) {
+        return { ok: true as const, plainCode, challenge: result.challenge }
+    }
+
+    if (result.status === 'cooldown' || result.status === 'locked') {
+        return { ok: false as const, status: result.status, challenge: result.challenge }
+    }
+
+    throw new Error('Không thể tạo mã OTP')
 }
 
 export async function deleteManagerOtpChallengeRecord(challengeId: string) {
-    await createAdminClient().from('manager_otp_challenges').delete().eq('id', challengeId)
+    const { error } = await createAdminClient().from('manager_otp_challenges').delete().eq('id', challengeId)
+    if (error) throw new Error(error.message)
 }
 
 async function readChallenge(context: Extract<ManagerOtpRouteContext, { ok: true }>, challengeId: string) {
@@ -190,6 +182,8 @@ export async function verifyManagerOtpChallengeRecord(context: Extract<ManagerOt
     const { data, error } = await adminClient.rpc('verify_manager_otp_challenge', {
         p_challenge_id: challenge.id,
         p_code: input.code,
+        p_session_id: context.sessionId,
+        p_user_id: context.userId,
     })
     const result = data as { ok?: boolean; status?: string } | null
 
@@ -259,7 +253,7 @@ export async function restoreManagerOtpChallengeRecord(rollback: Pick<
     ChallengeRecord,
     'id' | 'code_hash' | 'expires_at' | 'attempt_count' | 'resend_available_at'
 >) {
-    await createAdminClient()
+    const { error } = await createAdminClient()
         .from('manager_otp_challenges')
         .update({
             code_hash: rollback.code_hash,
@@ -268,4 +262,5 @@ export async function restoreManagerOtpChallengeRecord(rollback: Pick<
             resend_available_at: rollback.resend_available_at,
         })
         .eq('id', rollback.id)
+    if (error) throw new Error(error.message)
 }

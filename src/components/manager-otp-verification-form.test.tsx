@@ -98,4 +98,35 @@ describe('ManagerOtpVerificationForm', () => {
             expect(screen.getAllByText(/mã OTP đã được gửi/i).length).toBeGreaterThan(0)
         })
     })
+
+    it('preserves the active challenge returned by a cooldown response after reload', async () => {
+        const fetchMock = vi
+            .fn()
+            .mockResolvedValueOnce(Response.json({
+                ok: false,
+                status: 'cooldown',
+                challengeId: '44444444-4444-4444-8444-444444444444',
+                maskedEmail: 'ma***@example.com',
+                expiresAt: '2026-06-02T04:05:00.000Z',
+                resendAvailableAt: '2026-06-02T04:01:00.000Z',
+            }, { status: 429 }))
+            .mockResolvedValueOnce(Response.json({ ok: true }))
+        global.fetch = fetchMock as unknown as typeof fetch
+
+        render(<ManagerOtpVerificationForm initialMaskedEmail="ma***@example.com" />)
+
+        expect(await screen.findByText(/chưa thể gửi lại mã/i)).toBeDefined()
+        fireEvent.change(screen.getByLabelText('Mã OTP'), { target: { value: '123456' } })
+        fireEvent.click(screen.getByRole('button', { name: 'Xác nhận' }))
+
+        await waitFor(() => {
+            expect(fetchMock).toHaveBeenCalledWith('/api/manager/otp/verify', expect.objectContaining({
+                method: 'POST',
+                body: JSON.stringify({
+                    challengeId: '44444444-4444-4444-8444-444444444444',
+                    code: '123456',
+                }),
+            }))
+        })
+    })
 })

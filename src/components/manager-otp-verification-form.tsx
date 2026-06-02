@@ -62,9 +62,13 @@ export function ManagerOtpVerificationForm({ initialMaskedEmail }: { initialMask
 
             if (!response.ok || !result.ok || !result.challengeId) {
                 setMessage(mapStatusToMessage(result.status))
-                if (result.maskedEmail !== undefined) {
-                    setChallenge((current) => ({ ...current, maskedEmail: result.maskedEmail ?? current.maskedEmail }))
-                }
+                setChallenge((current) => ({
+                    ...current,
+                    challengeId: result.challengeId ?? current.challengeId,
+                    maskedEmail: result.maskedEmail ?? current.maskedEmail,
+                    expiresAt: result.expiresAt ?? current.expiresAt,
+                    resendAvailableAt: result.resendAvailableAt ?? current.resendAvailableAt,
+                }))
                 return
             }
 

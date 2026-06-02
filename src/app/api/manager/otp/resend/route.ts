@@ -8,20 +8,11 @@ import {
     resendManagerOtpChallengeRecord,
 } from '@/lib/manager-email-otp/server-records'
 import { isSameOriginRequest } from '../request-guards'
+import { contextErrorResponse } from '../responses'
 
 const ResendOtpSchema = z.object({
     challengeId: z.string().uuid(),
 })
-
-function contextErrorResponse(context: Exclude<Awaited<ReturnType<typeof getManagerOtpRouteContext>>, { ok: true }>) {
-    const status = context.status === 'unauthenticated' || context.status === 'session_expired'
-        ? 401
-        : context.status === 'forbidden'
-            ? 403
-            : 400
-
-    return NextResponse.json({ ok: false, status: context.status, maskedEmail: context.maskedEmail ?? null }, { status })
-}
 
 export async function POST(request: Request) {
     if (!isSameOriginRequest(request)) {
@@ -38,7 +29,8 @@ export async function POST(request: Request) {
 
     const result = await resendManagerOtpChallengeRecord(context, parsed.data.challengeId)
     if (!result.ok) {
-        return NextResponse.json({ ok: false, status: result.status, maskedEmail: context.maskedEmail }, { status: 400 })
+        const statusCode = result.status === 'cooldown' ? 429 : 400
+        return NextResponse.json({ ok: false, status: result.status, maskedEmail: context.maskedEmail }, { status: statusCode })
     }
 
     const delivery = createManagerOtpEmailDelivery()
@@ -49,7 +41,14 @@ export async function POST(request: Request) {
     }).catch(() => ({ ok: false as const }))
 
     if (!deliveryResult.ok) {
-        await restoreManagerOtpChallengeRecord(result.rollback)
+        try {
+            await restoreManagerOtpChallengeRecord(result.rollback)
+        } catch {
+            return NextResponse.json(
+                { ok: false, status: 'persist_failed', maskedEmail: context.maskedEmail },
+                { status: 500 },
+            )
+        }
         return NextResponse.json(
             { ok: false, status: 'provider_failed', maskedEmail: context.maskedEmail },
             { status: 503 },

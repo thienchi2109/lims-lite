@@ -7,16 +7,7 @@ import {
     getManagerOtpRouteContext,
 } from '@/lib/manager-email-otp/server-records'
 import { isSameOriginRequest } from '../request-guards'
-
-function contextErrorResponse(context: Exclude<Awaited<ReturnType<typeof getManagerOtpRouteContext>>, { ok: true }>) {
-    const status = context.status === 'unauthenticated' || context.status === 'session_expired'
-        ? 401
-        : context.status === 'forbidden'
-            ? 403
-            : 400
-
-    return NextResponse.json({ ok: false, status: context.status, maskedEmail: context.maskedEmail ?? null }, { status })
-}
+import { contextErrorResponse } from '../responses'
 
 export async function POST(request: Request) {
     if (!isSameOriginRequest(request)) {
@@ -28,6 +19,7 @@ export async function POST(request: Request) {
 
     const challengeResult = await createManagerOtpChallengeRecord(context)
     if (!challengeResult.ok) {
+        const statusCode = challengeResult.status === 'cooldown' ? 429 : 400
         return NextResponse.json({
             ok: false,
             status: challengeResult.status,
@@ -35,7 +27,7 @@ export async function POST(request: Request) {
             challengeId: challengeResult.challenge.id,
             expiresAt: challengeResult.challenge.expires_at,
             resendAvailableAt: challengeResult.challenge.resend_available_at,
-        }, { status: 429 })
+        }, { status: statusCode })
     }
 
     const { challenge, plainCode } = challengeResult
@@ -47,7 +39,14 @@ export async function POST(request: Request) {
     }).catch(() => ({ ok: false as const }))
 
     if (!deliveryResult.ok) {
-        await deleteManagerOtpChallengeRecord(challenge.id)
+        try {
+            await deleteManagerOtpChallengeRecord(challenge.id)
+        } catch {
+            return NextResponse.json(
+                { ok: false, status: 'persist_failed', maskedEmail: context.maskedEmail },
+                { status: 500 },
+            )
+        }
         return NextResponse.json(
             { ok: false, status: 'provider_failed', maskedEmail: context.maskedEmail },
             { status: 503 },
