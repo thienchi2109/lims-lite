@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { User } from '@/types'
 import { Button } from '@/components/ui/button'
-import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight, CheckCircle2, XCircle } from 'lucide-react'
+import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight, CheckCircle2, XCircle, KeyRound } from 'lucide-react'
 import {
     Table,
     TableBody,
@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { UserDialog } from '@/components/user-dialog'
+import { ManagerOtpEmailDialog } from '@/components/manager-otp-email-dialog'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { SearchInput } from '@/components/ui/search-input'
 import {
@@ -53,6 +54,7 @@ export function UserListTable({
     currentUserId,
 }: UserListTableProps) {
     const [editingUser, setEditingUser] = useState<User | null>(null)
+    const [otpEmailUser, setOtpEmailUser] = useState<User | null>(null)
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
     const router = useRouter()
     const pathname = usePathname()
@@ -159,6 +161,17 @@ export function UserListTable({
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
+                                            {user.role === 'manager' && user.id !== currentUserId && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => setOtpEmailUser(user)}
+                                                    className="h-8 w-8 p-0 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+                                                    title="Cấu hình email OTP"
+                                                >
+                                                    <KeyRound className="h-4 w-4" />
+                                                </Button>
+                                            )}
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
@@ -250,6 +263,12 @@ export function UserListTable({
                     currentUserId={currentUserId}
                 />
             )}
+
+            <ManagerOtpEmailDialog
+                open={!!otpEmailUser}
+                onOpenChange={(open) => !open && setOtpEmailUser(null)}
+                user={otpEmailUser}
+            />
         </div>
     )
 }

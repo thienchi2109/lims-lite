@@ -101,6 +101,15 @@ OTP lifecycle events are security-relevant and must be written to immutable audi
 5. Add Vietnamese UI for manager OTP verification and admin email configuration.
 6. Apply migrations via Docker, run `run_security_tests()`, run focused regression tests, `npm run typecheck`, and strict OpenSpec validation.
 
+Production rollout order:
+
+1. Deploy the verification UI, OTP routes, admin configuration workflow, and Resend configuration.
+2. Configure manager OTP destination emails through the intended user-management/admin workflow.
+3. Verify delivery and recovery guidance with cohort flags still disabled.
+4. Enable `MANAGER_EMAIL_OTP_ENABLED` and `MANAGER_HIV_EMAIL_OTP_ENABLED` only after configured managers can receive OTP email.
+
+The app does not keep a password-only bootstrap exception for OTP destination changes after a manager cohort flag is enabled. If recovery is needed, operators must disable the relevant cohort flag or update OTP destination metadata through an admin/database recovery procedure before re-enabling enforcement.
+
 Rollback: disable the manager step-up guard behind configuration or revert the middleware/API guard changes while keeping audit/challenge tables inert until a cleanup migration is approved.
 
 ## Open Questions
