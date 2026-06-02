@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs'
+import { join } from 'path'
 import { describe, expect, it } from 'vitest'
 
 type ManagerOtpChallenge = {
@@ -61,6 +63,23 @@ function createStore(): ChallengeStore {
 }
 
 describe('manager email OTP challenge contract', () => {
+    const rootDir = join(__dirname, '..', '..', '..')
+
+    it('keeps TypeScript and database OTP attempt limits aligned', () => {
+        const source = readFileSync(join(rootDir, 'src/lib/manager-email-otp/challenges.ts'), 'utf-8')
+        const migration = readFileSync(
+            join(rootDir, 'supabase/migrations/139_add_manager_otp_db_model.sql'),
+            'utf-8'
+        )
+
+        const tsAttemptLimit = source.match(/const MAX_ATTEMPTS = (?<limit>\d+)/)?.groups?.limit
+        const sqlAttemptLimit = migration.match(/v_attempt_count >= (?<limit>\d+)/)?.groups?.limit
+
+        expect(sqlAttemptLimit).toBeDefined()
+        expect(tsAttemptLimit).toBeDefined()
+        expect(sqlAttemptLimit).toBe(tsAttemptLimit)
+    })
+
     it('stores only a hash of the OTP and expires the challenge after five minutes', async () => {
         const { createManagerOtpChallenge } = await loadChallengeContract()
         const store = createStore()

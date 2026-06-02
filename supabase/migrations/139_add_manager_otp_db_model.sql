@@ -152,10 +152,10 @@ BEGIN
 
     UPDATE public.manager_otp_challenges
     SET attempt_count = v_attempt_count,
-        locked_at = CASE WHEN v_attempt_count >= 5 THEN now() ELSE locked_at END
+        locked_at = CASE WHEN v_attempt_count >= 3 THEN now() ELSE locked_at END
     WHERE id = p_challenge_id;
 
-    IF v_attempt_count >= 5 THEN
+    IF v_attempt_count >= 3 THEN
         RETURN jsonb_build_object('ok', false, 'status', 'locked');
     END IF;
 
