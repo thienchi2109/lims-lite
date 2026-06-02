@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Manager email OTP step-up is required after password login
-The system SHALL require configured manager cohorts to complete email OTP step-up after successful password authentication before accessing manager routes or manager-only operations.
+The system SHALL require configured manager cohorts to complete email OTP step-up after successful password authentication before accessing manager routes, manager-only operations, or `/api/client-actions` operations.
 
 #### Scenario: Manager password login requires OTP verification
 - **GIVEN** a user with role `manager` has successfully authenticated with username and password

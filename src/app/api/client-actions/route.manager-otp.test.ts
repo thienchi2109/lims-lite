@@ -94,6 +94,22 @@ describe('manager email OTP client action guard contract', () => {
         })
     })
 
+    it('denies shared client actions for password-only manager sessions when OTP is enabled', async () => {
+        mockPasswordOnlyManager()
+
+        await expect(getClientActionDenial('getSamples')).resolves.toEqual({
+            error: 'Yêu cầu xác thực OTP email quản lý trước khi tiếp tục',
+            status: 403,
+        })
+    })
+
+    it('allows shared client actions for manager cohorts when OTP enforcement is disabled', async () => {
+        process.env.MANAGER_EMAIL_OTP_ENABLED = 'FALSE'
+        mockPasswordOnlyManager()
+
+        await expect(getClientActionDenial('getSamples')).resolves.toBeNull()
+    })
+
     it('allows manager-only client actions when the request has a valid manager step-up cookie', async () => {
         mockSteppedUpManager()
         const cookieValue = createManagerStepUpCookieValue({
