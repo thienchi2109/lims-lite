@@ -5,6 +5,8 @@ const mocks = vi.hoisted(() => ({
     createAdminClient: vi.fn(),
     revalidatePath: vi.fn(),
     requireRole: vi.fn(),
+    shouldRequireManagerStepUp: vi.fn(),
+    cookieGet: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -16,6 +18,12 @@ vi.mock('next/cache', () => ({
     revalidatePath: (...args: unknown[]) => mocks.revalidatePath(...args),
 }))
 
+vi.mock('next/headers', () => ({
+    cookies: async () => ({
+        get: mocks.cookieGet,
+    }),
+}))
+
 vi.mock('@/lib/auth-helpers', () => ({
     requireRole: (...args: unknown[]) => mocks.requireRole(...args),
     isAuthError: (result: unknown) => (
@@ -24,6 +32,11 @@ vi.mock('@/lib/auth-helpers', () => ({
         'error' in result &&
         typeof (result as { error?: unknown }).error === 'string'
     ),
+}))
+
+vi.mock('@/lib/manager-email-otp/guards', () => ({
+    MANAGER_OTP_REQUIRED_ERROR: 'Yêu cầu xác thực OTP email quản lý trước khi tiếp tục',
+    shouldRequireManagerStepUp: (...args: unknown[]) => mocks.shouldRequireManagerStepUp(...args),
 }))
 
 type ManagerOtpUserActions = {
@@ -74,11 +87,49 @@ function createAdminOtpSettingsClient(result: {
     }
 }
 
+function createManagerStepUpContextClient(result: {
+    canAccessConfidential?: boolean
+    otpEmailUpdatedAt?: string | null
+    sessionId?: string | null
+} = {}) {
+    const usersQuery = {
+        select: vi.fn(() => usersQuery),
+        eq: vi.fn(() => usersQuery),
+        single: vi.fn(async () => ({
+            data: {
+                can_access_confidential: result.canAccessConfidential ?? false,
+                manager_otp_settings: {
+                    updated_at: result.otpEmailUpdatedAt ?? '2026-06-01T00:00:00.000Z',
+                },
+            },
+            error: null,
+        })),
+    }
+    const accessToken = result.sessionId === null
+        ? null
+        : ['header', Buffer.from(JSON.stringify({ session_id: result.sessionId ?? 'session-1' }), 'utf8').toString('base64url'), 'signature'].join('.')
+
+    return {
+        auth: {
+            getSession: vi.fn(async () => ({
+                data: {
+                    session: accessToken ? { access_token: accessToken } : null,
+                },
+                error: null,
+            })),
+        },
+        from: vi.fn(() => usersQuery),
+        usersQuery,
+    }
+}
+
 describe('manager OTP email user-management contract', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         vi.resetModules()
         mocks.requireRole.mockResolvedValue({ id: managerId, role: 'manager' })
+        mocks.shouldRequireManagerStepUp.mockReturnValue(false)
+        mocks.createClient.mockResolvedValue(createManagerStepUpContextClient())
     })
 
     it('exposes an admin-only action for configuring a manager OTP email destination', async () => {
@@ -116,6 +167,17 @@ describe('manager OTP email user-management contract', () => {
         expect(mocks.createAdminClient).not.toHaveBeenCalled()
     })
 
+    it('requires a completed manager OTP step-up before configuring another manager OTP email when enforcement is enabled', async () => {
+        mocks.shouldRequireManagerStepUp.mockReturnValue(true)
+        const actions = await loadUserActions()
+        const { configureManagerOtpEmail } = actions
+
+        await expect(
+            configureManagerOtpEmail({ userId: targetManagerId, otpEmail: 'otp@example.com' }),
+        ).rejects.toThrow('Yêu cầu xác thực OTP email quản lý trước khi tiếp tục')
+        expect(mocks.createAdminClient).not.toHaveBeenCalled()
+    })
+
     it('uses the service-role client for manager OTP email writes after manager authorization', async () => {
         const adminClient = createAdminOtpSettingsClient()
         mocks.createAdminClient.mockReturnValue(adminClient)
@@ -130,6 +192,15 @@ describe('manager OTP email user-management contract', () => {
         expect(adminClient.usersQuery.single).toHaveBeenCalled()
         expect(adminClient.query.upsert).toHaveBeenCalledWith(
             expect.objectContaining({ user_id: targetManagerId, otp_email: 'otp@example.com' }),
+        )
+        expect(mocks.shouldRequireManagerStepUp).toHaveBeenCalledWith(
+            expect.objectContaining({
+                userId: managerId,
+                role: 'manager',
+                sessionId: 'session-1',
+                otpEmailUpdatedAt: '2026-06-01T00:00:00.000Z',
+            }),
+            expect.objectContaining({ get: expect.any(Function) }),
         )
         expect(mocks.revalidatePath).toHaveBeenCalledWith('/manager/users')
     })
