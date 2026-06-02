@@ -73,20 +73,49 @@ describe('manager OTP resend route', () => {
     })
 
     it('reports persistence failure when provider-error rollback fails', async () => {
+        const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
         mocks.sendOtp.mockRejectedValue(new Error('provider timeout'))
         mocks.restoreManagerOtpChallengeRecord.mockRejectedValue(new Error('rollback failed'))
 
-        const response = await POST(new Request('http://localhost/api/manager/otp/resend', {
-            method: 'POST',
-            headers: { origin: 'http://localhost' },
-            body: JSON.stringify(requestBody),
-        }))
+        try {
+            const response = await POST(new Request('http://localhost/api/manager/otp/resend', {
+                method: 'POST',
+                headers: { origin: 'http://localhost' },
+                body: JSON.stringify(requestBody),
+            }))
 
-        await expect(response.json()).resolves.toEqual({
-            ok: false,
-            status: 'persist_failed',
-            maskedEmail: 'ma***@example.com',
-        })
-        expect(response.status).toBe(500)
+            await expect(response.json()).resolves.toEqual({
+                ok: false,
+                status: 'persist_failed',
+                maskedEmail: 'ma***@example.com',
+            })
+            expect(response.status).toBe(500)
+        } finally {
+            consoleError.mockRestore()
+        }
+    })
+
+    it('logs a sanitized provider failure without OTP or email values', async () => {
+        const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+        mocks.sendOtp.mockRejectedValue(new Error('provider timeout for 123456 manager@example.com'))
+        mocks.restoreManagerOtpChallengeRecord.mockResolvedValue(undefined)
+
+        try {
+            const response = await POST(new Request('http://localhost/api/manager/otp/resend', {
+                method: 'POST',
+                headers: { origin: 'http://localhost' },
+                body: JSON.stringify(requestBody),
+            }))
+
+            expect(response.status).toBe(503)
+            expect(consoleError).toHaveBeenCalledWith('Manager OTP resend delivery failed', {
+                status: 'provider_failed',
+            })
+            const loggedText = JSON.stringify(consoleError.mock.calls)
+            expect(loggedText).not.toContain('123456')
+            expect(loggedText).not.toContain('manager@example.com')
+        } finally {
+            consoleError.mockRestore()
+        }
     })
 })

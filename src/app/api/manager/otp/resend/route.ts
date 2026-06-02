@@ -41,6 +41,7 @@ export async function POST(request: Request) {
     }).catch(() => ({ ok: false as const }))
 
     if (!deliveryResult.ok) {
+        console.error('Manager OTP resend delivery failed', { status: 'provider_failed' })
         try {
             await restoreManagerOtpChallengeRecord(result.rollback)
         } catch {

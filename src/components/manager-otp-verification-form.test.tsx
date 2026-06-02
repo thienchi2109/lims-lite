@@ -129,4 +129,23 @@ describe('ManagerOtpVerificationForm', () => {
             }))
         })
     })
+
+    it('aborts the initial challenge request when the verification surface unmounts', async () => {
+        let requestSignal: AbortSignal | undefined
+        global.fetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+            requestSignal = init?.signal ?? undefined
+            return new Promise<Response>(() => undefined)
+        }) as typeof fetch
+
+        const { unmount } = render(<ManagerOtpVerificationForm initialMaskedEmail="ma***@example.com" />)
+
+        await waitFor(() => {
+            expect(requestSignal).toBeDefined()
+        })
+        expect(requestSignal?.aborted).toBe(false)
+
+        unmount()
+
+        expect(requestSignal?.aborted).toBe(true)
+    })
 })

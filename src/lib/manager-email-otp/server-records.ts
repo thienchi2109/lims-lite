@@ -139,7 +139,7 @@ export async function createManagerOtpChallengeRecord(context: Extract<ManagerOt
     const result = data as ChallengeRpcResult | null
 
     if (error || !result?.challenge) {
-        throw new Error(error?.message ?? 'Không thể tạo mã OTP')
+        throw new Error(error?.message ?? 'Unable to create manager OTP challenge')
     }
 
     if (result.ok === true) {
@@ -150,7 +150,7 @@ export async function createManagerOtpChallengeRecord(context: Extract<ManagerOt
         return { ok: false as const, status: result.status, challenge: result.challenge }
     }
 
-    throw new Error('Không thể tạo mã OTP')
+    throw new Error('Unable to create manager OTP challenge')
 }
 
 export async function deleteManagerOtpChallengeRecord(challengeId: string) {
@@ -238,7 +238,7 @@ export async function resendManagerOtpChallengeRecord(context: Extract<ManagerOt
         .single()
 
     if (error || !data) {
-        throw new Error(error?.message ?? 'Không thể gửi lại mã OTP')
+        throw new Error(error?.message ?? 'Unable to resend manager OTP challenge')
     }
 
     return {

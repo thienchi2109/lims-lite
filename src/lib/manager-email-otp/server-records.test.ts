@@ -42,6 +42,16 @@ function createChallengeQuery(challenge: unknown): Query {
     return query
 }
 
+function createUpdateQuery(data: unknown, error: unknown = null): Query {
+    const query = {
+        select: vi.fn(() => query),
+        eq: vi.fn(() => query),
+        single: vi.fn(async () => ({ data, error })),
+        update: vi.fn(() => query),
+    }
+    return query
+}
+
 describe('manager OTP server records', () => {
     beforeEach(() => {
         vi.clearAllMocks()
@@ -173,5 +183,38 @@ describe('manager OTP server records', () => {
             attempt_count: 0,
             resend_available_at: '2026-06-02T04:00:00.000Z',
         })).rejects.toThrow('rollback failed')
+    })
+
+    it('uses an English fallback error when challenge creation returns no row', async () => {
+        mocks.createAdminClient.mockReturnValue({
+            rpc: vi.fn(async () => ({ data: null, error: null })),
+        })
+
+        const { createManagerOtpChallengeRecord } = await import('./server-records')
+
+        await expect(createManagerOtpChallengeRecord(context))
+            .rejects.toThrow('Unable to create manager OTP challenge')
+    })
+
+    it('uses an English fallback error when resend update returns no row', async () => {
+        const readQuery = createChallengeQuery({
+            id: '33333333-3333-4333-8333-333333333333',
+            code_hash: 'old-hash',
+            expires_at: '2099-06-02T04:05:00.000Z',
+            used_at: null,
+            locked_at: null,
+            attempt_count: 0,
+            resend_available_at: '2026-06-02T04:00:00.000Z',
+        })
+        const updateQuery = createUpdateQuery(null)
+        const from = vi.fn()
+            .mockReturnValueOnce(readQuery)
+            .mockReturnValueOnce(updateQuery)
+        mocks.createAdminClient.mockReturnValue({ from })
+
+        const { resendManagerOtpChallengeRecord } = await import('./server-records')
+
+        await expect(resendManagerOtpChallengeRecord(context, '33333333-3333-4333-8333-333333333333'))
+            .rejects.toThrow('Unable to resend manager OTP challenge')
     })
 })

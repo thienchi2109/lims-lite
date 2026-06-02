@@ -49,7 +49,8 @@ export function ManagerOtpVerificationForm({ initialMaskedEmail }: { initialMask
 
     const canSubmit = useMemo(() => /^\d{6}$/.test(code) && Boolean(challenge.challengeId), [challenge.challengeId, code])
 
-    async function requestChallenge(endpoint: '/api/manager/otp/challenge' | '/api/manager/otp/resend') {
+    async function requestChallenge(endpoint: '/api/manager/otp/challenge' | '/api/manager/otp/resend', options?: { signal?: AbortSignal }) {
+        const signal = options?.signal
         setIsSending(true)
         setMessage(null)
         try {
@@ -57,8 +58,10 @@ export function ManagerOtpVerificationForm({ initialMaskedEmail }: { initialMask
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: challenge.challengeId ? JSON.stringify({ challengeId: challenge.challengeId }) : undefined,
+                signal,
             })
             const result = await response.json() as ApiResult
+            if (signal?.aborted) return
 
             if (!response.ok || !result.ok || !result.challengeId) {
                 setMessage(mapStatusToMessage(result.status))
@@ -81,14 +84,17 @@ export function ManagerOtpVerificationForm({ initialMaskedEmail }: { initialMask
             setCode('')
             setMessage('Mã OTP đã được gửi đến email đã cấu hình.')
         } catch {
+            if (signal?.aborted) return
             setMessage('Không thể gửi mã OTP. Vui lòng thử lại hoặc liên hệ quản trị viên.')
         } finally {
-            setIsSending(false)
+            if (!signal?.aborted) setIsSending(false)
         }
     }
 
     useEffect(() => {
-        void requestChallenge('/api/manager/otp/challenge')
+        const controller = new AbortController()
+        void requestChallenge('/api/manager/otp/challenge', { signal: controller.signal })
+        return () => controller.abort()
         // Run only once when the verification surface opens.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
