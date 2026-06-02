@@ -91,6 +91,7 @@ function createManagerStepUpContextClient(result: {
     canAccessConfidential?: boolean
     otpEmailUpdatedAt?: string | null
     sessionId?: string | null
+    userReadError?: { message: string } | null
 } = {}) {
     const usersQuery = {
         select: vi.fn(() => usersQuery),
@@ -102,7 +103,7 @@ function createManagerStepUpContextClient(result: {
                     updated_at: result.otpEmailUpdatedAt ?? '2026-06-01T00:00:00.000Z',
                 },
             },
-            error: null,
+            error: result.userReadError ?? null,
         })),
     }
     const accessToken = result.sessionId === null
@@ -175,6 +176,21 @@ describe('manager OTP email user-management contract', () => {
         await expect(
             configureManagerOtpEmail({ userId: targetManagerId, otpEmail: 'otp@example.com' }),
         ).rejects.toThrow('Yêu cầu xác thực OTP email quản lý trước khi tiếp tục')
+        expect(mocks.createAdminClient).not.toHaveBeenCalled()
+    })
+
+    it('fails closed when manager OTP context cannot be loaded before configuring an OTP email', async () => {
+        mocks.createClient.mockResolvedValue(createManagerStepUpContextClient({
+            userReadError: { message: 'relationship lookup failed' },
+        }))
+        mocks.createAdminClient.mockReturnValue(createAdminOtpSettingsClient())
+        const actions = await loadUserActions()
+        const { configureManagerOtpEmail } = actions
+
+        await expect(
+            configureManagerOtpEmail({ userId: targetManagerId, otpEmail: 'otp@example.com' }),
+        ).rejects.toThrow('Không thể xác minh trạng thái OTP của quản lý hiện tại')
+        expect(mocks.shouldRequireManagerStepUp).not.toHaveBeenCalled()
         expect(mocks.createAdminClient).not.toHaveBeenCalled()
     })
 

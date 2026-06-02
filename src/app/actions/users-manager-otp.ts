@@ -51,11 +51,16 @@ function readOtpEmailUpdatedAt(userData: { manager_otp_settings?: unknown } | nu
 
 async function requireManagerStepUpForOtpConfiguration(managerId: string) {
     const supabase = await createClient()
-    const { data: userData } = await supabase
+    const { data: userData, error: userDataError } = await supabase
         .from('users')
         .select('can_access_confidential, manager_otp_settings(updated_at)')
         .eq('id', managerId)
         .single()
+
+    if (userDataError || !userData) {
+        throw new Error('Không thể xác minh trạng thái OTP của quản lý hiện tại')
+    }
+
     const sessionResult = await supabase.auth.getSession?.()
     const cookieStore = await cookies()
 

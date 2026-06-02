@@ -20,7 +20,7 @@ The system SHALL treat manager email OTP step-up state as part of the authentica
 - **AND** the user's manager cohort has email OTP enabled by environment configuration
 - **AND** the session does not have valid manager email OTP step-up state
 - **WHEN** the user calls a manager-only Server Action or any `/api/client-actions` operation
-- **THEN** the system SHALL deny the operation and require email OTP step-up
+- **THEN** the system SHALL deny the operation before per-action authorization, including shared client-actions, and require email OTP step-up
 
 #### Scenario: Password-only manager session remains allowed when cohort OTP is disabled
 - **GIVEN** a user with role `manager` has a valid password-authenticated session
