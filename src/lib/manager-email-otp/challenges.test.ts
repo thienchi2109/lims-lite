@@ -80,6 +80,20 @@ describe('manager email OTP challenge contract', () => {
         expect(sqlAttemptLimit).toBe(tsAttemptLimit)
     })
 
+    it('keeps the database verification RPC aligned with app hashing and audit requirements', () => {
+        const migration = readFileSync(
+            join(rootDir, 'supabase/migrations/140_harden_manager_otp_verification_rpc.sql'),
+            'utf-8',
+        )
+
+        expect(migration).toContain("encode(digest(p_code, 'sha256'), 'hex')")
+        expect(migration).toContain('FOR UPDATE')
+        expect(migration).toContain('MANAGER_OTP_VERIFY_SUCCESS')
+        expect(migration).toContain('MANAGER_OTP_VERIFY_FAILED')
+        expect(migration).toContain('MANAGER_OTP_VERIFY_EXPIRED')
+        expect(migration).not.toMatch(/jsonb_build_object\([^)]*p_code/s)
+    })
+
     it('stores only a hash of the OTP and expires the challenge after five minutes', async () => {
         const { createManagerOtpChallenge } = await loadChallengeContract()
         const store = createStore()

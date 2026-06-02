@@ -131,7 +131,7 @@ describe('SampleDetailPanel redesigned layout', () => {
 
         expect(mockUseClient).toHaveBeenCalledWith({
             clientId: 'client-1',
-            placeholderData: expect.objectContaining({
+            initialData: expect.objectContaining({
                 name: 'Khach hang A',
                 id_card_num: '079123456789',
             }),
