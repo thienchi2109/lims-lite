@@ -24,7 +24,7 @@ async function requireTargetManager(adminClient: ReturnType<typeof createAdminCl
         .single()
 
     if (error || data?.role !== 'manager') {
-        throw new Error('Only manager users can receive a manager OTP email')
+        throw new Error('Chỉ tài khoản quản lý mới được cấu hình email nhận OTP quản lý')
     }
 }
 
@@ -33,7 +33,7 @@ export async function configureManagerOtpEmail(input: { userId: string; otpEmail
     const currentUser = await requireCurrentManager()
 
     if (validated.userId === currentUser.id) {
-        throw new Error('Managers cannot self-configure their own OTP email')
+        throw new Error('Quản lý không được tự cấu hình email OTP của chính mình')
     }
 
     const adminClient = createAdminClient()
@@ -48,7 +48,7 @@ export async function configureManagerOtpEmail(input: { userId: string; otpEmail
         })
 
     if (error) {
-        throw new Error(`Failed to configure manager OTP email: ${error.message}`)
+        throw new Error(`Không thể cấu hình email OTP quản lý: ${error.message}`)
     }
 
     revalidatePath('/manager/users')

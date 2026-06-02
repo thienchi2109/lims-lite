@@ -142,8 +142,19 @@ describe('manager OTP email user-management contract', () => {
 
         await expect(
             configureManagerOtpEmail({ userId: targetManagerId, otpEmail: 'otp@example.com' }),
-        ).rejects.toThrow(/manager/i)
+        ).rejects.toThrow(/quản lý/i)
         expect(adminClient.query.upsert).not.toHaveBeenCalled()
+    })
+
+    it('returns a Vietnamese error message when OTP email configuration fails', async () => {
+        const adminClient = createAdminOtpSettingsClient({ error: { message: 'database unavailable' } })
+        mocks.createAdminClient.mockReturnValue(adminClient)
+        const actions = await loadUserActions()
+        const { configureManagerOtpEmail } = actions
+
+        await expect(
+            configureManagerOtpEmail({ userId: targetManagerId, otpEmail: 'otp@example.com' }),
+        ).rejects.toThrow(/Không thể cấu hình email OTP quản lý/i)
     })
 
     it('requires manager authorization and service-role reads before returning a masked OTP email', async () => {

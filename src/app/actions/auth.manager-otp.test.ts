@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
     createClient: vi.fn(),
     createAdminClient: vi.fn(),
+    cookieSet: vi.fn(),
     redirect: vi.fn((path: string) => {
         throw new Error(`NEXT_REDIRECT:${path}`)
     }),
@@ -17,7 +18,17 @@ vi.mock('next/navigation', () => ({
     redirect: (path: string) => mocks.redirect(path),
 }))
 
-import { login } from './auth'
+vi.mock('next/headers', () => ({
+    cookies: async () => ({
+        set: mocks.cookieSet,
+    }),
+}))
+
+import { login, logout } from './auth'
+import {
+    MANAGER_STEP_UP_COOKIE_NAME,
+    getManagerStepUpCookieOptions,
+} from '@/lib/manager-email-otp/step-up'
 
 const originalEnv = { ...process.env }
 
@@ -94,5 +105,20 @@ describe('manager email OTP login contract', () => {
 
         await expect(login(null, createLoginFormData())).rejects.toThrow('NEXT_REDIRECT:/manager/otp')
         expect(mocks.redirect).toHaveBeenCalledWith('/manager/otp')
+    })
+
+    it('clears manager OTP step-up state when the server logout action is used', async () => {
+        mocks.createClient.mockResolvedValue({
+            auth: {
+                signOut: vi.fn(async () => undefined),
+            },
+        })
+
+        await expect(logout()).rejects.toThrow('NEXT_REDIRECT:/login')
+        expect(mocks.cookieSet).toHaveBeenCalledWith(MANAGER_STEP_UP_COOKIE_NAME, '', {
+            ...getManagerStepUpCookieOptions(),
+            maxAge: 0,
+        })
+        expect(mocks.redirect).toHaveBeenCalledWith('/login')
     })
 })

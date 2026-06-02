@@ -2,7 +2,12 @@
 
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { managerRequiresOtp } from '@/lib/manager-email-otp/guards'
+import {
+    MANAGER_STEP_UP_COOKIE_NAME,
+    getManagerStepUpCookieOptions,
+} from '@/lib/manager-email-otp/step-up'
 import { LoginSchema } from '@/types'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 export async function login(_prevState: unknown, formData: FormData) {
@@ -116,5 +121,10 @@ export async function login(_prevState: unknown, formData: FormData) {
 export async function logout() {
     const supabase = await createClient()
     await supabase.auth.signOut()
+    const cookieStore = await cookies()
+    cookieStore.set(MANAGER_STEP_UP_COOKIE_NAME, '', {
+        ...getManagerStepUpCookieOptions(),
+        maxAge: 0,
+    })
     redirect('/login')
 }
