@@ -251,7 +251,10 @@ export async function resendManagerOtpChallengeRecord(context: Extract<ManagerOt
         if (Date.parse(latestChallenge.expires_at) <= Date.now()) return { ok: false as const, status: 'expired' }
         if (Date.parse(latestChallenge.resend_available_at) > Date.now()) return { ok: false as const, status: 'cooldown' }
         const fallbackMessage = 'Unable to resend manager OTP challenge'
-        throw new Error(error?.code === 'PGRST116' ? fallbackMessage : error?.message ?? fallbackMessage)
+        const errorMessage = error?.code === 'PGRST116' || !error?.message
+            ? fallbackMessage
+            : error.message
+        throw new Error(errorMessage)
     }
 
     return {

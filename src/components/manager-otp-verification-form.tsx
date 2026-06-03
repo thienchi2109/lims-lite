@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertCircle, CheckCircle2, Loader2, Mail, RotateCw, ShieldCheck } from 'lucide-react'
 
@@ -46,10 +46,14 @@ export function ManagerOtpVerificationForm({ initialMaskedEmail }: { initialMask
     const [message, setMessage] = useState<string | null>(null)
     const [isSending, setIsSending] = useState(false)
     const [isVerifying, setIsVerifying] = useState(false)
+    const isChallengeRequestInFlight = useRef(false)
 
     const canSubmit = useMemo(() => /^\d{6}$/.test(code) && Boolean(challenge.challengeId), [challenge.challengeId, code])
 
     async function requestChallenge(endpoint: '/api/manager/otp/challenge' | '/api/manager/otp/resend', options?: { signal?: AbortSignal }) {
+        if (isChallengeRequestInFlight.current) return
+
+        isChallengeRequestInFlight.current = true
         const signal = options?.signal
         setIsSending(true)
         setMessage(null)
@@ -87,6 +91,7 @@ export function ManagerOtpVerificationForm({ initialMaskedEmail }: { initialMask
             if (signal?.aborted) return
             setMessage('Không thể gửi mã OTP. Vui lòng thử lại hoặc liên hệ quản trị viên.')
         } finally {
+            isChallengeRequestInFlight.current = false
             if (!signal?.aborted) setIsSending(false)
         }
     }

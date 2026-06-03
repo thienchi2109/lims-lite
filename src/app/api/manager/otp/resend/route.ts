@@ -14,6 +14,12 @@ const ResendOtpSchema = z.object({
     challengeId: z.string().uuid(),
 })
 
+function getRemainingExpiryMinutes(expiresAt: string) {
+    const remainingMs = new Date(expiresAt).getTime() - Date.now()
+    if (!Number.isFinite(remainingMs)) return 1
+    return Math.max(1, Math.ceil(remainingMs / 60000))
+}
+
 export async function POST(request: Request) {
     if (!isSameOriginRequest(request)) {
         return NextResponse.json({ ok: false, status: 'invalid_origin' }, { status: 403 })
@@ -37,7 +43,7 @@ export async function POST(request: Request) {
     const deliveryResult = await delivery.sendOtp({
         to: context.otpEmail,
         code: result.plainCode,
-        expiresInMinutes: 5,
+        expiresInMinutes: getRemainingExpiryMinutes(result.challenge.expires_at),
     }).catch(() => ({ ok: false as const }))
 
     if (!deliveryResult.ok) {
