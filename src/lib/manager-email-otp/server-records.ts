@@ -234,11 +234,24 @@ export async function resendManagerOtpChallengeRecord(context: Extract<ManagerOt
             resend_available_at: addMs(now, RESEND_COOLDOWN_MS).toISOString(),
         })
         .eq('id', challenge.id)
+        .eq('user_id', context.userId)
+        .eq('session_id', context.sessionId)
+        .is('used_at', null)
+        .is('locked_at', null)
+        .gt('expires_at', now.toISOString())
+        .lte('resend_available_at', now.toISOString())
         .select('id, expires_at, resend_available_at')
         .single()
 
     if (error || !data) {
-        throw new Error(error?.message ?? 'Unable to resend manager OTP challenge')
+        const latestChallenge = await readChallenge(context, challengeId)
+        if (!latestChallenge) return { ok: false as const, status: 'not_found' }
+        if (latestChallenge.used_at) return { ok: false as const, status: 'used' }
+        if (latestChallenge.locked_at) return { ok: false as const, status: 'locked' }
+        if (Date.parse(latestChallenge.expires_at) <= Date.now()) return { ok: false as const, status: 'expired' }
+        if (Date.parse(latestChallenge.resend_available_at) > Date.now()) return { ok: false as const, status: 'cooldown' }
+        const fallbackMessage = 'Unable to resend manager OTP challenge'
+        throw new Error(error?.code === 'PGRST116' ? fallbackMessage : error?.message ?? fallbackMessage)
     }
 
     return {

@@ -19,6 +19,9 @@ type Query = {
     eq: ReturnType<typeof vi.fn>
     single: ReturnType<typeof vi.fn>
     update: ReturnType<typeof vi.fn>
+    is?: ReturnType<typeof vi.fn>
+    gt?: ReturnType<typeof vi.fn>
+    lte?: ReturnType<typeof vi.fn>
     delete?: ReturnType<typeof vi.fn>
 }
 
@@ -46,6 +49,9 @@ function createUpdateQuery(data: unknown, error: unknown = null): Query {
     const query = {
         select: vi.fn(() => query),
         eq: vi.fn(() => query),
+        is: vi.fn(() => query),
+        gt: vi.fn(() => query),
+        lte: vi.fn(() => query),
         single: vi.fn(async () => ({ data, error })),
         update: vi.fn(() => query),
     }
@@ -196,7 +202,7 @@ describe('manager OTP server records', () => {
             .rejects.toThrow('Unable to create manager OTP challenge')
     })
 
-    it('uses an English fallback error when resend update returns no row', async () => {
+    it('guards resend updates with eligibility predicates', async () => {
         const readQuery = createChallengeQuery({
             id: '33333333-3333-4333-8333-333333333333',
             code_hash: 'old-hash',
@@ -210,6 +216,77 @@ describe('manager OTP server records', () => {
         const from = vi.fn()
             .mockReturnValueOnce(readQuery)
             .mockReturnValueOnce(updateQuery)
+        mocks.createAdminClient.mockReturnValue({ from })
+
+        const { resendManagerOtpChallengeRecord } = await import('./server-records')
+
+        await resendManagerOtpChallengeRecord(context, '33333333-3333-4333-8333-333333333333').catch(() => null)
+
+        expect(updateQuery.eq).toHaveBeenCalledWith('id', '33333333-3333-4333-8333-333333333333')
+        expect(updateQuery.eq).toHaveBeenCalledWith('user_id', '11111111-1111-4111-8111-111111111111')
+        expect(updateQuery.eq).toHaveBeenCalledWith('session_id', 'session-1')
+        expect(updateQuery.is).toHaveBeenCalledWith('used_at', null)
+        expect(updateQuery.is).toHaveBeenCalledWith('locked_at', null)
+        expect(updateQuery.gt).toHaveBeenCalledWith('expires_at', expect.any(String))
+        expect(updateQuery.lte).toHaveBeenCalledWith('resend_available_at', expect.any(String))
+    })
+
+    it('maps stale resend update misses to the latest challenge status', async () => {
+        const readQuery = createChallengeQuery({
+            id: '33333333-3333-4333-8333-333333333333',
+            code_hash: 'old-hash',
+            expires_at: '2099-06-02T04:05:00.000Z',
+            used_at: null,
+            locked_at: null,
+            attempt_count: 0,
+            resend_available_at: '2026-06-02T04:00:00.000Z',
+        })
+        const updateQuery = createUpdateQuery(null, { code: 'PGRST116', message: 'No rows returned' })
+        const staleReadQuery = createChallengeQuery({
+            id: '33333333-3333-4333-8333-333333333333',
+            code_hash: 'old-hash',
+            expires_at: '2099-06-02T04:05:00.000Z',
+            used_at: null,
+            locked_at: '2026-06-02T04:01:00.000Z',
+            attempt_count: 3,
+            resend_available_at: '2026-06-02T04:00:00.000Z',
+        })
+        const from = vi.fn()
+            .mockReturnValueOnce(readQuery)
+            .mockReturnValueOnce(updateQuery)
+            .mockReturnValueOnce(staleReadQuery)
+        mocks.createAdminClient.mockReturnValue({ from })
+
+        const { resendManagerOtpChallengeRecord } = await import('./server-records')
+
+        await expect(resendManagerOtpChallengeRecord(context, '33333333-3333-4333-8333-333333333333'))
+            .resolves.toEqual({ ok: false, status: 'locked' })
+    })
+
+    it('uses an English fallback error when resend update fails without a status change', async () => {
+        const readQuery = createChallengeQuery({
+            id: '33333333-3333-4333-8333-333333333333',
+            code_hash: 'old-hash',
+            expires_at: '2099-06-02T04:05:00.000Z',
+            used_at: null,
+            locked_at: null,
+            attempt_count: 0,
+            resend_available_at: '2026-06-02T04:00:00.000Z',
+        })
+        const updateQuery = createUpdateQuery(null, { code: 'PGRST116' })
+        const unchangedReadQuery = createChallengeQuery({
+            id: '33333333-3333-4333-8333-333333333333',
+            code_hash: 'old-hash',
+            expires_at: '2099-06-02T04:05:00.000Z',
+            used_at: null,
+            locked_at: null,
+            attempt_count: 0,
+            resend_available_at: '2026-06-02T04:00:00.000Z',
+        })
+        const from = vi.fn()
+            .mockReturnValueOnce(readQuery)
+            .mockReturnValueOnce(updateQuery)
+            .mockReturnValueOnce(unchangedReadQuery)
         mocks.createAdminClient.mockReturnValue({ from })
 
         const { resendManagerOtpChallengeRecord } = await import('./server-records')

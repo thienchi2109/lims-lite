@@ -34,17 +34,17 @@ export async function POST(request: Request) {
     const context = await getManagerOtpRouteContext()
     if (!context.ok) return contextErrorResponse(context)
 
+    const cohort = getManagerOtpStepUpCohort(context)
+    if (!cohort) {
+        return NextResponse.json({ ok: false, status: 'forbidden' }, { status: 403 })
+    }
+
     const result = await verifyManagerOtpChallengeRecord(context, parsed.data)
     if (!result.ok) {
         return NextResponse.json(
             { ok: false, status: result.status },
             { status: result.status === 'persist_failed' ? 500 : 400 },
         )
-    }
-
-    const cohort = getManagerOtpStepUpCohort(context)
-    if (!cohort) {
-        return NextResponse.json({ ok: false, status: 'forbidden' }, { status: 403 })
     }
 
     const expiresAt = new Date(Date.now() + getSessionTimeboxSeconds() * 1000)
