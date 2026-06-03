@@ -71,4 +71,28 @@ describe('ManagerOtpEmailDialog', () => {
 
         expect(screen.getByRole('button', { name: 'Lưu email OTP' })).toHaveProperty('disabled', true)
     })
+
+    it('shows an object error message instead of rendering object text', async () => {
+        mocks.configureManagerOtpEmailClient.mockResolvedValue({
+            error: { message: 'Email OTP không hợp lệ' },
+        })
+
+        render(
+            <ManagerOtpEmailDialog
+                open
+                onOpenChange={vi.fn()}
+                user={{ id: 'manager-2', full_name: 'Quản lý 2', role: 'manager' }}
+            />,
+        )
+
+        await screen.findByText(/ma\*\*\*@example\.com/)
+        fireEvent.change(screen.getByLabelText('Email nhận OTP'), { target: { value: 'otp@example.com' } })
+        fireEvent.click(screen.getByRole('button', { name: 'Lưu email OTP' }))
+
+        await waitFor(() => {
+            expect(mocks.toastError).toHaveBeenCalledWith('Email OTP không hợp lệ')
+        })
+        expect(mocks.toastSuccess).not.toHaveBeenCalled()
+        expect(mocks.refresh).not.toHaveBeenCalled()
+    })
 })

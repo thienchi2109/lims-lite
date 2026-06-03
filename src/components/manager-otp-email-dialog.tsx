@@ -27,6 +27,15 @@ function isValidEmail(value: string) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
 }
 
+function getOtpActionErrorMessage(error: unknown) {
+    if (typeof error === 'string') return error
+    if (error && typeof error === 'object' && 'message' in error) {
+        const message = (error as { message?: unknown }).message
+        if (typeof message === 'string' && message) return message
+    }
+    return 'Không thể cập nhật email OTP'
+}
+
 export function ManagerOtpEmailDialog({
     open,
     onOpenChange,
@@ -74,7 +83,7 @@ export function ManagerOtpEmailDialog({
         try {
             const result = await configureManagerOtpEmailClient({ userId: user.id, otpEmail })
             if (result && typeof result === 'object' && 'error' in result) {
-                toast.error(String(result.error ?? 'Không thể cập nhật email OTP'))
+                toast.error(getOtpActionErrorMessage(result.error))
                 return
             }
 

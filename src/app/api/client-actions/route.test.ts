@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
     accessionAndAssignTests: vi.fn(),
     recordSampleLabelPrint: vi.fn(),
     globalSearch: vi.fn(),
+    configureManagerOtpEmail: vi.fn(),
+    getMaskedManagerOtpEmail: vi.fn(),
     createClient: vi.fn(),
 }))
 
@@ -70,6 +72,11 @@ vi.mock('@/app/actions/users', () => ({
     createUser: vi.fn(),
     updateUser: vi.fn(),
     deleteUser: vi.fn(),
+}))
+
+vi.mock('@/app/actions/users-manager-otp', () => ({
+    configureManagerOtpEmail: (...args: unknown[]) => mocks.configureManagerOtpEmail(...args),
+    getMaskedManagerOtpEmail: (...args: unknown[]) => mocks.getMaskedManagerOtpEmail(...args),
 }))
 
 vi.mock('@/app/actions/clients', () => ({
@@ -147,6 +154,8 @@ describe('client action role guard', () => {
         mocks.createSample.mockResolvedValue({ data: { id: 'sample-1' } })
         mocks.accessionAndAssignTests.mockResolvedValue({ data: { sample: { id: 'sample-1' } } })
         mocks.globalSearch.mockResolvedValue({ data: [] })
+        mocks.configureManagerOtpEmail.mockResolvedValue({ success: true })
+        mocks.getMaskedManagerOtpEmail.mockResolvedValue({ otpEmail: null })
     })
 
     it('allows doctor to call the completed samples read action', async () => {
@@ -204,5 +213,25 @@ describe('client action role guard', () => {
             error: 'Bạn không có quyền thực hiện thao tác này',
         })
         expect(mocks.accessionAndAssignTests).not.toHaveBeenCalled()
+    })
+
+    it('rejects invalid manager OTP email payload before calling the action', async () => {
+        mocks.createClient.mockResolvedValue({
+            auth: {
+                getUser: vi.fn().mockResolvedValue({
+                    data: { user: null },
+                    error: null,
+                }),
+            },
+        })
+
+        const response = await POST(buildRequest('configureManagerOtpEmail', {
+            userId: 'not-a-uuid',
+            otpEmail: 'not-an-email',
+        }))
+
+        expect(response.status).toBe(400)
+        await expect(response.json()).resolves.toEqual({ error: 'ID người dùng không hợp lệ' })
+        expect(mocks.configureManagerOtpEmail).not.toHaveBeenCalled()
     })
 })

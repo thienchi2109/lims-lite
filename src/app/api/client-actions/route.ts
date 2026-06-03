@@ -50,6 +50,7 @@ import {
 } from '@/app/actions/search'
 import { generateCoA, regenerateCoA } from '@/app/actions/coa'
 import { isIsoDateString } from '@/lib/iso-date'
+import { ConfigureManagerOtpEmailSchema } from '@/types'
 import type { ClientActionName, ClientActionRequest } from '@/lib/client-actions/types'
 import { isAllowedOrigin, mapErrorToStatus } from './route-helpers'
 import { getClientActionDenial } from './role-guard'
@@ -192,7 +193,13 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
         }
         return deleteUser(payload.userId)
     },
-    configureManagerOtpEmail: async (payload) => configureManagerOtpEmail(payload),
+    configureManagerOtpEmail: async (payload) => {
+        const parsed = ConfigureManagerOtpEmailSchema.safeParse(payload)
+        if (!parsed.success) {
+            return { error: parsed.error.issues[0]?.message ?? 'Thông tin email OTP không hợp lệ' }
+        }
+        return configureManagerOtpEmail(parsed.data)
+    },
     getMaskedManagerOtpEmail: async (payload) => {
         if (!payload?.userId) {
             return { error: 'User ID là bắt buộc' }
