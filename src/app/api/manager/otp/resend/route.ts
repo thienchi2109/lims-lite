@@ -17,7 +17,7 @@ const ResendOtpSchema = z.object({
 function getRemainingExpiryMinutes(expiresAt: string) {
     const remainingMs = new Date(expiresAt).getTime() - Date.now()
     if (!Number.isFinite(remainingMs)) return 1
-    return Math.max(1, Math.ceil(remainingMs / 60000))
+    return Math.max(1, Math.floor(remainingMs / 60000))
 }
 
 export async function POST(request: Request) {

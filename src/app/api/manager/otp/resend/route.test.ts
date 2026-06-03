@@ -58,7 +58,7 @@ describe('manager OTP resend route', () => {
 
     it('derives the delivery expiration window from the challenge expiry', async () => {
         vi.useFakeTimers()
-        vi.setSystemTime(new Date('2026-06-02T04:01:30.000Z'))
+        vi.setSystemTime(new Date('2026-06-02T04:00:59.000Z'))
 
         await POST(new Request('http://localhost/api/manager/otp/resend', {
             method: 'POST',

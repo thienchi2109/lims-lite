@@ -47,6 +47,7 @@ export function ManagerOtpVerificationForm({ initialMaskedEmail }: { initialMask
     const [isSending, setIsSending] = useState(false)
     const [isVerifying, setIsVerifying] = useState(false)
     const isChallengeRequestInFlight = useRef(false)
+    const isMounted = useRef(true)
 
     const canSubmit = useMemo(() => /^\d{6}$/.test(code) && Boolean(challenge.challengeId), [challenge.challengeId, code])
 
@@ -92,14 +93,17 @@ export function ManagerOtpVerificationForm({ initialMaskedEmail }: { initialMask
             setMessage('Không thể gửi mã OTP. Vui lòng thử lại hoặc liên hệ quản trị viên.')
         } finally {
             isChallengeRequestInFlight.current = false
-            if (!signal?.aborted) setIsSending(false)
+            if (isMounted.current) setIsSending(false)
         }
     }
 
     useEffect(() => {
         const controller = new AbortController()
         void requestChallenge('/api/manager/otp/challenge', { signal: controller.signal })
-        return () => controller.abort()
+        return () => {
+            isMounted.current = false
+            controller.abort()
+        }
         // Run only once when the verification surface opens.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
