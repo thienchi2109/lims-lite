@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertCircle, CheckCircle2, Loader2, Mail, RotateCw, ShieldCheck } from 'lucide-react'
 
@@ -46,10 +46,15 @@ export function ManagerOtpVerificationForm({ initialMaskedEmail }: { initialMask
     const [message, setMessage] = useState<string | null>(null)
     const [isSending, setIsSending] = useState(false)
     const [isVerifying, setIsVerifying] = useState(false)
+    const isChallengeRequestInFlight = useRef(false)
+    const isMounted = useRef(true)
 
     const canSubmit = useMemo(() => /^\d{6}$/.test(code) && Boolean(challenge.challengeId), [challenge.challengeId, code])
 
     async function requestChallenge(endpoint: '/api/manager/otp/challenge' | '/api/manager/otp/resend', options?: { signal?: AbortSignal }) {
+        if (isChallengeRequestInFlight.current) return
+
+        isChallengeRequestInFlight.current = true
         const signal = options?.signal
         setIsSending(true)
         setMessage(null)
@@ -87,14 +92,18 @@ export function ManagerOtpVerificationForm({ initialMaskedEmail }: { initialMask
             if (signal?.aborted) return
             setMessage('Không thể gửi mã OTP. Vui lòng thử lại hoặc liên hệ quản trị viên.')
         } finally {
-            if (!signal?.aborted) setIsSending(false)
+            isChallengeRequestInFlight.current = false
+            if (isMounted.current) setIsSending(false)
         }
     }
 
     useEffect(() => {
         const controller = new AbortController()
         void requestChallenge('/api/manager/otp/challenge', { signal: controller.signal })
-        return () => controller.abort()
+        return () => {
+            isMounted.current = false
+            controller.abort()
+        }
         // Run only once when the verification surface opens.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])

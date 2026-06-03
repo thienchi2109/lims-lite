@@ -238,6 +238,14 @@ export function deleteUserClient(userId: string) {
     return callClientAction('deleteUser', { userId })
 }
 
+export function configureManagerOtpEmailClient(data: { userId: string; otpEmail: string }) {
+    return callClientAction<{ success?: boolean; error?: unknown }>('configureManagerOtpEmail', data)
+}
+
+export function getMaskedManagerOtpEmailClient(userId: string) {
+    return callClientAction<{ otpEmail: string | null }>('getMaskedManagerOtpEmail', { userId })
+}
+
 export function rejectSampleClient(data: RejectSample) {
     return callClientAction('rejectSample', data)
 }

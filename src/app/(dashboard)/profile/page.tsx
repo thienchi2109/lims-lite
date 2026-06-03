@@ -7,6 +7,7 @@ import { DashboardHeader } from '@/components/dashboard-header'
 import { UserProfileInfo } from '@/components/user-profile-info'
 import { ChangePasswordForm } from '@/components/change-password-form'
 import SignatureUpload from '@/components/profile/signature-upload'
+import { ManagerOtpProfileNotice } from '@/components/manager-otp-profile-notice'
 
 export default async function ProfilePage() {
     const supabase = await createClient()
@@ -60,6 +61,10 @@ export default async function ProfilePage() {
 
                     {/* Right Column: Settings */}
                     <div className="lg:col-span-2 space-y-8">
+                        {userData.role === 'manager' && (
+                            <ManagerOtpProfileNotice />
+                        )}
+
                         {/* Change Password Section */}
                         <ChangePasswordForm />
 

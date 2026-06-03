@@ -99,6 +99,19 @@ describe('ManagerOtpVerificationForm', () => {
         })
     })
 
+    it('does not start a retry while the initial challenge request is pending', async () => {
+        const fetchMock = vi.fn(async () => new Promise<Response>(() => undefined))
+        global.fetch = fetchMock as unknown as typeof fetch
+
+        render(<ManagerOtpVerificationForm initialMaskedEmail="ma***@example.com" />)
+
+        fireEvent.click(screen.getByRole('button', { name: 'Thử gửi lại' }))
+
+        await waitFor(() => {
+            expect(fetchMock).toHaveBeenCalledTimes(1)
+        })
+    })
+
     it('preserves the active challenge returned by a cooldown response after reload', async () => {
         const fetchMock = vi
             .fn()

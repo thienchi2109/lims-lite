@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
     getManagerOtpRouteContext: vi.fn(),
@@ -50,6 +50,25 @@ describe('manager OTP resend route', () => {
             },
         })
         mocks.sendOtp.mockResolvedValue({ ok: true })
+    })
+
+    afterEach(() => {
+        vi.useRealTimers()
+    })
+
+    it('derives the delivery expiration window from the challenge expiry', async () => {
+        vi.useFakeTimers()
+        vi.setSystemTime(new Date('2026-06-02T04:00:59.000Z'))
+
+        await POST(new Request('http://localhost/api/manager/otp/resend', {
+            method: 'POST',
+            headers: { origin: 'http://localhost' },
+            body: JSON.stringify(requestBody),
+        }))
+
+        expect(mocks.sendOtp).toHaveBeenCalledWith(expect.objectContaining({
+            expiresInMinutes: 4,
+        }))
     })
 
     it('returns 429 when resend is still in cooldown', async () => {
