@@ -50,6 +50,11 @@ export function ManagerOtpVerificationForm({ initialMaskedEmail }: { initialMask
     const isMounted = useRef(true)
 
     const canSubmit = useMemo(() => /^\d{6}$/.test(code) && Boolean(challenge.challengeId), [challenge.challengeId, code])
+    const challengeMessage = challenge.challengeId
+        ? `Mã OTP đã được gửi đến ${challenge.maskedEmail ?? 'email đã cấu hình'}.`
+        : isSending
+            ? 'Đang gửi mã OTP đến email đã cấu hình.'
+            : 'Chưa có mã OTP sẵn sàng. Vui lòng thử gửi lại.'
 
     async function requestChallenge(endpoint: '/api/manager/otp/challenge' | '/api/manager/otp/resend', options?: { signal?: AbortSignal }) {
         if (isChallengeRequestInFlight.current) return
@@ -148,7 +153,7 @@ export function ManagerOtpVerificationForm({ initialMaskedEmail }: { initialMask
                     <div className="space-y-1">
                         <h2 className="text-lg font-semibold text-slate-950">Nhập mã OTP email</h2>
                         <p className="text-sm text-slate-600">
-                            Mã OTP đã được gửi đến {challenge.maskedEmail ?? 'email đã cấu hình'}.
+                            {challengeMessage}
                         </p>
                     </div>
                 </div>

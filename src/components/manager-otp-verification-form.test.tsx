@@ -39,7 +39,7 @@ describe('ManagerOtpVerificationForm', () => {
     it('sends an OTP, shows the masked destination, and verifies a six-digit code', async () => {
         render(<ManagerOtpVerificationForm initialMaskedEmail="ma***@example.com" />)
 
-        expect(await screen.findByText(/mã OTP đã được gửi/i)).toBeDefined()
+        expect(await screen.findByText(/Mã OTP đã được gửi đến ma\*\*\*@example\.com\./i)).toBeDefined()
         expect(screen.getByText(/ma\*\*\*@example\.com/)).toBeDefined()
 
         fireEvent.change(screen.getByLabelText('Mã OTP'), { target: { value: '123456' } })
@@ -68,6 +68,7 @@ describe('ManagerOtpVerificationForm', () => {
 
         expect(await screen.findByText(/không thể gửi mã OTP/i)).toBeDefined()
         expect(screen.getAllByText(/liên hệ quản trị viên/i).length).toBeGreaterThan(0)
+        expect(screen.queryByText(/mã OTP đã được gửi đến/i)).toBeNull()
         expect(screen.queryByText('manager@example.com')).toBeNull()
     })
 
@@ -118,12 +119,14 @@ describe('ManagerOtpVerificationForm', () => {
             .fn()
             .mockRejectedValueOnce(new DOMException('Aborted', 'AbortError'))
             .mockResolvedValueOnce(Response.json({
-                ok: true,
+                ok: false,
+                status: 'cooldown',
                 challengeId: '33333333-3333-4333-8333-333333333333',
                 maskedEmail: 'ma***@example.com',
                 expiresAt: '2026-06-02T04:05:00.000Z',
                 resendAvailableAt: '2026-06-02T04:01:00.000Z',
-            }))
+            }, { status: 429 }))
+            .mockResolvedValueOnce(Response.json({ ok: true }))
         global.fetch = fetchMock as unknown as typeof fetch
 
         render(
@@ -139,6 +142,43 @@ describe('ManagerOtpVerificationForm', () => {
             expect((screen.getByRole('button', { name: 'Thử gửi lại' }) as HTMLButtonElement).disabled).toBe(false)
         })
         fireEvent.click(screen.getByRole('button', { name: 'Thử gửi lại' }))
+
+        expect(await screen.findByText(/chưa thể gửi lại mã/i)).toBeDefined()
+        fireEvent.change(screen.getByLabelText('Mã OTP'), { target: { value: '123456' } })
+        fireEvent.click(screen.getByRole('button', { name: 'Xác nhận' }))
+
+        await waitFor(() => {
+            expect(fetchMock).toHaveBeenCalledWith('/api/manager/otp/verify', expect.objectContaining({
+                method: 'POST',
+                body: JSON.stringify({
+                    challengeId: '33333333-3333-4333-8333-333333333333',
+                    code: '123456',
+                }),
+            }))
+        })
+    })
+
+    it('lets the manager verify when the initial challenge request succeeds', async () => {
+        const fetchMock = vi
+            .fn()
+            .mockResolvedValueOnce(Response.json({
+                ok: true,
+                challengeId: '33333333-3333-4333-8333-333333333333',
+                maskedEmail: 'ma***@example.com',
+                expiresAt: '2026-06-02T04:05:00.000Z',
+                resendAvailableAt: '2026-06-02T04:01:00.000Z',
+            }))
+            .mockResolvedValueOnce(Response.json({ ok: true }))
+        global.fetch = fetchMock as unknown as typeof fetch
+
+        render(<ManagerOtpVerificationForm initialMaskedEmail="ma***@example.com" />)
+
+        expect(await screen.findByText(/Mã OTP đã được gửi đến ma\*\*\*@example\.com\./i)).toBeDefined()
+        fireEvent.change(screen.getByLabelText('Mã OTP'), { target: { value: '123456' } })
+        await waitFor(() => {
+            expect((screen.getByRole('button', { name: 'Xác nhận' }) as HTMLButtonElement).disabled).toBe(false)
+        })
+        fireEvent.click(screen.getByRole('button', { name: 'Xác nhận' }))
 
         await waitFor(() => {
             expect(fetchMock).toHaveBeenCalledTimes(2)
