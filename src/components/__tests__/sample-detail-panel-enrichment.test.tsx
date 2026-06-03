@@ -57,7 +57,7 @@ describe('SampleDetailPanel enrichment isolation', () => {
 
         expect(mockUseClient).toHaveBeenCalledWith({
             clientId: 'client-1',
-            initialData: sample.client,
+            placeholderData: sample.client,
         })
 
         expect(screen.getByText('CDC-XN-0001')).toBeDefined()

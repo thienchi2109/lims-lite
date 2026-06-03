@@ -65,7 +65,7 @@ async function requireManagerStepUpForOtpConfiguration(managerId: string) {
     const cookieStore = await cookies()
 
     if (
-        shouldRequireManagerStepUp(
+        await shouldRequireManagerStepUp(
             {
                 userId: managerId,
                 role: 'manager',

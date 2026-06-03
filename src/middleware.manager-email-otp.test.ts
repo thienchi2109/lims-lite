@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { MANAGER_STEP_UP_COOKIE_NAME } from './lib/manager-email-otp/step-up'
+import { createManagerStepUpCookieValue, MANAGER_STEP_UP_COOKIE_NAME } from './lib/manager-email-otp/step-up'
 
 const mocks = vi.hoisted(() => ({
     createServerClient: vi.fn(),
@@ -26,6 +26,7 @@ vi.mock('@/lib/supabase/edge-admin', () => ({
 import { middleware } from './middleware'
 
 const originalEnv = { ...process.env }
+const otpEmailUpdatedAt = '2026-06-01T00:00:00.000Z'
 
 function createRequest(pathname: string, cookie?: string) {
     return new NextRequest(`http://localhost${pathname}`, {
@@ -38,14 +39,20 @@ function mockPasswordOnlyManagerSession() {
         select: vi.fn(() => usersQuery),
         eq: vi.fn(() => usersQuery),
         single: vi.fn(async () => ({
-            data: { role: 'manager', can_access_confidential: false },
+            data: {
+                role: 'manager',
+                can_access_confidential: false,
+                manager_otp_settings: { updated_at: otpEmailUpdatedAt },
+            },
             error: null,
         })),
     }
 
     mocks.createEdgeAdminClient.mockReturnValue({
-        rpc: vi.fn(async () => ({
-            data: new Date(Date.now()).toISOString(),
+        rpc: vi.fn(async (fnName: string) => ({
+            data: fnName === 'get_session_created_at'
+                ? new Date(Date.now()).toISOString()
+                : otpEmailUpdatedAt,
             error: null,
         })),
     })
@@ -97,5 +104,23 @@ describe('manager email OTP middleware contract', () => {
         expect(new URL(response.headers.get('location') ?? '').pathname).toBe('/manager/otp')
         expect(response.headers.get('set-cookie')).toContain(`${MANAGER_STEP_UP_COOKIE_NAME}=;`)
         expect(response.headers.get('set-cookie')).toContain('Max-Age=0')
+    })
+
+    it('allows manager routes when the step-up cookie is valid for the current session', async () => {
+        mockPasswordOnlyManagerSession()
+        const cookieValue = await createManagerStepUpCookieValue({
+            userId: 'manager-1',
+            sessionId: 'session-1',
+            cohort: 'standard',
+            otpEmailUpdatedAt,
+            expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+            secret: 'middleware-step-up-secret',
+        })
+        process.env.MANAGER_OTP_STEP_UP_SECRET = 'middleware-step-up-secret'
+
+        const response = await middleware(createRequest('/manager', `${MANAGER_STEP_UP_COOKIE_NAME}=${cookieValue}`))
+
+        expect(response.headers.get('location')).toBeNull()
+        expect(response.headers.get('set-cookie') ?? '').not.toContain(`${MANAGER_STEP_UP_COOKIE_NAME}=;`)
     })
 })

@@ -87,7 +87,7 @@ export async function getClientActionDenial(action: ClientActionName, request?: 
 
     if (
         userData?.role === 'manager' &&
-        shouldRequireManagerStepUp(
+        await shouldRequireManagerStepUp(
             {
                 userId: user.id,
                 role: userData.role,

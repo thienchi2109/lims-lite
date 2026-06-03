@@ -90,7 +90,7 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
         error: clientError,
     } = useClient({
         clientId: sample?.client_id ?? null,
-        initialData: embeddedClient ?? undefined,
+        placeholderData: embeddedClient ?? undefined,
     })
 
     const sampleId = sample?.sample_id

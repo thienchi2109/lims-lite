@@ -112,7 +112,7 @@ describe('manager email OTP client action guard contract', () => {
 
     it('allows manager-only client actions when the request has a valid manager step-up cookie', async () => {
         mockSteppedUpManager()
-        const cookieValue = createManagerStepUpCookieValue({
+        const cookieValue = await createManagerStepUpCookieValue({
             userId: 'manager-1',
             sessionId: 'session-1',
             cohort: 'standard',

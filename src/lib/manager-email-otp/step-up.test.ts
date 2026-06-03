@@ -1,4 +1,6 @@
 import { createHmac } from 'crypto'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -21,29 +23,43 @@ describe('manager OTP step-up cookie contract', () => {
         vi.unstubAllEnvs()
     })
 
-    it('accepts a signed cookie tied to the authenticated user and session', () => {
-        const cookieValue = createManagerStepUpCookieValue(baseInput)
+    it('keeps the step-up helper compatible with Edge middleware imports', () => {
+        const source = readFileSync(join(process.cwd(), 'src/lib/manager-email-otp/step-up.ts'), 'utf8')
+
+        expect(source).not.toMatch(/from ['"](?:node:)?crypto['"]/)
+        expect(source).not.toMatch(/\bBuffer\b/)
+    })
+
+    it('accepts a signed cookie tied to the authenticated user and session', async () => {
+        const cookieValue = await createManagerStepUpCookieValue(baseInput)
 
         expect(
-            verifyManagerStepUpCookieValue(cookieValue, {
+            await verifyManagerStepUpCookieValue(cookieValue, {
                 ...baseInput,
                 now: new Date('2026-06-01T01:00:00.000Z'),
             }),
         ).toEqual({ ok: true })
     })
 
-    it('rejects expired, wrong-session, and OTP-email-change cookies', () => {
-        const cookieValue = createManagerStepUpCookieValue(baseInput)
+    it('preserves the legacy Node HMAC signature format', async () => {
+        const cookieValue = await createManagerStepUpCookieValue(baseInput)
+        const [payload, signature] = cookieValue.split('.')
+
+        expect(signature).toBe(createHmac('sha256', baseInput.secret).update(payload ?? '').digest('base64url'))
+    })
+
+    it('rejects expired, wrong-session, and OTP-email-change cookies', async () => {
+        const cookieValue = await createManagerStepUpCookieValue(baseInput)
 
         expect(
-            verifyManagerStepUpCookieValue(cookieValue, {
+            await verifyManagerStepUpCookieValue(cookieValue, {
                 ...baseInput,
                 now: new Date('2026-06-01T04:00:01.000Z'),
             }),
         ).toEqual({ ok: false, reason: 'expired' })
 
         expect(
-            verifyManagerStepUpCookieValue(cookieValue, {
+            await verifyManagerStepUpCookieValue(cookieValue, {
                 ...baseInput,
                 sessionId: 'session-2',
                 now: new Date('2026-06-01T01:00:00.000Z'),
@@ -51,7 +67,7 @@ describe('manager OTP step-up cookie contract', () => {
         ).toEqual({ ok: false, reason: 'mismatch' })
 
         expect(
-            verifyManagerStepUpCookieValue(cookieValue, {
+            await verifyManagerStepUpCookieValue(cookieValue, {
                 ...baseInput,
                 otpEmailUpdatedAt: '2026-06-01T02:00:00.000Z',
                 now: new Date('2026-06-01T01:00:00.000Z'),
@@ -59,7 +75,7 @@ describe('manager OTP step-up cookie contract', () => {
         ).toEqual({ ok: false, reason: 'mismatch' })
     })
 
-    it('rejects malformed signed payloads instead of treating them as valid', () => {
+    it('rejects malformed signed payloads instead of treating them as valid', async () => {
         const payload = Buffer.from(
             JSON.stringify({
                 userId: 'manager-1',
@@ -73,7 +89,7 @@ describe('manager OTP step-up cookie contract', () => {
         const signature = createHmac('sha256', baseInput.secret).update(payload).digest('base64url')
 
         expect(
-            verifyManagerStepUpCookieValue(`${payload}.${signature}`, {
+            await verifyManagerStepUpCookieValue(`${payload}.${signature}`, {
                 ...baseInput,
                 now: new Date('2026-06-01T01:00:00.000Z'),
             }),

@@ -33,13 +33,13 @@ export function managerRequiresOtp(principal: ManagerOtpCohortInput) {
     return requiresManagerEmailOtp(parseManagerEmailOtpConfig(process.env), principal)
 }
 
-export function hasValidManagerStepUp(principal: ManagerOtpPrincipal, cookies: CookieReader) {
+export async function hasValidManagerStepUp(principal: ManagerOtpPrincipal, cookies: CookieReader) {
     const cohort = getManagerOtpCohort(principal)
     if (!cohort || !principal.sessionId || !principal.otpEmailUpdatedAt) {
         return false
     }
 
-    const result = verifyManagerStepUpCookieValue(
+    const result = await verifyManagerStepUpCookieValue(
         cookies.get(MANAGER_STEP_UP_COOKIE_NAME)?.value,
         {
             userId: principal.userId,
@@ -55,6 +55,6 @@ export function hasValidManagerStepUp(principal: ManagerOtpPrincipal, cookies: C
     return result.ok
 }
 
-export function shouldRequireManagerStepUp(principal: ManagerOtpPrincipal, cookies: CookieReader) {
-    return managerRequiresOtp(principal) && !hasValidManagerStepUp(principal, cookies)
+export async function shouldRequireManagerStepUp(principal: ManagerOtpPrincipal, cookies: CookieReader) {
+    return managerRequiresOtp(principal) && !(await hasValidManagerStepUp(principal, cookies))
 }

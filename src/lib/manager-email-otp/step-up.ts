@@ -1,4 +1,3 @@
-import { createHmac, timingSafeEqual } from 'crypto'
 import { ManagerStepUpPayloadSchema, type ManagerStepUpPayload } from '@/types'
 
 export const MANAGER_STEP_UP_COOKIE_NAME = 'manager_otp_step_up'
@@ -18,26 +17,64 @@ type VerifyInput = CreateInput & {
     now: Date
 }
 
+const textEncoder = new TextEncoder()
+const textDecoder = new TextDecoder()
+
 function encodeBase64Url(value: string) {
-    return Buffer.from(value, 'utf8').toString('base64url')
+    return bytesToBase64Url(textEncoder.encode(value))
 }
 
 function decodeBase64Url(value: string) {
-    return Buffer.from(value, 'base64url').toString('utf8')
+    return textDecoder.decode(base64UrlToBytes(value))
 }
 
-function signPayload(payload: string, secret: string) {
-    return createHmac('sha256', secret).update(payload).digest('base64url')
+function bytesToBase64Url(bytes: Uint8Array) {
+    let binary = ''
+    bytes.forEach((byte) => {
+        binary += String.fromCharCode(byte)
+    })
+
+    return btoa(binary)
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/u, '')
+}
+
+function base64UrlToBytes(value: string) {
+    const base64 = value.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')
+    const binary = atob(padded)
+
+    return Uint8Array.from(binary, (char) => char.charCodeAt(0))
+}
+
+async function signPayload(payload: string, secret: string) {
+    const key = await globalThis.crypto.subtle.importKey(
+        'raw',
+        textEncoder.encode(secret),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign'],
+    )
+    const signature = await globalThis.crypto.subtle.sign('HMAC', key, textEncoder.encode(payload))
+
+    return bytesToBase64Url(new Uint8Array(signature))
 }
 
 function signaturesMatch(left: string, right: string) {
-    const leftBuffer = Buffer.from(left)
-    const rightBuffer = Buffer.from(right)
+    const maxLength = Math.max(left.length, right.length)
+    let diff = left.length ^ right.length
 
-    return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer)
+    for (let index = 0; index < maxLength; index += 1) {
+        const leftCode = index < left.length ? left.charCodeAt(index) : 0
+        const rightCode = index < right.length ? right.charCodeAt(index) : 0
+        diff |= leftCode ^ rightCode
+    }
+
+    return diff === 0
 }
 
-export function createManagerStepUpCookieValue(input: CreateInput) {
+export async function createManagerStepUpCookieValue(input: CreateInput) {
     const payload: ManagerStepUpPayload = {
         userId: input.userId,
         sessionId: input.sessionId,
@@ -46,15 +83,15 @@ export function createManagerStepUpCookieValue(input: CreateInput) {
         expiresAt: input.expiresAt.toISOString(),
     }
     const encodedPayload = encodeBase64Url(JSON.stringify(payload))
-    const signature = signPayload(encodedPayload, input.secret)
+    const signature = await signPayload(encodedPayload, input.secret)
 
     return `${encodedPayload}.${signature}`
 }
 
-export function verifyManagerStepUpCookieValue(
+export async function verifyManagerStepUpCookieValue(
     cookieValue: string | null | undefined,
     input: VerifyInput,
-): { ok: true } | { ok: false; reason: 'missing' | 'invalid' | 'expired' | 'mismatch' } {
+): Promise<{ ok: true } | { ok: false; reason: 'missing' | 'invalid' | 'expired' | 'mismatch' }> {
     if (!cookieValue) {
         return { ok: false, reason: 'missing' }
     }
@@ -64,7 +101,7 @@ export function verifyManagerStepUpCookieValue(
         return { ok: false, reason: 'invalid' }
     }
 
-    if (!signaturesMatch(signature, signPayload(encodedPayload, input.secret))) {
+    if (!signaturesMatch(signature, await signPayload(encodedPayload, input.secret))) {
         return { ok: false, reason: 'invalid' }
     }
 

@@ -13,7 +13,7 @@ vi.mock('@/lib/manager-email-otp/server-records', () => ({
 }))
 
 vi.mock('@/lib/manager-email-otp/step-up', () => ({
-    createManagerStepUpCookieValue: () => 'step-up-cookie',
+    createManagerStepUpCookieValue: async () => 'step-up-cookie',
     getManagerStepUpCookieOptions: () => ({ httpOnly: true }),
     getManagerStepUpSecret: () => 'test-secret',
     MANAGER_STEP_UP_COOKIE_NAME: 'manager_otp_step_up',

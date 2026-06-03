@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     }
 
     const expiresAt = new Date(Date.now() + getSessionTimeboxSeconds() * 1000)
-    const cookieValue = createManagerStepUpCookieValue({
+    const cookieValue = await createManagerStepUpCookieValue({
         userId: context.userId,
         sessionId: context.sessionId,
         cohort,

@@ -215,7 +215,7 @@ export async function middleware(request: NextRequest) {
             request.nextUrl.pathname.startsWith('/manager') &&
             request.nextUrl.pathname !== '/manager/otp' &&
             userRole === 'manager' &&
-            shouldRequireManagerStepUp(
+            await shouldRequireManagerStepUp(
                 {
                     userId: user.id,
                     role: userRole,

@@ -30,10 +30,10 @@ interface UseClientOptions {
     /**
      * Seeded client detail from the parent sample payload.
      */
-    initialData?: Client
+    placeholderData?: Client
 }
 
-export function useClient({ clientId, initialData }: UseClientOptions) {
+export function useClient({ clientId, placeholderData }: UseClientOptions) {
     return useQuery({
         queryKey: clientKeys.detail(clientId),
         queryFn: async (): Promise<Client> => {
@@ -59,6 +59,6 @@ export function useClient({ clientId, initialData }: UseClientOptions) {
         staleTime: 5 * 60 * 1000,
         // Refetch on window focus to ensure fresh data
         refetchOnWindowFocus: true,
-        initialData,
+        placeholderData,
     })
 }
