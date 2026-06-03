@@ -7,6 +7,7 @@
 -- - Does not expose plaintext OTP values or grant direct app access to challenge rows.
 
 DROP FUNCTION IF EXISTS public.verify_manager_otp_challenge(UUID, TEXT);
+DROP FUNCTION IF EXISTS public.create_manager_otp_challenge(UUID, UUID, TEXT, TEXT, TIMESTAMPTZ, TIMESTAMPTZ);
 
 CREATE OR REPLACE FUNCTION public.create_manager_otp_challenge(
     p_challenge_id UUID,

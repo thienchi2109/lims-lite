@@ -94,6 +94,7 @@ describe('manager email OTP challenge contract', () => {
         expect(migration).toContain('MANAGER_OTP_VERIFY_EXPIRED')
         expect(migration).toContain('v_attempt_count >= 3')
         expect(migration).toContain('p_user_id IS NULL')
+        expect(migration).toContain('DROP FUNCTION IF EXISTS public.create_manager_otp_challenge(UUID, UUID, TEXT, TEXT, TIMESTAMPTZ, TIMESTAMPTZ)')
         expect(migration).toContain('GRANT EXECUTE ON FUNCTION public.verify_manager_otp_challenge(UUID, TEXT, UUID, TEXT) TO service_role')
         expect(migration).toContain('GRANT EXECUTE ON FUNCTION public.create_manager_otp_challenge(UUID, UUID, TEXT, TEXT, TIMESTAMPTZ, TIMESTAMPTZ) TO service_role')
         expect(migration).not.toMatch(/jsonb_build_object\([^)]*p_code/s)
