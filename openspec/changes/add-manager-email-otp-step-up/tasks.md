@@ -27,16 +27,16 @@
 
 ## 4. Vietnamese UI and Admin Workflow
 
-- [ ] 4.1 Add manager OTP verification page with masked email display, code input, resend cooldown, error states, and lockout messaging in Vietnamese.
-- [ ] 4.2 Add admin-controlled manager OTP email configuration in the existing user-management flow.
-- [ ] 4.3 Ensure manager self-service profile screens cannot edit the OTP destination email and show contact-admin guidance.
-- [ ] 4.4 Add accessible loading, success, failure, and expired-code states without exposing sensitive email details.
+- [x] 4.1 Add manager OTP verification page with masked email display, code input, resend cooldown, error states, and lockout messaging in Vietnamese.
+- [x] 4.2 Add admin-controlled manager OTP email configuration in the existing user-management flow.
+- [x] 4.3 Ensure manager self-service profile screens cannot edit the OTP destination email and show contact-admin guidance.
+- [x] 4.4 Add accessible loading, success, failure, and expired-code states without exposing sensitive email details.
 
 ## 5. Verification and Rollout
 
 - [x] 5.1 Apply migrations through Docker and run `SELECT * FROM run_security_tests();`.
 - [x] 5.2 Run focused SQL regression tests for OTP metadata, challenge lifecycle, and RLS. Audit regression coverage remains deferred with 2.3.
-- [ ] 5.3 Run focused app tests for login redirect, OTP verification, manager route guard, client-action guard, environment flag combinations, admin email configuration, and manager self-service denial.
-- [ ] 5.4 Run `npm run lint` and `npm run typecheck`.
-- [ ] 5.5 Validate OpenSpec with `openspec validate add-manager-email-otp-step-up --strict`.
-- [ ] 5.6 Document operational requirements for Resend API key, verified sender/domain, quota monitoring, admin recovery, email-change review, and the MVP limitation that email OTP is not phishing-resistant MFA.
+- [x] 5.3 Run focused app tests for login redirect, OTP verification, manager route guard, client-action guard, environment flag combinations, admin email configuration, and manager self-service denial.
+- [x] 5.4 Run `npm run lint` and `npm run typecheck`.
+- [x] 5.5 Validate OpenSpec with `openspec validate add-manager-email-otp-step-up --strict`.
+- [x] 5.6 Document operational requirements for Resend API key, verified sender/domain, quota monitoring, admin recovery, email-change review, and the MVP limitation that email OTP is not phishing-resistant MFA.

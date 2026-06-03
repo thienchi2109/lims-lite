@@ -24,6 +24,8 @@ export type ClientActionName =
     | 'createUser'
     | 'updateUser'
     | 'deleteUser'
+    | 'configureManagerOtpEmail'
+    | 'getMaskedManagerOtpEmail'
     | 'rejectSample'
     | 'discardSample'
     | 'getRejectedSamplesCount'

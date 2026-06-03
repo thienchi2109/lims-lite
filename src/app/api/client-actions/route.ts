@@ -26,6 +26,7 @@ import {
     removeMethodFromAssay,
 } from '@/app/actions/assay-methods'
 import { createUser, updateUser, deleteUser } from '@/app/actions/users'
+import { configureManagerOtpEmail, getMaskedManagerOtpEmail } from '@/app/actions/users-manager-otp'
 import {
     upsertClient,
     findClientByIdentity,
@@ -190,6 +191,13 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
             return { error: 'User ID là bắt buộc' }
         }
         return deleteUser(payload.userId)
+    },
+    configureManagerOtpEmail: async (payload) => configureManagerOtpEmail(payload),
+    getMaskedManagerOtpEmail: async (payload) => {
+        if (!payload?.userId) {
+            return { error: 'User ID là bắt buộc' }
+        }
+        return getMaskedManagerOtpEmail(payload.userId)
     },
     rejectSample: async (payload) => rejectSample(payload),
     discardSample: async (payload) => discardSample(payload),
