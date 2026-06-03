@@ -1,3 +1,4 @@
+import { StrictMode } from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -109,6 +110,38 @@ describe('ManagerOtpVerificationForm', () => {
 
         await waitFor(() => {
             expect(fetchMock).toHaveBeenCalledTimes(1)
+        })
+    })
+
+    it('lets the manager retry after StrictMode replays the initial challenge effect', async () => {
+        const fetchMock = vi
+            .fn()
+            .mockRejectedValueOnce(new DOMException('Aborted', 'AbortError'))
+            .mockResolvedValueOnce(Response.json({
+                ok: true,
+                challengeId: '33333333-3333-4333-8333-333333333333',
+                maskedEmail: 'ma***@example.com',
+                expiresAt: '2026-06-02T04:05:00.000Z',
+                resendAvailableAt: '2026-06-02T04:01:00.000Z',
+            }))
+        global.fetch = fetchMock as unknown as typeof fetch
+
+        render(
+            <StrictMode>
+                <ManagerOtpVerificationForm initialMaskedEmail="ma***@example.com" />
+            </StrictMode>,
+        )
+
+        await waitFor(() => {
+            expect(fetchMock).toHaveBeenCalledTimes(1)
+        })
+        await waitFor(() => {
+            expect((screen.getByRole('button', { name: 'Thử gửi lại' }) as HTMLButtonElement).disabled).toBe(false)
+        })
+        fireEvent.click(screen.getByRole('button', { name: 'Thử gửi lại' }))
+
+        await waitFor(() => {
+            expect(fetchMock).toHaveBeenCalledTimes(2)
         })
     })
 

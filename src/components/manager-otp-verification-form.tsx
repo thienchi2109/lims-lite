@@ -99,6 +99,7 @@ export function ManagerOtpVerificationForm({ initialMaskedEmail }: { initialMask
 
     useEffect(() => {
         const controller = new AbortController()
+        isMounted.current = true
         void requestChallenge('/api/manager/otp/challenge', { signal: controller.signal })
         return () => {
             isMounted.current = false
