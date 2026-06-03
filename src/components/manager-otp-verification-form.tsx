@@ -1,12 +1,11 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertCircle, CheckCircle2, Loader2, Mail, RotateCw, ShieldCheck } from 'lucide-react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 type ChallengeState = {
@@ -46,6 +45,7 @@ export function ManagerOtpVerificationForm({ initialMaskedEmail }: { initialMask
     const [message, setMessage] = useState<string | null>(null)
     const [isSending, setIsSending] = useState(false)
     const [isVerifying, setIsVerifying] = useState(false)
+    const digitInputRefs = useRef<Array<HTMLInputElement | null>>([])
     const isChallengeRequestInFlight = useRef(false)
     const isMounted = useRef(true)
 
@@ -55,6 +55,43 @@ export function ManagerOtpVerificationForm({ initialMaskedEmail }: { initialMask
         : isSending
             ? 'Đang gửi mã OTP đến email đã cấu hình.'
             : 'Chưa có mã OTP sẵn sàng. Vui lòng thử gửi lại.'
+
+    function focusOtpDigit(index: number) {
+        digitInputRefs.current[index]?.focus()
+    }
+
+    function updateOtpDigit(index: number, value: string) {
+        const digit = value.replace(/\D/g, '').slice(-1)
+        const nextCode = code.padEnd(6, '').split('')
+        nextCode[index] = digit
+        setCode(nextCode.join('').slice(0, 6))
+        if (digit && index < 5) focusOtpDigit(index + 1)
+    }
+
+    function handleOtpKeyDown(index: number, event: KeyboardEvent<HTMLInputElement>) {
+        if (event.key !== 'Backspace') return
+        if (code[index]) return
+        if (index === 0) return
+
+        event.preventDefault()
+        const nextCode = code.padEnd(6, '').split('')
+        nextCode[index - 1] = ''
+        setCode(nextCode.join('').slice(0, 6))
+        focusOtpDigit(index - 1)
+    }
+
+    function handleOtpPaste(index: number, event: ClipboardEvent<HTMLInputElement>) {
+        const digits = event.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6 - index)
+        if (!digits) return
+
+        event.preventDefault()
+        const nextCode = code.padEnd(6, '').split('')
+        digits.split('').forEach((digit, offset) => {
+            nextCode[index + offset] = digit
+        })
+        setCode(nextCode.join('').slice(0, 6))
+        focusOtpDigit(Math.min(index + digits.length, 5))
+    }
 
     async function requestChallenge(endpoint: '/api/manager/otp/challenge' | '/api/manager/otp/resend', options?: { signal?: AbortSignal }) {
         if (isChallengeRequestInFlight.current) return
@@ -168,16 +205,32 @@ export function ManagerOtpVerificationForm({ initialMaskedEmail }: { initialMask
 
                 <form className="space-y-4" onSubmit={handleSubmit}>
                     <div className="space-y-2">
-                        <Label htmlFor="manager-otp-code">Mã OTP</Label>
-                        <Input
-                            id="manager-otp-code"
-                            inputMode="numeric"
-                            maxLength={6}
-                            value={code}
-                            onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
-                            placeholder="Nhập 6 chữ số"
-                            className="h-12 text-center text-xl font-semibold tracking-[0.35em]"
-                        />
+                        <Label id="manager-otp-code-label">Mã OTP</Label>
+                        <div
+                            aria-labelledby="manager-otp-code-label"
+                            className="grid grid-cols-6 gap-2 sm:max-w-sm sm:gap-3"
+                            role="group"
+                        >
+                            {Array.from({ length: 6 }, (_value, index) => (
+                                <input
+                                    key={index}
+                                    ref={(element) => {
+                                        digitInputRefs.current[index] = element
+                                    }}
+                                    aria-label={`Số OTP ${index + 1}`}
+                                    autoComplete={index === 0 ? 'one-time-code' : 'off'}
+                                    className="h-12 min-w-0 rounded-md border border-slate-300 bg-white text-center text-xl font-semibold tabular-nums shadow-xs outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                                    inputMode="numeric"
+                                    maxLength={1}
+                                    pattern="[0-9]*"
+                                    type="text"
+                                    value={code[index] ?? ''}
+                                    onChange={(event) => updateOtpDigit(index, event.target.value)}
+                                    onKeyDown={(event) => handleOtpKeyDown(index, event)}
+                                    onPaste={(event) => handleOtpPaste(index, event)}
+                                />
+                            ))}
+                        </div>
                     </div>
 
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

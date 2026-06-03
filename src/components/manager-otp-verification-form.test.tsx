@@ -13,6 +13,19 @@ vi.mock('next/navigation', () => ({
 
 import { ManagerOtpVerificationForm } from './manager-otp-verification-form'
 
+function getOtpDigitInputs() {
+    return Array.from({ length: 6 }, (_value, index) =>
+        screen.getByLabelText(`Số OTP ${index + 1}`) as HTMLInputElement,
+    )
+}
+
+function enterOtp(code: string) {
+    const inputs = getOtpDigitInputs()
+    code.split('').forEach((digit, index) => {
+        fireEvent.change(inputs[index], { target: { value: digit } })
+    })
+}
+
 describe('ManagerOtpVerificationForm', () => {
     beforeEach(() => {
         vi.clearAllMocks()
@@ -42,7 +55,8 @@ describe('ManagerOtpVerificationForm', () => {
         expect(await screen.findByText(/Mã OTP đã được gửi đến ma\*\*\*@example\.com\./i)).toBeDefined()
         expect(screen.getByText(/ma\*\*\*@example\.com/)).toBeDefined()
 
-        fireEvent.change(screen.getByLabelText('Mã OTP'), { target: { value: '123456' } })
+        expect(getOtpDigitInputs()).toHaveLength(6)
+        enterOtp('123456')
         fireEvent.click(screen.getByRole('button', { name: 'Xác nhận' }))
 
         await waitFor(() => {
@@ -144,7 +158,7 @@ describe('ManagerOtpVerificationForm', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Thử gửi lại' }))
 
         expect(await screen.findByText(/chưa thể gửi lại mã/i)).toBeDefined()
-        fireEvent.change(screen.getByLabelText('Mã OTP'), { target: { value: '123456' } })
+        enterOtp('123456')
         fireEvent.click(screen.getByRole('button', { name: 'Xác nhận' }))
 
         await waitFor(() => {
@@ -174,7 +188,7 @@ describe('ManagerOtpVerificationForm', () => {
         render(<ManagerOtpVerificationForm initialMaskedEmail="ma***@example.com" />)
 
         expect(await screen.findByText(/Mã OTP đã được gửi đến ma\*\*\*@example\.com\./i)).toBeDefined()
-        fireEvent.change(screen.getByLabelText('Mã OTP'), { target: { value: '123456' } })
+        enterOtp('123456')
         await waitFor(() => {
             expect((screen.getByRole('button', { name: 'Xác nhận' }) as HTMLButtonElement).disabled).toBe(false)
         })
@@ -202,7 +216,7 @@ describe('ManagerOtpVerificationForm', () => {
         render(<ManagerOtpVerificationForm initialMaskedEmail="ma***@example.com" />)
 
         expect(await screen.findByText(/chưa thể gửi lại mã/i)).toBeDefined()
-        fireEvent.change(screen.getByLabelText('Mã OTP'), { target: { value: '123456' } })
+        enterOtp('123456')
         fireEvent.click(screen.getByRole('button', { name: 'Xác nhận' }))
 
         await waitFor(() => {
@@ -214,6 +228,39 @@ describe('ManagerOtpVerificationForm', () => {
                 }),
             }))
         })
+    })
+
+    it('pastes a six-digit OTP across the separated digit boxes', async () => {
+        render(<ManagerOtpVerificationForm initialMaskedEmail="ma***@example.com" />)
+
+        expect(await screen.findByText(/Mã OTP đã được gửi đến ma\*\*\*@example\.com\./i)).toBeDefined()
+        fireEvent.paste(screen.getByLabelText('Số OTP 1'), {
+            clipboardData: { getData: () => '123456' },
+        })
+        fireEvent.click(screen.getByRole('button', { name: 'Xác nhận' }))
+
+        await waitFor(() => {
+            expect(global.fetch).toHaveBeenCalledWith('/api/manager/otp/verify', expect.objectContaining({
+                method: 'POST',
+                body: JSON.stringify({
+                    challengeId: '33333333-3333-4333-8333-333333333333',
+                    code: '123456',
+                }),
+            }))
+        })
+    })
+
+    it('moves back when pressing Backspace in an empty OTP digit box', async () => {
+        render(<ManagerOtpVerificationForm initialMaskedEmail="ma***@example.com" />)
+
+        expect(await screen.findByText(/Mã OTP đã được gửi đến ma\*\*\*@example\.com\./i)).toBeDefined()
+        enterOtp('12')
+        const inputs = getOtpDigitInputs()
+
+        fireEvent.keyDown(inputs[2], { key: 'Backspace' })
+
+        expect(document.activeElement).toBe(inputs[1])
+        expect(inputs[1].value).toBe('')
     })
 
     it('aborts the initial challenge request when the verification surface unmounts', async () => {
