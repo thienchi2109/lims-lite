@@ -79,22 +79,17 @@ BEGIN
 
     RESET ROLE;
 
-    INSERT INTO public.manager_otp_challenges (
-        user_id,
-        session_id,
-        code_hash,
-        expires_at,
-        resend_available_at
-    ) VALUES (
+    SELECT ((public.create_manager_otp_challenge(
+        '92000000-0000-0000-0000-000000000044'::UUID,
         v_manager_id,
         'session-issue-44',
-        crypt('123456', gen_salt('bf')),
+        encode(digest('123456', 'sha256'), 'hex'),
         now() + interval '5 minutes',
-        now() + interval '1 minute'
-    )
-    RETURNING id INTO v_challenge_id;
+        now() - interval '1 minute'
+    )->'challenge'->>'id')::UUID)
+    INTO v_challenge_id;
 
-    SELECT public.verify_manager_otp_challenge(v_challenge_id, '000000')
+    SELECT public.verify_manager_otp_challenge(v_challenge_id, '000000', v_manager_id, 'session-issue-44')
     INTO v_result;
 
     IF v_result->>'status' <> 'invalid' THEN
@@ -110,14 +105,14 @@ BEGIN
         RAISE EXCEPTION 'wrong OTP should increment attempt_count to 1, got %', v_attempt_count;
     END IF;
 
-    SELECT public.verify_manager_otp_challenge(v_challenge_id, '123456')
+    SELECT public.verify_manager_otp_challenge(v_challenge_id, '123456', v_manager_id, 'session-issue-44')
     INTO v_result;
 
     IF v_result->>'status' <> 'verified' THEN
         RAISE EXCEPTION 'correct OTP should verify, got %', v_result;
     END IF;
 
-    SELECT public.verify_manager_otp_challenge(v_challenge_id, '123456')
+    SELECT public.verify_manager_otp_challenge(v_challenge_id, '123456', v_manager_id, 'session-issue-44')
     INTO v_result;
 
     IF v_result->>'status' <> 'used' THEN
@@ -133,15 +128,15 @@ BEGIN
         resend_available_at
     ) VALUES (
         v_manager_id,
-        'session-issue-44-lock',
-        crypt('654321', gen_salt('bf')),
+        'session-issue-44-lockout',
+        encode(digest('654321', 'sha256'), 'hex'),
         now() + interval '5 minutes',
         2,
         now()
     )
     RETURNING id INTO v_challenge_id;
 
-    SELECT public.verify_manager_otp_challenge(v_challenge_id, '000000')
+    SELECT public.verify_manager_otp_challenge(v_challenge_id, '000000', v_manager_id, 'session-issue-44-lockout')
     INTO v_result;
 
     IF v_result->>'status' <> 'locked' THEN
@@ -167,14 +162,14 @@ BEGIN
     ) VALUES (
         v_manager_id,
         'session-issue-44-expired',
-        crypt('111111', gen_salt('bf')),
+        encode(digest('111111', 'sha256'), 'hex'),
         now() - interval '1 minute',
         now() - interval '2 minutes',
         now() - interval '6 minutes'
     )
     RETURNING id INTO v_challenge_id;
 
-    SELECT public.verify_manager_otp_challenge(v_challenge_id, '111111')
+    SELECT public.verify_manager_otp_challenge(v_challenge_id, '111111', v_manager_id, 'session-issue-44-expired')
     INTO v_result;
 
     IF v_result->>'status' <> 'expired' THEN
@@ -183,7 +178,9 @@ BEGIN
 
     SELECT public.verify_manager_otp_challenge(
         '00000000-0000-0000-0000-000000000000'::UUID,
-        '123456'
+        '123456',
+        v_manager_id,
+        'session-issue-44-missing'
     )
     INTO v_result;
 

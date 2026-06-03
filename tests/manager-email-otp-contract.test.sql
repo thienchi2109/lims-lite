@@ -166,12 +166,19 @@ END $$;
 
 DO $$
 BEGIN
-    IF to_regprocedure('public.verify_manager_otp_challenge(uuid,text)') IS NULL THEN
+    IF to_regprocedure('public.verify_manager_otp_challenge(uuid,text,uuid,text)') IS NULL THEN
         INSERT INTO manager_otp_contract_results
         VALUES (
             'OTP verification RPC exists',
             FALSE,
-            'missing public.verify_manager_otp_challenge(uuid, text)'
+            'missing public.verify_manager_otp_challenge(uuid, text, uuid, text)'
+        );
+    ELSIF to_regprocedure('public.verify_manager_otp_challenge(uuid,text)') IS NOT NULL THEN
+        INSERT INTO manager_otp_contract_results
+        VALUES (
+            'OTP verification RPC exists',
+            FALSE,
+            'legacy public.verify_manager_otp_challenge(uuid, text) must be removed'
         );
     ELSE
         INSERT INTO manager_otp_contract_results
