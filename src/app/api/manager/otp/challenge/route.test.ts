@@ -89,6 +89,38 @@ describe('manager OTP challenge route', () => {
         }))
     })
 
+    it('accepts same-origin requests when nginx forwards the public host without forwarded-host', async () => {
+        mocks.sendOtp.mockResolvedValue({ ok: true })
+
+        const response = await POST(new Request('http://app:3000/api/manager/otp/challenge', {
+            method: 'POST',
+            headers: {
+                origin: 'https://cdclims.cloud',
+                host: 'cdclims.cloud',
+                'x-forwarded-proto': 'http',
+            },
+        }))
+
+        expect(response.status).toBe(200)
+        expect(mocks.createManagerOtpChallengeRecord).toHaveBeenCalled()
+        expect(mocks.sendOtp).toHaveBeenCalled()
+    })
+
+    it('rejects requests when the origin host does not match the public host', async () => {
+        const response = await POST(new Request('http://app:3000/api/manager/otp/challenge', {
+            method: 'POST',
+            headers: {
+                origin: 'https://example.test',
+                host: 'cdclims.cloud',
+                'x-forwarded-proto': 'http',
+            },
+        }))
+
+        await expect(response.json()).resolves.toEqual({ ok: false, status: 'invalid_origin' })
+        expect(response.status).toBe(403)
+        expect(mocks.createManagerOtpChallengeRecord).not.toHaveBeenCalled()
+    })
+
     it('reports persistence failure when provider-error cleanup fails', async () => {
         mocks.sendOtp.mockRejectedValue(new Error('provider timeout'))
         mocks.deleteManagerOtpChallengeRecord.mockRejectedValue(new Error('delete failed'))
