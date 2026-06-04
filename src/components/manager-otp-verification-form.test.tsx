@@ -7,9 +7,19 @@ const router = vi.hoisted(() => ({
     refresh: vi.fn(),
 }))
 
+const locationAssign = vi.hoisted(() => vi.fn())
+
 vi.mock('next/navigation', () => ({
     useRouter: () => router,
 }))
+
+Object.defineProperty(window, 'location', {
+    value: {
+        ...window.location,
+        assign: locationAssign,
+    },
+    writable: true,
+})
 
 import { ManagerOtpVerificationForm } from './manager-otp-verification-form'
 
@@ -68,8 +78,9 @@ describe('ManagerOtpVerificationForm', () => {
                 }),
             }))
         })
-        expect(router.replace).toHaveBeenCalledWith('/manager')
-        expect(router.refresh).toHaveBeenCalled()
+        expect(locationAssign).toHaveBeenCalledWith('/manager')
+        expect(router.replace).not.toHaveBeenCalled()
+        expect(router.refresh).not.toHaveBeenCalled()
     })
 
     it('shows Vietnamese provider-failure guidance without exposing a full email address', async () => {

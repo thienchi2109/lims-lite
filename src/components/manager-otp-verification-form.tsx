@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent } from 'react'
-import { useRouter } from 'next/navigation'
 import { AlertCircle, CheckCircle2, Loader2, Mail, RotateCw, ShieldCheck } from 'lucide-react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -34,7 +33,6 @@ function mapStatusToMessage(status: string | undefined) {
 }
 
 export function ManagerOtpVerificationForm({ initialMaskedEmail }: { initialMaskedEmail: string | null }) {
-    const router = useRouter()
     const [challenge, setChallenge] = useState<ChallengeState>({
         challengeId: null,
         maskedEmail: initialMaskedEmail,
@@ -170,8 +168,7 @@ export function ManagerOtpVerificationForm({ initialMaskedEmail }: { initialMask
                 return
             }
 
-            router.replace('/manager')
-            router.refresh()
+            window.location.assign('/manager')
         } catch {
             setMessage('Không thể xác thực mã OTP. Vui lòng thử lại.')
         } finally {
