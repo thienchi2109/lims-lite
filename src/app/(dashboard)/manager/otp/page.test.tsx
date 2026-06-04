@@ -27,12 +27,6 @@ vi.mock('next/navigation', () => ({
     },
 }))
 
-vi.mock('@/components/dashboard-header', () => ({
-    DashboardHeader: ({ subtitle, user }: { subtitle: string; user?: { full_name?: string | null } | null }) => (
-        <header data-testid="dashboard-header">{`${subtitle}-${user?.full_name ?? ''}`}</header>
-    ),
-}))
-
 vi.mock('@/components/logout-button', () => ({
     LogoutButton: () => <button type="button">Đăng xuất</button>,
 }))
@@ -54,12 +48,12 @@ describe('ManagerOtpPage', () => {
             .mockResolvedValueOnce({ data: null })
     })
 
-    it('shows Vietnamese admin recovery guidance inside the dashboard shell when OTP email is not configured', async () => {
+    it('shows Vietnamese admin recovery guidance without the dashboard shell when OTP email is not configured', async () => {
         render(await ManagerOtpPage())
 
-        expect(screen.getByTestId('dashboard-header').textContent).toContain('Xác thực email quản lý')
-        expect(screen.getByTestId('dashboard-header').textContent).toContain('Quản lý')
-        expect(screen.getByRole('heading', { name: 'Xác thực email quản lý' })).toBeDefined()
+        expect(screen.queryByTestId('dashboard-header')).toBeNull()
+        expect(screen.getByText('CDC-LIMS Pro')).toBeDefined()
+        expect(screen.getByRole('heading', { name: 'Cần cấu hình email nhận mã' })).toBeDefined()
         expect(screen.getByText(/liên hệ quản trị viên/i)).toBeDefined()
         expect(screen.getByText(/Quản lý người dùng/i)).toBeDefined()
         expect(screen.getByRole('button', { name: 'Đăng xuất' })).toBeDefined()

@@ -1,4 +1,3 @@
-import { DashboardHeader } from '@/components/dashboard-header'
 import { LogoutButton } from '@/components/logout-button'
 import { ManagerOtpVerificationForm } from '@/components/manager-otp-verification-form'
 import { maskManagerOtpEmail } from '@/lib/manager-email-otp/server-records'
@@ -33,32 +32,30 @@ export default async function ManagerOtpPage() {
     const maskedOtpEmail = otpSettings?.otp_email ? maskManagerOtpEmail(otpSettings.otp_email) : null
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-            <DashboardHeader
-                subtitle="Xác thực email quản lý"
-                user={userData}
-            />
-
-            <main className="mx-auto flex min-h-[60vh] w-full max-w-xl flex-col justify-center gap-5 px-6 py-10">
-                <div className="space-y-2">
-                    <h1 className="text-2xl font-semibold text-slate-950">Xác thực email quản lý</h1>
-                    <p className="text-sm leading-6 text-slate-600">
-                        Tính năng xác thực OTP email đang được bật cho tài khoản quản lý. Vui lòng liên hệ quản trị viên
-                        nếu bạn chưa được cấp email nhận mã OTP.
-                    </p>
+        <main className="flex min-h-screen items-center justify-center bg-[#eef4ff] px-4 py-8 text-slate-950 sm:px-6">
+            <div className="flex w-full max-w-[440px] flex-col gap-5">
+                <div className="flex items-center justify-between text-xs font-medium text-slate-500">
+                    <span className="tracking-[0.18em] text-slate-700 uppercase">CDC-LIMS Pro</span>
+                    <span>Quản lý</span>
                 </div>
 
                 {maskedOtpEmail ? (
                     <ManagerOtpVerificationForm initialMaskedEmail={maskedOtpEmail} />
                 ) : (
-                    <p className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
-                        Quản trị viên cần vào Quản lý người dùng để cấu hình email nhận OTP cho tài khoản của bạn trước
-                        khi bạn có thể tiếp tục.
-                    </p>
+                    <section className="rounded-md border border-amber-200 bg-white p-7 shadow-[0_18px_50px_rgba(15,23,42,0.12)]">
+                        <div className="space-y-3">
+                            <p className="text-sm font-semibold text-amber-700">Chưa cấu hình email OTP</p>
+                            <h1 className="text-2xl font-semibold tracking-tight text-slate-950">Cần cấu hình email nhận mã</h1>
+                            <p className="text-sm leading-6 text-slate-600">
+                                Vui lòng liên hệ quản trị viên để cấu hình email nhận OTP trong Quản lý người dùng cho tài
+                                khoản của bạn trước khi tiếp tục.
+                            </p>
+                        </div>
+                    </section>
                 )}
 
                 <LogoutButton />
-            </main>
-        </div>
+            </div>
+        </main>
     )
 }

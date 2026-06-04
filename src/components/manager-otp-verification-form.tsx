@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent } from 'react'
-import { AlertCircle, CheckCircle2, Loader2, Mail, RotateCw, ShieldCheck } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Loader2, RotateCw, ShieldCheck } from 'lucide-react'
 
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 
@@ -177,35 +177,34 @@ export function ManagerOtpVerificationForm({ initialMaskedEmail }: { initialMask
     }
 
     return (
-        <section className="relative overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-            <div className="absolute inset-x-0 top-0 h-1 bg-emerald-500" />
-            <div className="space-y-6 p-6">
-                <div className="flex items-start gap-4">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-slate-950 text-white">
+        <section className="rounded-md border border-white/80 bg-white p-6 shadow-[0_22px_70px_rgba(15,23,42,0.14)] sm:p-8">
+            <div className="space-y-7">
+                <div className="space-y-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-md bg-[#13235b] text-white shadow-[0_12px_30px_rgba(19,35,91,0.28)]">
                         <ShieldCheck className="h-5 w-5" />
                     </div>
-                    <div className="space-y-1">
-                        <h2 className="text-lg font-semibold text-slate-950">Nhập mã OTP email</h2>
-                        <p className="text-sm text-slate-600">
+                    <div className="space-y-2">
+                        <p className="text-xs font-semibold tracking-[0.2em] text-[#3157c8] uppercase">Xác thực OTP</p>
+                        <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Nhập mã xác thực</h1>
+                        <p className="text-sm leading-6 text-slate-600">
                             {challengeMessage}
                         </p>
                     </div>
                 </div>
 
                 {message && (
-                    <Alert className="border-amber-200 bg-amber-50 text-amber-950">
+                    <Alert className="rounded-md border-amber-200 bg-amber-50 text-amber-950">
                         <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Trạng thái xác thực</AlertTitle>
                         <AlertDescription>{message}</AlertDescription>
                     </Alert>
                 )}
 
-                <form className="space-y-4" onSubmit={handleSubmit}>
-                    <div className="space-y-2">
-                        <Label id="manager-otp-code-label">Mã OTP</Label>
+                <form className="space-y-5" onSubmit={handleSubmit}>
+                    <div className="space-y-3">
+                        <Label id="manager-otp-code-label" className="text-sm font-semibold text-slate-800">Mã OTP</Label>
                         <div
                             aria-labelledby="manager-otp-code-label"
-                            className="grid grid-cols-6 gap-2 sm:max-w-sm sm:gap-3"
+                            className="grid grid-cols-6 gap-2 sm:gap-3"
                             role="group"
                         >
                             {Array.from({ length: 6 }, (_value, index) => (
@@ -216,7 +215,7 @@ export function ManagerOtpVerificationForm({ initialMaskedEmail }: { initialMask
                                     }}
                                     aria-label={`Số OTP ${index + 1}`}
                                     autoComplete={index === 0 ? 'one-time-code' : 'off'}
-                                    className="h-12 min-w-0 rounded-md border border-slate-300 bg-white text-center text-xl font-semibold tabular-nums shadow-xs outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="h-12 min-w-0 rounded-md border border-slate-300 bg-white text-center text-xl font-semibold tabular-nums text-slate-950 shadow-xs outline-none transition focus:border-[#3157c8] focus:ring-3 focus:ring-[#3157c8]/15 disabled:cursor-not-allowed disabled:opacity-50 sm:h-14"
                                     inputMode="numeric"
                                     maxLength={1}
                                     pattern="[0-9]*"
@@ -230,28 +229,33 @@ export function ManagerOtpVerificationForm({ initialMaskedEmail }: { initialMask
                         </div>
                     </div>
 
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                        <Button type="submit" disabled={!canSubmit || isVerifying} className="h-11">
-                            {isVerifying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
-                            Xác nhận
-                        </Button>
+                    <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
+                        <span>Không nhận được mã?</span>
                         <Button
                             type="button"
-                            variant="outline"
+                            variant="ghost"
                             disabled={isSending}
-                            className="h-11"
+                            className="h-8 px-2 text-xs font-semibold text-[#3157c8] hover:bg-[#eef4ff] hover:text-[#2445a8]"
                             onClick={() => requestChallenge(challenge.challengeId ? '/api/manager/otp/resend' : '/api/manager/otp/challenge')}
                         >
-                            {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCw className="mr-2 h-4 w-4" />}
+                            {isSending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <RotateCw className="mr-1.5 h-3.5 w-3.5" />}
                             {challenge.challengeId ? 'Gửi lại mã' : 'Thử gửi lại'}
                         </Button>
                     </div>
+
+                    <Button
+                        type="submit"
+                        disabled={!canSubmit || isVerifying}
+                        className="h-12 w-full rounded-md bg-[#3157c8] text-base font-semibold text-white shadow-[0_14px_28px_rgba(49,87,200,0.28)] transition hover:bg-[#2948a9] disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none"
+                    >
+                        {isVerifying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                        Xác nhận
+                    </Button>
                 </form>
 
-                <div className="flex items-start gap-3 rounded-md bg-slate-50 p-4 text-sm text-slate-600">
-                    <Mail className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
-                    <p>Không nhận được mã hoặc email không đúng? Vui lòng liên hệ quản trị viên để kiểm tra email nhận OTP.</p>
-                </div>
+                <p className="border-t border-slate-100 pt-5 text-center text-xs leading-5 text-slate-500">
+                    Email không đúng hoặc không nhận được mã? Vui lòng liên hệ quản trị viên để kiểm tra cấu hình OTP.
+                </p>
             </div>
         </section>
     )
