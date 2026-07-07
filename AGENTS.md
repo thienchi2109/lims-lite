@@ -142,6 +142,8 @@ Before completing tasks:
 3. Code is self-documenting
 4. Directory structure stays logical
 5. Changes follow existing patterns
+6. Run focused tests that cover the changed behavior and immediate blast radius
+7. Run the full test suite only for shared-core/risky changes or when explicitly requested
 
 ## Token Optimization
 
@@ -155,7 +157,7 @@ Before completing tasks:
 **MANDATORY:** Work is NOT complete until `git push` succeeds.
 
 1. File issues for remaining work
-2. Run quality gates (tests, linters, builds)
+2. Run scoped quality gates: focused tests first, plus relevant linters/builds/typecheck for the touched area
 3. Update issue status
 4. **PUSH TO REMOTE:**
    ```bash
