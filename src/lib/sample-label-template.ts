@@ -7,6 +7,13 @@ interface SampleLabelOptions {
     preset?: SampleLabelPreset
 }
 
+type SampleLabelInput = SampleWithUser & {
+    client?: {
+        name?: string | null
+        date_of_birth?: string | null
+    } | null
+}
+
 const LABEL_PRESETS: Record<SampleLabelPreset, {
     pageWidth: string
     pageHeight: string
@@ -54,28 +61,35 @@ function escapeHtml(value: string) {
         .replace(/'/g, '&#39;')
 }
 
-function formatReceivedAt(value: string) {
+function getBirthYear(value: string | null | undefined) {
+    if (!value) return ''
+
     const date = new Date(value)
     if (Number.isNaN(date.getTime())) return ''
 
-    const day = String(date.getDate()).padStart(2, '0')
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const hours = String(date.getHours()).padStart(2, '0')
-    const minutes = String(date.getMinutes()).padStart(2, '0')
-
-    return `${day}/${month} ${hours}:${minutes}`
+    return String(date.getFullYear())
 }
 
-function getReceiverInitials(name: string | null | undefined) {
-    if (!name) return ''
+function getClientName(sample: SampleLabelInput) {
+    return sample.client?.name?.trim() || sample.client_name?.trim() || ''
+}
 
-    return name
-        .trim()
-        .split(/\s+/)
-        .filter(Boolean)
-        .map((part) => part[0]?.toUpperCase() ?? '')
-        .join('')
-        .slice(0, 4)
+function getSampleIdFontSize(presetName: SampleLabelPreset) {
+    if (presetName === 'thermal-35x22-2up') return '6.5pt'
+    if (presetName === 'small-tube') return '7.5pt'
+    return '9pt'
+}
+
+function getMetaFontSize(presetName: SampleLabelPreset) {
+    if (presetName === 'thermal-35x22-2up') return '5pt'
+    if (presetName === 'small-tube') return '6pt'
+    return '7pt'
+}
+
+function getCompactMetaFontSize(presetName: SampleLabelPreset) {
+    if (presetName === 'thermal-35x22-2up') return '4.4pt'
+    if (presetName === 'small-tube') return '5.2pt'
+    return '6pt'
 }
 
 function renderBarcodeSvg(sampleId: string, height: number) {
@@ -98,29 +112,25 @@ function renderBarcodeSvg(sampleId: string, height: number) {
 }
 
 export function generateSampleLabelHtml(
-    sample: SampleWithUser,
+    sample: SampleLabelInput,
     options: SampleLabelOptions = {},
 ) {
     const presetName = options.preset ?? 'thermal-35x22-2up'
     const preset = LABEL_PRESETS[presetName]
     const sampleId = sample.sample_id
-    const sampleType = sample.type ?? ''
-    const receivedAt = formatReceivedAt(sample.received_at)
-    const receiver = presetName === 'container'
-        ? sample.received_by_name ?? ''
-        : getReceiverInitials(sample.received_by_name)
+    const clientName = getClientName(sample)
+    const birthYear = getBirthYear(sample.client?.date_of_birth)
+    const metaItems = [clientName, birthYear].filter(Boolean)
+    const isCompactMeta = presetName === 'thermal-35x22-2up' && metaItems.join(' ').length > 24
+    const metaClass = isCompactMeta ? 'meta compact' : 'meta'
     const barcodeSvg = renderBarcodeSvg(sampleId, preset.barcodeHeight)
     const sheetColumns = Array.from({ length: preset.columns }, () => preset.labelWidth).join(' ')
     const labelCopies = Array.from({ length: preset.columns }, () => `
         <section class="sample-label" aria-label="Nhãn barcode mẫu ${escapeHtml(sampleId)}">
             <div class="sample-id">${escapeHtml(sampleId)}</div>
             <div class="barcode">${barcodeSvg}</div>
-            <div class="meta">
-                <span>${escapeHtml(sampleType)}</span>
-                <span>|</span>
-                <span>${escapeHtml(receivedAt)}</span>
-                <span>|</span>
-                <span>${escapeHtml(receiver)}</span>
+            <div class="${metaClass}">
+                ${metaItems.map((item) => `<span>${escapeHtml(item)}</span>`).join('<span>|</span>')}
             </div>
         </section>`).join('')
 
@@ -170,10 +180,12 @@ export function generateSampleLabelHtml(
 
         .sample-id {
             font-family: "Courier New", monospace;
-            font-size: ${presetName === 'small-tube' ? '7.5pt' : '9pt'};
+            font-size: ${getSampleIdFontSize(presetName)};
             font-weight: 700;
             line-height: 1;
             white-space: nowrap;
+            overflow: hidden;
+            text-overflow: clip;
         }
 
         .barcode {
@@ -194,11 +206,16 @@ export function generateSampleLabelHtml(
             display: flex;
             min-width: 0;
             align-items: center;
-            gap: 1mm;
-            font-size: ${presetName === 'small-tube' ? '6pt' : '7pt'};
+            gap: 0.8mm;
+            font-size: ${getMetaFontSize(presetName)};
             font-weight: 600;
             line-height: 1;
             white-space: nowrap;
+        }
+
+        .meta.compact {
+            font-size: ${getCompactMetaFontSize(presetName)};
+            gap: 0.5mm;
         }
 
         .meta span {

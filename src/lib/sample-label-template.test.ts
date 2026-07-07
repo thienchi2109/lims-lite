@@ -12,6 +12,10 @@ const sensitiveSample = {
     received_at: '2026-05-21T08:35:00.000Z',
     received_by: '33333333-3333-4333-8333-333333333333',
     received_by_name: 'Tran Thi Binh',
+    client: {
+        name: 'Nguyen Van A',
+        date_of_birth: '1991-02-03',
+    },
     created_at: '2026-05-21T08:35:00.000Z',
     updated_at: '2026-05-21T08:35:00.000Z',
     deleted_at: null,
@@ -27,38 +31,58 @@ describe('generateSampleLabelHtml', () => {
         expect(html).toContain('size: 72mm 22mm')
         expect(html).toContain('grid-template-columns: 35mm 35mm')
         expect(html).toContain('column-gap: 2mm')
+        expect(html).toContain('font-size: 6.5pt')
         expect(html.match(/class="sample-label"/g)).toHaveLength(2)
         expect(html.match(/CDC-XN-21052026-0001/g)?.length).toBeGreaterThanOrEqual(2)
     })
 
-    it('renders a small tube label with only privacy-safe sample metadata', () => {
+    it('renders patient identity metadata without sample type, collection time, or receiver on labels', () => {
         const html = generateSampleLabelHtml(sensitiveSample, { preset: 'small-tube' })
 
         expect(html).toContain('@page')
         expect(html).toContain('40mm')
         expect(html).toContain('15mm')
         expect(html).toContain('CDC-XN-21052026-0001')
-        expect(html).toContain('Máu')
-        expect(html).toContain('21/05 08:35')
-        expect(html).toContain('TTB')
+        expect(html).toContain('Nguyen Van A')
+        expect(html).toContain('1991')
         expect(html).toContain('<svg')
         expect(html).toContain('aria-label="Barcode CDC-XN-21052026-0001"')
 
-        expect(html).not.toContain('Nguyen Van HIV')
+        expect(html).not.toContain('Máu')
+        expect(html).not.toContain('21/05 08:35')
+        expect(html).not.toContain('Tran Thi Binh')
+        expect(html).not.toContain('TTB')
         expect(html).not.toContain('0912345678')
         expect(html).not.toContain('012345678901')
-        expect(html).not.toContain('HIV')
         expect(html).not.toContain('confidential')
         expect(html).not.toContain('xét nghiệm HIV')
         expect(html).not.toContain('/coa/access')
         expect(html).not.toContain('token')
     })
 
-    it('uses the full receiver name only on the larger container label', () => {
+    it('uses compact metadata text for long patient names on 35x22mm labels', () => {
+        const html = generateSampleLabelHtml({
+            ...sensitiveSample,
+            client: {
+                name: 'Nguyen Thi Minh Chau Phuong',
+                date_of_birth: '1988-09-10',
+            },
+        }, { preset: 'thermal-35x22-2up' })
+
+        expect(html).toContain('Nguyen Thi Minh Chau Phuong')
+        expect(html).toContain('1988')
+        expect(html).toContain('class="meta compact"')
+        expect(html).not.toContain('21/05 08:35')
+        expect(html).not.toContain('Tran Thi Binh')
+    })
+
+    it('keeps patient identity metadata on the larger container label', () => {
         const html = generateSampleLabelHtml(sensitiveSample, { preset: 'container' })
 
         expect(html).toContain('50mm')
         expect(html).toContain('25mm')
-        expect(html).toContain('Tran Thi Binh')
+        expect(html).toContain('Nguyen Van A')
+        expect(html).toContain('1991')
+        expect(html).not.toContain('Tran Thi Binh')
     })
 })
