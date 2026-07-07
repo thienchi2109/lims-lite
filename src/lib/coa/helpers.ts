@@ -98,6 +98,7 @@ interface TestResultQueryRow {
     assay_definitions: {
         name: string | null
         units: string | null
+        normal_range: string | null
         validation_rules: Record<string, unknown> | null
         lab_specialties: {
             name: string | null
@@ -376,6 +377,7 @@ export async function fetchTestResults(sampleId: string): Promise<TestResult[]> 
             assay_definitions!inner (
                 name,
                 units,
+                normal_range,
                 validation_rules,
                 lab_specialties (
                     name,
@@ -411,15 +413,11 @@ export async function fetchTestResults(sampleId: string): Promise<TestResult[]> 
     })
 
     return sorted.map((row) => {
-        // Extract normal_range from validation_rules if it exists
-        const validationRules = row.assay_definitions?.validation_rules ?? {}
-        const normalRange = (validationRules as Record<string, string>).normal_range ?? null
-
         return {
             assay_name: row.assay_definitions?.name ?? 'N/A',
             value: row.value,
             unit: row.assay_definitions?.units ?? null,
-            normal_range: normalRange,
+            normal_range: row.assay_definitions?.normal_range ?? null,
             method_name: row.methods?.name ?? null,
             lab_specialty_name: row.assay_definitions?.lab_specialties?.name ?? null
         }
