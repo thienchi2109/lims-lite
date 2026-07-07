@@ -132,3 +132,157 @@ WHERE assay.specialty_id = specialty.id
   AND assay.name = reference_ranges.assay_name
   AND assay.deleted_at IS NULL
   AND assay.normal_range IS DISTINCT FROM reference_ranges.normal_range;
+
+-- Anti HCV appears twice in the source appendix with different methods and
+-- reference ranges. Keep these as separate assays so CoA rows are unambiguous.
+INSERT INTO public.methods (name, description)
+SELECT 'Test nhanh', 'Rapid qualitative test method'
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM public.methods
+    WHERE lower(name) = lower('Test nhanh')
+      AND deleted_at IS NULL
+);
+
+INSERT INTO public.methods (name, description)
+SELECT 'Elisa', 'ELISA semi-quantitative immunoassay method'
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM public.methods
+    WHERE lower(name) = lower('Elisa')
+      AND deleted_at IS NULL
+);
+
+UPDATE public.assay_definitions AS assay
+SET name = 'Anti HCV (Test nhanh)',
+    normal_range = 'Âm tính',
+    updated_at = now()
+FROM public.lab_specialties AS specialty
+WHERE assay.specialty_id = specialty.id
+  AND specialty.code = 'IMM'
+  AND assay.name = 'Anti HCV'
+  AND assay.deleted_at IS NULL
+  AND NOT EXISTS (
+      SELECT 1
+      FROM public.assay_definitions existing
+      WHERE existing.specialty_id = specialty.id
+        AND existing.name = 'Anti HCV (Test nhanh)'
+        AND existing.deleted_at IS NULL
+  );
+
+INSERT INTO public.assay_definitions (name, specialty_id, units, normal_range, validation_rules)
+SELECT 'Anti HCV (Test nhanh)', specialty.id, NULL, 'Âm tính', '{}'::jsonb
+FROM public.lab_specialties AS specialty
+WHERE specialty.code = 'IMM'
+  AND specialty.deleted_at IS NULL
+  AND NOT EXISTS (
+      SELECT 1
+      FROM public.assay_definitions existing
+      WHERE existing.specialty_id = specialty.id
+        AND existing.name = 'Anti HCV (Test nhanh)'
+        AND existing.deleted_at IS NULL
+  );
+
+INSERT INTO public.assay_definitions (name, specialty_id, units, normal_range, validation_rules)
+SELECT 'Anti HCV (Elisa)', specialty.id, NULL, 'Neg < 0,9 S/CO
+Pos > 1,1 S/CO', '{}'::jsonb
+FROM public.lab_specialties AS specialty
+WHERE specialty.code = 'IMM'
+  AND specialty.deleted_at IS NULL
+  AND NOT EXISTS (
+      SELECT 1
+      FROM public.assay_definitions existing
+      WHERE existing.specialty_id = specialty.id
+        AND existing.name = 'Anti HCV (Elisa)'
+        AND existing.deleted_at IS NULL
+  );
+
+UPDATE public.assay_definitions AS assay
+SET normal_range = CASE
+        WHEN assay.name = 'Anti HCV (Test nhanh)' THEN 'Âm tính'
+        WHEN assay.name = 'Anti HCV (Elisa)' THEN 'Neg < 0,9 S/CO
+Pos > 1,1 S/CO'
+        ELSE assay.normal_range
+    END,
+    updated_at = now()
+FROM public.lab_specialties AS specialty
+WHERE assay.specialty_id = specialty.id
+  AND specialty.code = 'IMM'
+  AND assay.name IN ('Anti HCV (Test nhanh)', 'Anti HCV (Elisa)')
+  AND assay.deleted_at IS NULL
+  AND assay.normal_range IS DISTINCT FROM CASE
+        WHEN assay.name = 'Anti HCV (Test nhanh)' THEN 'Âm tính'
+        WHEN assay.name = 'Anti HCV (Elisa)' THEN 'Neg < 0,9 S/CO
+Pos > 1,1 S/CO'
+        ELSE assay.normal_range
+    END;
+
+INSERT INTO public.assay_methods (assay_id, method_id, is_default, notes)
+SELECT assay.id, method.id, true, 'Backfilled from assay appendix Anti HCV Test nhanh row'
+FROM public.assay_definitions AS assay
+JOIN public.lab_specialties AS specialty
+    ON specialty.id = assay.specialty_id
+JOIN public.methods AS method
+    ON lower(method.name) = lower('Test nhanh')
+WHERE specialty.code = 'IMM'
+  AND assay.name = 'Anti HCV (Test nhanh)'
+  AND assay.deleted_at IS NULL
+  AND method.deleted_at IS NULL
+  AND NOT EXISTS (
+      SELECT 1
+      FROM public.assay_methods existing
+      WHERE existing.assay_id = assay.id
+        AND existing.method_id = method.id
+  );
+
+INSERT INTO public.assay_methods (assay_id, method_id, is_default, notes)
+SELECT assay.id, method.id, true, 'Backfilled from assay appendix Anti HCV Elisa row'
+FROM public.assay_definitions AS assay
+JOIN public.lab_specialties AS specialty
+    ON specialty.id = assay.specialty_id
+JOIN public.methods AS method
+    ON lower(method.name) = lower('Elisa')
+WHERE specialty.code = 'IMM'
+  AND assay.name = 'Anti HCV (Elisa)'
+  AND assay.deleted_at IS NULL
+  AND method.deleted_at IS NULL
+  AND NOT EXISTS (
+      SELECT 1
+      FROM public.assay_methods existing
+      WHERE existing.assay_id = assay.id
+        AND existing.method_id = method.id
+  );
+
+DO $$
+DECLARE
+    v_anti_hcv_count integer;
+BEGIN
+    SELECT count(*)
+    INTO v_anti_hcv_count
+    FROM public.assay_definitions assay
+    JOIN public.lab_specialties specialty
+        ON specialty.id = assay.specialty_id
+    JOIN public.assay_methods assay_method
+        ON assay_method.assay_id = assay.id
+    JOIN public.methods method
+        ON method.id = assay_method.method_id
+    WHERE assay.deleted_at IS NULL
+      AND specialty.code = 'IMM'
+      AND (
+          (
+              assay.name = 'Anti HCV (Test nhanh)'
+              AND assay.normal_range = 'Âm tính'
+              AND lower(method.name) = lower('Test nhanh')
+          )
+          OR (
+              assay.name = 'Anti HCV (Elisa)'
+              AND assay.normal_range = 'Neg < 0,9 S/CO
+Pos > 1,1 S/CO'
+              AND lower(method.name) = lower('Elisa')
+          )
+      );
+
+    IF v_anti_hcv_count <> 2 THEN
+        RAISE EXCEPTION 'Expected 2 distinct Anti HCV assays with method links and normal ranges, got %', v_anti_hcv_count;
+    END IF;
+END $$;
