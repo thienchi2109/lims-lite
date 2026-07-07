@@ -13,7 +13,7 @@ export async function printSampleBarcodeLabel(
     sampleId: string,
     options: PrintSampleBarcodeLabelOptions = {},
 ) {
-    const preset = options.preset ?? 'small-tube'
+    const preset = options.preset ?? 'thermal-35x22-2up'
 
     try {
         const sample = await fetchSampleDetail(sampleId)

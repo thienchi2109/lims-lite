@@ -6,7 +6,6 @@ import { useClient } from '@/hooks/use-client'
 import {
     FileText,
     AlertCircle,
-    Activity,
     Loader2,
     Pencil,
     User,
@@ -23,6 +22,8 @@ import { markLocalSamplesMutation } from '@/lib/samples-realtime'
 import { sampleKeys, clientKeys } from '@/types/query-keys'
 import { cn } from '@/lib/utils'
 import { printSampleBarcodeLabel } from '@/lib/sample-label-print-client'
+import { SampleLabelPrintDialog } from '@/components/sample-label-print-dialog'
+import type { SampleLabelPreset } from '@/lib/sample-label-template'
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -81,6 +82,7 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
     const [editDialogOpen, setEditDialogOpen] = useState(false)
     const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
     const [copied, setCopied] = useState(false)
+    const [labelPrintDialogOpen, setLabelPrintDialogOpen] = useState(false)
     const queryClient = useQueryClient()
     const embeddedClient = getEmbeddedClient(sample)
 
@@ -112,7 +114,11 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
     }
 
     const handlePrintBarcodeLabel = () => {
-        void printSampleBarcodeLabel(sample.id, { preset: 'small-tube' })
+        setLabelPrintDialogOpen(true)
+    }
+
+    const handleConfirmPrintBarcodeLabel = (preset: SampleLabelPreset) => {
+        void printSampleBarcodeLabel(sample.id, { preset })
     }
 
     const handleEditSuccess = () => {
@@ -299,6 +305,11 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
                 open={editDialogOpen}
                 onOpenChange={setEditDialogOpen}
                 onSuccess={handleEditSuccess}
+            />
+            <SampleLabelPrintDialog
+                open={labelPrintDialogOpen}
+                onOpenChange={setLabelPrintDialogOpen}
+                onPrint={handleConfirmPrintBarcodeLabel}
             />
         </div>
     )

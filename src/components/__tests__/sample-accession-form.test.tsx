@@ -321,8 +321,12 @@ describe('SampleAccessionForm', () => {
 
         fireEvent.click(printButton)
 
+        expect(screen.getByRole('dialog', { name: 'Cấu hình nhãn barcode' })).toBeDefined()
+
+        fireEvent.click(screen.getByRole('button', { name: 'In nhãn' }))
+
         expect(accessionFormMocks.printSampleBarcodeLabel).toHaveBeenCalledWith('sample-created-1', {
-            preset: 'small-tube',
+            preset: 'thermal-35x22-2up',
         })
     })
 

@@ -1,26 +1,47 @@
 import bwipjs from 'bwip-js/browser'
 import type { SampleWithUser } from '@/types'
 
-export type SampleLabelPreset = 'small-tube' | 'container'
+export type SampleLabelPreset = 'thermal-35x22-2up' | 'small-tube' | 'container'
 
 interface SampleLabelOptions {
     preset?: SampleLabelPreset
 }
 
 const LABEL_PRESETS: Record<SampleLabelPreset, {
-    width: string
-    height: string
+    pageWidth: string
+    pageHeight: string
+    labelWidth: string
+    labelHeight: string
     barcodeHeight: number
+    columns: 1 | 2
+    columnGap: string
 }> = {
+    'thermal-35x22-2up': {
+        pageWidth: '72mm',
+        pageHeight: '22mm',
+        labelWidth: '35mm',
+        labelHeight: '22mm',
+        barcodeHeight: 9,
+        columns: 2,
+        columnGap: '2mm',
+    },
     'small-tube': {
-        width: '40mm',
-        height: '15mm',
+        pageWidth: '40mm',
+        pageHeight: '15mm',
+        labelWidth: '40mm',
+        labelHeight: '15mm',
         barcodeHeight: 7,
+        columns: 1,
+        columnGap: '0',
     },
     container: {
-        width: '50mm',
-        height: '25mm',
+        pageWidth: '50mm',
+        pageHeight: '25mm',
+        labelWidth: '50mm',
+        labelHeight: '25mm',
         barcodeHeight: 11,
+        columns: 1,
+        columnGap: '0',
     },
 }
 
@@ -80,7 +101,7 @@ export function generateSampleLabelHtml(
     sample: SampleWithUser,
     options: SampleLabelOptions = {},
 ) {
-    const presetName = options.preset ?? 'small-tube'
+    const presetName = options.preset ?? 'thermal-35x22-2up'
     const preset = LABEL_PRESETS[presetName]
     const sampleId = sample.sample_id
     const sampleType = sample.type ?? ''
@@ -89,6 +110,19 @@ export function generateSampleLabelHtml(
         ? sample.received_by_name ?? ''
         : getReceiverInitials(sample.received_by_name)
     const barcodeSvg = renderBarcodeSvg(sampleId, preset.barcodeHeight)
+    const sheetColumns = Array.from({ length: preset.columns }, () => preset.labelWidth).join(' ')
+    const labelCopies = Array.from({ length: preset.columns }, () => `
+        <section class="sample-label" aria-label="Nhãn barcode mẫu ${escapeHtml(sampleId)}">
+            <div class="sample-id">${escapeHtml(sampleId)}</div>
+            <div class="barcode">${barcodeSvg}</div>
+            <div class="meta">
+                <span>${escapeHtml(sampleType)}</span>
+                <span>|</span>
+                <span>${escapeHtml(receivedAt)}</span>
+                <span>|</span>
+                <span>${escapeHtml(receiver)}</span>
+            </div>
+        </section>`).join('')
 
     return `<!DOCTYPE html>
 <html lang="vi">
@@ -97,7 +131,7 @@ export function generateSampleLabelHtml(
     <title>Nhãn barcode - ${escapeHtml(sampleId)}</title>
     <style>
         @page {
-            size: ${preset.width} ${preset.height};
+            size: ${preset.pageWidth} ${preset.pageHeight};
             margin: 0;
         }
 
@@ -107,8 +141,8 @@ export function generateSampleLabelHtml(
 
         html,
         body {
-            width: ${preset.width};
-            height: ${preset.height};
+            width: ${preset.pageWidth};
+            height: ${preset.pageHeight};
             margin: 0;
             padding: 0;
             background: #fff;
@@ -116,9 +150,17 @@ export function generateSampleLabelHtml(
             font-family: Arial, sans-serif;
         }
 
+        .label-sheet {
+            width: ${preset.pageWidth};
+            height: ${preset.pageHeight};
+            display: grid;
+            grid-template-columns: ${sheetColumns};
+            column-gap: ${preset.columnGap};
+        }
+
         .sample-label {
-            width: ${preset.width};
-            height: ${preset.height};
+            width: ${preset.labelWidth};
+            height: ${preset.labelHeight};
             display: grid;
             grid-template-rows: auto 1fr auto;
             gap: 0.6mm;
@@ -174,17 +216,8 @@ export function generateSampleLabelHtml(
     </style>
 </head>
 <body>
-    <section class="sample-label" aria-label="Nhãn barcode mẫu ${escapeHtml(sampleId)}">
-        <div class="sample-id">${escapeHtml(sampleId)}</div>
-        <div class="barcode">${barcodeSvg}</div>
-        <div class="meta">
-            <span>${escapeHtml(sampleType)}</span>
-            <span>|</span>
-            <span>${escapeHtml(receivedAt)}</span>
-            <span>|</span>
-            <span>${escapeHtml(receiver)}</span>
-        </div>
-    </section>
+    <main class="label-sheet">${labelCopies}
+    </main>
 </body>
 </html>`
 }

@@ -78,13 +78,14 @@ describe('SampleDetailPanel invalidation contract', () => {
         })
     })
 
-    it('prints a barcode label from the selected sample detail header', () => {
+    it('opens the barcode label preset dialog before printing', () => {
         render(<SampleDetailPanel sample={sample} />)
 
         fireEvent.click(screen.getByRole('button', { name: 'In nhãn barcode' }))
+        fireEvent.click(screen.getByRole('button', { name: 'In nhãn' }))
 
         expect(mockPrintSampleBarcodeLabel).toHaveBeenCalledWith('sample-1', {
-            preset: 'small-tube',
+            preset: 'thermal-35x22-2up',
         })
     })
 })

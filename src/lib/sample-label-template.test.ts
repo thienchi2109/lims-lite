@@ -21,6 +21,16 @@ const sensitiveSample = {
 } as SampleWithUser
 
 describe('generateSampleLabelHtml', () => {
+    it('renders a two-column 35x22mm thermal label row with duplicate labels', () => {
+        const html = generateSampleLabelHtml(sensitiveSample, { preset: 'thermal-35x22-2up' })
+
+        expect(html).toContain('size: 72mm 22mm')
+        expect(html).toContain('grid-template-columns: 35mm 35mm')
+        expect(html).toContain('column-gap: 2mm')
+        expect(html.match(/class="sample-label"/g)).toHaveLength(2)
+        expect(html.match(/CDC-XN-21052026-0001/g)?.length).toBeGreaterThanOrEqual(2)
+    })
+
     it('renders a small tube label with only privacy-safe sample metadata', () => {
         const html = generateSampleLabelHtml(sensitiveSample, { preset: 'small-tube' })
 

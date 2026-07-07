@@ -28,7 +28,7 @@ import {
 const RecordSampleLabelPrintSchema = z.object({
     sampleId: z.string().uuid(),
     copies: z.number().int().min(1).max(20).default(1),
-    preset: z.enum(['small-tube', 'container']).default('small-tube'),
+    preset: z.enum(['thermal-35x22-2up', 'small-tube', 'container']).default('thermal-35x22-2up'),
 })
 
 export type RecordSampleLabelPrintInput = z.input<typeof RecordSampleLabelPrintSchema>

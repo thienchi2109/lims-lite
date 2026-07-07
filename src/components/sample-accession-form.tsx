@@ -7,6 +7,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { type CreateSampleWithAssignments, type CreateSample, type Client, type CreateClient, type LabSpecialty, type SampleType, type SelectedTest } from '@/types'
 import { accessionAndAssignTestsClient, createSampleClient, findClientByIdentityClient } from '@/lib/api-client'
 import { printSampleBarcodeLabel } from '@/lib/sample-label-print-client'
+import { SampleLabelPrintDialog } from '@/components/sample-label-print-dialog'
+import type { SampleLabelPreset } from '@/lib/sample-label-template'
 import { parseClientIdentityQr } from '@/lib/qr/parse-client-identity-qr'
 import { ClientQrScannerDialog } from '@/components/client-qr-scanner-dialog'
 import {
@@ -43,6 +45,7 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
     const [createdSampleId, setCreatedSampleId] = useState<string | null>(null)
     const [selectedTests, setSelectedTests] = useState<SelectedTest[]>([])
     const [showConfirmation, setShowConfirmation] = useState(false)
+    const [showLabelPrintDialog, setShowLabelPrintDialog] = useState(false)
 
     // New state for Client and Sample Type
     const [selectedClient, setSelectedClient] = useState<Client | null>(null)
@@ -229,7 +232,12 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
 
     const handlePrintBarcodeLabel = useCallback(() => {
         if (!createdSampleId) return
-        void printSampleBarcodeLabel(createdSampleId, { preset: 'small-tube' })
+        setShowLabelPrintDialog(true)
+    }, [createdSampleId])
+
+    const handleConfirmPrintBarcodeLabel = useCallback((preset: SampleLabelPreset) => {
+        if (!createdSampleId) return
+        void printSampleBarcodeLabel(createdSampleId, { preset })
     }, [createdSampleId])
 
     const createdSampleHref = createdSampleId
@@ -373,6 +381,11 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
                 onOpenChange={setShowQRScanner}
                 onScan={handleQRScan}
                 serialController={serialController}
+            />
+            <SampleLabelPrintDialog
+                open={showLabelPrintDialog}
+                onOpenChange={setShowLabelPrintDialog}
+                onPrint={handleConfirmPrintBarcodeLabel}
             />
         </div>
     )

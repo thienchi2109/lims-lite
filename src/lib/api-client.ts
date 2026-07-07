@@ -19,6 +19,7 @@ import type {
     CoAManualInputs,
 } from '@/types'
 import type { ClientActionName } from '@/lib/client-actions/types'
+import type { SampleLabelPreset } from '@/lib/sample-label-template'
 
 const ENDPOINT = '/api/client-actions'
 const SESSION_EXPIRY_ENDPOINT = '/api/auth/session-expiry'
@@ -165,7 +166,7 @@ export function accessionAndAssignTestsClient(data: CreateSampleWithAssignments)
 export function recordSampleLabelPrintClient(data: {
     sampleId: string
     copies: number
-    preset: 'small-tube' | 'container'
+    preset: SampleLabelPreset
 }) {
     return callClientAction('recordSampleLabelPrint', data)
 }
