@@ -85,6 +85,7 @@ export const AssayDefinitionSchema = z.object({
     name: z.string().min(1).max(200),
     specialty_id: z.string().uuid().nullable().optional(),
     units: z.string().nullable(),
+    normal_range: z.string().nullable().optional(),
     validation_rules: z.record(z.string(), z.any()).default({}),
     is_confidential: z.boolean(),
     created_at: z.string().datetime(),
@@ -99,6 +100,7 @@ export const CreateAssayDefinitionSchema = z.object({
     specialty_id: z.string().uuid().optional(),
     method_id: z.string().uuid().optional(),
     units: z.string().optional(),
+    normal_range: z.string().nullable().optional(),
     validation_rules: z.record(z.string(), z.any()).optional(),
     is_confidential: z.boolean().optional(),
 })
