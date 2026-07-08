@@ -42,6 +42,7 @@ import { usePrintHandlers } from '@/hooks/use-print-handlers'
 import { markLocalSamplesMutation } from '@/lib/samples-realtime'
 import { QCRowIndicator } from '@/components/qc/qc-row-indicator'
 import { CoAPreviewDialog } from '@/components/coa-preview-dialog'
+import { DocumentPreviewDialog } from '@/components/document-preview-dialog'
 import type { ResultWithAssay } from '@/types'
 
 interface AssignedTestsPanelProps {
@@ -53,6 +54,7 @@ interface AssignedTestsPanelProps {
 
 const DEFAULT_SPECIALTIES: LabSpecialty[] = []
 const COA_PREVIEW_TITLE = 'Phiếu Kết Quả Phân Tích'
+const TEST_ORDER_PREVIEW_TITLE = 'Phiếu chỉ định xét nghiệm'
 
 export function AssignedTestsPanel({
     sampleId,
@@ -67,7 +69,13 @@ export function AssignedTestsPanel({
         qcStatuses, coaStatus, enrichmentLoading, enrichmentError, setCoaStatus, fetchTests,
     } = useAssignedTestsData(sampleId, { initialResults })
     const { isGeneratingCoA, handleGenerateCoA } = useCoaActions(sampleId, setCoaStatus)
-    const { handlePrint, handlePrintCoABody, handlePrintBarcodeLabel } = usePrintHandlers(sampleId, results)
+    const {
+        handlePrint,
+        handlePrintCoABody,
+        handlePrintBarcodeLabel,
+        closePrintPreview,
+        printPreview,
+    } = usePrintHandlers(sampleId, results)
     const [showSubmitDialog, setShowSubmitDialog] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [showAssignmentDialog, setShowAssignmentDialog] = useState(false)
@@ -356,6 +364,18 @@ export function AssignedTestsPanel({
                 sampleId={previewSampleId ?? ''}
                 title={COA_PREVIEW_TITLE}
                 route="staff"
+            />
+            <DocumentPreviewDialog
+                open={printPreview.open}
+                onOpenChange={(open) => {
+                    if (!open) closePrintPreview()
+                }}
+                title={TEST_ORDER_PREVIEW_TITLE}
+                subtitle={`Mẫu ${sampleId}`}
+                loading={printPreview.loading}
+                error={printPreview.error}
+                html={printPreview.html}
+                onRetry={handlePrint}
             />
         </div>
     )

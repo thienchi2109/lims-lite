@@ -1,4 +1,5 @@
 import type { Client, ResultWithAssay, SampleWithUser } from '@/types'
+import { renderSampleBarcodeSvg } from '@/lib/sample-label-template'
 
 type SampleForPrint = SampleWithUser & {
   client?: Pick<
@@ -12,8 +13,8 @@ export function generatePrintTemplate(
   results: ResultWithAssay[],
   dateStr?: string
 ) {
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${sample.sample_id}&margin=0`;
   const logoUrl = "https://i.postimg.cc/8zFZ52j1/cdc-logo-150.png";
+  const sampleBarcodeSvg = renderSampleBarcodeSvg(sample.sample_id, 12)
   const currentDate = dateStr || new Date().toLocaleDateString('vi-VN');
 
   const client = sample.client ?? null
@@ -26,7 +27,6 @@ export function generatePrintTemplate(
     : ''
   const gender = client?.gender || ''
   const address = client?.address || ''
-  const phone = client?.phone || ''
   const healthInsuranceNum = client?.health_insurance_num || ''
   const sampleType = sample.type || ''
 
@@ -126,7 +126,19 @@ export function generatePrintTemplate(
           flex-direction: column;
           align-items: center;
         }
-        .qr-img { width: 70px; height: 70px; margin-bottom: 5px; }
+        .sample-barcode-box {
+          width: 118px;
+          border: 1px solid #94a3b8;
+          border-radius: 6px;
+          padding: 5px 6px;
+          margin-bottom: 5px;
+          background: #fff;
+        }
+        .sample-barcode-box svg {
+          width: 100%;
+          height: 36px;
+          display: block;
+        }
         .sample-id-box { font-family: monospace; font-size: 12px; font-weight: bold; border: 1px solid #ccc; padding: 2px 6px; border-radius: 4px; background: #f8fafc; }
 
         /* SECTIONS & TABLES */
@@ -195,12 +207,6 @@ export function generatePrintTemplate(
           font-size: 13px;
         }
         .center-text { text-align: center; }
-        .checkbox-cell {
-            font-size: 16px;
-            color: #000;
-            line-height: 1;
-            text-align: center;
-        }
 
         /* PORTAL GUIDE BOX */
         .portal-guide-box {
@@ -283,7 +289,7 @@ export function generatePrintTemplate(
             <div class="form-name">PHIẾU CHỈ ĐỊNH XÉT NGHIỆM</div>
           </div>
           <div class="header-right">
-            <img src="${qrCodeUrl}" class="qr-img" alt="QR Code" />
+            <div class="sample-barcode-box">${sampleBarcodeSvg}</div>
             <div class="sample-id-box">${sample.sample_id}</div>
           </div>
         </div>
@@ -365,8 +371,7 @@ export function generatePrintTemplate(
             <thead>
               <tr>
                 <th width="5%" class="center-text">STT</th>
-                <th width="5%" class="center-text">Chọn</th>
-                <th width="15%" class="center-text">Mã XN</th>
+                <th width="20%" class="center-text">Mã XN</th>
                 <th width="45%">Tên Xét Nghiệm / Protocol</th>
                 <th width="30%">Ghi Chú</th>
               </tr>
@@ -374,12 +379,11 @@ export function generatePrintTemplate(
             <tbody>
               ${sortedCategories.map((category) => `
                 <tr class="cat-row">
-                  <td colspan="5">${category}</td>
+                  <td colspan="4">${category}</td>
                 </tr>
-                ${testsByCategory[category].map((test, index) => `
+                ${testsByCategory[category].map((test) => `
                   <tr>
                     <td class="center-text">${displayResults.indexOf(test) + 1}</td>
-                    <td class="checkbox-cell">☐</td>
                     <td class="center-text" style="font-weight:bold;">${test.assay_name}</td> 
                     <td style="font-weight: 500;">${test.assay_name}</td>
                     <td></td>
@@ -388,7 +392,7 @@ export function generatePrintTemplate(
               `).join('')}
               
               ${results.length === 0 ? `
-                <tr><td colspan="5" style="text-align:center; padding: 20px; color: #64748b; font-style: italic; font-size: 13px;">Chưa có chỉ định nào</td></tr>
+                <tr><td colspan="4" style="text-align:center; padding: 20px; color: #64748b; font-style: italic; font-size: 13px;">Chưa có chỉ định nào</td></tr>
               ` : ''}
             </tbody>
           </table>

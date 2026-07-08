@@ -275,6 +275,14 @@ describe('SamplesPageClient read-path contract', () => {
         mockUsePrintHandlers.mockReturnValue({
             handlePrint: vi.fn(),
             handlePrintCoABody: vi.fn(),
+            handlePrintBarcodeLabel: vi.fn(),
+            closePrintPreview: vi.fn(),
+            printPreview: {
+                open: false,
+                loading: false,
+                error: null,
+                html: null,
+            },
         })
         mockFetchSampleResultsClient.mockResolvedValue({
             data: [],

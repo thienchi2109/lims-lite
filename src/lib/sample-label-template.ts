@@ -92,7 +92,7 @@ function getCompactMetaFontSize(presetName: SampleLabelPreset) {
     return '6pt'
 }
 
-function renderBarcodeSvg(sampleId: string, height: number) {
+export function renderSampleBarcodeSvg(sampleId: string, height: number) {
     const svg = bwipjs.toSVG({
         bcid: 'code128',
         text: sampleId,
@@ -123,7 +123,7 @@ export function generateSampleLabelHtml(
     const metaItems = [clientName, birthYear].filter(Boolean)
     const isCompactMeta = presetName === 'thermal-35x22-2up' && metaItems.join(' ').length > 24
     const metaClass = isCompactMeta ? 'meta compact' : 'meta'
-    const barcodeSvg = renderBarcodeSvg(sampleId, preset.barcodeHeight)
+    const barcodeSvg = renderSampleBarcodeSvg(sampleId, preset.barcodeHeight)
     const sheetColumns = Array.from({ length: preset.columns }, () => preset.labelWidth).join(' ')
     const labelCopies = Array.from({ length: preset.columns }, () => `
         <section class="sample-label" aria-label="Nhãn barcode mẫu ${escapeHtml(sampleId)}">

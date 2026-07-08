@@ -66,6 +66,14 @@ vi.mock('@/hooks/use-print-handlers', () => ({
     usePrintHandlers: () => ({
         handlePrint: vi.fn(),
         handlePrintCoABody: vi.fn(),
+        handlePrintBarcodeLabel: vi.fn(),
+        closePrintPreview: vi.fn(),
+        printPreview: {
+            open: false,
+            loading: false,
+            error: null,
+            html: null,
+        },
     }),
 }))
 

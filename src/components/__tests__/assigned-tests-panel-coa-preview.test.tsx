@@ -3,7 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 
 const mockHandlePrintCoABody = vi.fn()
+const mockHandlePrint = vi.fn()
+const mockClosePrintPreview = vi.fn()
 const mockDialogProps: Array<Record<string, unknown>> = []
+const mockDocumentPreviewProps: Array<Record<string, unknown>> = []
 
 vi.mock('@tanstack/react-query', () => ({
     useQueryClient: () => ({
@@ -76,24 +79,35 @@ vi.mock('@/hooks/use-coa-actions', () => ({
 
 vi.mock('@/hooks/use-print-handlers', () => ({
     usePrintHandlers: () => ({
-        handlePrint: vi.fn(),
+        handlePrint: mockHandlePrint,
         handlePrintCoABody: mockHandlePrintCoABody,
+        handlePrintBarcodeLabel: vi.fn(),
+        closePrintPreview: mockClosePrintPreview,
+        printPreview: {
+            open: true,
+            loading: false,
+            error: null,
+            html: '<html>Phiếu chỉ định</html>',
+        },
     }),
 }))
 
 vi.mock('@/components/assigned-tests-toolbar', () => ({
     AssignedTestsToolbar: ({
+        onPrint,
         onPreviewCoA,
         onPrintCoABody,
         onSubmitForReview,
         onOpenAssignment,
     }: {
+        onPrint: () => void
         onPreviewCoA: () => void
         onPrintCoABody: () => void
         onSubmitForReview: () => void
         onOpenAssignment?: () => void
     }) => (
         <>
+            <button onClick={onPrint}>In phiếu chỉ định</button>
             <button onClick={onPreviewCoA}>Xem CoA đầy đủ</button>
             <button onClick={onPrintCoABody}>Chỉ in bảng kết quả</button>
             <button onClick={onSubmitForReview}>Submit for review</button>
@@ -129,6 +143,19 @@ vi.mock('@/components/coa-preview-dialog', () => ({
             <div data-testid="coa-preview-dialog">
                 <button onClick={() => (props.onOpenChange as (open: boolean) => void)(false)}>
                     Đóng
+                </button>
+            </div>
+        ) : null
+    },
+}))
+
+vi.mock('@/components/document-preview-dialog', () => ({
+    DocumentPreviewDialog: (props: Record<string, unknown>) => {
+        mockDocumentPreviewProps.push(props)
+        return props.open ? (
+            <div data-testid="document-preview-dialog">
+                <button onClick={() => (props.onOpenChange as (open: boolean) => void)(false)}>
+                    Đóng phiếu chỉ định
                 </button>
             </div>
         ) : null
@@ -171,6 +198,7 @@ describe('AssignedTestsPanel CoA preview wiring', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockDialogProps.length = 0
+        mockDocumentPreviewProps.length = 0
     })
 
     it('opens the staff CoA preview dialog from the toolbar and closes it again', async () => {
@@ -198,6 +226,27 @@ describe('AssignedTestsPanel CoA preview wiring', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Chỉ in bảng kết quả' }))
 
         expect(mockHandlePrintCoABody).toHaveBeenCalledTimes(1)
+    })
+
+    it('renders the test-order form through the shared document preview dialog', () => {
+        render(<AssignedTestsPanel sampleId="sample-1" />)
+
+        fireEvent.click(screen.getByRole('button', { name: 'In phiếu chỉ định' }))
+
+        expect(mockHandlePrint).toHaveBeenCalledTimes(1)
+        expect(mockDocumentPreviewProps.at(-1)).toMatchObject({
+            open: true,
+            title: 'Phiếu chỉ định xét nghiệm',
+            subtitle: 'Mẫu sample-1',
+            loading: false,
+            error: null,
+            html: '<html>Phiếu chỉ định</html>',
+            onRetry: mockHandlePrint,
+        })
+
+        fireEvent.click(screen.getByRole('button', { name: 'Đóng phiếu chỉ định' }))
+
+        expect(mockClosePrintPreview).toHaveBeenCalledTimes(1)
     })
 
     it('keeps the results region in a constrained scroll chain for split-panel layouts', () => {

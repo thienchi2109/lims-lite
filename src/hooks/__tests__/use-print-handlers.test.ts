@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
 import { usePrintHandlers } from '../use-print-handlers'
 
 vi.mock('@/hooks/use-sample-detail', () => ({
@@ -58,7 +58,7 @@ describe('usePrintHandlers', () => {
     })
 
     describe('handlePrint', () => {
-        it('opens the print window before sample detail finishes loading', async () => {
+        it('loads the test-order HTML into preview state without opening a new tab', async () => {
             let resolveDetail: ((value: any) => void) | undefined
             const detailPromise = new Promise((resolve) => {
                 resolveDetail = resolve
@@ -66,16 +66,20 @@ describe('usePrintHandlers', () => {
 
             mockFetchDetail.mockReturnValue(detailPromise as Promise<any>)
             mockTemplate.mockReturnValue('<html>Print Content</html>')
-            const openSpy = vi.spyOn(window, 'open').mockReturnValue(mockPrintWindow)
+            const openSpy = vi.spyOn(window, 'open')
 
             const { result } = renderHook(() => usePrintHandlers('sample-1', results))
 
-            const printPromise = result.current.handlePrint()
+            let printPromise: Promise<void>
 
-            expect(openSpy).toHaveBeenCalledWith('', '_blank')
-            expect(mockPrintWindow.document.write).toHaveBeenCalledWith(
-                expect.stringContaining('Đang tải')
-            )
+            act(() => {
+                printPromise = result.current.handlePrint()
+            })
+
+            await waitFor(() => {
+                expect(result.current.printPreview.loading).toBe(true)
+                expect(result.current.printPreview.open).toBe(true)
+            })
 
             resolveDetail?.({ id: 'sample-1', sample_code: 'S001' } as any)
 
@@ -83,35 +87,56 @@ describe('usePrintHandlers', () => {
                 await printPromise
             })
 
-            expect(mockTemplate).toHaveBeenCalled()
-            expect(mockPrintWindow.document.write).toHaveBeenCalledWith('<html>Print Content</html>')
-        })
-
-        it('fetches sample detail and opens print window with template', async () => {
-            mockFetchDetail.mockResolvedValue({ id: 'sample-1', sample_code: 'S001' } as any)
-            mockTemplate.mockReturnValue('<html>Print Content</html>')
-            vi.spyOn(window, 'open').mockReturnValue(mockPrintWindow)
-
-            const { result } = renderHook(() => usePrintHandlers('sample-1', results))
-
-            await act(async () => { await result.current.handlePrint() })
-
+            expect(openSpy).not.toHaveBeenCalled()
             expect(mockFetchDetail).toHaveBeenCalledWith('sample-1')
             expect(mockTemplate).toHaveBeenCalled()
-            expect(mockPrintWindow.document.write).toHaveBeenCalledWith('<html>Print Content</html>')
-            expect(mockPrintWindow.document.close).toHaveBeenCalled()
+            expect(result.current.printPreview).toMatchObject({
+                open: true,
+                loading: false,
+                error: null,
+                html: '<html>Print Content</html>',
+            })
         })
 
-        it('toasts error when popup is blocked', async () => {
-            vi.spyOn(window, 'open').mockReturnValue(null)
-            mockFetchDetail.mockResolvedValue({ id: 'sample-1' } as any)
+        it('closes and clears the test-order preview', async () => {
+            mockFetchDetail.mockResolvedValue({ id: 'sample-1', sample_code: 'S001' } as any)
+            mockTemplate.mockReturnValue('<html>Print Content</html>')
+
+            const { result } = renderHook(() => usePrintHandlers('sample-1', results))
+
+            await act(async () => { await result.current.handlePrint() })
+            expect(result.current.printPreview.open).toBe(true)
+
+            act(() => { result.current.closePrintPreview() })
+
+            expect(result.current.printPreview).toMatchObject({
+                open: false,
+                loading: false,
+                error: null,
+                html: null,
+            })
+        })
+
+        it('keeps the preview open with an error when test-order HTML cannot be prepared', async () => {
+            const error = new Error('network failed')
+            mockFetchDetail.mockRejectedValue(error)
             mockTemplate.mockReturnValue('<html></html>')
+            const openSpy = vi.spyOn(window, 'open')
+            const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
 
             const { result } = renderHook(() => usePrintHandlers('sample-1', results))
 
             await act(async () => { await result.current.handlePrint() })
 
-            expect(toast.error).toHaveBeenCalledWith('Trình duyệt đã chặn cửa sổ in')
+            expect(openSpy).not.toHaveBeenCalled()
+            expect(errorSpy).toHaveBeenCalledWith(error)
+            expect(toast.error).toHaveBeenCalledWith('Có lỗi xảy ra khi chuẩn bị Phiếu chỉ định')
+            expect(result.current.printPreview).toMatchObject({
+                open: true,
+                loading: false,
+                error: 'Có lỗi xảy ra khi chuẩn bị Phiếu chỉ định',
+                html: null,
+            })
         })
     })
 
