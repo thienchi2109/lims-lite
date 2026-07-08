@@ -78,6 +78,65 @@ describe('assay query confidentiality mapping', () => {
         )
     })
 
+    it('maps method_name from list and detail RPC payloads', async () => {
+        mockRpc.mockResolvedValueOnce({
+            data: [
+                {
+                    id: '11111111-1111-4111-8111-111111111111',
+                    name: 'Anti HCV',
+                    specialty_id: null,
+                    specialty_name: 'Miễn dịch',
+                    specialty_order: 1,
+                    units: 'S/CO',
+                    validation_rules: {},
+                    is_confidential: false,
+                    method_name: 'CLIA',
+                    methods: [],
+                    created_at: '2026-03-25T00:00:00.000Z',
+                    updated_at: '2026-03-25T00:00:00.000Z',
+                    total_count: 1,
+                },
+            ],
+            error: null,
+        })
+
+        await expect(getAssayDefinitions()).resolves.toEqual(
+            expect.objectContaining({
+                data: [
+                    expect.objectContaining({
+                        method_name: 'CLIA',
+                    }),
+                ],
+            }),
+        )
+
+        mockRpc.mockResolvedValueOnce({
+            data: [
+                {
+                    id: '11111111-1111-4111-8111-111111111111',
+                    name: 'Anti HCV',
+                    specialty_id: null,
+                    units: 'S/CO',
+                    validation_rules: {},
+                    is_confidential: false,
+                    method_name: 'ELISA',
+                    methods: [],
+                    created_at: '2026-03-25T00:00:00.000Z',
+                    updated_at: '2026-03-25T00:00:00.000Z',
+                },
+            ],
+            error: null,
+        })
+
+        await expect(getAssayDefinitionById('11111111-1111-4111-8111-111111111111')).resolves.toEqual(
+            expect.objectContaining({
+                data: expect.objectContaining({
+                    method_name: 'ELISA',
+                }),
+            }),
+        )
+    })
+
     it('fails closed when the list RPC omits is_confidential', async () => {
         mockRpc.mockResolvedValue({
             data: [

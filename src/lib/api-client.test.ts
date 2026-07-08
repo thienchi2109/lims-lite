@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fetchSamplesForApprovalCountClient } from './api-client'
+import { fetchMethodNameSuggestionsClient, fetchSamplesForApprovalCountClient } from './api-client'
 
 describe('callClientAction', () => {
     afterEach(() => {
@@ -19,6 +19,22 @@ describe('callClientAction', () => {
         await expect(fetchSamplesForApprovalCountClient()).resolves.toEqual({
             error: null,
             data: 3,
+        })
+    })
+
+    it('requests assay method name suggestions from the client-action bridge', async () => {
+        const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+            new Response(JSON.stringify({ data: ['CLIA'] }), {
+                status: 200,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            }),
+        )
+
+        await expect(fetchMethodNameSuggestionsClient()).resolves.toEqual({ data: ['CLIA'] })
+        expect(JSON.parse(fetchMock.mock.calls[0][1]?.body as string)).toEqual({
+            action: 'getMethodNameSuggestions',
         })
     })
 })

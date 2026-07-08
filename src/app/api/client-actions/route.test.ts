@@ -9,6 +9,9 @@ const mocks = vi.hoisted(() => ({
     globalSearch: vi.fn(),
     configureManagerOtpEmail: vi.fn(),
     getMaskedManagerOtpEmail: vi.fn(),
+    createAssayDefinition: vi.fn(),
+    updateAssayDefinition: vi.fn(),
+    getMethodNameSuggestions: vi.fn(),
     createClient: vi.fn(),
 }))
 
@@ -54,11 +57,12 @@ vi.mock('@/app/actions/assay-queries', () => ({
 
 vi.mock('@/app/actions/assay-lookups', () => ({
     getMethods: vi.fn(),
+    getMethodNameSuggestions: (...args: unknown[]) => mocks.getMethodNameSuggestions(...args),
 }))
 
 vi.mock('@/app/actions/assay-mutations', () => ({
-    createAssayDefinition: vi.fn(),
-    updateAssayDefinition: vi.fn(),
+    createAssayDefinition: (...args: unknown[]) => mocks.createAssayDefinition(...args),
+    updateAssayDefinition: (...args: unknown[]) => mocks.updateAssayDefinition(...args),
     deleteAssayDefinition: vi.fn(),
 }))
 
@@ -156,6 +160,9 @@ describe('client action role guard', () => {
         mocks.globalSearch.mockResolvedValue({ data: [] })
         mocks.configureManagerOtpEmail.mockResolvedValue({ success: true })
         mocks.getMaskedManagerOtpEmail.mockResolvedValue({ otpEmail: null })
+        mocks.createAssayDefinition.mockResolvedValue({ success: true })
+        mocks.updateAssayDefinition.mockResolvedValue({ success: true })
+        mocks.getMethodNameSuggestions.mockResolvedValue({ data: ['CLIA'] })
     })
 
     it('allows doctor to call the completed samples read action', async () => {
@@ -233,5 +240,45 @@ describe('client action role guard', () => {
         expect(response.status).toBe(400)
         await expect(response.json()).resolves.toEqual({ error: 'ID người dùng không hợp lệ' })
         expect(mocks.configureManagerOtpEmail).not.toHaveBeenCalled()
+    })
+
+    it('passes manager assay methodName as assay-owned method_name form data', async () => {
+        mockRole('manager')
+
+        const response = await POST(buildRequest('createAssayDefinition', {
+            name: 'Anti HCV',
+            methodName: 'CLIA',
+        }))
+
+        expect(response.status).toBe(200)
+        expect(mocks.createAssayDefinition).toHaveBeenCalledTimes(1)
+        const formData = mocks.createAssayDefinition.mock.calls[0][0] as FormData
+        expect(formData.get('method_name')).toBe('CLIA')
+        expect(formData.has('method_id')).toBe(false)
+    })
+
+    it('passes manager assay update methodName as assay-owned method_name form data', async () => {
+        mockRole('manager')
+
+        const response = await POST(buildRequest('updateAssayDefinition', {
+            id: '11111111-1111-4111-8111-111111111111',
+            name: 'Anti HCV',
+            methodName: 'ELISA',
+        }))
+
+        expect(response.status).toBe(200)
+        expect(mocks.updateAssayDefinition).toHaveBeenCalledTimes(1)
+        const formData = mocks.updateAssayDefinition.mock.calls[0][0] as FormData
+        expect(formData.get('method_name')).toBe('ELISA')
+    })
+
+    it('dispatches method name suggestion lookup through the client-action bridge', async () => {
+        mockRole('manager')
+
+        const response = await POST(buildRequest('getMethodNameSuggestions'))
+
+        expect(response.status).toBe(200)
+        await expect(response.json()).resolves.toEqual({ data: ['CLIA'] })
+        expect(mocks.getMethodNameSuggestions).toHaveBeenCalledTimes(1)
     })
 })

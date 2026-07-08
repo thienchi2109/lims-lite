@@ -14,7 +14,7 @@ import { getSamplesForApprovalCount, getRejectedSamplesCount, getSamplesWithTab,
 import { getResultsBySample, saveBatchResults } from '@/app/actions/results'
 import { approveResults, cancelApproval } from '@/app/actions/results-approval'
 import { getAssayDefinitions as fetchAssayDefinitions } from '@/app/actions/assay-queries'
-import { getMethods } from '@/app/actions/assay-lookups'
+import { getMethodNameSuggestions, getMethods } from '@/app/actions/assay-lookups'
 import {
     createAssayDefinition,
     updateAssayDefinition,
@@ -108,6 +108,7 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
     },
     getAssayDefinitions: async (payload) => fetchAssayDefinitions(payload),
     getMethods: async () => getMethods(),
+    getMethodNameSuggestions: async () => getMethodNameSuggestions(),
     addMethodToAssay: async (payload) => {
         if (!payload?.assayId || !payload?.methodId) {
             return { error: 'assayId và methodId là bắt buộc' }
@@ -145,6 +146,9 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
         if (payload.methodId) {
             formData.append('method_id', payload.methodId)
         }
+        if (payload.methodName) {
+            formData.append('method_name', payload.methodName)
+        }
         if (payload.units) {
             formData.append('units', payload.units)
         }
@@ -168,6 +172,9 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
         }
         if (payload.units) {
             formData.append('units', payload.units)
+        }
+        if (payload.methodName) {
+            formData.append('method_name', payload.methodName)
         }
         if (typeof payload.is_confidential === 'boolean') {
             formData.append('is_confidential', String(payload.is_confidential))

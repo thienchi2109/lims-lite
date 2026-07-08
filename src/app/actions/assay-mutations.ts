@@ -10,6 +10,7 @@ const UpdateAssayDefinitionSchema = z.object({
     id: z.string().uuid(),
     name: z.string().min(1).max(200),
     specialty_id: z.string().uuid().optional(),
+    method_name: z.string().trim().min(1).max(200).optional(),
     units: z.string().optional(),
     validation_rules: z.record(z.string(), z.any()).optional(),
     is_confidential: z.boolean().optional(),
@@ -36,6 +37,7 @@ export async function createAssayDefinition(formData: FormData) {
             name: formData.get('name'),
             specialty_id: formData.get('specialty_id') || undefined,
             method_id: formData.get('method_id') || undefined,
+            method_name: formData.get('method_name') || undefined,
             units: formData.get('units') || undefined,
             is_confidential: parseFormBoolean(formData.get('is_confidential')),
             validation_rules: formData.get('validation_rules')
@@ -58,6 +60,7 @@ export async function createAssayDefinition(formData: FormData) {
             .insert({
                 name: result.data.name,
                 specialty_id: result.data.specialty_id || null,
+                method_name: result.data.method_name || null,
                 units: result.data.units || null,
                 validation_rules: result.data.validation_rules || {},
                 is_confidential: result.data.is_confidential ?? false,
@@ -111,6 +114,7 @@ export async function updateAssayDefinition(formData: FormData) {
             id: formData.get('id'),
             name: formData.get('name'),
             specialty_id: formData.get('specialty_id') || undefined,
+            method_name: formData.get('method_name') || undefined,
             units: formData.get('units') || undefined,
             is_confidential: formData.has('is_confidential')
                 ? parseFormBoolean(formData.get('is_confidential'))
@@ -137,6 +141,9 @@ export async function updateAssayDefinition(formData: FormData) {
                 specialty_id: result.data.specialty_id || null,
                 units: result.data.units || null,
                 validation_rules: result.data.validation_rules || {},
+                ...(result.data.method_name !== undefined
+                    ? { method_name: result.data.method_name || null }
+                    : {}),
                 ...(result.data.is_confidential !== undefined
                     ? { is_confidential: result.data.is_confidential }
                     : {}),

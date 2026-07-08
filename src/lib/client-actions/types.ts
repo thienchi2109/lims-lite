@@ -13,6 +13,7 @@ export type ClientActionName =
     | 'submitSampleForReview'
     | 'getAssayDefinitions'
     | 'getMethods'
+    | 'getMethodNameSuggestions'
     | 'addMethodToAssay'
     | 'setDefaultMethod'
     | 'removeMethodFromAssay'

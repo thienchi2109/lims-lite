@@ -8,12 +8,12 @@
 
 ## 2. Phase 2 - Method Text Database and Backend Contract
 
-- [ ] 2.1 Add a Supabase migration for `assay_definitions.method_name` with comments documenting that method text is assay-owned and manager-managed.
-- [ ] 2.2 Update `get_assay_definitions` and `get_assay_definition_by_id` RPCs to return `method_name` and remove required dependence on `assay_methods` for new assay management.
-- [ ] 2.3 Update Zod schemas and TypeScript assay types to use `methodName`/`method_name` instead of required `methodId` for assay create/edit.
-- [ ] 2.4 Update `createAssayDefinition` and `updateAssayDefinition` to validate and persist method text under manager-only authorization.
-- [ ] 2.5 Add or update a lookup action that returns distinct method-name suggestions from assay definitions and optionally legacy method catalog names.
-- [ ] 2.6 Apply the migration against the Docker-backed database and run `SELECT * FROM run_security_tests();`.
+- [x] 2.1 Add a Supabase migration for `assay_definitions.method_name` with comments documenting that method text is assay-owned and manager-managed.
+- [x] 2.2 Update `get_assay_definitions` and `get_assay_definition_by_id` RPCs to return `method_name` and remove required dependence on `assay_methods` for new assay management.
+- [x] 2.3 Update Zod schemas and TypeScript assay types to use `methodName`/`method_name` instead of required `methodId` for assay create/edit.
+- [x] 2.4 Update `createAssayDefinition` and `updateAssayDefinition` to validate and persist method text under manager-only authorization.
+- [x] 2.5 Add or update a lookup action that returns distinct method-name suggestions from assay definitions and optionally legacy method catalog names.
+- [x] 2.6 Apply the migration against the Docker-backed database and run `SELECT * FROM run_security_tests();`.
 
 ## 3. Phase 3 - Free-Form Method UI
 

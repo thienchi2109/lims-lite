@@ -195,6 +195,10 @@ export function fetchMethodsClient() {
     return callClientAction('getMethods')
 }
 
+export function fetchMethodNameSuggestionsClient() {
+    return callClientAction('getMethodNameSuggestions')
+}
+
 export function addMethodToAssayClient(payload: { assayId: string; methodId: string; isDefault: boolean; notes?: string }) {
     return callClientAction('addMethodToAssay', payload)
 }
@@ -207,11 +211,11 @@ export function removeMethodFromAssayClient(assayMethodId: string) {
     return callClientAction('removeMethodFromAssay', { assayMethodId })
 }
 
-export function createAssayDefinitionClient(payload: { name: string; specialty_id?: string; methodId?: string; units?: string; validationRules?: Record<string, unknown>; is_confidential?: boolean }) {
+export function createAssayDefinitionClient(payload: { name: string; specialty_id?: string; methodId?: string; methodName?: string; units?: string; validationRules?: Record<string, unknown>; is_confidential?: boolean }) {
     return callClientAction('createAssayDefinition', payload)
 }
 
-export function updateAssayDefinitionClient(payload: { id: string; name: string; specialty_id?: string; units?: string; validationRules?: Record<string, unknown>; is_confidential?: boolean }) {
+export function updateAssayDefinitionClient(payload: { id: string; name: string; specialty_id?: string; methodName?: string; units?: string; validationRules?: Record<string, unknown>; is_confidential?: boolean }) {
     return callClientAction('updateAssayDefinition', payload)
 }
 
