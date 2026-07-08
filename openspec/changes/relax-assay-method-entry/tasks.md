@@ -1,10 +1,10 @@
 ## 1. Phase 1 - Dialog Consolidation and Detail Action
 
-- [ ] 1.1 Extract the current assay dialog field body into a shared component used by create, edit, and view modes.
-- [ ] 1.2 Make the shared component own field layout and read-only rendering for name, specialty, units, confidentiality, validation rules, and existing method display.
-- [ ] 1.3 Add a `view`/detail mode to the existing assay dialog shell instead of creating a separate detail modal.
-- [ ] 1.4 Add a row action button with an accessible Vietnamese label such as `Xem chi tiết chỉ tiêu` that opens the shared dialog in read-only mode.
-- [ ] 1.5 Add focused component tests proving create/edit/detail share the field component and detail mode exposes no submit controls.
+- [x] 1.1 Extract the current assay dialog field body into a shared component used by create, edit, and view modes.
+- [x] 1.2 Make the shared component own field layout and read-only rendering for name, specialty, units, confidentiality, validation rules, and existing method display.
+- [x] 1.3 Add a `view`/detail mode to the existing assay dialog shell instead of creating a separate detail modal.
+- [x] 1.4 Add a row action button with an accessible Vietnamese label such as `Xem chi tiết chỉ tiêu` that opens the shared dialog in read-only mode.
+- [x] 1.5 Add focused component tests proving create/edit/detail share the field component and detail mode exposes no submit controls.
 
 ## 2. Phase 2 - Method Text Database and Backend Contract
 

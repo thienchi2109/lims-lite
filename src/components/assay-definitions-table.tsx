@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Plus, Pencil, Trash2, Search, Filter, FlaskConical, TestTube2, AlertCircle } from 'lucide-react'
+import { Plus, FlaskConical, AlertCircle } from 'lucide-react'
 import {
     Table,
     TableBody,
@@ -14,21 +14,13 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { Separator } from '@/components/ui/separator'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { AssayDefinitionDialog } from '@/components/assay-definition-dialog'
+import { AssayDefinitionRowActions } from '@/components/assay-definition-row-actions'
 import { DeleteAssayDialog } from '@/components/delete-assay-dialog'
-
+import { AssayDefinitionsPagination } from '@/components/assay-definitions-pagination'
+import { AssayDefinitionsTableToolbar } from '@/components/assay-definitions-table-toolbar'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select'
-import { SearchInput } from '@/components/ui/search-input'
 import { LabSpecialty } from '@/types'
 import { AssayDefinition, AssayMethod } from './assay-definition-dialog/types'
 
@@ -51,11 +43,10 @@ export function AssayDefinitionsTable({
     specialties = EMPTY_SPECIALTIES,
 }: Props & { specialties?: LabSpecialty[] }) {
     const [editingAssay, setEditingAssay] = useState<AssayDefinition | null>(null)
+    const [viewingAssay, setViewingAssay] = useState<AssayDefinition | null>(null)
     const [deletingAssay, setDeletingAssay] = useState<AssayDefinition | null>(null)
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-
     const [localAssays, setLocalAssays] = useState<AssayDefinition[]>(assays)
-
     useEffect(() => {
         setLocalAssays(assays)
     }, [assays])
@@ -129,57 +120,19 @@ export function AssayDefinitionsTable({
         } else {
             params.delete('specialtyId')
         }
-        params.set('page', '1') // Reset to page 1
+        params.set('page', '1')
         router.replace(`${pathname}?${params.toString()}`, { scroll: false })
     }
 
     return (
         <div className="space-y-6">
-            {/* Toolbar Section */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-slate-900 p-4 rounded-lg border shadow-sm">
-                <div className="flex flex-1 items-center gap-3">
-                    <div className="relative w-full sm:w-72">
-                        <SearchInput
-                            placeholder="Tìm kiếm tên, mã chỉ tiêu..."
-                            className="w-full pl-9 bg-slate-50 dark:bg-slate-950 border-slate-200"
-                        />
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                    </div>
-
-                    <Separator orientation="vertical" className="h-8 hidden sm:block" />
-
-                    <Select
-                        value={searchParams.get('specialtyId') || 'all'}
-                        onValueChange={handleSpecialtyFilter}
-                    >
-                        <SelectTrigger className="w-[240px] bg-slate-50 dark:bg-slate-950 border-slate-200">
-                            <div className="flex items-center gap-2 text-muted-foreground truncate">
-                                <Filter className="h-3.5 w-3.5 flex-shrink-0" />
-                                <SelectValue placeholder="Nhóm kỹ thuật" />
-                            </div>
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Tất cả Nhóm kỹ thuật</SelectItem>
-                            {specialties.map((specialty) => (
-                                <SelectItem key={specialty.id} value={specialty.id}>
-                                    {specialty.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                <div className="flex items-center gap-3">
-                    <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-md text-xs font-medium text-slate-600 dark:text-slate-400">
-                        <TestTube2 className="h-3.5 w-3.5" />
-                        {totalCount} chỉ tiêu
-                    </div>
-                    <Button onClick={() => setIsAddDialogOpen(true)} className="bg-primary hover:bg-primary/90 shadow-sm">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Thêm mới
-                    </Button>
-                </div>
-            </div>
+            <AssayDefinitionsTableToolbar
+                specialties={specialties}
+                selectedSpecialtyId={searchParams.get('specialtyId') || 'all'}
+                totalCount={totalCount}
+                onSpecialtyFilter={handleSpecialtyFilter}
+                onAdd={() => setIsAddDialogOpen(true)}
+            />
 
             {localAssays.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-slate-900 rounded-lg border border-dashed">
@@ -331,24 +284,12 @@ export function AssayDefinitionsTable({
                                             )}
                                         </TableCell>
                                         <TableCell>
-                                            <div className="flex items-center justify-end gap-2">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-                                                    onClick={() => setEditingAssay(assay)}
-                                                >
-                                                    <Pencil className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 text-slate-500 hover:text-red-600 hover:bg-red-50"
-                                                    onClick={() => setDeletingAssay(assay)}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
+                                            <AssayDefinitionRowActions
+                                                assay={assay}
+                                                onView={setViewingAssay}
+                                                onEdit={setEditingAssay}
+                                                onDelete={setDeletingAssay}
+                                            />
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -356,58 +297,16 @@ export function AssayDefinitionsTable({
                         </Table>
                     </Card>
 
-                    {/* Pagination */}
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <span>Hiển thị</span>
-                            <Select
-                                value={String(pageSize)}
-                                onValueChange={(value) => updateQuery(1, Number(value))}
-                            >
-                                <SelectTrigger className="h-8 w-[70px]">
-                                    <SelectValue placeholder={pageSize} />
-                                </SelectTrigger>
-                                <SelectContent side="top">
-                                    {[10, 20, 50, 100].map((size) => (
-                                        <SelectItem key={size} value={String(size)}>
-                                            {size}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <span>
-                                {(page - 1) * pageSize + 1} -{' '}
-                                {Math.min(page * pageSize, totalCount)} của {totalCount} chỉ tiêu
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => updateQuery(Math.max(1, page - 1), pageSize)}
-                                disabled={page === 1}
-                            >
-                                <ChevronLeft className="h-4 w-4" />
-                                Trước
-                            </Button>
-                            <div className="text-sm font-medium min-w-[3rem] text-center">
-                                Trang {page} / {totalPages}
-                            </div>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => updateQuery(Math.min(totalPages, page + 1), pageSize)}
-                                disabled={page === totalPages}
-                            >
-                                Tiếp
-                                <ChevronRight className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    </div>
+                    <AssayDefinitionsPagination
+                        page={page}
+                        pageSize={pageSize}
+                        totalPages={totalPages}
+                        totalCount={totalCount}
+                        onPageChange={updateQuery}
+                    />
                 </>
             )}
 
-            {/* Dialogs */}
             <AssayDefinitionDialog
                 open={isAddDialogOpen}
                 onOpenChange={setIsAddDialogOpen}
@@ -424,6 +323,16 @@ export function AssayDefinitionsTable({
                     assay={editingAssay}
                     specialties={specialties}
                     onUpdated={handleAssayUpdated}
+                />
+            )}
+
+            {viewingAssay && (
+                <AssayDefinitionDialog
+                    open={!!viewingAssay}
+                    onOpenChange={(open) => !open && setViewingAssay(null)}
+                    mode="view"
+                    assay={viewingAssay}
+                    specialties={specialties}
                 />
             )}
 

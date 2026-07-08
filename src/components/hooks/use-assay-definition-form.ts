@@ -20,7 +20,7 @@ import {
 } from "@/lib/api-client";
 
 type UseAssayDefinitionFormProps = {
-  mode: AssayFormMode;
+  mode: Exclude<AssayFormMode, "view">;
   assay?: AssayDefinition;
   onCreated?: (assay: AssayDefinition) => void;
   onUpdated?: (assay: AssayDefinition) => void;

@@ -29,7 +29,7 @@ export const AssayFormSchema = z.object({
 // Type exports
 export type AssayFormValues = z.infer<typeof AssayFormSchema>
 export type ValidationRules = z.infer<typeof ValidationRulesSchema>
-export type AssayFormMode = 'create' | 'edit'
+export type AssayFormMode = 'create' | 'edit' | 'view'
 
 // Re-export existing types used by the dialog
 export type Method = {
