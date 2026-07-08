@@ -257,6 +257,20 @@ describe('client action role guard', () => {
         expect(formData.has('method_id')).toBe(false)
     })
 
+    it('passes manager assay reference range as normal_range form data', async () => {
+        mockRole('manager')
+
+        const response = await POST(buildRequest('createAssayDefinition', {
+            name: 'Creatinine',
+            normalRange: 'Nam: 208 - 428 µmol/L\nNữ: 155 - 357 µmol/L',
+        }))
+
+        expect(response.status).toBe(200)
+        expect(mocks.createAssayDefinition).toHaveBeenCalledTimes(1)
+        const formData = mocks.createAssayDefinition.mock.calls[0][0] as FormData
+        expect(formData.get('normal_range')).toBe('Nam: 208 - 428 µmol/L\nNữ: 155 - 357 µmol/L')
+    })
+
     it('passes manager assay update methodName as assay-owned method_name form data', async () => {
         mockRole('manager')
 
@@ -270,6 +284,22 @@ describe('client action role guard', () => {
         expect(mocks.updateAssayDefinition).toHaveBeenCalledTimes(1)
         const formData = mocks.updateAssayDefinition.mock.calls[0][0] as FormData
         expect(formData.get('method_name')).toBe('ELISA')
+    })
+
+    it('passes blank manager assay update reference range so the server can clear it', async () => {
+        mockRole('manager')
+
+        const response = await POST(buildRequest('updateAssayDefinition', {
+            id: '11111111-1111-4111-8111-111111111111',
+            name: 'Creatinine',
+            normalRange: '',
+        }))
+
+        expect(response.status).toBe(200)
+        expect(mocks.updateAssayDefinition).toHaveBeenCalledTimes(1)
+        const formData = mocks.updateAssayDefinition.mock.calls[0][0] as FormData
+        expect(formData.has('normal_range')).toBe(true)
+        expect(formData.get('normal_range')).toBe('')
     })
 
     it('dispatches method name suggestion lookup through the client-action bridge', async () => {

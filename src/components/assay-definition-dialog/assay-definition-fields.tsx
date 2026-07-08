@@ -4,6 +4,7 @@ import { UseFormReturn } from 'react-hook-form'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { LabSpecialty } from '@/types'
 import { getAssayDefinitionMethodName } from '@/lib/assay-method-name'
 import { MethodNameField } from './method-name-field'
@@ -46,10 +47,17 @@ function ReadOnlyRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="space-y-1">
       <div className="text-sm font-medium text-muted-foreground">{label}</div>
-      <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">{value}</div>
+      <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm whitespace-pre-line">{value}</div>
     </div>
   )
 }
+
+const REFERENCE_RANGE_PLACEHOLDER = `VD:
+Nam: 208 - 428 µmol/L
+Nữ: 155 - 357 µmol/L
+
+Hoặc:
+Âm tính`
 
 function ReadOnlyValidationRules({ assay }: { assay?: AssayDefinition }) {
   const rules = getValidationRules(assay)
@@ -87,6 +95,7 @@ function ReadOnlyAssayFields({
       <ReadOnlyRow label="Nhóm kỹ thuật" value={getSpecialtyName(assay, specialties)} />
       <ReadOnlyRow label="Phương pháp" value={getAssayDefinitionMethodName(assay) || '-'} />
       <ReadOnlyRow label="Đơn vị" value={assay?.units || '-'} />
+      <ReadOnlyRow label="Khoảng tham chiếu" value={assay?.normal_range || '-'} />
       <ReadOnlyRow label="Chỉ tiêu bí mật" value={assay?.is_confidential ? 'Có' : 'Không'} />
       <ReadOnlyValidationRules assay={assay} />
     </div>
@@ -146,6 +155,17 @@ export function AssayDefinitionFields({
           id="units"
           {...form.register('units')}
           placeholder="Ví dụ: mg/L, CFU/100mL"
+          disabled={disabled}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="normalRange">Khoảng tham chiếu</Label>
+        <Textarea
+          id="normalRange"
+          {...form.register('normalRange')}
+          placeholder={REFERENCE_RANGE_PLACEHOLDER}
+          className="min-h-28"
           disabled={disabled}
         />
       </div>

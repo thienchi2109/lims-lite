@@ -18,6 +18,7 @@ interface AssayDefinition {
     specialty_order: number | null
     units: string | null
     method_name: string | null
+    normal_range: string | null
     validation_rules: Record<string, unknown>
     is_confidential: boolean
     methods: AssayMethod[]
@@ -91,6 +92,7 @@ export async function getAssayDefinitions(params?: GetAssayDefinitionsParams) {
             specialty_order: row.specialty_order,
             units: row.units,
             method_name: row.method_name,
+            normal_range: row.normal_range,
             validation_rules: row.validation_rules || {},
             is_confidential: row.is_confidential,
             methods: row.methods || [],
@@ -149,6 +151,7 @@ export async function getAssayDefinitionById(id: string) {
                 specialty_id: row.specialty_id,
                 units: row.units,
                 method_name: row.method_name,
+                normal_range: row.normal_range,
                 validation_rules: row.validation_rules || {},
                 is_confidential: row.is_confidential,
                 methods: row.methods || [],

@@ -86,6 +86,7 @@ const assay: AssayDefinition = {
   specialty_id: specialty.id,
   method_name: 'ELISA',
   units: 'Index',
+  normal_range: 'Âm tính',
   is_confidential: true,
   validation_rules: {
     min: 0,
@@ -126,6 +127,8 @@ describe('AssayDefinitionDialog detail mode', () => {
     expect(screen.getByText('Miễn dịch')).toBeDefined()
     expect(screen.getByText('ELISA')).toBeDefined()
     expect(screen.getByText('Index')).toBeDefined()
+    expect(screen.getByText('Khoảng tham chiếu')).toBeDefined()
+    expect(screen.getByText('Âm tính')).toBeDefined()
     expect(screen.getAllByText('Có').length).toBeGreaterThan(0)
     expect(screen.getByText('Số (Numeric)')).toBeDefined()
     expect(screen.queryByLabelText(/Phương pháp/i)).toBeNull()
@@ -207,6 +210,73 @@ describe('AssayDefinitionDialog method entry', () => {
         expect.objectContaining({
           id: 'assay-1',
           methodName: 'ELISA cải tiến',
+        }),
+      )
+    })
+  })
+
+  it('shows the approved reference range placeholder and submits multiline text', async () => {
+    render(
+      <AssayDefinitionDialog
+        open
+        onOpenChange={vi.fn()}
+        mode="create"
+        specialties={[specialty]}
+      />,
+    )
+
+    const referenceRangeInput = screen.getByRole('textbox', { name: /Khoảng tham chiếu/i })
+    expect(referenceRangeInput.getAttribute('placeholder')).toContain('Nam: 208 - 428 µmol/L')
+    expect(referenceRangeInput.getAttribute('placeholder')).toContain('Âm tính')
+
+    fireEvent.change(screen.getByLabelText(/Tên chỉ tiêu/i), {
+      target: { value: 'Creatinine' },
+    })
+    fireEvent.change(screen.getByLabelText(/Nhóm kỹ thuật/i), {
+      target: { value: specialty.id },
+    })
+    fireEvent.change(screen.getByRole('textbox', { name: /Phương pháp/i }), {
+      target: { value: 'Jaffe' },
+    })
+    fireEvent.change(referenceRangeInput, {
+      target: { value: 'Nam: 208 - 428 µmol/L\nNữ: 155 - 357 µmol/L' },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo' }))
+
+    await waitFor(() => {
+      expect(mocks.createAssayDefinitionClient).toHaveBeenCalledWith(
+        expect.objectContaining({
+          normalRange: 'Nam: 208 - 428 µmol/L\nNữ: 155 - 357 µmol/L',
+        }),
+      )
+    })
+  })
+
+  it('initializes reference range for edits and submits blank text to clear it', async () => {
+    render(
+      <AssayDefinitionDialog
+        open
+        onOpenChange={vi.fn()}
+        mode="edit"
+        assay={{ ...assay, normal_range: 'Âm tính' }}
+        specialties={[specialty]}
+      />,
+    )
+
+    const referenceRangeInput = screen.getByRole('textbox', { name: /Khoảng tham chiếu/i })
+    expect((referenceRangeInput as HTMLTextAreaElement).value).toBe('Âm tính')
+
+    fireEvent.change(referenceRangeInput, {
+      target: { value: '' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Cập nhật' }))
+
+    await waitFor(() => {
+      expect(mocks.updateAssayDefinitionClient).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'assay-1',
+          normalRange: '',
         }),
       )
     })

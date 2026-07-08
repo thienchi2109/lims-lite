@@ -46,6 +46,7 @@ export function useAssayDefinitionForm({
       specialtyId: "",
       methodName: "",
       units: "",
+      normalRange: "",
       isConfidential: false,
       validationRules: {
         type: "numeric",
@@ -63,6 +64,7 @@ export function useAssayDefinitionForm({
         specialtyId: assayData.specialty_id || "",
         methodName: getAssayDefinitionMethodName(assayData),
         units: assayData.units || "",
+        normalRange: assayData.normal_range || "",
         isConfidential: assayData.is_confidential ?? false,
         validationRules: {
           min: rules?.min,
@@ -99,6 +101,7 @@ export function useAssayDefinitionForm({
       specialtyId: "",
       methodName: "",
       units: "",
+      normalRange: "",
       isConfidential: false,
       validationRules: {
         type: "numeric",
@@ -128,6 +131,7 @@ export function useAssayDefinitionForm({
       specialty_id: values.specialtyId || undefined,
       units: values.units || undefined,
       methodName: values.methodName.trim(),
+      normalRange: values.normalRange ?? "",
       is_confidential: values.isConfidential,
       validationRules:
         Object.keys(validationRules).length > 0 ? validationRules : undefined,

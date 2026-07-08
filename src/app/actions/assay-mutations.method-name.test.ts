@@ -67,6 +67,33 @@ describe('assay mutation method text persistence', () => {
         expect(insertChain.insert).toHaveBeenCalledWith(expect.objectContaining({ method_name: 'CLIA' }))
     })
 
+    it('creates an assay definition with reference range text', async () => {
+        const insertChain = createInsertChain({
+            id: '11111111-1111-4111-8111-111111111111',
+            name: 'Creatinine',
+            normal_range: 'Nam: 208 - 428 µmol/L\nNữ: 155 - 357 µmol/L',
+        })
+        mockCreateClient.mockResolvedValue({ from: vi.fn().mockReturnValue(insertChain) })
+
+        const formData = new FormData()
+        formData.set('name', 'Creatinine')
+        formData.set('normal_range', 'Nam: 208 - 428 µmol/L\nNữ: 155 - 357 µmol/L')
+
+        const result = await createAssayDefinition(formData)
+
+        expect(result).toEqual({
+            success: true,
+            data: expect.objectContaining({
+                normal_range: 'Nam: 208 - 428 µmol/L\nNữ: 155 - 357 µmol/L',
+            }),
+        })
+        expect(insertChain.insert).toHaveBeenCalledWith(
+            expect.objectContaining({
+                normal_range: 'Nam: 208 - 428 µmol/L\nNữ: 155 - 357 µmol/L',
+            }),
+        )
+    })
+
     it('updates assay-owned method_name on assay_definitions', async () => {
         const updateChain = createUpdateChain({
             id: '11111111-1111-4111-8111-111111111111',
@@ -89,6 +116,46 @@ describe('assay mutation method text persistence', () => {
         expect(updateChain.update).toHaveBeenCalledWith(expect.objectContaining({ method_name: 'ELISA' }))
     })
 
+    it('updates reference range text on assay_definitions', async () => {
+        const updateChain = createUpdateChain({
+            id: '11111111-1111-4111-8111-111111111111',
+            name: 'Creatinine',
+            normal_range: 'Âm tính',
+        })
+        mockCreateClient.mockResolvedValue({ from: vi.fn().mockReturnValue(updateChain) })
+
+        const formData = new FormData()
+        formData.set('id', '11111111-1111-4111-8111-111111111111')
+        formData.set('name', 'Creatinine')
+        formData.set('normal_range', 'Âm tính')
+
+        const result = await updateAssayDefinition(formData)
+
+        expect(result).toEqual({
+            success: true,
+            data: expect.objectContaining({ normal_range: 'Âm tính' }),
+        })
+        expect(updateChain.update).toHaveBeenCalledWith(expect.objectContaining({ normal_range: 'Âm tính' }))
+    })
+
+    it('clears reference range text to null when submitted blank', async () => {
+        const updateChain = createUpdateChain({
+            id: '11111111-1111-4111-8111-111111111111',
+            name: 'Creatinine',
+            normal_range: null,
+        })
+        mockCreateClient.mockResolvedValue({ from: vi.fn().mockReturnValue(updateChain) })
+
+        const formData = new FormData()
+        formData.set('id', '11111111-1111-4111-8111-111111111111')
+        formData.set('name', 'Creatinine')
+        formData.set('normal_range', '   ')
+
+        await updateAssayDefinition(formData)
+
+        expect(updateChain.update).toHaveBeenCalledWith(expect.objectContaining({ normal_range: null }))
+    })
+
     it('does not clear method_name when legacy edit forms omit it', async () => {
         const updateChain = createUpdateChain({
             id: '11111111-1111-4111-8111-111111111111',
@@ -104,5 +171,21 @@ describe('assay mutation method text persistence', () => {
 
         const updatePayload = updateChain.update.mock.calls[0][0]
         expect(updatePayload).not.toHaveProperty('method_name')
+    })
+
+    it('rejects non-manager reference range updates before database writes', async () => {
+        mockRequireRole.mockResolvedValue({ error: 'Forbidden' })
+        const from = vi.fn()
+        mockCreateClient.mockResolvedValue({ from })
+
+        const formData = new FormData()
+        formData.set('id', '11111111-1111-4111-8111-111111111111')
+        formData.set('name', 'Creatinine')
+        formData.set('normal_range', 'Âm tính')
+
+        await expect(updateAssayDefinition(formData)).resolves.toEqual({
+            error: 'Chỉ Quản lý mới có thể cập nhật chỉ tiêu xét nghiệm',
+        })
+        expect(from).not.toHaveBeenCalled()
     })
 })

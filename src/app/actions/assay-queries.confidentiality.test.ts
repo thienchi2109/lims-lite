@@ -137,6 +137,67 @@ describe('assay query confidentiality mapping', () => {
         )
     })
 
+    it('maps normal_range from list and detail RPC payloads', async () => {
+        mockRpc.mockResolvedValueOnce({
+            data: [
+                {
+                    id: '11111111-1111-4111-8111-111111111111',
+                    name: 'Creatinine',
+                    specialty_id: null,
+                    specialty_name: 'Sinh hóa',
+                    specialty_order: 1,
+                    units: 'µmol/L',
+                    validation_rules: {},
+                    is_confidential: false,
+                    method_name: 'Jaffe',
+                    normal_range: 'Nam: 208 - 428 µmol/L',
+                    methods: [],
+                    created_at: '2026-03-25T00:00:00.000Z',
+                    updated_at: '2026-03-25T00:00:00.000Z',
+                    total_count: 1,
+                },
+            ],
+            error: null,
+        })
+
+        await expect(getAssayDefinitions()).resolves.toEqual(
+            expect.objectContaining({
+                data: [
+                    expect.objectContaining({
+                        normal_range: 'Nam: 208 - 428 µmol/L',
+                    }),
+                ],
+            }),
+        )
+
+        mockRpc.mockResolvedValueOnce({
+            data: [
+                {
+                    id: '11111111-1111-4111-8111-111111111111',
+                    name: 'Creatinine',
+                    specialty_id: null,
+                    units: 'µmol/L',
+                    validation_rules: {},
+                    is_confidential: false,
+                    method_name: 'Jaffe',
+                    normal_range: 'Nữ: 155 - 357 µmol/L',
+                    methods: [],
+                    created_at: '2026-03-25T00:00:00.000Z',
+                    updated_at: '2026-03-25T00:00:00.000Z',
+                },
+            ],
+            error: null,
+        })
+
+        await expect(getAssayDefinitionById('11111111-1111-4111-8111-111111111111')).resolves.toEqual(
+            expect.objectContaining({
+                data: expect.objectContaining({
+                    normal_range: 'Nữ: 155 - 357 µmol/L',
+                }),
+            }),
+        )
+    })
+
     it('fails closed when the list RPC omits is_confidential', async () => {
         mockRpc.mockResolvedValue({
             data: [

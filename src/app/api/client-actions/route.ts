@@ -152,6 +152,9 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
         if (payload.units) {
             formData.append('units', payload.units)
         }
+        if (typeof payload.normalRange === 'string') {
+            formData.append('normal_range', payload.normalRange)
+        }
         if (typeof payload.is_confidential === 'boolean') {
             formData.append('is_confidential', String(payload.is_confidential))
         }
@@ -175,6 +178,9 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
         }
         if (payload.methodName) {
             formData.append('method_name', payload.methodName)
+        }
+        if (typeof payload.normalRange === 'string') {
+            formData.append('normal_range', payload.normalRange)
         }
         if (typeof payload.is_confidential === 'boolean') {
             formData.append('is_confidential', String(payload.is_confidential))
