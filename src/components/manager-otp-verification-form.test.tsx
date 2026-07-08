@@ -8,6 +8,7 @@ const router = vi.hoisted(() => ({
 }))
 
 const locationAssign = vi.hoisted(() => vi.fn())
+const locationReplace = vi.hoisted(() => vi.fn())
 
 vi.mock('next/navigation', () => ({
     useRouter: () => router,
@@ -17,6 +18,7 @@ Object.defineProperty(window, 'location', {
     value: {
         ...window.location,
         assign: locationAssign,
+        replace: locationReplace,
     },
     writable: true,
 })
@@ -78,7 +80,8 @@ describe('ManagerOtpVerificationForm', () => {
                 }),
             }))
         })
-        expect(locationAssign).toHaveBeenCalledWith('/manager')
+        expect(locationReplace).toHaveBeenCalledWith('/manager')
+        expect(locationAssign).not.toHaveBeenCalled()
         expect(router.replace).not.toHaveBeenCalled()
         expect(router.refresh).not.toHaveBeenCalled()
     })
