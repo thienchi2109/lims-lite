@@ -114,6 +114,7 @@ describe('AssayDefinitionsTable detail action', () => {
       />,
     )
 
+    expect(screen.getByText('Phương pháp/Thiết bị')).toBeDefined()
     expect(screen.getByText('RT-PCR')).toBeDefined()
   })
 })

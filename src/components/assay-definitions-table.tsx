@@ -158,7 +158,7 @@ export function AssayDefinitionsTable({
                                 <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50">
                                     <TableHead className="w-[250px] font-semibold text-slate-700 dark:text-slate-300">Tên chỉ tiêu</TableHead>
                                     <TableHead className="w-[180px] font-semibold text-slate-700 dark:text-slate-300">Nhóm kỹ thuật</TableHead>
-                                    <TableHead className="w-[200px] font-semibold text-slate-700 dark:text-slate-300">Phương pháp</TableHead>
+                                    <TableHead className="w-[200px] font-semibold text-slate-700 dark:text-slate-300">Phương pháp/Thiết bị</TableHead>
                                     <TableHead className="w-[100px] font-semibold text-slate-700 dark:text-slate-300">Đơn vị</TableHead>
                                     <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Quy tắc xác thực</TableHead>
                                     <TableHead className="w-[100px] text-right font-semibold text-slate-700 dark:text-slate-300">Thao tác</TableHead>
