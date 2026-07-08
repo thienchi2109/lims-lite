@@ -25,8 +25,8 @@
 
 ## 4. Phase 4 - Downstream Cleanup and Verification
 
-- [ ] 4.1 Update sample assignment/result read and write paths that assume a required `method_id` so new assay data with method text remains usable.
-- [ ] 4.2 Add focused server/action tests for creating and updating assay method text without `method_id`.
-- [ ] 4.3 Add focused downstream tests proving newly created assays display method text in assignment/result-oriented UI.
-- [ ] 4.4 Run focused affected tests, `npm run typecheck`, and `npm run lint`.
-- [ ] 4.5 Validate the OpenSpec change with `openspec validate relax-assay-method-entry --strict`.
+- [x] 4.1 Update sample assignment/result read and write paths that assume a required `method_id` so new assay data with method text remains usable.
+- [x] 4.2 Add focused server/action tests for creating and updating assay method text without `method_id`.
+- [x] 4.3 Add focused downstream tests proving newly created assays display method text in assignment/result-oriented UI.
+- [x] 4.4 Run focused affected tests, `npm run typecheck`, and `npm run lint`.
+- [x] 4.5 Validate the OpenSpec change with `openspec validate relax-assay-method-entry --strict`.

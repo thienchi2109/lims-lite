@@ -99,6 +99,7 @@ interface TestResultQueryRow {
         name: string | null
         units: string | null
         normal_range: string | null
+        method_name: string | null
         validation_rules: Record<string, unknown> | null
         lab_specialties: {
             name: string | null
@@ -378,6 +379,7 @@ export async function fetchTestResults(sampleId: string): Promise<TestResult[]> 
                 name,
                 units,
                 normal_range,
+                method_name,
                 validation_rules,
                 lab_specialties (
                     name,
@@ -418,7 +420,7 @@ export async function fetchTestResults(sampleId: string): Promise<TestResult[]> 
             value: row.value,
             unit: row.assay_definitions?.units ?? null,
             normal_range: row.assay_definitions?.normal_range ?? null,
-            method_name: row.methods?.name ?? null,
+            method_name: row.methods?.name ?? row.assay_definitions?.method_name ?? null,
             lab_specialty_name: row.assay_definitions?.lab_specialties?.name ?? null
         }
     })

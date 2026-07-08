@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { requireRole, isAuthError } from '@/lib/auth-helpers'
 import { AssignTestsSchema, type AssignTests, type ResultStatus } from '@/types'
+import { getAssayDefinitionMethodName } from '@/lib/assay-method-name'
 
 /**
  * Raw result with joined assay and method for getSampleTests query
@@ -24,7 +25,7 @@ interface RawTestResult {
     entered_at: string | null
     created_at: string
     updated_at: string
-    assay: { id: string; name: string; units: string | null } | null
+    assay: { id: string; name: string; units: string | null; method_name: string | null } | null
     method: { id: string; name: string } | null
 }
 
@@ -165,7 +166,10 @@ export async function getAssayDefinitions(search?: string) {
             const { assay_methods, ...assayData } = assay
             return {
                 ...assayData,
-                method_name: methodDetail?.name || null,
+                method_name: getAssayDefinitionMethodName({
+                    method_name: assayData.method_name,
+                    methods: methodDetail ? [{ name: methodDetail.name, is_default: true }] : [],
+                }) || null,
                 default_method_id: defaultMethodLink?.method_id || null,
             }
         })
@@ -188,7 +192,7 @@ export async function getSampleTests(sampleId: string) {
             .from('results')
             .select(`
                 *,
-                assay:assay_definitions(id, name, units),
+                assay:assay_definitions(id, name, units, method_name),
                 method:methods(id, name)
             `)
             .eq('sample_id', sampleId)
@@ -202,7 +206,11 @@ export async function getSampleTests(sampleId: string) {
             ...r,
             assay: {
                 ...r.assay,
-                method: r.method ? { id: r.method.id, name: r.method.name } : null
+                method: r.method
+                    ? { id: r.method.id, name: r.method.name }
+                    : r.assay?.method_name
+                        ? { id: null, name: r.assay.method_name }
+                        : null
             }
         }))
 

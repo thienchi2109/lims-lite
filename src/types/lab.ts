@@ -168,7 +168,7 @@ export const CreateSampleWithAssignmentsSchema = z.object({
     received_at: z.string().datetime().optional(),
     tests: z.array(z.object({
         assayId: z.string(),
-        methodId: z.string(),
+        methodId: z.string().nullable(),
     })).min(1, 'At least one test must be selected'),
 })
 
@@ -225,7 +225,7 @@ export type SampleWithUser = z.infer<typeof SampleWithUserSchema>
 
 export type SelectedTest = {
     assayId: string
-    methodId: string
+    methodId: string | null
     assayName: string
     methodName: string
     units: string | null

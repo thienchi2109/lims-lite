@@ -3,6 +3,7 @@ import { fetchAssayDefinitionsClient, fetchMethodsClient } from '@/lib/api-clien
 import type { AssayDefinitionWithMethods, SelectedTest, LabSpecialty } from '@/types'
 import type { SortKey, SortConfig, GridRow } from '@/types/test-assignment'
 import { SPECIALTY_BADGE_CLASSES } from '@/lib/specialty-badges'
+import { getAssayDefinitionMethodName } from '@/lib/assay-method-name'
 
 interface UseTestAssignmentGridProps {
     selected: SelectedTest[]
@@ -212,9 +213,9 @@ export function useTestAssignmentGrid({
 
             onChange([...selected, {
                 assayId: assay.id,
-                methodId: methodToSelect?.method_id || '',
+                methodId: methodToSelect?.method_id ?? null,
                 assayName: assay.name,
-                methodName: methodToSelect?.name || 'Không có',
+                methodName: methodToSelect?.name || getAssayDefinitionMethodName(assay) || 'Không có',
                 units: assay.units
             }])
         }

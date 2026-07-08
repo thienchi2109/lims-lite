@@ -63,7 +63,7 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
         received_at: z.string().optional(),
         tests: z.array(z.object({
             assayId: z.string(),
-            methodId: z.string(),
+            methodId: z.string().nullable(),
         })).optional(),
     })
 

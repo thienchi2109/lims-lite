@@ -71,4 +71,32 @@ describe('fetchTestResults', () => {
             },
         ])
     })
+
+    it('uses assay-owned method text when approved result has no catalog method', async () => {
+        resultQuery = createResultQuery([
+            {
+                value: '1200',
+                assay_definitions: {
+                    name: 'HBV DNA',
+                    units: 'IU/mL',
+                    normal_range: null,
+                    method_name: 'RT-PCR tự thiết lập',
+                    validation_rules: {},
+                    lab_specialties: {
+                        name: 'Sinh học phân tử',
+                        display_order: 10,
+                    },
+                },
+                methods: null,
+            },
+        ])
+        mockFrom.mockReturnValue(resultQuery)
+
+        const results = await fetchTestResults('sample-1')
+
+        expect(results[0]).toEqual(expect.objectContaining({
+            assay_name: 'HBV DNA',
+            method_name: 'RT-PCR tự thiết lập',
+        }))
+    })
 })

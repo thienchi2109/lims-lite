@@ -18,6 +18,7 @@ import { getActiveQCSessionsForAssays } from './qc-operations'
 type ResultAssayRelation = {
     name: string | null
     units: string | null
+    method_name: string | null
     validation_rules: Record<string, unknown> | null
     lab_specialties: RelationValue<{
         name: string | null
@@ -64,6 +65,7 @@ export async function getResultsBySample(sampleId: string) {
                     id,
                     name,
                     units,
+                    method_name,
                     validation_rules,
                     lab_specialties (
                         name,
@@ -97,7 +99,7 @@ export async function getResultsBySample(sampleId: string) {
                 ...result,
                 assay_name: assay?.name || 'Unknown',
                 assay_units: assay?.units || null,
-                method_name: method?.name || null,
+                method_name: method?.name || assay?.method_name || null,
                 validation_rules: assay?.validation_rules || {},
                 sample_id_display: sample?.sample_id || '',
                 sample_status: sample?.status || null,
