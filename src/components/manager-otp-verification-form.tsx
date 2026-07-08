@@ -168,7 +168,7 @@ export function ManagerOtpVerificationForm({ initialMaskedEmail }: { initialMask
                 return
             }
 
-            window.location.assign('/manager')
+            window.location.replace('/manager')
         } catch {
             setMessage('Không thể xác thực mã OTP. Vui lòng thử lại.')
         } finally {
