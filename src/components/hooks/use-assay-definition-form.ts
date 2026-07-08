@@ -5,18 +5,18 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { getAssayDefinitionMethodName } from "@/lib/assay-method-name";
 import {
   AssayFormSchema,
   AssayFormValues,
   AssayFormMode,
   AssayDefinition,
-  Method,
   RawValidationRules,
 } from "@/components/assay-definition-dialog/types";
 import {
   createAssayDefinitionClient,
   updateAssayDefinitionClient,
-  fetchMethodsClient,
+  fetchMethodNameSuggestionsClient,
 } from "@/lib/api-client";
 
 type UseAssayDefinitionFormProps = {
@@ -36,15 +36,15 @@ export function useAssayDefinitionForm({
 }: UseAssayDefinitionFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [methods, setMethods] = useState<Method[]>([]);
-  const [loadingMethods, setLoadingMethods] = useState(false);
+  const [methodNameSuggestions, setMethodNameSuggestions] = useState<string[]>([]);
+  const [loadingMethodNameSuggestions, setLoadingMethodNameSuggestions] = useState(false);
 
   const form = useForm<AssayFormValues>({
     resolver: zodResolver(AssayFormSchema),
     defaultValues: {
       name: "",
       specialtyId: "",
-      methodId: "",
+      methodName: "",
       units: "",
       isConfidential: false,
       validationRules: {
@@ -61,6 +61,7 @@ export function useAssayDefinitionForm({
       form.reset({
         name: assayData.name,
         specialtyId: assayData.specialty_id || "",
+        methodName: getAssayDefinitionMethodName(assayData),
         units: assayData.units || "",
         isConfidential: assayData.is_confidential ?? false,
         validationRules: {
@@ -77,27 +78,26 @@ export function useAssayDefinitionForm({
     [form],
   );
 
-  // Load methods with ID-based deduplication (fixes Gemini concern)
-  const loadMethods = useCallback(async () => {
-    setLoadingMethods(true);
-    const result = await fetchMethodsClient();
+  const loadMethodNameSuggestions = useCallback(async () => {
+    setLoadingMethodNameSuggestions(true);
+    const result = await fetchMethodNameSuggestionsClient();
     if (result.data) {
-      const methodsData = result.data as Method[];
-      // Deduplicate by ID to ensure unique values
-      const uniqueMethods = methodsData.filter(
-        (method, index, self) =>
-          index === self.findIndex((m) => m.id === method.id),
+      const suggestions = result.data as string[];
+      const uniqueSuggestions = suggestions.filter(
+        (suggestion, index, self) =>
+          suggestion.trim() &&
+          index === self.findIndex((item) => item.trim().toLowerCase() === suggestion.trim().toLowerCase()),
       );
-      setMethods(uniqueMethods);
+      setMethodNameSuggestions(uniqueSuggestions);
     }
-    setLoadingMethods(false);
+    setLoadingMethodNameSuggestions(false);
   }, []);
 
   const resetForm = useCallback(() => {
     form.reset({
       name: "",
       specialtyId: "",
-      methodId: "",
+      methodName: "",
       units: "",
       isConfidential: false,
       validationRules: {
@@ -127,6 +127,7 @@ export function useAssayDefinitionForm({
       name: values.name,
       specialty_id: values.specialtyId || undefined,
       units: values.units || undefined,
+      methodName: values.methodName.trim(),
       is_confidential: values.isConfidential,
       validationRules:
         Object.keys(validationRules).length > 0 ? validationRules : undefined,
@@ -138,7 +139,6 @@ export function useAssayDefinitionForm({
           mode === "create"
             ? await createAssayDefinitionClient({
                 ...basePayload,
-                methodId: values.methodId || undefined,
               })
             : await updateAssayDefinitionClient({
                 ...basePayload,
@@ -175,9 +175,9 @@ export function useAssayDefinitionForm({
   return {
     form,
     isPending,
-    methods,
-    loadingMethods,
-    loadMethods,
+    methodNameSuggestions,
+    loadingMethodNameSuggestions,
+    loadMethodNameSuggestions,
     initializeForm,
     resetForm,
     onSubmit,

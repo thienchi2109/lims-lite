@@ -14,7 +14,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { getAssayDefinitionMethodName } from '@/lib/assay-method-name'
 import { AssayDefinitionDialog } from '@/components/assay-definition-dialog'
 import { AssayDefinitionRowActions } from '@/components/assay-definition-row-actions'
 import { DeleteAssayDialog } from '@/components/delete-assay-dialog'
@@ -22,7 +22,7 @@ import { AssayDefinitionsPagination } from '@/components/assay-definitions-pagin
 import { AssayDefinitionsTableToolbar } from '@/components/assay-definitions-table-toolbar'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { LabSpecialty } from '@/types'
-import { AssayDefinition, AssayMethod } from './assay-definition-dialog/types'
+import { AssayDefinition } from './assay-definition-dialog/types'
 
 const EMPTY_SPECIALTIES: LabSpecialty[] = []
 
@@ -201,63 +201,13 @@ export function AssayDefinitionsTable({
                                             )}
                                         </TableCell>
                                         <TableCell>
-                                            {assay.methods && assay.methods.length > 0 ? (
-                                                <div className="flex flex-col gap-1 items-start">
-                                                    {assay.methods.find((m) => m.is_default) ? (
-                                                        <div className="flex items-center gap-1.5">
-                                                            <Badge
-                                                                variant="secondary"
-                                                                className="font-normal bg-slate-100 text-slate-700 hover:bg-slate-200 border-0"
-                                                            >
-                                                                {
-                                                                    assay.methods.find(
-                                                                        (m) => m.is_default
-                                                                    )?.name
-                                                                }
-                                                            </Badge>
-                                                            {assay.methods.length > 1 && (
-                                                                <TooltipProvider>
-                                                                    <Tooltip>
-                                                                        <TooltipTrigger asChild>
-                                                                            <Badge
-                                                                                variant="outline"
-                                                                                className="h-5 px-1.5 text-[10px] text-muted-foreground border-dashed cursor-help"
-                                                                            >
-                                                                                +{assay.methods.length - 1}
-                                                                            </Badge>
-                                                                        </TooltipTrigger>
-                                                                        <TooltipContent>
-                                                                            <div className="flex flex-col gap-1">
-                                                                                <span className="font-semibold text-xs">
-                                                                                    Phương pháp khác:
-                                                                                </span>
-                                                                                {assay.methods
-                                                                                    .filter(
-                                                                                        (m) => !m.is_default
-                                                                                    )
-                                                                                    .map((m) => (
-                                                                                        <span
-                                                                                            key={m.id}
-                                                                                            className="text-xs text-muted-foreground"
-                                                                                        >
-                                                                                            • {m.name}
-                                                                                        </span>
-                                                                                    ))}
-                                                                            </div>
-                                                                        </TooltipContent>
-                                                                    </Tooltip>
-                                                                </TooltipProvider>
-                                                            )}
-                                                        </div>
-                                                    ) : (
-                                                        <Badge
-                                                            variant="outline"
-                                                            className="text-muted-foreground font-normal"
-                                                        >
-                                                            {assay.methods[0].name}
-                                                        </Badge>
-                                                    )}
-                                                </div>
+                                            {getAssayDefinitionMethodName(assay) ? (
+                                                <Badge
+                                                    variant="secondary"
+                                                    className="font-normal bg-slate-100 text-slate-700 hover:bg-slate-200 border-0"
+                                                >
+                                                    {getAssayDefinitionMethodName(assay)}
+                                                </Badge>
                                             ) : (
                                                 <span className="text-muted-foreground text-sm">
                                                     Chưa chỉ định

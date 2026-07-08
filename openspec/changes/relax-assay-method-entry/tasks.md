@@ -17,11 +17,11 @@
 
 ## 3. Phase 3 - Free-Form Method UI
 
-- [ ] 3.1 Replace the create dialog's current `Phương pháp ban đầu` select with the shared free-text `Phương pháp` input/combobox that accepts arbitrary text and shows suggestions.
-- [ ] 3.2 Replace the edit dialog's catalog method management area with the same shared editable `Phương pháp` input/combobox and route saves through `assay_definitions.method_name`.
-- [ ] 3.3 Show method text consistently in the manager assay table, create/edit/detail dialogs, and validation errors using Vietnamese labels.
-- [ ] 3.4 Remove edit-mode `AssayMethodsList` from the manager assay dialog for this workflow.
-- [ ] 3.5 Add focused component tests for arbitrary method text entry, suggestion selection, and persisted table display.
+- [x] 3.1 Replace the create dialog's current `Phương pháp ban đầu` select with the shared free-text `Phương pháp` input/combobox that accepts arbitrary text and shows suggestions.
+- [x] 3.2 Replace the edit dialog's catalog method management area with the same shared editable `Phương pháp` input/combobox and route saves through `assay_definitions.method_name`.
+- [x] 3.3 Show method text consistently in the manager assay table, create/edit/detail dialogs, and validation errors using Vietnamese labels.
+- [x] 3.4 Remove edit-mode `AssayMethodsList` from the manager assay dialog for this workflow.
+- [x] 3.5 Add focused component tests for arbitrary method text entry, suggestion selection, and persisted table display.
 
 ## 4. Phase 4 - Downstream Cleanup and Verification
 

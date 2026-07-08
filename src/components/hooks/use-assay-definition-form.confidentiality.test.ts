@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
   refresh: vi.fn(),
   createAssayDefinitionClient: vi.fn(),
   updateAssayDefinitionClient: vi.fn(),
-  fetchMethodsClient: vi.fn(),
+  fetchMethodNameSuggestionsClient: vi.fn(),
   toast: {
     error: vi.fn(),
     success: vi.fn(),
@@ -27,7 +27,7 @@ vi.mock('sonner', () => ({
 vi.mock('@/lib/api-client', () => ({
   createAssayDefinitionClient: (...args: unknown[]) => mocks.createAssayDefinitionClient(...args),
   updateAssayDefinitionClient: (...args: unknown[]) => mocks.updateAssayDefinitionClient(...args),
-  fetchMethodsClient: (...args: unknown[]) => mocks.fetchMethodsClient(...args),
+  fetchMethodNameSuggestionsClient: (...args: unknown[]) => mocks.fetchMethodNameSuggestionsClient(...args),
 }))
 
 import { useAssayDefinitionForm } from '../hooks/use-assay-definition-form'
@@ -35,7 +35,7 @@ import { useAssayDefinitionForm } from '../hooks/use-assay-definition-form'
 describe('useAssayDefinitionForm confidentiality', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.fetchMethodsClient.mockResolvedValue({ data: [] })
+    mocks.fetchMethodNameSuggestionsClient.mockResolvedValue({ data: [] })
     mocks.createAssayDefinitionClient.mockResolvedValue({ data: { id: 'assay-1' } })
     mocks.updateAssayDefinitionClient.mockResolvedValue({ data: { id: 'assay-1' } })
   })
@@ -100,6 +100,7 @@ describe('useAssayDefinitionForm confidentiality', () => {
       result.current.form.setValue('name', 'HIV Ag/Ab')
       result.current.form.setValue('isConfidential', true)
       result.current.form.setValue('specialtyId', 'specialty-1')
+      result.current.form.setValue('methodName', 'ELISA')
     })
 
     await act(async () => {
@@ -116,6 +117,34 @@ describe('useAssayDefinitionForm confidentiality', () => {
       )
     })
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('submits typed methodName when creating an assay', async () => {
+    const { result } = renderHook(() =>
+      useAssayDefinitionForm({
+        mode: 'create',
+        onClose: vi.fn(),
+      }),
+    )
+
+    act(() => {
+      result.current.form.setValue('name', 'HIV RNA')
+      result.current.form.setValue('specialtyId', 'specialty-1')
+      result.current.form.setValue('methodName', 'RT-PCR tự thiết lập')
+    })
+
+    await act(async () => {
+      await result.current.onSubmit({ preventDefault: vi.fn() } as never)
+    })
+
+    await waitFor(() => {
+      expect(mocks.createAssayDefinitionClient).toHaveBeenCalledWith(
+        expect.objectContaining({
+          methodName: 'RT-PCR tự thiết lập',
+        }),
+      )
+    })
+    expect(mocks.createAssayDefinitionClient.mock.calls[0][0]).not.toHaveProperty('methodId')
   })
 
   it('submits the confidential flag when updating an assay', async () => {
@@ -142,6 +171,7 @@ describe('useAssayDefinitionForm confidentiality', () => {
       result.current.form.setValue('name', 'HIV Ag/Ab updated')
       result.current.form.setValue('isConfidential', true)
       result.current.form.setValue('specialtyId', 'specialty-1')
+      result.current.form.setValue('methodName', 'ELISA')
     })
 
     await act(async () => {
@@ -158,5 +188,45 @@ describe('useAssayDefinitionForm confidentiality', () => {
       )
     })
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('submits typed methodName when updating an assay', async () => {
+    const { result } = renderHook(() =>
+      useAssayDefinitionForm({
+        mode: 'edit',
+        assay: {
+          id: 'assay-1',
+          name: 'HIV Ag/Ab',
+          specialty_id: null,
+          method_name: 'ELISA',
+          units: 'Index',
+          validation_rules: {},
+          created_at: '2026-03-25T00:00:00.000Z',
+          updated_at: '2026-03-25T00:00:00.000Z',
+          deleted_at: null,
+          is_confidential: false,
+        },
+        onClose: vi.fn(),
+      }),
+    )
+
+    act(() => {
+      result.current.form.setValue('name', 'HIV Ag/Ab updated')
+      result.current.form.setValue('specialtyId', 'specialty-1')
+      result.current.form.setValue('methodName', 'ELISA cải tiến')
+    })
+
+    await act(async () => {
+      await result.current.onSubmit({ preventDefault: vi.fn() } as never)
+    })
+
+    await waitFor(() => {
+      expect(mocks.updateAssayDefinitionClient).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'assay-1',
+          methodName: 'ELISA cải tiến',
+        }),
+      )
+    })
   })
 })

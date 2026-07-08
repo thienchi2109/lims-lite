@@ -21,6 +21,8 @@ type Props = {
 export function ValidationRulesFields({ form, disabled = false }: Props) {
   const dataType = form.watch('validationRules.type') || 'numeric'
   const isBoolean = dataType === 'boolean'
+  const parseOptionalNumber = (value: string) =>
+    value === '' ? undefined : Number(value)
 
   const handleTypeChange = (value: string) => {
     form.setValue('validationRules.type', value as 'numeric' | 'text' | 'boolean')
@@ -43,7 +45,7 @@ export function ValidationRulesFields({ form, disabled = false }: Props) {
               id="min_value"
               type="number"
               step="any"
-              {...form.register('validationRules.min', { valueAsNumber: true })}
+              {...form.register('validationRules.min', { setValueAs: parseOptionalNumber })}
               placeholder="0"
               disabled={disabled || isBoolean}
             />
@@ -60,7 +62,7 @@ export function ValidationRulesFields({ form, disabled = false }: Props) {
               id="max_value"
               type="number"
               step="any"
-              {...form.register('validationRules.max', { valueAsNumber: true })}
+              {...form.register('validationRules.max', { setValueAs: parseOptionalNumber })}
               placeholder="100"
               disabled={disabled || isBoolean}
             />

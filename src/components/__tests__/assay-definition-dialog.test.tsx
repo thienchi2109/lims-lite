@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AssayDefinitionDialog } from '../assay-definition-dialog'
 import type { AssayDefinition } from '../assay-definition-dialog/types'
@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   refresh: vi.fn(),
   createAssayDefinitionClient: vi.fn(),
   updateAssayDefinitionClient: vi.fn(),
-  fetchMethodsClient: vi.fn(),
+  fetchMethodNameSuggestionsClient: vi.fn(),
   createLabSpecialty: vi.fn(),
   toast: {
     error: vi.fn(),
@@ -27,11 +27,36 @@ vi.mock('sonner', () => ({
 vi.mock('@/lib/api-client', () => ({
   createAssayDefinitionClient: (...args: unknown[]) => mocks.createAssayDefinitionClient(...args),
   updateAssayDefinitionClient: (...args: unknown[]) => mocks.updateAssayDefinitionClient(...args),
-  fetchMethodsClient: (...args: unknown[]) => mocks.fetchMethodsClient(...args),
+  fetchMethodNameSuggestionsClient: (...args: unknown[]) => mocks.fetchMethodNameSuggestionsClient(...args),
 }))
 
 vi.mock('@/app/actions/lab-specialties', () => ({
   createLabSpecialty: (...args: unknown[]) => mocks.createLabSpecialty(...args),
+}))
+
+vi.mock('../assay-definition-dialog/specialty-field', () => ({
+  SpecialtyField: ({
+    form,
+    specialties,
+  }: {
+    form: { watch: (name: 'specialtyId') => string; setValue: (name: 'specialtyId', value: string) => void }
+    specialties: LabSpecialty[]
+  }) => (
+    <label>
+      Nhóm kỹ thuật
+      <select
+        value={form.watch('specialtyId')}
+        onChange={(event) => form.setValue('specialtyId', event.target.value)}
+      >
+        <option value="">Chọn Nhóm kỹ thuật</option>
+        {specialties.map((specialty) => (
+          <option key={specialty.id} value={specialty.id}>
+            {specialty.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  ),
 }))
 
 global.ResizeObserver = class ResizeObserver {
@@ -39,6 +64,10 @@ global.ResizeObserver = class ResizeObserver {
   unobserve() {}
   disconnect() {}
 }
+
+Element.prototype.hasPointerCapture = vi.fn(() => false)
+Element.prototype.setPointerCapture = vi.fn()
+Element.prototype.releasePointerCapture = vi.fn()
 
 const specialty: LabSpecialty = {
   id: '11111111-1111-4111-8111-111111111111',
@@ -55,6 +84,7 @@ const assay: AssayDefinition = {
   id: 'assay-1',
   name: 'HIV Ag/Ab',
   specialty_id: specialty.id,
+  method_name: 'ELISA',
   units: 'Index',
   is_confidential: true,
   validation_rules: {
@@ -77,10 +107,10 @@ const assay: AssayDefinition = {
 describe('AssayDefinitionDialog detail mode', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.fetchMethodsClient.mockResolvedValue({ data: [] })
+    mocks.fetchMethodNameSuggestionsClient.mockResolvedValue({ data: ['ELISA', 'CLIA'] })
   })
 
-  it('renders assay details read-only without submit controls', () => {
+  it('renders assay details read-only with assay-owned method text and without submit controls', () => {
     render(
       <AssayDefinitionDialog
         open
@@ -98,7 +128,115 @@ describe('AssayDefinitionDialog detail mode', () => {
     expect(screen.getByText('Index')).toBeDefined()
     expect(screen.getAllByText('Có').length).toBeGreaterThan(0)
     expect(screen.getByText('Số (Numeric)')).toBeDefined()
+    expect(screen.queryByLabelText(/Phương pháp/i)).toBeNull()
     expect(screen.queryByRole('button', { name: 'Tạo' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Cập nhật' })).toBeNull()
+  })
+})
+
+describe('AssayDefinitionDialog method entry', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.createAssayDefinitionClient.mockResolvedValue({ data: { id: 'assay-new' } })
+    mocks.updateAssayDefinitionClient.mockResolvedValue({ data: { id: 'assay-1' } })
+    mocks.fetchMethodNameSuggestionsClient.mockResolvedValue({ data: ['ELISA', 'CLIA'] })
+  })
+
+  it('creates an assay with arbitrary Phương pháp text as methodName', async () => {
+    render(
+      <AssayDefinitionDialog
+        open
+        onOpenChange={vi.fn()}
+        mode="create"
+        specialties={[specialty]}
+      />,
+    )
+
+    expect(await screen.findByText('ELISA')).toBeDefined()
+    expect(screen.getByText('CLIA')).toBeDefined()
+    expect(screen.queryByText('Phương pháp ban đầu')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Dùng gợi ý phương pháp CLIA' }))
+    expect((screen.getByRole('textbox', { name: /Phương pháp/i }) as HTMLInputElement).value).toBe('CLIA')
+
+    fireEvent.change(screen.getByLabelText(/Tên chỉ tiêu/i), {
+      target: { value: 'HIV RNA' },
+    })
+    fireEvent.change(screen.getByLabelText(/Nhóm kỹ thuật/i), {
+      target: { value: specialty.id },
+    })
+    fireEvent.change(screen.getByRole('textbox', { name: /Phương pháp/i }), {
+      target: { value: 'RT-PCR tự thiết lập' },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo' }))
+
+    await waitFor(() => {
+      expect(mocks.createAssayDefinitionClient).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'HIV RNA',
+          specialty_id: specialty.id,
+          methodName: 'RT-PCR tự thiết lập',
+        }),
+      )
+    })
+    expect(mocks.createAssayDefinitionClient.mock.calls[0][0]).not.toHaveProperty('methodId')
+  })
+
+  it('updates assay-owned Phương pháp text without showing catalog method management', async () => {
+    render(
+      <AssayDefinitionDialog
+        open
+        onOpenChange={vi.fn()}
+        mode="edit"
+        assay={{ ...assay, method_name: 'Western blot' }}
+        specialties={[specialty]}
+      />,
+    )
+
+    expect(screen.queryByText('Danh sách phương pháp')).toBeNull()
+
+    const methodInput = screen.getByRole('textbox', { name: /Phương pháp/i })
+    expect((methodInput as HTMLInputElement).value).toBe('Western blot')
+    fireEvent.change(methodInput, {
+      target: { value: 'ELISA cải tiến' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Cập nhật' }))
+
+    await waitFor(() => {
+      expect(mocks.updateAssayDefinitionClient).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'assay-1',
+          methodName: 'ELISA cải tiến',
+        }),
+      )
+    })
+  })
+
+  it('debounces method suggestion filtering while the manager types', async () => {
+    render(
+      <AssayDefinitionDialog
+        open
+        onOpenChange={vi.fn()}
+        mode="create"
+        specialties={[specialty]}
+      />,
+    )
+
+    expect(await screen.findByText('ELISA')).toBeDefined()
+    expect(screen.getByText('CLIA')).toBeDefined()
+
+    fireEvent.change(screen.getByRole('textbox', { name: /Phương pháp/i }), {
+      target: { value: 'cli' },
+    })
+
+    expect(screen.getByText('ELISA')).toBeDefined()
+
+    await waitFor(
+      () => {
+        expect(screen.queryByText('ELISA')).toBeNull()
+        expect(screen.getByText('CLIA')).toBeDefined()
+      },
+      { timeout: 1000 },
+    )
   })
 })

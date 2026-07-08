@@ -20,7 +20,7 @@ export const ValidationRulesSchema = z.object({
 export const AssayFormSchema = z.object({
   name: z.string().min(1, 'Tên chỉ tiêu là bắt buộc'),
   specialtyId: z.string().min(1, 'Vui lòng chọn nhóm kỹ thuật'),
-  methodId: z.string().optional(),
+  methodName: z.string().trim().min(1, 'Phương pháp là bắt buộc').max(200, 'Phương pháp tối đa 200 ký tự'),
   units: z.string().optional(),
   validationRules: ValidationRulesSchema.optional(),
   isConfidential: z.boolean(),
@@ -59,6 +59,7 @@ export type AssayDefinition = {
   id: string
   name: string
   specialty_id?: string | null
+  method_name?: string | null
   units: string | null
   is_confidential?: boolean
   // Using Record for compatibility with existing code that uses Record<string, any>

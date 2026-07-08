@@ -11,7 +11,6 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Loader2 } from 'lucide-react'
-import { AssayMethodsList } from './assay-methods-list'
 import { LabSpecialty } from '@/types'
 import { useAssayDefinitionForm } from './hooks/use-assay-definition-form'
 import { AssayDefinitionFields } from './assay-definition-dialog/assay-definition-fields'
@@ -60,9 +59,9 @@ export function AssayDefinitionDialog({
   const {
     form,
     isPending,
-    methods,
-    loadingMethods,
-    loadMethods,
+    methodNameSuggestions,
+    loadingMethodNameSuggestions,
+    loadMethodNameSuggestions,
     initializeForm,
     resetForm,
     onSubmit,
@@ -74,12 +73,11 @@ export function AssayDefinitionDialog({
     onClose: handleClose,
   })
 
-  // Load methods on open in create mode
   useEffect(() => {
-    if (open && mode === 'create') {
-      loadMethods()
+    if (open && !isViewMode) {
+      loadMethodNameSuggestions()
     }
-  }, [open, mode, loadMethods])
+  }, [open, isViewMode, loadMethodNameSuggestions])
 
   // Initialize form when editing
   useEffect(() => {
@@ -126,8 +124,8 @@ export function AssayDefinitionDialog({
               assay={assay}
               specialties={availableSpecialties}
               onSpecialtyCreated={handleSpecialtyCreated}
-              methods={methods}
-              loadingMethods={loadingMethods}
+              methodNameSuggestions={methodNameSuggestions}
+              loadingMethodNameSuggestions={loadingMethodNameSuggestions}
               disabled={isPending}
             />
           ) : (
@@ -138,21 +136,11 @@ export function AssayDefinitionDialog({
                 assay={assay}
                 specialties={availableSpecialties}
                 onSpecialtyCreated={handleSpecialtyCreated}
-                methods={methods}
-                loadingMethods={loadingMethods}
+                methodNameSuggestions={methodNameSuggestions}
+                loadingMethodNameSuggestions={loadingMethodNameSuggestions}
                 disabled={isPending}
               />
             </form>
-          )}
-
-          {/* Methods Management (Edit Mode Only) */}
-          {mode === 'edit' && assay && (
-            <div className="border-t pt-6">
-              <AssayMethodsList
-                assayId={assay.id}
-                methods={assay.methods || []}
-              />
-            </div>
           )}
         </div>
 

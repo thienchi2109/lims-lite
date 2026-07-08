@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   refresh: vi.fn(),
   createAssayDefinitionClient: vi.fn(),
   updateAssayDefinitionClient: vi.fn(),
-  fetchMethodsClient: vi.fn(),
+  fetchMethodNameSuggestionsClient: vi.fn(),
   createLabSpecialty: vi.fn(),
   toast: {
     error: vi.fn(),
@@ -33,7 +33,7 @@ vi.mock('sonner', () => ({
 vi.mock('@/lib/api-client', () => ({
   createAssayDefinitionClient: (...args: unknown[]) => mocks.createAssayDefinitionClient(...args),
   updateAssayDefinitionClient: (...args: unknown[]) => mocks.updateAssayDefinitionClient(...args),
-  fetchMethodsClient: (...args: unknown[]) => mocks.fetchMethodsClient(...args),
+  fetchMethodNameSuggestionsClient: (...args: unknown[]) => mocks.fetchMethodNameSuggestionsClient(...args),
 }))
 
 vi.mock('@/app/actions/lab-specialties', () => ({
@@ -61,6 +61,7 @@ const assay: AssayDefinition = {
   id: 'assay-1',
   name: 'HIV Ag/Ab',
   specialty_id: specialty.id,
+  method_name: 'RT-PCR',
   units: 'Index',
   is_confidential: true,
   validation_rules: { type: 'numeric', required: true },
@@ -78,7 +79,7 @@ const assay: AssayDefinition = {
 describe('AssayDefinitionsTable detail action', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.fetchMethodsClient.mockResolvedValue({ data: [] })
+    mocks.fetchMethodNameSuggestionsClient.mockResolvedValue({ data: [] })
   })
 
   it('opens the shared read-only detail dialog from the row action', () => {
@@ -97,7 +98,22 @@ describe('AssayDefinitionsTable detail action', () => {
 
     expect(screen.getByText('Chi tiết chỉ tiêu xét nghiệm')).toBeDefined()
     expect(screen.getAllByText('HIV Ag/Ab').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('ELISA').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('RT-PCR').length).toBeGreaterThan(0)
     expect(screen.queryByRole('button', { name: 'Cập nhật' })).toBeNull()
+  })
+
+  it('shows persisted assay-owned method text in the manager table', () => {
+    render(
+      <AssayDefinitionsTable
+        assays={[assay]}
+        page={1}
+        pageSize={10}
+        totalPages={1}
+        totalCount={1}
+        specialties={[specialty]}
+      />,
+    )
+
+    expect(screen.getByText('RT-PCR')).toBeDefined()
   })
 })
