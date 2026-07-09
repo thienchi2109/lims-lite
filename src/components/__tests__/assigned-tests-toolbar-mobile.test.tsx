@@ -159,6 +159,13 @@ describe('AssignedTestsToolbar mobile overflow', () => {
         expect(screen.queryByRole('heading', { name: 'Chỉ định xét nghiệm' })).toBeNull()
     })
 
+    it('does not render barcode printing actions in the result entry toolbar', () => {
+        render(<AssignedTestsToolbar {...defaultProps} />)
+
+        expect(screen.queryByRole('button', { name: 'In nhãn barcode' })).toBeNull()
+        expect(screen.queryByText('In nhãn barcode')).toBeNull()
+    })
+
     it('moves the IQC shortcut into the mobile overflow menu', () => {
         render(<AssignedTestsToolbar {...defaultProps} />)
 

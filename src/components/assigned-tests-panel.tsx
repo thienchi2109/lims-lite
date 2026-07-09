@@ -72,7 +72,6 @@ export function AssignedTestsPanel({
     const {
         handlePrint,
         handlePrintCoABody,
-        handlePrintBarcodeLabel,
         closePrintPreview,
         printPreview,
     } = usePrintHandlers(sampleId, results)
@@ -183,7 +182,6 @@ export function AssignedTestsPanel({
                 signatureLoading={signatureLoading}
                 isGeneratingCoA={isGeneratingCoA}
                 onPrint={handlePrint}
-                onPrintBarcodeLabel={handlePrintBarcodeLabel}
                 onGenerateCoA={handleGenerateCoA}
                 onSubmitForReview={() => setShowSubmitDialog(true)}
                 onOpenAssignment={() => setShowAssignmentDialog(true)}
