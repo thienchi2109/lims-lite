@@ -26,6 +26,11 @@ import {
 } from '@/components/ui/select'
 import { deleteUserClient } from '@/lib/api-client'
 import { getUserRoleLabel } from '@/lib/role-labels'
+import {
+    canOwnElectronicSignature,
+    getSignatureReadinessTitle,
+    hasActiveElectronicSignature,
+} from '@/lib/signature-readiness'
 
 function getActionErrorMessage(result: unknown) {
     if (result && typeof result === 'object' && 'error' in result) {
@@ -129,9 +134,9 @@ export function UserListTable({
                             </TableRow>
                         ) : (
                             users.map((user) => {
-                                // Check if manager has active signature
-                                const hasSignature = user.role === 'manager' &&
-                                    user.user_signatures?.some(sig => sig.is_active) || false
+                                const requiresSignature = canOwnElectronicSignature(user.role)
+                                const hasSignature = requiresSignature &&
+                                    hasActiveElectronicSignature(user.user_signatures)
                                 const isRestrictedManagerRow = currentUserRole === 'manager' &&
                                     user.role === 'manager' &&
                                     user.id !== currentUserId
@@ -150,13 +155,21 @@ export function UserListTable({
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-center">
-                                        {user.role === 'manager' ? (
+                                        {requiresSignature ? (
                                             hasSignature ? (
-                                                <div className="flex justify-center" title="Đã có chữ ký">
+                                                <div
+                                                    className="flex justify-center"
+                                                    title={getSignatureReadinessTitle(user.full_name, true)}
+                                                    aria-label={getSignatureReadinessTitle(user.full_name, true)}
+                                                >
                                                     <CheckCircle2 className="h-5 w-5 text-green-600" />
                                                 </div>
                                             ) : (
-                                                <div className="flex justify-center" title="Chưa có chữ ký">
+                                                <div
+                                                    className="flex justify-center"
+                                                    title={getSignatureReadinessTitle(user.full_name, false)}
+                                                    aria-label={getSignatureReadinessTitle(user.full_name, false)}
+                                                >
                                                     <XCircle className="h-5 w-5 text-slate-300" />
                                                 </div>
                                             )

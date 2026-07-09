@@ -143,4 +143,32 @@ describe('AssignedTestsToolbar CoA desktop actions', () => {
 
         expect(onPrintBarcodeLabel).toHaveBeenCalledTimes(1)
     })
+
+    it('points analysts to profile signature upload when submit is blocked by missing signature', () => {
+        render(
+            <AssignedTestsToolbar
+                resultsCount={3}
+                sampleStatus="in_progress"
+                coaStatus={null}
+                canSubmitForReview={true}
+                hasPendingChanges={false}
+                hasSignature={false}
+                signatureLoading={false}
+                isGeneratingCoA={false}
+                onPrint={vi.fn()}
+                onPrintBarcodeLabel={vi.fn()}
+                onGenerateCoA={vi.fn()}
+                onSubmitForReview={vi.fn()}
+                onOpenAssignment={vi.fn()}
+                onPreviewCoA={vi.fn()}
+                onPrintCoABody={vi.fn()}
+                userRole="analyst"
+            />,
+        )
+
+        expect(screen.getByRole('button', { name: 'Gửi duyệt' }).getAttribute('title')).toBe(
+            'Vui lòng tải lên chữ ký trong Hồ sơ trước khi nộp',
+        )
+        expect(screen.getByText('Vui lòng tải lên chữ ký trong Hồ sơ trước khi nộp')).toBeDefined()
+    })
 })

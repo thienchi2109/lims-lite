@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { FormLabel } from '@/components/ui/form'
 import { SignatureUploadField } from '@/components/signature-upload-field'
 import { Info } from 'lucide-react'
+import { getSignatureSelfUploadGuidance } from '@/lib/signature-readiness'
 
 interface UserFormSignatureSectionProps {
     isEdit: boolean
@@ -28,6 +29,9 @@ export function UserFormSignatureSection({
     userRole,
     onSignatureFileChange,
 }: UserFormSignatureSectionProps) {
+    const createGuidance = !isEdit ? getSignatureSelfUploadGuidance(selectedRole) : null
+    const otherEditGuidance = isOtherEdit ? getSignatureSelfUploadGuidance(userRole) : null
+
     return (
         <>
             {!isEdit && selectedRole === 'manager' && (
@@ -39,6 +43,18 @@ export function UserFormSignatureSection({
                 />
             )}
 
+            {!isEdit && selectedRole === 'analyst' && createGuidance && (
+                <div className="space-y-2">
+                    <FormLabel>Chữ ký điện tử</FormLabel>
+                    <Alert>
+                        <Info className="h-4 w-4" />
+                        <AlertDescription className="text-sm">
+                            {createGuidance}
+                        </AlertDescription>
+                    </Alert>
+                </div>
+            )}
+
             {isSelfEdit && userRole === 'manager' && (
                 <SignatureUploadField
                     value={signatureFile}
@@ -48,14 +64,13 @@ export function UserFormSignatureSection({
                 />
             )}
 
-            {isOtherEdit && userRole === 'manager' && (
+            {otherEditGuidance && (
                 <div className="space-y-2">
                     <FormLabel>Chữ ký điện tử</FormLabel>
                     <Alert>
                         <Info className="h-4 w-4" />
                         <AlertDescription className="text-sm">
-                            Người dùng này cần tự tải lên chữ ký điện tử của họ khi đăng nhập.
-                            Bạn không thể tải lên chữ ký thay họ để đảm bảo tuân thủ quy định.
+                            {otherEditGuidance}
                         </AlertDescription>
                     </Alert>
                 </div>

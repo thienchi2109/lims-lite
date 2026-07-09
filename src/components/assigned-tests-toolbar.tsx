@@ -31,6 +31,7 @@ import {
 } from 'lucide-react'
 import type { SampleStatus, CoAReportStatus } from '@/types'
 import { cn } from '@/lib/utils'
+import { SIGNATURE_SUBMIT_BLOCKED_MESSAGE } from '@/lib/signature-readiness'
 
 interface AssignedTestsToolbarProps {
     resultsCount: number
@@ -246,7 +247,7 @@ export function AssignedTestsToolbar({
                                 className="h-8 w-8 bg-emerald-600 text-white shadow-sm transition-all hover:scale-105 hover:bg-emerald-700 hover:shadow-emerald-500/20"
                                 onClick={onSubmitForReview}
                                 disabled={hasPendingChanges || !hasSignature || signatureLoading}
-                                title={!hasSignature ? "Vui lòng tải lên chữ ký trước khi nộp" : undefined}
+                                title={!hasSignature ? SIGNATURE_SUBMIT_BLOCKED_MESSAGE : undefined}
                                 aria-disabled={hasPendingChanges || !hasSignature || signatureLoading}
                             >
                                 <CheckCircle className="h-4 w-4" />
@@ -257,7 +258,7 @@ export function AssignedTestsToolbar({
                             {signatureLoading
                                 ? 'Đang kiểm tra chữ ký...'
                                 : !hasSignature
-                                    ? 'Vui lòng tải lên chữ ký trước khi nộp'
+                                    ? SIGNATURE_SUBMIT_BLOCKED_MESSAGE
                                     : hasPendingChanges
                                         ? 'Lưu thay đổi trước khi gửi duyệt'
                                         : 'Gửi duyệt kết quả'}

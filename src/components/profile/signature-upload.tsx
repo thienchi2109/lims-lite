@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Upload, Check, Loader2, AlertCircle } from 'lucide-react'
 import { SIGNATURE_VALIDATION } from '@/types/workflow'
+import { SIGNATURE_PROFILE_REQUIRED_MESSAGE } from '@/lib/signature-readiness'
 
 /**
  * Get the upload prompt text based on current state
@@ -200,7 +201,7 @@ export default function SignatureUpload() {
                                 Chưa có chữ ký
                             </p>
                             <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-                                Vui lòng tải lên chữ ký để có thể nộp kết quả xét nghiệm
+                                {SIGNATURE_PROFILE_REQUIRED_MESSAGE}
                             </p>
                         </div>
                     </div>
