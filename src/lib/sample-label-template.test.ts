@@ -82,6 +82,20 @@ describe('generateSampleLabelHtml', () => {
         expect(html).not.toContain('Tran Thi Binh')
     })
 
+    it('keeps patient metadata glyphs clear of the barcode clipping edge', () => {
+        const html = generateSampleLabelHtml({
+            ...sensitiveSample,
+            client: {
+                name: 'Nguyễn Thị Ánh Hồng',
+                date_of_birth: '1991-02-03',
+            },
+        }, { preset: 'thermal-35x22-2up' })
+
+        expect(html).toContain('line-height: 1.2')
+        expect(html).toContain('padding-top: 0.2mm')
+        expect(html).toContain('Nguyễn Thị Ánh Hồng')
+    })
+
     it('keeps patient identity metadata on the larger container label', () => {
         const html = generateSampleLabelHtml(sensitiveSample, { preset: 'container' })
 

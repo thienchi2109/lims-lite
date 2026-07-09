@@ -214,7 +214,8 @@ export function generateSampleLabelHtml(
             gap: 0.8mm;
             font-size: ${getMetaFontSize(presetName)};
             font-weight: 600;
-            line-height: 1;
+            line-height: 1.2;
+            padding-top: 0.2mm;
             white-space: nowrap;
         }
 
