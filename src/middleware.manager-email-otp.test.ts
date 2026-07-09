@@ -133,7 +133,7 @@ describe('manager email OTP middleware contract', () => {
         const location = response.headers.get('location')
 
         expect(location).not.toBeNull()
-        expect(new URL(location ?? '').pathname).toBe('/manager/otp')
+        expect(new URL(location ?? '').pathname).toBe('/otp')
     })
 
     it('clears stale manager step-up cookies when redirecting back to OTP verification', async () => {
@@ -141,7 +141,7 @@ describe('manager email OTP middleware contract', () => {
 
         const response = await middleware(createRequest('/manager', `${MANAGER_STEP_UP_COOKIE_NAME}=stale-cookie`))
 
-        expect(new URL(response.headers.get('location') ?? '').pathname).toBe('/manager/otp')
+        expect(new URL(response.headers.get('location') ?? '').pathname).toBe('/otp')
         expect(response.headers.get('set-cookie')).toContain(`${MANAGER_STEP_UP_COOKIE_NAME}=;`)
         expect(response.headers.get('set-cookie')).toContain('Max-Age=0')
     })
@@ -174,7 +174,7 @@ describe('manager email OTP middleware contract', () => {
         const location = response.headers.get('location')
 
         expect(location).not.toBeNull()
-        expect(new URL(location ?? '').pathname).toBe('/manager/otp')
+        expect(new URL(location ?? '').pathname).toBe('/otp')
     })
 
     it('allows standard analysts without OTP even when analyst HIV OTP is enabled', async () => {

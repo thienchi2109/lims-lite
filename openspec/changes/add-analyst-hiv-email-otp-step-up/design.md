@@ -21,7 +21,8 @@ Delivery should be phased:
 - Let managers manage the confidential-access entitlement and analyst OTP destination email for analyst users.
 - Keep environment-flag control out of the app UI; only the superadmin/operator changes OTP flags.
 - Fail closed when the analyst HIV cohort is enabled but no OTP destination email is configured.
-- Keep `/manager/otp` compatible while adding a shared OTP route or alias path for analyst use.
+- Use `/otp` as the canonical shared OTP route for manager and analyst-HIV users.
+- Keep `/manager/otp` compatible as a redirect to `/otp` during rollout.
 
 **Non-Goals:**
 
@@ -30,7 +31,7 @@ Delivery should be phased:
 - Do not implement TOTP, passkeys, SMS, Zalo OTP, Supabase MFA factors, or phishing-resistant MFA.
 - Do not redesign analyst permissions, confidential data access rules, or post-login dashboard behavior.
 - Do not add any in-app control for `ANALYST_HIV_EMAIL_OTP_ENABLED`, `MANAGER_HIV_EMAIL_OTP_ENABLED`, or other env flags.
-- Do not complete route unification or remove `/manager/otp`; that cleanup is tracked in issue #66.
+- Do not remove `/manager/otp`; issue #66 covers the canonical-route decision and compatibility redirect.
 
 ## Decisions
 
@@ -64,7 +65,7 @@ Alternative considered: expose the analyst OTP flag in the manager UI. That woul
 
 ### Preserve manager route compatibility and track route unification separately
 
-The preferred user-facing OTP route should be shared for manager and analyst-HIV users, but `/manager/otp` must keep working as a redirect or compatibility alias during rollout. GitHub issue #66 tracks final route naming, docs, tests, and removal or permanent redirect decisions.
+The canonical user-facing OTP route is `/otp` for manager and analyst-HIV users. `/manager/otp` must keep working as a redirect during rollout so existing manager bookmarks and links do not break. GitHub issue #66 tracks the route naming decision, docs, tests, and any future removal or permanent redirect decision.
 
 ## Risks / Trade-offs
 
@@ -89,7 +90,7 @@ Phase 2: analyst HIV OTP enforcement
 
 1. Add `ANALYST_HIV_EMAIL_OTP_ENABLED` parsing and cohort classification.
 2. Generalize OTP route context, challenge creation, verification, step-up cookie, and guard checks for manager and analyst-HIV cohorts.
-3. Add shared OTP UI routing while keeping `/manager/otp` compatible.
+3. Add shared OTP UI routing at `/otp` while keeping `/manager/otp` compatible as a redirect.
 4. Enforce login redirect, middleware, action/API guards, logout cleanup, and session-expiry cleanup for analyst HIV sessions.
 5. Run focused auth, middleware, OTP, user-management, route-compatibility, lint, typecheck, and OpenSpec validation.
 

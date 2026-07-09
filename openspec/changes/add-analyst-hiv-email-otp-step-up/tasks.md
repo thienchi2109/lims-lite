@@ -42,5 +42,5 @@
 ## 5. Phase 3 Route Cleanup Tracking
 
 - [x] 5.1 Keep GitHub issue #66 open during Phase 1 and Phase 2 implementation.
-- [ ] 5.2 After Phase 2 stabilizes, use issue #66 to decide the canonical shared OTP route.
-- [ ] 5.3 Preserve or intentionally migrate `/manager/otp` only under issue #66 with explicit tests and documentation.
+- [x] 5.2 After Phase 2 stabilizes, use issue #66 to decide the canonical shared OTP route.
+- [x] 5.3 Preserve or intentionally migrate `/manager/otp` only under issue #66 with explicit tests and documentation.

@@ -109,8 +109,8 @@ describe('manager email OTP login contract', () => {
     })
 
     it('redirects a password-authenticated manager to email OTP verification before /manager access', async () => {
-        await expect(login(null, createLoginFormData())).rejects.toThrow('NEXT_REDIRECT:/manager/otp')
-        expect(mocks.redirect).toHaveBeenCalledWith('/manager/otp')
+        await expect(login(null, createLoginFormData())).rejects.toThrow('NEXT_REDIRECT:/otp')
+        expect(mocks.redirect).toHaveBeenCalledWith('/otp')
     })
 
     it('still redirects a manager to email OTP verification when session ID lookup fails', async () => {
@@ -128,8 +128,8 @@ describe('manager email OTP login contract', () => {
             }),
         })
 
-        await expect(login(null, createLoginFormData())).rejects.toThrow('NEXT_REDIRECT:/manager/otp')
-        expect(mocks.redirect).toHaveBeenCalledWith('/manager/otp')
+        await expect(login(null, createLoginFormData())).rejects.toThrow('NEXT_REDIRECT:/otp')
+        expect(mocks.redirect).toHaveBeenCalledWith('/otp')
     })
 
     it('clears manager OTP step-up state when the server logout action is used', async () => {
@@ -157,8 +157,8 @@ describe('manager email OTP login contract', () => {
             canAccessConfidential: true,
         })
 
-        await expect(login(null, createLoginFormData('analyst-hiv'))).rejects.toThrow('NEXT_REDIRECT:/manager/otp')
-        expect(mocks.redirect).toHaveBeenCalledWith('/manager/otp')
+        await expect(login(null, createLoginFormData('analyst-hiv'))).rejects.toThrow('NEXT_REDIRECT:/otp')
+        expect(mocks.redirect).toHaveBeenCalledWith('/otp')
     })
 
     it('does not redirect a confidential analyst to OTP when the analyst HIV flag is disabled', async () => {

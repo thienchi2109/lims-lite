@@ -2,6 +2,7 @@
 
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { managerRequiresOtp } from '@/lib/manager-email-otp/guards'
+import { OTP_STEP_UP_ROUTE } from '@/lib/manager-email-otp/routes'
 import {
     MANAGER_STEP_UP_COOKIE_NAME,
     getManagerStepUpCookieOptions,
@@ -106,7 +107,7 @@ export async function login(_prevState: unknown, formData: FormData) {
             can_access_confidential: userData?.can_access_confidential === true,
         })
     ) {
-        redirect('/manager/otp')
+        redirect(OTP_STEP_UP_ROUTE)
     }
 
     // Redirect based on role

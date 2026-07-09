@@ -4,6 +4,11 @@ import { getSessionTimeboxSeconds } from '@/lib/auth-session-timebox'
 import { decodeJwtPayload } from '@/lib/jwt'
 import { shouldRequireManagerStepUp } from '@/lib/manager-email-otp/guards'
 import {
+    LEGACY_MANAGER_OTP_ROUTE,
+    OTP_STEP_UP_ROUTE,
+    isOtpStepUpRoute,
+} from '@/lib/manager-email-otp/routes'
+import {
     MANAGER_STEP_UP_COOKIE_NAME,
     getManagerStepUpCookieOptions,
 } from '@/lib/manager-email-otp/step-up'
@@ -74,7 +79,8 @@ export async function middleware(request: NextRequest) {
         request.nextUrl.pathname.startsWith('/analyst') ||
         request.nextUrl.pathname.startsWith('/manager') ||
         request.nextUrl.pathname.startsWith('/samples') ||
-        request.nextUrl.pathname.startsWith('/profile')
+        request.nextUrl.pathname.startsWith('/profile') ||
+        request.nextUrl.pathname === OTP_STEP_UP_ROUTE
     const isApiRoute = request.nextUrl.pathname.startsWith('/api')
     const isLoginRoute = request.nextUrl.pathname === '/login'
     const shouldEnforceTimebox = isProtectedRoute || isApiRoute || isLoginRoute
@@ -209,14 +215,14 @@ export async function middleware(request: NextRequest) {
         // Role-based route protection
         if (
             request.nextUrl.pathname.startsWith('/manager') &&
-            request.nextUrl.pathname !== '/manager/otp' &&
+            !isOtpStepUpRoute(request.nextUrl.pathname) &&
             userRole !== 'manager'
         ) {
             return redirectByRole()
         }
 
         if (
-            request.nextUrl.pathname !== '/manager/otp' &&
+            request.nextUrl.pathname !== LEGACY_MANAGER_OTP_ROUTE &&
             await shouldRequireManagerStepUp(
                 {
                     userId: user.id,
@@ -229,7 +235,7 @@ export async function middleware(request: NextRequest) {
             )
         ) {
             const url = request.nextUrl.clone()
-            url.pathname = '/manager/otp'
+            url.pathname = OTP_STEP_UP_ROUTE
             const response = NextResponse.redirect(url)
             applyCookies(response)
             clearManagerStepUpCookie(response)

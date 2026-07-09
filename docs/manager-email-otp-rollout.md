@@ -16,9 +16,15 @@ Email OTP quản lý là bước xác thực bổ sung cho tài khoản `manager
 - `MANAGER_OTP_EMAIL_REPLY_TO`: tùy chọn, dùng mailbox hỗ trợ nội bộ.
 - `MANAGER_OTP_STEP_UP_SECRET`: khóa ký cookie step-up; nếu thiếu, hệ thống fallback sang `JWT_SECRET`.
 
+## Route OTP
+
+- Route xác thực OTP dùng chung cho manager và analyst HIV là `/otp`.
+- Route cũ `/manager/otp` được giữ tương thích dưới dạng redirect về `/otp`.
+- Login flow và middleware redirect phiên password-only cần step-up về `/otp`.
+
 ## Thứ tự rollout production
 
-1. Deploy UI xác thực OTP, route `/api/manager/otp/*`, workflow cấu hình email trong Quản lý người dùng, và cấu hình Resend.
+1. Deploy UI xác thực OTP tại `/otp`, route `/api/manager/otp/*`, workflow cấu hình email trong Quản lý người dùng, và cấu hình Resend.
 2. Giữ `MANAGER_EMAIL_OTP_ENABLED=FALSE`, `MANAGER_HIV_EMAIL_OTP_ENABLED=FALSE`, và `ANALYST_HIV_EMAIL_OTP_ENABLED=FALSE`.
 3. Quản trị viên cấu hình email nhận OTP cho từng tài khoản quản lý trong màn hình Quản lý người dùng.
 4. Kiểm tra gửi email OTP bằng tài khoản thử nghiệm hoặc cohort nhỏ.
