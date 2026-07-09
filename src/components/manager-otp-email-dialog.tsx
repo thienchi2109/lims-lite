@@ -51,6 +51,7 @@ export function ManagerOtpEmailDialog({
     const [isLoading, setIsLoading] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
     const canSave = useMemo(() => Boolean(user?.id) && isValidEmail(otpEmail), [otpEmail, user?.id])
+    const targetLabel = user?.role === 'analyst' ? 'analyst' : 'quản lý'
 
     useEffect(() => {
         if (!open || !user?.id) return
@@ -104,9 +105,9 @@ export function ManagerOtpEmailDialog({
                     <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-md bg-slate-950 text-white">
                         <KeyRound className="h-5 w-5" />
                     </div>
-                    <DialogTitle>Cấu hình email OTP quản lý</DialogTitle>
+                    <DialogTitle>Cấu hình email OTP {targetLabel}</DialogTitle>
                     <DialogDescription>
-                        Cập nhật email nhận mã OTP cho {user?.full_name ?? 'tài khoản quản lý'}.
+                        Cập nhật email nhận mã OTP cho {user?.full_name ?? `tài khoản ${targetLabel}`}.
                     </DialogDescription>
                 </DialogHeader>
 

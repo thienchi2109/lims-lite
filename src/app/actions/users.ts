@@ -55,6 +55,23 @@ function assertManagerTargetAllowed(currentManagerId: string, targetProfile: Use
     }
 }
 
+async function configureOtpDestination(
+    adminClient: ReturnType<typeof createAdminClient>,
+    userId: string,
+    otpEmail: string,
+    errorPrefix: string,
+) {
+    const { error } = await adminClient
+        .from('manager_otp_settings')
+        .upsert({
+            user_id: userId,
+            otp_email: otpEmail,
+            updated_at: new Date().toISOString(),
+        })
+
+    if (error) throw new Error(`${errorPrefix}: ${error.message}`)
+}
+
 /**
  * Get users with pagination and filtering
  */
@@ -199,6 +216,10 @@ export async function createUser(data: z.infer<typeof CreateUserSchema>) {
 
     // 2. Create in public.users
     // Note: The ID must match the auth user ID
+    const canAccessConfidential = validated.role === 'analyst'
+        ? validated.can_access_confidential === true
+        : false
+
     const { error: dbError } = await supabase
         .from('users')
         .insert({
@@ -208,7 +229,7 @@ export async function createUser(data: z.infer<typeof CreateUserSchema>) {
             role: validated.role,
             email: email,
             lab: validated.lab || 'Central Lab',
-            can_access_confidential: false,
+            can_access_confidential: canAccessConfidential,
         })
 
     if (dbError) {
@@ -218,17 +239,30 @@ export async function createUser(data: z.infer<typeof CreateUserSchema>) {
     }
 
     if (validated.role === 'manager') {
-        const { error: otpSettingsError } = await adminClient
-            .from('manager_otp_settings')
-            .upsert({
-                user_id: authUser.user.id,
-                otp_email: email,
-                updated_at: new Date().toISOString(),
-            })
-
-        if (otpSettingsError) {
+        try {
+            await configureOtpDestination(
+                adminClient,
+                authUser.user.id,
+                email,
+                'Manager OTP email configuration failed',
+            )
+        } catch (error) {
             await adminClient.auth.admin.deleteUser(authUser.user.id)
-            throw new Error(`Manager OTP email configuration failed: ${otpSettingsError.message}`)
+            throw error
+        }
+    }
+
+    if (validated.role === 'analyst' && validated.otpEmail) {
+        try {
+            await configureOtpDestination(
+                adminClient,
+                authUser.user.id,
+                validated.otpEmail,
+                'Analyst OTP email configuration failed',
+            )
+        } catch (error) {
+            await adminClient.auth.admin.deleteUser(authUser.user.id)
+            throw error
         }
     }
 
@@ -253,16 +287,19 @@ export async function updateUser(data: z.infer<typeof UpdateUserSchema>) {
     )
     assertManagerTargetAllowed(currentManager.id, targetProfile)
 
-    if (validated.can_access_confidential !== undefined) {
-        throw new Error('Unauthorized: Managers cannot change confidential access')
+    if (validated.can_access_confidential !== undefined && targetProfile.role !== 'analyst') {
+        throw new Error('Unauthorized: Managers can only change confidential access for analyst accounts')
     }
 
     // Update public profile
-    const updateData: Partial<Pick<z.infer<typeof UpdateUserSchema>, 'full_name' | 'role' | 'email' | 'lab'>> = {}
+    const updateData: Partial<Pick<z.infer<typeof UpdateUserSchema>, 'full_name' | 'role' | 'email' | 'lab' | 'can_access_confidential'>> = {}
     if (validated.full_name) updateData.full_name = validated.full_name
     if (validated.role) updateData.role = validated.role
     if (validated.email) updateData.email = validated.email
     if (validated.lab) updateData.lab = validated.lab
+    if (validated.can_access_confidential !== undefined) {
+        updateData.can_access_confidential = validated.can_access_confidential
+    }
 
     if (Object.keys(updateData).length > 0) {
         const { error } = await supabase
@@ -287,6 +324,20 @@ export async function updateUser(data: z.infer<typeof UpdateUserSchema>) {
         )
 
         if (authError) throw new Error(`Auth update failed: ${authError.message}`)
+    }
+
+    if (validated.otpEmail) {
+        if ((validated.role ?? targetProfile.role) !== 'analyst') {
+            throw new Error('Unauthorized: Managers can only configure analyst OTP email in user edit')
+        }
+
+        const adminClient = createAdminClient()
+        await configureOtpDestination(
+            adminClient,
+            validated.id,
+            validated.otpEmail,
+            'Analyst OTP email configuration failed',
+        )
     }
 
     revalidatePath('/manager/users')

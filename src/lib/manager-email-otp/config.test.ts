@@ -92,4 +92,14 @@ describe('manager email OTP configuration contract', () => {
         expect(requiresManagerEmailOtp(config, { role: 'analyst', can_access_confidential: false })).toBe(false)
         expect(requiresManagerEmailOtp(config, { role: 'doctor', can_access_confidential: true })).toBe(false)
     })
+
+    it('does not enforce analyst confidential OTP during Phase 1 without an analyst flag', async () => {
+        const { parseManagerEmailOtpConfig, requiresManagerEmailOtp } = await loadConfigContract()
+        const config = parseManagerEmailOtpConfig({
+            MANAGER_EMAIL_OTP_ENABLED: 'TRUE',
+            MANAGER_HIV_EMAIL_OTP_ENABLED: 'TRUE',
+        })
+
+        expect(requiresManagerEmailOtp(config, { role: 'analyst', can_access_confidential: true })).toBe(false)
+    })
 })

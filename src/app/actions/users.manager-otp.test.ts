@@ -52,6 +52,7 @@ async function loadUserActions() {
 
 const managerId = '11111111-1111-4111-8111-111111111111'
 const targetManagerId = '22222222-2222-4222-8222-222222222222'
+const targetAnalystId = '33333333-3333-4333-8333-333333333333'
 
 function createAdminOtpSettingsClient(result: {
     data?: unknown
@@ -221,15 +222,29 @@ describe('manager OTP email user-management contract', () => {
         expect(mocks.revalidatePath).toHaveBeenCalledWith('/manager/users')
     })
 
-    it('rejects non-manager OTP email targets before writing settings', async () => {
+    it('allows managers to configure analyst OTP destination emails', async () => {
         const adminClient = createAdminOtpSettingsClient({ targetRole: 'analyst' })
         mocks.createAdminClient.mockReturnValue(adminClient)
         const actions = await loadUserActions()
         const { configureManagerOtpEmail } = actions
 
         await expect(
-            configureManagerOtpEmail({ userId: targetManagerId, otpEmail: 'otp@example.com' }),
-        ).rejects.toThrow(/quản lý/i)
+            configureManagerOtpEmail({ userId: targetAnalystId, otpEmail: 'analyst-otp@example.com' }),
+        ).resolves.toEqual({ success: true })
+        expect(adminClient.query.upsert).toHaveBeenCalledWith(
+            expect.objectContaining({ user_id: targetAnalystId, otp_email: 'analyst-otp@example.com' }),
+        )
+    })
+
+    it('rejects OTP email targets that are neither manager nor analyst before writing settings', async () => {
+        const adminClient = createAdminOtpSettingsClient({ targetRole: 'doctor' })
+        mocks.createAdminClient.mockReturnValue(adminClient)
+        const actions = await loadUserActions()
+        const { configureManagerOtpEmail } = actions
+
+        await expect(
+            configureManagerOtpEmail({ userId: targetAnalystId, otpEmail: 'doctor-otp@example.com' }),
+        ).rejects.toThrow(/analyst|quản lý/i)
         expect(adminClient.query.upsert).not.toHaveBeenCalled()
     })
 

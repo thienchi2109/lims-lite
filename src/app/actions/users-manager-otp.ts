@@ -19,15 +19,15 @@ async function requireCurrentManager() {
     return auth
 }
 
-async function requireTargetManager(adminClient: ReturnType<typeof createAdminClient>, userId: string) {
+async function requireTargetOtpConfigurableUser(adminClient: ReturnType<typeof createAdminClient>, userId: string) {
     const { data, error } = await adminClient
         .from('users')
         .select('role')
         .eq('id', userId)
         .single()
 
-    if (error || data?.role !== 'manager') {
-        throw new Error('Chỉ tài khoản quản lý mới được cấu hình email nhận OTP quản lý')
+    if (error || (data?.role !== 'manager' && data?.role !== 'analyst')) {
+        throw new Error('Chỉ tài khoản quản lý hoặc analyst mới được cấu hình email nhận OTP')
     }
 }
 
@@ -91,7 +91,7 @@ export async function configureManagerOtpEmail(input: { userId: string; otpEmail
     await requireManagerStepUpForOtpConfiguration(currentUser.id)
 
     const adminClient = createAdminClient()
-    await requireTargetManager(adminClient, validated.userId)
+    await requireTargetOtpConfigurableUser(adminClient, validated.userId)
 
     const { error } = await adminClient
         .from('manager_otp_settings')
@@ -102,7 +102,7 @@ export async function configureManagerOtpEmail(input: { userId: string; otpEmail
         })
 
     if (error) {
-        throw new Error(`Không thể cấu hình email OTP quản lý: ${error.message}`)
+        throw new Error(`Không thể cấu hình email OTP quản lý/analyst: ${error.message}`)
     }
 
     revalidatePath('/manager/users')

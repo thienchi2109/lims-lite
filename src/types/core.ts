@@ -60,6 +60,7 @@ export const CreateUserSchema = z.object({
     password: z.string().min(8),
     role: UserRole,
     can_access_confidential: z.boolean().optional(),
+    otpEmail: z.string().email('Email OTP không hợp lệ').optional(),
 }).superRefine((data, ctx) => {
     if (data.role === 'manager' && !data.email) {
         ctx.addIssue({
@@ -80,6 +81,7 @@ export const UpdateUserSchema = z.object({
     role: UserRole.optional(),
     password: z.string().min(8).optional(),
     can_access_confidential: z.boolean().optional(),
+    otpEmail: z.string().email('Email OTP không hợp lệ').optional(),
 })
 
 export type UpdateUser = z.infer<typeof UpdateUserSchema>

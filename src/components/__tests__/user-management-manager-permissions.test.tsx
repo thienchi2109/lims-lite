@@ -97,7 +97,9 @@ describe('manager user-management UI permissions', () => {
         expect(screen.getByRole('button', { name: 'Xóa người dùng manager2' }).hasAttribute('disabled')).toBe(true)
     })
 
-    it('omits confidential-access control when a manager creates a user', () => {
+    it('allows a manager to set confidential access and OTP email when creating an analyst', async () => {
+        vi.mocked(createUserClient).mockResolvedValue({ success: true })
+
         render(
             <UserForm
                 currentUserId="11111111-1111-4111-8111-111111111111"
@@ -107,10 +109,33 @@ describe('manager user-management UI permissions', () => {
             />,
         )
 
-        expect(screen.queryByText('Có quyền truy cập dữ liệu bí mật')).toBeNull()
-        expect(
-            screen.getByText('Quyền truy cập dữ liệu bí mật chỉ do quản trị viên hệ thống cấu hình ngoài ứng dụng.'),
-        ).toBeDefined()
+        fireEvent.change(screen.getByLabelText('Tên đăng nhập'), {
+            target: { value: 'analyst2' },
+        })
+        fireEvent.change(screen.getByLabelText('Họ và tên'), {
+            target: { value: 'Analyst Two' },
+        })
+        fireEvent.change(screen.getByLabelText('Email'), {
+            target: { value: 'analyst2@example.com' },
+        })
+        fireEvent.change(screen.getByLabelText('Mật khẩu'), {
+            target: { value: 'password123' },
+        })
+        fireEvent.change(screen.getByLabelText('Email nhận OTP'), {
+            target: { value: 'analyst-otp@example.com' },
+        })
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Có quyền truy cập dữ liệu bí mật' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Tạo mới' }))
+
+        await waitFor(() => {
+            expect(createUserClient).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    role: 'analyst',
+                    can_access_confidential: true,
+                    otpEmail: 'analyst-otp@example.com',
+                }),
+            )
+        })
     })
 
     it('omits confidential-access control when a manager edits their own account', () => {
@@ -133,6 +158,7 @@ describe('manager user-management UI permissions', () => {
         )
 
         expect(screen.queryByText('Có quyền truy cập dữ liệu bí mật')).toBeNull()
+        expect(screen.queryByText('Email nhận OTP')).toBeNull()
         expect(
             screen.getByText('Quyền truy cập dữ liệu bí mật chỉ do quản trị viên hệ thống cấu hình ngoài ứng dụng.'),
         ).toBeDefined()

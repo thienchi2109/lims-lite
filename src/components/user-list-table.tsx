@@ -140,6 +140,8 @@ export function UserListTable({
                                 const isRestrictedManagerRow = currentUserRole === 'manager' &&
                                     user.role === 'manager' &&
                                     user.id !== currentUserId
+                                const canConfigureOtpEmail = user.role === 'analyst' ||
+                                    (user.role === 'manager' && user.id !== currentUserId)
 
                                 return (
                                 <TableRow key={user.id}>
@@ -180,7 +182,7 @@ export function UserListTable({
                                     <TableCell>
                                         <div className="flex flex-col items-start gap-1">
                                             <div className="flex items-center gap-2">
-                                                {user.role === 'manager' && user.id !== currentUserId && (
+                                                {canConfigureOtpEmail && (
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"

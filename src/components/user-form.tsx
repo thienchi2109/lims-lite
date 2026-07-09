@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import {
     Form,
     FormControl,
+    FormDescription,
     FormField,
     FormItem,
     FormLabel,
@@ -37,7 +38,10 @@ export function UserForm({ user, currentUserId, currentUserRole, onSuccess, onCa
     const isEdit = !!user
     const isSelfEdit = Boolean(isEdit && currentUserId && user.id === currentUserId)
     const isOtherEdit = Boolean(isEdit && !isSelfEdit)
-    const canEditConfidentialAccess = currentUserRole !== 'manager'
+
+    const createSchema = CreateUserSchema.safeExtend({
+        otpEmail: z.string().email('Email OTP không hợp lệ').optional().or(z.literal('')),
+    })
 
     const updateSchema = UpdateUserSchema.extend({
         id: z.string().uuid().optional(),
@@ -46,14 +50,15 @@ export function UserForm({ user, currentUserId, currentUserRole, onSuccess, onCa
         lab: z.string().optional().or(z.literal('')),
         password: z.string().min(8).optional().or(z.literal('')),
         can_access_confidential: z.boolean().optional(),
+        otpEmail: z.string().email('Email OTP không hợp lệ').optional().or(z.literal('')),
     })
 
-    type CreateUserFormValues = z.infer<typeof CreateUserSchema>
+    type CreateUserFormValues = z.infer<typeof createSchema>
     type UpdateUserFormValues = z.infer<typeof updateSchema>
     type UserFormValues = CreateUserFormValues | UpdateUserFormValues
 
     const form = useForm<UserFormValues>({
-        resolver: zodResolver(isEdit ? updateSchema : CreateUserSchema),
+        resolver: zodResolver(isEdit ? updateSchema : createSchema),
         defaultValues: (isEdit
             ? {
                   full_name: user?.full_name ?? '',
@@ -62,6 +67,7 @@ export function UserForm({ user, currentUserId, currentUserRole, onSuccess, onCa
                   role: user?.role ?? 'analyst',
                   password: '',
                   can_access_confidential: user?.can_access_confidential ?? false,
+                  otpEmail: '',
               }
             : {
                   username: '',
@@ -71,12 +77,16 @@ export function UserForm({ user, currentUserId, currentUserRole, onSuccess, onCa
                   role: 'analyst',
                   password: '',
                   can_access_confidential: false,
+                  otpEmail: '',
               }) as UserFormValues,
     })
     const selectedRole = useWatch({
         control: form.control,
         name: 'role',
     })
+    const isAnalystForm = selectedRole === 'analyst'
+    const canEditConfidentialAccess = currentUserRole !== 'manager' || isAnalystForm
+    const canConfigureAnalystOtpEmail = isAnalystForm && !isSelfEdit
 
     const hasActionError = (result: unknown): result is { error: string } =>
         Boolean(result && typeof result === 'object' && 'error' in result)
@@ -104,6 +114,10 @@ export function UserForm({ user, currentUserId, currentUserRole, onSuccess, onCa
 
             if (canEditConfidentialAccess) {
                 updatePayload.can_access_confidential = updateValues.can_access_confidential ?? userForUpdate.can_access_confidential
+            }
+
+            if (canConfigureAnalystOtpEmail && updateValues.otpEmail) {
+                updatePayload.otpEmail = updateValues.otpEmail
             }
 
             if (updateValues.password) {
@@ -157,6 +171,9 @@ export function UserForm({ user, currentUserId, currentUserRole, onSuccess, onCa
                 email: createValues.email || undefined,
                 lab: createValues.lab || undefined,
                 can_access_confidential: canEditConfidentialAccess ? createValues.can_access_confidential ?? false : false,
+            }
+            if (canConfigureAnalystOtpEmail && createValues.otpEmail) {
+                createPayload.otpEmail = createValues.otpEmail
             }
 
             const result = await createUserClient(createPayload).catch((error) => {
@@ -290,6 +307,29 @@ export function UserForm({ user, currentUserId, currentUserRole, onSuccess, onCa
                 />
 
                 <UserFormRoleAccessFields control={form.control} showConfidentialAccess={canEditConfidentialAccess} />
+
+                {canConfigureAnalystOtpEmail && (
+                    <FormField
+                        control={form.control}
+                        name="otpEmail"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Email nhận OTP</FormLabel>
+                                <FormControl>
+                                    <Input
+                                        type="email"
+                                        placeholder="otp@example.com"
+                                        {...field}
+                                    />
+                                </FormControl>
+                                <FormDescription>
+                                    Email nhận mã OTP khi tính năng OTP analyst HIV được bật bởi superadmin.
+                                </FormDescription>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                )}
 
                 <FormField
                     control={form.control}
