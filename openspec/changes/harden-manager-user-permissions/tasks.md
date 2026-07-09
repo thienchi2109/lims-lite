@@ -26,16 +26,16 @@
 
 ## 4. Vietnamese UI Alignment
 
-- [ ] 4.1 Disable or hide edit/delete controls for rows representing another existing manager in `UserListTable`.
-- [ ] 4.2 Disable, omit, or fix the confidential-access control to false in user creation and manager self-edit forms.
-- [ ] 4.3 Add Vietnamese explanatory copy/toasts for restricted manager-management and confidential-access actions.
-- [ ] 4.4 Add or update focused component tests for disabled/hidden manager row actions and confidential-control behavior.
+- [x] 4.1 Disable or hide edit/delete controls for rows representing another existing manager in `UserListTable`.
+- [x] 4.2 Disable, omit, or fix the confidential-access control to false in user creation and manager self-edit forms.
+- [x] 4.3 Add Vietnamese explanatory copy/toasts for restricted manager-management and confidential-access actions.
+- [x] 4.4 Add or update focused component tests for disabled/hidden manager row actions and confidential-control behavior.
 
 ## 5. Verification and Rollout
 
-- [ ] 5.1 Run focused app tests for `createUser`, `updateUser`, `deleteUser`, and user-management UI changes.
-- [ ] 5.2 Run `docker exec lims-postgres psql -U postgres -d postgres -c "SELECT * FROM run_security_tests();"` after applying the migration.
-- [ ] 5.3 Run `npm run lint`.
-- [ ] 5.4 Run `npm run typecheck`.
-- [ ] 5.5 Run `openspec validate harden-manager-user-permissions --strict`.
-- [ ] 5.6 Document in the implementation handoff that confidential-access changes are superadmin/DB-admin operations outside the app workflow.
+- [x] 5.1 Run focused app tests for `createUser`, `updateUser`, `deleteUser`, and user-management UI changes.
+- [x] 5.2 Run `docker exec lims-postgres psql -U postgres -d postgres -c "SELECT * FROM run_security_tests();"` after applying the migration.
+- [x] 5.3 Run `npm run lint`.
+- [x] 5.4 Run `npm run typecheck`.
+- [x] 5.5 Run `openspec validate harden-manager-user-permissions --strict`.
+- [x] 5.6 Document in the implementation handoff that confidential-access changes are superadmin/DB-admin operations outside the app workflow.

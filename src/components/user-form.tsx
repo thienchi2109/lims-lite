@@ -22,26 +22,25 @@ import { Info } from 'lucide-react'
 import { UserFormRoleAccessFields } from '@/components/user-form-role-access-fields'
 import { UserFormSignatureSection } from '@/components/user-form-signature-section'
 
-// We need a combined schema or handling logic because Create and Update are different
-// But for the form, we can just use a loose schema or separate them.
-
 interface UserFormProps {
     user?: User
     currentUserId?: string  // ID of the logged-in user
+    currentUserRole?: User['role']
     onSuccess: () => void
     onCancel: () => void
 }
 
-export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormProps) {
+export function UserForm({ user, currentUserId, currentUserRole, onSuccess, onCancel }: UserFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [signatureFile, setSignatureFile] = useState<File | null>(null)
     const [signatureError, setSignatureError] = useState<string | null>(null)
     const isEdit = !!user
     const isSelfEdit = Boolean(isEdit && currentUserId && user.id === currentUserId)
     const isOtherEdit = Boolean(isEdit && !isSelfEdit)
+    const canEditConfidentialAccess = currentUserRole !== 'manager'
 
     const updateSchema = UpdateUserSchema.extend({
-        id: z.string().uuid().optional(), // Make optional - we use user.id in onSubmit, not form value
+        id: z.string().uuid().optional(),
         full_name: z.string().min(1).max(100).optional().or(z.literal('')),
         email: z.string().email().optional().or(z.literal('')),
         lab: z.string().optional().or(z.literal('')),
@@ -57,7 +56,6 @@ export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormP
         resolver: zodResolver(isEdit ? updateSchema : CreateUserSchema),
         defaultValues: (isEdit
             ? {
-                  // id is NOT included - we use user.id directly in onSubmit
                   full_name: user?.full_name ?? '',
                   email: user?.email || '',
                   lab: user?.lab || '',
@@ -102,8 +100,10 @@ export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormP
                 role: updateValues.role ?? userForUpdate.role,
                 email: updateValues.email || undefined,
                 lab: updateValues.lab || undefined,
-                can_access_confidential:
-                    updateValues.can_access_confidential ?? userForUpdate.can_access_confidential,
+            }
+
+            if (canEditConfidentialAccess) {
+                updatePayload.can_access_confidential = updateValues.can_access_confidential ?? userForUpdate.can_access_confidential
             }
 
             if (updateValues.password) {
@@ -125,7 +125,6 @@ export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormP
                 return
             }
 
-            // If self-edit and manager role and signature file provided, upload signature
             if (isSelfEdit && userForUpdate.role === 'manager' && signatureFile) {
                 const formData = new FormData()
                 formData.append('file', signatureFile)
@@ -157,7 +156,7 @@ export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormP
                 role: createValues.role,
                 email: createValues.email || undefined,
                 lab: createValues.lab || undefined,
-                can_access_confidential: createValues.can_access_confidential ?? false,
+                can_access_confidential: canEditConfidentialAccess ? createValues.can_access_confidential ?? false : false,
             }
 
             const result = await createUserClient(createPayload).catch((error) => {
@@ -175,7 +174,6 @@ export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormP
                 return
             }
 
-            // If manager role and signature file provided, upload signature
             if (createValues.role === 'manager' && signatureFile) {
                 const formData = new FormData()
                 formData.append('file', signatureFile)
@@ -190,7 +188,6 @@ export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormP
                     return null
                 })
                 if (signatureResult && !signatureResult.success) {
-                    // Signature upload failed, but user was created
                     setSignatureError(signatureResult.error)
                     toast.warning(
                         'Tài khoản đã được tạo nhưng chữ ký tải lên thất bại. ' +
@@ -211,7 +208,6 @@ export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormP
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                {/* Compliance banner when editing other users */}
                 {isOtherEdit && (
                         <Alert>
                             <Info className="h-4 w-4" />
@@ -293,7 +289,7 @@ export function UserForm({ user, currentUserId, onSuccess, onCancel }: UserFormP
                     )}
                 />
 
-                <UserFormRoleAccessFields control={form.control} />
+                <UserFormRoleAccessFields control={form.control} showConfidentialAccess={canEditConfidentialAccess} />
 
                 <FormField
                     control={form.control}

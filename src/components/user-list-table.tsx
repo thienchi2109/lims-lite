@@ -43,6 +43,7 @@ interface UserListTableProps {
     totalPages: number
     totalCount: number
     currentUserId?: string
+    currentUserRole?: User['role']
 }
 
 export function UserListTable({
@@ -52,6 +53,7 @@ export function UserListTable({
     totalPages,
     totalCount,
     currentUserId,
+    currentUserRole,
 }: UserListTableProps) {
     const [editingUser, setEditingUser] = useState<User | null>(null)
     const [otpEmailUser, setOtpEmailUser] = useState<User | null>(null)
@@ -115,7 +117,7 @@ export function UserListTable({
                             <TableHead>Phòng Lab</TableHead>
                             <TableHead>Vai trò</TableHead>
                             <TableHead className="w-[80px] text-center">Chữ ký</TableHead>
-                            <TableHead className="w-[100px]">Thao tác</TableHead>
+                            <TableHead className="w-[180px]">Thao tác</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -130,6 +132,9 @@ export function UserListTable({
                                 // Check if manager has active signature
                                 const hasSignature = user.role === 'manager' &&
                                     user.user_signatures?.some(sig => sig.is_active) || false
+                                const isRestrictedManagerRow = currentUserRole === 'manager' &&
+                                    user.role === 'manager' &&
+                                    user.id !== currentUserId
 
                                 return (
                                 <TableRow key={user.id}>
@@ -160,34 +165,48 @@ export function UserListTable({
                                         )}
                                     </TableCell>
                                     <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            {user.role === 'manager' && user.id !== currentUserId && (
+                                        <div className="flex flex-col items-start gap-1">
+                                            <div className="flex items-center gap-2">
+                                                {user.role === 'manager' && user.id !== currentUserId && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => setOtpEmailUser(user)}
+                                                        className="h-8 w-8 p-0 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+                                                        title="Cấu hình email OTP"
+                                                        aria-label={`Cấu hình email OTP cho ${user.username}`}
+                                                    >
+                                                        <KeyRound className="h-4 w-4" />
+                                                    </Button>
+                                                )}
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    onClick={() => setOtpEmailUser(user)}
-                                                    className="h-8 w-8 p-0 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
-                                                    title="Cấu hình email OTP"
+                                                    onClick={() => setEditingUser(user)}
+                                                    disabled={isRestrictedManagerRow}
+                                                    className="h-8 w-8 p-0"
+                                                    title={isRestrictedManagerRow ? 'Không thể sửa quản lý khác' : 'Sửa người dùng'}
+                                                    aria-label={`Sửa người dùng ${user.username}`}
                                                 >
-                                                    <KeyRound className="h-4 w-4" />
+                                                    <Pencil className="h-4 w-4 text-slate-500" />
                                                 </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleDelete(user)}
+                                                    disabled={isRestrictedManagerRow}
+                                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                    title={isRestrictedManagerRow ? 'Không thể xóa quản lý khác' : 'Xóa người dùng'}
+                                                    aria-label={`Xóa người dùng ${user.username}`}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                            {isRestrictedManagerRow && (
+                                                <p className="max-w-40 text-xs text-muted-foreground">
+                                                    Bạn không thể chỉnh sửa hoặc xóa tài khoản quản lý khác.
+                                                </p>
                                             )}
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => setEditingUser(user)}
-                                                className="h-8 w-8 p-0"
-                                            >
-                                                <Pencil className="h-4 w-4 text-slate-500" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handleDelete(user)}
-                                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -252,6 +271,7 @@ export function UserListTable({
                 onOpenChange={setIsAddDialogOpen}
                 mode="create"
                 currentUserId={currentUserId}
+                currentUserRole={currentUserRole}
             />
 
             {editingUser && (
@@ -261,6 +281,7 @@ export function UserListTable({
                     mode="edit"
                     user={editingUser}
                     currentUserId={currentUserId}
+                    currentUserRole={currentUserRole}
                 />
             )}
 

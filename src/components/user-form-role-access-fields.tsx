@@ -20,9 +20,13 @@ import { USER_ROLE_OPTIONS } from '@/lib/role-labels'
 
 interface UserFormRoleAccessFieldsProps {
     control: Control
+    showConfidentialAccess?: boolean
 }
 
-export function UserFormRoleAccessFields({ control }: UserFormRoleAccessFieldsProps) {
+export function UserFormRoleAccessFields({
+    control,
+    showConfidentialAccess = true,
+}: UserFormRoleAccessFieldsProps) {
     return (
         <>
             <FormField
@@ -50,26 +54,32 @@ export function UserFormRoleAccessFields({ control }: UserFormRoleAccessFieldsPr
                 )}
             />
 
-            <FormField
-                control={control}
-                name="can_access_confidential"
-                render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                        <div className="space-y-0.5">
-                            <FormLabel>Có quyền truy cập dữ liệu bí mật</FormLabel>
-                            <div className="text-sm text-muted-foreground">
-                                Cho phép người dùng xem và xử lý các chỉ tiêu bí mật.
+            {showConfidentialAccess ? (
+                <FormField
+                    control={control}
+                    name="can_access_confidential"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                            <div className="space-y-0.5">
+                                <FormLabel>Có quyền truy cập dữ liệu bí mật</FormLabel>
+                                <div className="text-sm text-muted-foreground">
+                                    Cho phép người dùng xem và xử lý các chỉ tiêu bí mật.
+                                </div>
                             </div>
-                        </div>
-                        <FormControl>
-                            <Checkbox
-                                checked={Boolean(field.value)}
-                                onCheckedChange={(checked) => field.onChange(checked === true)}
-                            />
-                        </FormControl>
-                    </FormItem>
-                )}
-            />
+                            <FormControl>
+                                <Checkbox
+                                    checked={Boolean(field.value)}
+                                    onCheckedChange={(checked) => field.onChange(checked === true)}
+                                />
+                            </FormControl>
+                        </FormItem>
+                    )}
+                />
+            ) : (
+                <div className="rounded-lg border p-3 text-sm text-muted-foreground">
+                    Quyền truy cập dữ liệu bí mật chỉ do quản trị viên hệ thống cấu hình ngoài ứng dụng.
+                </div>
+            )}
         </>
     )
 }

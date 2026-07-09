@@ -85,6 +85,7 @@ export default async function UsersPage({
                             totalPages={totalPages || 1}
                             totalCount={count || 0}
                             currentUserId={user.id}
+                            currentUserRole={userData.role}
                         />
                     </CardContent>
                 </Card>

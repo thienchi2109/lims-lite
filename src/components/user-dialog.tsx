@@ -16,9 +16,17 @@ interface UserDialogProps {
     mode: 'create' | 'edit'
     user?: User
     currentUserId?: string
+    currentUserRole?: User['role']
 }
 
-export function UserDialog({ open, onOpenChange, mode, user, currentUserId }: UserDialogProps) {
+export function UserDialog({
+    open,
+    onOpenChange,
+    mode,
+    user,
+    currentUserId,
+    currentUserRole,
+}: UserDialogProps) {
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[500px]">
@@ -31,6 +39,7 @@ export function UserDialog({ open, onOpenChange, mode, user, currentUserId }: Us
                 <UserForm
                     user={user}
                     currentUserId={currentUserId}
+                    currentUserRole={currentUserRole}
                     onSuccess={() => onOpenChange(false)}
                     onCancel={() => onOpenChange(false)}
                 />
