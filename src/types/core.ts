@@ -60,6 +60,14 @@ export const CreateUserSchema = z.object({
     password: z.string().min(8),
     role: UserRole,
     can_access_confidential: z.boolean().optional(),
+}).superRefine((data, ctx) => {
+    if (data.role === 'manager' && !data.email) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['email'],
+            message: 'Email là bắt buộc để quản lý nhận OTP xác thực',
+        })
+    }
 })
 
 export type CreateUser = z.infer<typeof CreateUserSchema>

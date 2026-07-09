@@ -25,6 +25,7 @@ const mockAuthUpdateUserById = vi.fn()
 const mockUserSelect = vi.fn()
 const mockUserSelectEq = vi.fn()
 const mockUserSingle = vi.fn()
+const mockOtpSettingsUpsert = vi.fn()
 
 vi.mock('@/lib/supabase/server', () => ({
     createClient: (...args: unknown[]) => mockCreateClient(...args),
@@ -95,6 +96,7 @@ describe('confidentiality schemas', () => {
             full_name: 'Manager One',
             password: 'password123',
             role: 'manager',
+            email: 'manager@example.com',
             can_access_confidential: true,
         })
         const user = UserSchema.parse({
@@ -134,7 +136,18 @@ describe('confidentiality actions', () => {
                     updateUserById: mockAuthUpdateUserById,
                 },
             },
+            from: mockAdminFrom,
         })
+    })
+
+    const mockAdminFrom = vi.fn((table: string) => {
+        if (table === 'manager_otp_settings') {
+            return {
+                upsert: mockOtpSettingsUpsert,
+            }
+        }
+
+        throw new Error(`Unexpected admin table: ${table}`)
     })
 
     const mockFrom = vi.fn((table: string) => {
@@ -206,6 +219,7 @@ describe('confidentiality actions', () => {
         })
         mockAuthDeleteUser.mockResolvedValue({ error: null })
         mockAuthUpdateUserById.mockResolvedValue({ error: null })
+        mockOtpSettingsUpsert.mockResolvedValue({ error: null })
         mockUserSelect.mockReturnValue({ eq: mockUserSelectEq })
         mockUserSelectEq.mockReturnValue({ single: mockUserSingle })
         mockUserSingle.mockResolvedValue({

@@ -159,12 +159,6 @@ export async function createUser(data: z.infer<typeof CreateUserSchema>) {
     const adminClient = createAdminClient()
 
     // 1. Create in Supabase Auth
-    // Use email if provided, otherwise construct a dummy email from username (legacy support)
-    // But since we require email now in UI (optional in schema but good for auth), let's use it.
-    // If no email provided, we might fail or generate one.
-    // The schema says email is optional. If missing, we can't create auth user easily without email.
-    // We will assume email is required for creation effectively, or generate 'username@cdc-lims.local'
-    
     const email = validated.email || `${validated.username}@cdc-lims.local`
 
     const { data: authUser, error: authError } = await adminClient.auth.admin.createUser({
@@ -221,6 +215,21 @@ export async function createUser(data: z.infer<typeof CreateUserSchema>) {
         // Rollback auth user creation if DB insert fails
         await adminClient.auth.admin.deleteUser(authUser.user.id)
         throw new Error(`Database profile creation failed: ${dbError.message}`)
+    }
+
+    if (validated.role === 'manager') {
+        const { error: otpSettingsError } = await adminClient
+            .from('manager_otp_settings')
+            .upsert({
+                user_id: authUser.user.id,
+                otp_email: email,
+                updated_at: new Date().toISOString(),
+            })
+
+        if (otpSettingsError) {
+            await adminClient.auth.admin.deleteUser(authUser.user.id)
+            throw new Error(`Manager OTP email configuration failed: ${otpSettingsError.message}`)
+        }
     }
 
     revalidatePath('/manager/users')

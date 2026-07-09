@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
     userInsert: vi.fn(),
     userUpdate: vi.fn(),
     userUpdateEq: vi.fn(),
+    otpSettingsUpsert: vi.fn(),
     profiles: {} as Record<string, { id: string; role: 'analyst' | 'doctor' | 'manager' }>,
 }))
 
@@ -71,6 +72,7 @@ describe('manager user-management permissions', () => {
         mocks.userInsert.mockResolvedValue({ error: null })
         mocks.userUpdate.mockReturnValue({ eq: mocks.userUpdateEq })
         mocks.userUpdateEq.mockResolvedValue({ error: null })
+        mocks.otpSettingsUpsert.mockResolvedValue({ error: null })
         mocks.createClient.mockResolvedValue({
             auth: {
                 getUser: mocks.authGetUser,
@@ -88,6 +90,12 @@ describe('manager user-management permissions', () => {
                     updateUserById: mocks.authUpdateUserById,
                 },
             },
+            from: vi.fn((table: string) => {
+                if (table !== 'manager_otp_settings') throw new Error(`Unexpected admin table: ${table}`)
+                return {
+                    upsert: mocks.otpSettingsUpsert,
+                }
+            }),
         })
     })
 
@@ -106,6 +114,38 @@ describe('manager user-management permissions', () => {
                 can_access_confidential: false,
             }),
         )
+    })
+
+    it('configures manager OTP email from the account email during creation', async () => {
+        await createUser({
+            username: 'manager2',
+            full_name: 'Manager Two',
+            password: 'password123',
+            role: 'manager',
+            email: 'manager2@example.com',
+        })
+
+        expect(mocks.otpSettingsUpsert).toHaveBeenCalledWith(
+            expect.objectContaining({
+                user_id: newManagerId,
+                otp_email: 'manager2@example.com',
+            }),
+        )
+    })
+
+    it('rejects manager creation without an email before creating Auth user', async () => {
+        await expect(
+            createUser({
+                username: 'manager2',
+                full_name: 'Manager Two',
+                password: 'password123',
+                role: 'manager',
+            } as never),
+        ).rejects.toThrow(/email/i)
+
+        expect(mocks.authCreateUser).not.toHaveBeenCalled()
+        expect(mocks.userInsert).not.toHaveBeenCalled()
+        expect(mocks.otpSettingsUpsert).not.toHaveBeenCalled()
     })
 
     it('rejects manager updates to another existing manager before profile or Auth mutations', async () => {
