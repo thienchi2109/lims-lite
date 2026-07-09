@@ -4,8 +4,8 @@
 - [x] 1.2 Add focused app tests proving `updateUser` rejects manager attempts to update another existing manager before profile or Auth admin mutations.
 - [x] 1.3 Add focused app tests proving `deleteUser` rejects manager attempts to soft-delete or ban another existing manager.
 - [x] 1.4 Add focused app tests proving manager self-edit may update permitted fields but rejects `can_access_confidential` changes.
-- [ ] 1.5 Add SQL/security regression tests proving authenticated manager writes cannot update/delete another manager, cannot toggle `can_access_confidential`, and cannot insert confidential-enabled users.
-- [ ] 1.6 Add SQL/security regression tests proving trusted DB roles can still update `can_access_confidential` for superadmin operations.
+- [x] 1.5 Add SQL/security regression tests proving authenticated manager writes cannot update/delete another manager, cannot toggle `can_access_confidential`, and cannot insert confidential-enabled users.
+- [x] 1.6 Add SQL/security regression tests proving trusted DB roles can still update `can_access_confidential` for superadmin operations.
 
 ## 2. Server-Side User Management Guards
 
@@ -18,11 +18,11 @@
 
 ## 3. Database Defense-in-Depth
 
-- [ ] 3.1 Add a forward SQL migration with security-impact comments for `public.users` manager write boundaries.
-- [ ] 3.2 Add a narrowly scoped helper/trigger guard that blocks authenticated manager-originated forbidden INSERT/UPDATE/DELETE transitions on `public.users`.
-- [ ] 3.3 Ensure the guard does not block trusted roles such as `postgres` or `service_role` for superadmin/Supabase administration operations.
-- [ ] 3.4 Extend `run_security_tests()` with manager user-management boundary assertions.
-- [ ] 3.5 Apply the migration through Docker and verify policy/function/trigger state with targeted SQL queries.
+- [x] 3.1 Add a forward SQL migration with security-impact comments for `public.users` manager write boundaries.
+- [x] 3.2 Add a narrowly scoped helper/trigger guard that blocks authenticated manager-originated forbidden INSERT/UPDATE/DELETE transitions on `public.users`.
+- [x] 3.3 Ensure the guard does not block trusted roles such as `postgres` or `service_role` for superadmin/Supabase administration operations.
+- [x] 3.4 Extend `run_security_tests()` with manager user-management boundary assertions.
+- [x] 3.5 Apply the migration through Docker and verify policy/function/trigger state with targeted SQL queries.
 
 ## 4. Vietnamese UI Alignment
 
