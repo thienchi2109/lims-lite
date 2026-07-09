@@ -124,7 +124,7 @@ export function usePrintHandlers(
     }, [sampleId])
 
     const handlePrintBarcodeLabel = useCallback(async () => {
-        await printSampleBarcodeLabel(sampleId, { preset: 'small-tube' })
+        await printSampleBarcodeLabel(sampleId, { preset: 'thermal-35x22-2up' })
     }, [sampleId])
 
     return {

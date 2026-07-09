@@ -36,6 +36,12 @@ describe('generateSampleLabelHtml', () => {
         expect(html.match(/CDC-XN-21052026-0001/g)?.length).toBeGreaterThanOrEqual(2)
     })
 
+    it('keeps 35x22mm thermal label content inside a printer-safe inset', () => {
+        const html = generateSampleLabelHtml(sensitiveSample, { preset: 'thermal-35x22-2up' })
+
+        expect(html).toContain('padding: 2mm 2mm 1mm 3mm')
+    })
+
     it('renders patient identity metadata without sample type, collection time, or receiver on labels', () => {
         const html = generateSampleLabelHtml(sensitiveSample, { preset: 'small-tube' })
 

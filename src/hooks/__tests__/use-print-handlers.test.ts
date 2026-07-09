@@ -181,7 +181,7 @@ describe('usePrintHandlers', () => {
             await act(async () => { await result.current.handlePrintBarcodeLabel() })
 
             expect(mockPrintSampleBarcodeLabel).toHaveBeenCalledWith('sample-1', {
-                preset: 'small-tube',
+                preset: 'thermal-35x22-2up',
             })
         })
     })

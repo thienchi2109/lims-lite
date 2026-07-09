@@ -92,6 +92,11 @@ function getCompactMetaFontSize(presetName: SampleLabelPreset) {
     return '6pt'
 }
 
+function getLabelPadding(presetName: SampleLabelPreset) {
+    if (presetName === 'thermal-35x22-2up') return '2mm 2mm 1mm 3mm'
+    return '1mm 1.5mm'
+}
+
 export function renderSampleBarcodeSvg(sampleId: string, height: number) {
     const svg = bwipjs.toSVG({
         bcid: 'code128',
@@ -175,7 +180,7 @@ export function generateSampleLabelHtml(
             grid-template-rows: auto 1fr auto;
             gap: 0.6mm;
             overflow: hidden;
-            padding: 1mm 1.5mm;
+            padding: ${getLabelPadding(presetName)};
         }
 
         .sample-id {
