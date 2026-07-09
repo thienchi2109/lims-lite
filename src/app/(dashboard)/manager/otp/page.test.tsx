@@ -71,4 +71,23 @@ describe('ManagerOtpPage', () => {
         expect(screen.getByTestId('manager-otp-form').textContent).toBe('ma***@example.com')
         expect(screen.queryByText('manager@example.com')).toBeNull()
     })
+
+    it('keeps /manager/otp compatible for confidential analysts using the shared OTP flow', async () => {
+        mocks.getUser.mockResolvedValue({ data: { user: { id: 'analyst-hiv-1' } } })
+        mocks.single
+            .mockReset()
+            .mockResolvedValueOnce({
+                data: {
+                    full_name: 'Kỹ thuật viên HIV',
+                    role: 'analyst',
+                    can_access_confidential: true,
+                },
+            })
+            .mockResolvedValueOnce({ data: { otp_email: 'analyst@example.com' } })
+
+        render(await ManagerOtpPage())
+
+        expect(screen.getByTestId('manager-otp-form').textContent).toBe('an***@example.com')
+        expect(screen.queryByText('analyst@example.com')).toBeNull()
+    })
 })

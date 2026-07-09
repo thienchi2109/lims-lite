@@ -41,6 +41,22 @@ describe('manager OTP step-up cookie contract', () => {
         ).toEqual({ ok: true })
     })
 
+    it('accepts the analyst confidential cohort in the shared step-up cookie contract', async () => {
+        const analystInput = {
+            ...baseInput,
+            userId: 'analyst-hiv-1',
+            cohort: 'analyst-confidential' as const,
+        }
+        const cookieValue = await createManagerStepUpCookieValue(analystInput)
+
+        expect(
+            await verifyManagerStepUpCookieValue(cookieValue, {
+                ...analystInput,
+                now: new Date('2026-06-01T01:00:00.000Z'),
+            }),
+        ).toEqual({ ok: true })
+    })
+
     it('preserves the legacy Node HMAC signature format', async () => {
         const cookieValue = await createManagerStepUpCookieValue(baseInput)
         const [payload, signature] = cookieValue.split('.')

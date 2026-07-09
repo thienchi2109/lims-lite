@@ -96,7 +96,7 @@ export type ConfigureManagerOtpEmail = z.infer<typeof ConfigureManagerOtpEmailSc
 export const ManagerStepUpPayloadSchema = z.object({
     userId: z.string().min(1),
     sessionId: z.string().min(1),
-    cohort: z.enum(['standard', 'confidential']),
+    cohort: z.enum(['standard', 'confidential', 'analyst-confidential']),
     otpEmailUpdatedAt: z.string().min(1),
     expiresAt: z.string().datetime(),
 })

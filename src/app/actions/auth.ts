@@ -101,7 +101,6 @@ export async function login(_prevState: unknown, formData: FormData) {
     const role = userData?.role || 'analyst'
 
     if (
-        role === 'manager' &&
         managerRequiresOtp({
             role,
             can_access_confidential: userData?.can_access_confidential === true,

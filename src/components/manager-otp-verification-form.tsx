@@ -32,7 +32,15 @@ function mapStatusToMessage(status: string | undefined) {
     return 'Không thể gửi mã OTP. Vui lòng thử lại hoặc liên hệ quản trị viên.'
 }
 
-export function ManagerOtpVerificationForm({ initialMaskedEmail }: { initialMaskedEmail: string | null }) {
+type ManagerOtpVerificationFormProps = {
+    initialMaskedEmail: string | null
+    successRedirectPath?: '/manager' | '/analyst'
+}
+
+export function ManagerOtpVerificationForm({
+    initialMaskedEmail,
+    successRedirectPath = '/manager',
+}: ManagerOtpVerificationFormProps) {
     const [challenge, setChallenge] = useState<ChallengeState>({
         challengeId: null,
         maskedEmail: initialMaskedEmail,
@@ -168,7 +176,7 @@ export function ManagerOtpVerificationForm({ initialMaskedEmail }: { initialMask
                 return
             }
 
-            window.location.replace('/manager')
+            window.location.replace(successRedirectPath)
         } catch {
             setMessage('Không thể xác thực mã OTP. Vui lòng thử lại.')
         } finally {

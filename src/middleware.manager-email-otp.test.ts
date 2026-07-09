@@ -73,6 +73,45 @@ function mockPasswordOnlyManagerSession() {
     })
 }
 
+function mockPasswordOnlyAnalystSession(canAccessConfidential: boolean) {
+    const usersQuery = {
+        select: vi.fn(() => usersQuery),
+        eq: vi.fn(() => usersQuery),
+        single: vi.fn(async () => ({
+            data: {
+                role: 'analyst',
+                can_access_confidential: canAccessConfidential,
+                manager_otp_settings: { updated_at: otpEmailUpdatedAt },
+            },
+            error: null,
+        })),
+    }
+
+    mocks.createEdgeAdminClient.mockReturnValue({
+        rpc: vi.fn(async (fnName: string) => ({
+            data: fnName === 'get_session_created_at'
+                ? new Date(Date.now()).toISOString()
+                : otpEmailUpdatedAt,
+            error: null,
+        })),
+    })
+
+    mocks.createServerClient.mockReturnValue({
+        auth: {
+            getUser: vi.fn(async () => ({
+                data: { user: { id: 'analyst-1', last_sign_in_at: new Date(Date.now()).toISOString() } },
+                error: null,
+            })),
+            getSession: vi.fn(async () => ({
+                data: { session: { access_token: 'token' } },
+                error: null,
+            })),
+            signOut: vi.fn(),
+        },
+        from: vi.fn(() => usersQuery),
+    })
+}
+
 describe('manager email OTP middleware contract', () => {
     beforeEach(() => {
         vi.clearAllMocks()
@@ -80,6 +119,7 @@ describe('manager email OTP middleware contract', () => {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'anon-key'
         process.env.MANAGER_EMAIL_OTP_ENABLED = 'TRUE'
         process.env.MANAGER_HIV_EMAIL_OTP_ENABLED = 'FALSE'
+        process.env.ANALYST_HIV_EMAIL_OTP_ENABLED = 'FALSE'
     })
 
     afterEach(() => {
@@ -122,5 +162,27 @@ describe('manager email OTP middleware contract', () => {
 
         expect(response.headers.get('location')).toBeNull()
         expect(response.headers.get('set-cookie') ?? '').not.toContain(`${MANAGER_STEP_UP_COOKIE_NAME}=;`)
+    })
+
+    it('redirects password-only confidential analyst sessions away from /analyst when analyst HIV OTP is enabled', async () => {
+        process.env.MANAGER_EMAIL_OTP_ENABLED = 'FALSE'
+        process.env.MANAGER_HIV_EMAIL_OTP_ENABLED = 'FALSE'
+        process.env.ANALYST_HIV_EMAIL_OTP_ENABLED = 'TRUE'
+        mockPasswordOnlyAnalystSession(true)
+
+        const response = await middleware(createRequest('/analyst'))
+        const location = response.headers.get('location')
+
+        expect(location).not.toBeNull()
+        expect(new URL(location ?? '').pathname).toBe('/manager/otp')
+    })
+
+    it('allows standard analysts without OTP even when analyst HIV OTP is enabled', async () => {
+        process.env.ANALYST_HIV_EMAIL_OTP_ENABLED = 'TRUE'
+        mockPasswordOnlyAnalystSession(false)
+
+        const response = await middleware(createRequest('/analyst'))
+
+        expect(response.headers.get('location')).toBeNull()
     })
 })

@@ -207,14 +207,16 @@ export async function middleware(request: NextRequest) {
         }
 
         // Role-based route protection
-        if (request.nextUrl.pathname.startsWith('/manager') && userRole !== 'manager') {
+        if (
+            request.nextUrl.pathname.startsWith('/manager') &&
+            request.nextUrl.pathname !== '/manager/otp' &&
+            userRole !== 'manager'
+        ) {
             return redirectByRole()
         }
 
         if (
-            request.nextUrl.pathname.startsWith('/manager') &&
             request.nextUrl.pathname !== '/manager/otp' &&
-            userRole === 'manager' &&
             await shouldRequireManagerStepUp(
                 {
                     userId: user.id,

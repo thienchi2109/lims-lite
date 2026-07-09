@@ -2,7 +2,7 @@ import { ManagerStepUpPayloadSchema, type ManagerStepUpPayload } from '@/types'
 
 export const MANAGER_STEP_UP_COOKIE_NAME = 'manager_otp_step_up'
 
-type ManagerStepUpCohort = 'standard' | 'confidential'
+type ManagerStepUpCohort = 'standard' | 'confidential' | 'analyst-confidential'
 
 type CreateInput = {
     userId: string

@@ -22,11 +22,15 @@ export type ManagerOtpPrincipal = ManagerOtpCohortInput & {
 }
 
 export function getManagerOtpCohort(user: ManagerOtpCohortInput) {
-    if (user.role !== 'manager') {
-        return null
+    if (user.role === 'manager') {
+        return user.can_access_confidential === true ? 'confidential' : 'standard'
     }
 
-    return user.can_access_confidential === true ? 'confidential' : 'standard'
+    if (user.role === 'analyst' && user.can_access_confidential === true) {
+        return 'analyst-confidential'
+    }
+
+    return null
 }
 
 export function managerRequiresOtp(principal: ManagerOtpCohortInput) {

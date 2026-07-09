@@ -1,7 +1,7 @@
 import { createHash, randomInt, randomUUID } from 'crypto'
 
 import { decodeJwtPayload } from '@/lib/jwt'
-import { getManagerOtpCohort } from '@/lib/manager-email-otp/guards'
+import { getManagerOtpCohort, managerRequiresOtp } from '@/lib/manager-email-otp/guards'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000
@@ -11,6 +11,7 @@ export type ManagerOtpRouteContext =
     | {
           ok: true
           userId: string
+          role: 'manager' | 'analyst'
           sessionId: string
           canAccessConfidential: boolean
           otpEmail: string
@@ -92,7 +93,15 @@ export async function getManagerOtpRouteContext(): Promise<ManagerOtpRouteContex
         .eq('id', user.id)
         .single()
 
-    if (userData?.role !== 'manager') {
+    const role = userData?.role
+    const canAccessConfidential = userData?.can_access_confidential === true
+    const isEligibleRole = role === 'manager' || (
+        role === 'analyst' &&
+        canAccessConfidential &&
+        managerRequiresOtp({ role, can_access_confidential: true })
+    )
+
+    if (!isEligibleRole) {
         return { ok: false, status: 'forbidden' }
     }
 
@@ -110,8 +119,9 @@ export async function getManagerOtpRouteContext(): Promise<ManagerOtpRouteContex
     return {
         ok: true,
         userId: user.id,
+        role,
         sessionId,
-        canAccessConfidential: userData.can_access_confidential === true,
+        canAccessConfidential,
         otpEmail: otpSettings.otp_email,
         otpEmailUpdatedAt: otpSettings.updated_at,
         maskedEmail: maskManagerOtpEmail(otpSettings.otp_email),
@@ -120,7 +130,7 @@ export async function getManagerOtpRouteContext(): Promise<ManagerOtpRouteContex
 
 export function getManagerOtpStepUpCohort(context: Extract<ManagerOtpRouteContext, { ok: true }>) {
     return getManagerOtpCohort({
-        role: 'manager',
+        role: context.role,
         can_access_confidential: context.canAccessConfidential,
     })
 }

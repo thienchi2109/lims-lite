@@ -86,6 +86,23 @@ describe('ManagerOtpVerificationForm', () => {
         expect(router.refresh).not.toHaveBeenCalled()
     })
 
+    it('redirects to the analyst workspace after analyst HIV OTP verification', async () => {
+        render(
+            <ManagerOtpVerificationForm
+                initialMaskedEmail="an***@example.com"
+                successRedirectPath="/analyst"
+            />,
+        )
+
+        expect(await screen.findByText(/Mã OTP đã được gửi đến ma\*\*\*@example\.com\./i)).toBeDefined()
+        enterOtp('123456')
+        fireEvent.click(screen.getByRole('button', { name: 'Xác nhận' }))
+
+        await waitFor(() => {
+            expect(locationReplace).toHaveBeenCalledWith('/analyst')
+        })
+    })
+
     it('shows Vietnamese provider-failure guidance without exposing a full email address', async () => {
         global.fetch = vi.fn(async () => Response.json(
             { ok: false, status: 'provider_failed', maskedEmail: 'ma***@example.com' },

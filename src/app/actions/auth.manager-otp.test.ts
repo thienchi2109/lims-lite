@@ -32,11 +32,35 @@ import {
 
 const originalEnv = { ...process.env }
 
-function createLoginFormData() {
+function createLoginFormData(username = 'manager') {
     const formData = new FormData()
-    formData.set('username', 'manager')
+    formData.set('username', username)
     formData.set('password', 'correct-password')
     return formData
+}
+
+function mockAuthenticatedProfile(profile: { userId: string; role: 'manager' | 'analyst'; canAccessConfidential: boolean }) {
+    const usersQuery = {
+        select: vi.fn(() => usersQuery),
+        eq: vi.fn(() => usersQuery),
+        single: vi.fn(async () => ({
+            data: {
+                role: profile.role,
+                can_access_confidential: profile.canAccessConfidential,
+            },
+            error: null,
+        })),
+    }
+
+    mocks.createClient.mockResolvedValue({
+        auth: {
+            signInWithPassword: vi.fn(async () => ({
+                data: { user: { id: profile.userId } },
+                error: null,
+            })),
+        },
+        from: vi.fn(() => usersQuery),
+    })
 }
 
 describe('manager email OTP login contract', () => {
@@ -44,6 +68,7 @@ describe('manager email OTP login contract', () => {
         vi.clearAllMocks()
         process.env.MANAGER_EMAIL_OTP_ENABLED = 'TRUE'
         process.env.MANAGER_HIV_EMAIL_OTP_ENABLED = 'FALSE'
+        process.env.ANALYST_HIV_EMAIL_OTP_ENABLED = 'FALSE'
 
         mocks.createAdminClient.mockReturnValue({
             rpc: vi.fn(async (name: string) => {
@@ -120,5 +145,31 @@ describe('manager email OTP login contract', () => {
             maxAge: 0,
         })
         expect(mocks.redirect).toHaveBeenCalledWith('/login')
+    })
+
+    it('redirects a confidential analyst to OTP verification after password login when analyst HIV OTP is enabled', async () => {
+        process.env.MANAGER_EMAIL_OTP_ENABLED = 'FALSE'
+        process.env.MANAGER_HIV_EMAIL_OTP_ENABLED = 'FALSE'
+        process.env.ANALYST_HIV_EMAIL_OTP_ENABLED = 'TRUE'
+        mockAuthenticatedProfile({
+            userId: 'analyst-hiv-1',
+            role: 'analyst',
+            canAccessConfidential: true,
+        })
+
+        await expect(login(null, createLoginFormData('analyst-hiv'))).rejects.toThrow('NEXT_REDIRECT:/manager/otp')
+        expect(mocks.redirect).toHaveBeenCalledWith('/manager/otp')
+    })
+
+    it('does not redirect a confidential analyst to OTP when the analyst HIV flag is disabled', async () => {
+        process.env.ANALYST_HIV_EMAIL_OTP_ENABLED = 'FALSE'
+        mockAuthenticatedProfile({
+            userId: 'analyst-hiv-1',
+            role: 'analyst',
+            canAccessConfidential: true,
+        })
+
+        await expect(login(null, createLoginFormData('analyst-hiv'))).rejects.toThrow('NEXT_REDIRECT:/analyst')
+        expect(mocks.redirect).toHaveBeenCalledWith('/analyst')
     })
 })

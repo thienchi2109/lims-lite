@@ -12,6 +12,7 @@ vi.mock('@/lib/supabase/server', () => ({
 
 vi.mock('@/lib/manager-email-otp/guards', () => ({
     getManagerOtpCohort: () => 'standard',
+    managerRequiresOtp: () => process.env.ANALYST_HIV_EMAIL_OTP_ENABLED === 'TRUE',
 }))
 
 type Query = {
@@ -28,6 +29,7 @@ type Query = {
 const context = {
     ok: true,
     userId: '11111111-1111-4111-8111-111111111111',
+    role: 'manager',
     sessionId: 'session-1',
     canAccessConfidential: false,
     otpEmail: 'manager@example.com',

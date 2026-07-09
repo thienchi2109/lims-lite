@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
     getManagerOtpRouteContext: vi.fn(),
     getManagerOtpStepUpCohort: vi.fn(),
     verifyManagerOtpChallengeRecord: vi.fn(),
+    createManagerStepUpCookieValue: vi.fn(async () => 'step-up-cookie'),
 }))
 
 vi.mock('@/lib/manager-email-otp/server-records', () => ({
@@ -13,7 +14,7 @@ vi.mock('@/lib/manager-email-otp/server-records', () => ({
 }))
 
 vi.mock('@/lib/manager-email-otp/step-up', () => ({
-    createManagerStepUpCookieValue: async () => 'step-up-cookie',
+    createManagerStepUpCookieValue: (...args: unknown[]) => mocks.createManagerStepUpCookieValue(...args),
     getManagerStepUpCookieOptions: () => ({ httpOnly: true }),
     getManagerStepUpSecret: () => 'test-secret',
     MANAGER_STEP_UP_COOKIE_NAME: 'manager_otp_step_up',
@@ -58,5 +59,37 @@ describe('manager OTP verify route', () => {
         await expect(response.json()).resolves.toEqual({ ok: false, status: 'forbidden' })
         expect(response.status).toBe(403)
         expect(mocks.verifyManagerOtpChallengeRecord).not.toHaveBeenCalled()
+    })
+
+    it('sets a shared step-up cookie for analyst confidential OTP verification', async () => {
+        mocks.getManagerOtpRouteContext.mockResolvedValue({
+            ok: true,
+            userId: 'analyst-hiv-1',
+            role: 'analyst',
+            sessionId: 'session-analyst-1',
+            canAccessConfidential: true,
+            otpEmail: 'analyst@example.com',
+            otpEmailUpdatedAt: '2026-06-01T00:00:00.000Z',
+            maskedEmail: 'an***@example.com',
+        })
+        mocks.getManagerOtpStepUpCohort.mockReturnValue('analyst-confidential')
+
+        const response = await POST(new Request('http://localhost/api/manager/otp/verify', {
+            method: 'POST',
+            headers: { origin: 'http://localhost' },
+            body: JSON.stringify(validBody),
+        }))
+
+        expect(response.status).toBe(200)
+        expect(mocks.verifyManagerOtpChallengeRecord).toHaveBeenCalledWith(
+            expect.objectContaining({ userId: 'analyst-hiv-1' }),
+            validBody,
+        )
+        expect(mocks.createManagerStepUpCookieValue).toHaveBeenCalledWith(expect.objectContaining({
+            userId: 'analyst-hiv-1',
+            sessionId: 'session-analyst-1',
+            cohort: 'analyst-confidential',
+            otpEmailUpdatedAt: '2026-06-01T00:00:00.000Z',
+        }))
     })
 })

@@ -16,11 +16,14 @@ export default async function ManagerOtpPage() {
 
     const { data: userData } = await supabase
         .from('users')
-        .select('full_name, role')
+        .select('full_name, role, can_access_confidential')
         .eq('id', user.id)
         .single()
 
-    if (!userData || userData.role !== 'manager') {
+    const canUseOtpRoute = userData?.role === 'manager' ||
+        (userData?.role === 'analyst' && userData.can_access_confidential === true)
+
+    if (!userData || !canUseOtpRoute) {
         redirect('/login')
     }
 
@@ -36,11 +39,14 @@ export default async function ManagerOtpPage() {
             <div className="flex w-full max-w-[440px] flex-col gap-5">
                 <div className="flex items-center justify-between text-xs font-medium text-slate-500">
                     <span className="tracking-[0.18em] text-slate-700 uppercase">CDC-LIMS Pro</span>
-                    <span>Quản lý</span>
+                    <span>{userData.role === 'analyst' ? 'Kỹ thuật viên' : 'Quản lý'}</span>
                 </div>
 
                 {maskedOtpEmail ? (
-                    <ManagerOtpVerificationForm initialMaskedEmail={maskedOtpEmail} />
+                    <ManagerOtpVerificationForm
+                        initialMaskedEmail={maskedOtpEmail}
+                        successRedirectPath={userData.role === 'analyst' ? '/analyst' : '/manager'}
+                    />
                 ) : (
                     <section className="rounded-md border border-amber-200 bg-white p-7 shadow-[0_18px_50px_rgba(15,23,42,0.12)]">
                         <div className="space-y-3">

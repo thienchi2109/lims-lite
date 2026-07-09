@@ -20,27 +20,27 @@
 
 ## 3. Phase 2 RED: Analyst HIV OTP Enforcement
 
-- [ ] 3.1 Add config/guard tests for `ANALYST_HIV_EMAIL_OTP_ENABLED` with strict `TRUE`/`FALSE`, missing-value disabled behavior, and independence from manager OTP flags.
-- [ ] 3.2 Add login-action tests proving analyst HIV users redirect to OTP after password login only when the analyst HIV flag is enabled.
-- [ ] 3.3 Add middleware/API guard tests proving password-only analyst HIV sessions cannot access protected analyst routes/actions while standard analysts and disabled-flag sessions keep current behavior.
-- [ ] 3.4 Add OTP challenge/verify tests proving analyst HIV uses existing hashed, single-use, rate-limited, lockout-protected OTP behavior.
-- [ ] 3.5 Add route compatibility tests proving `/manager/otp` remains valid while analyst OTP uses the shared OTP flow.
+- [x] 3.1 Add config/guard tests for `ANALYST_HIV_EMAIL_OTP_ENABLED` with strict `TRUE`/`FALSE`, missing-value disabled behavior, and independence from manager OTP flags.
+- [x] 3.2 Add login-action tests proving analyst HIV users redirect to OTP after password login only when the analyst HIV flag is enabled.
+- [x] 3.3 Add middleware/API guard tests proving password-only analyst HIV sessions cannot access protected analyst routes/actions while standard analysts and disabled-flag sessions keep current behavior.
+- [x] 3.4 Add OTP challenge/verify tests proving analyst HIV uses existing hashed, single-use, rate-limited, lockout-protected OTP behavior.
+- [x] 3.5 Add route compatibility tests proving `/manager/otp` remains valid while analyst OTP uses the shared OTP flow.
 
 ## 4. Phase 2 Server, UI, and Verification
 
-- [ ] 4.1 Generalize OTP cohort classification to support manager standard, manager HIV, and analyst HIV principals.
-- [ ] 4.2 Add `ANALYST_HIV_EMAIL_OTP_ENABLED` parsing and document its operator-only semantics.
-- [ ] 4.3 Update login flow so password-authenticated analyst HIV users requiring OTP are redirected to OTP verification before `/analyst`.
-- [ ] 4.4 Generalize OTP route context, challenge creation, resend, verification, and step-up cookie validation for analyst HIV without regressing manager behavior.
-- [ ] 4.5 Update logout/session-expiry cleanup so analyst HIV step-up state is cleared with the authenticated session.
-- [ ] 4.6 Update server action/API guards so password-only analyst HIV sessions are rejected when the flag is enabled.
-- [ ] 4.7 Add or reuse a shared Vietnamese OTP verification page for manager and analyst HIV users while keeping `/manager/otp` as a compatibility route.
-- [ ] 4.8 Redirect analyst HIV users to the normal analyst UI after successful OTP verification.
-- [ ] 4.9 Add Vietnamese guidance for missing OTP email configuration, resend cooldown, lockout, invalid code, expired code, and contact-admin states.
-- [ ] 4.10 Run focused auth, middleware, OTP, route compatibility, lint, typecheck, and strict OpenSpec validation.
+- [x] 4.1 Generalize OTP cohort classification to support manager standard, manager HIV, and analyst HIV principals.
+- [x] 4.2 Add `ANALYST_HIV_EMAIL_OTP_ENABLED` parsing and document its operator-only semantics.
+- [x] 4.3 Update login flow so password-authenticated analyst HIV users requiring OTP are redirected to OTP verification before `/analyst`.
+- [x] 4.4 Generalize OTP route context, challenge creation, resend, verification, and step-up cookie validation for analyst HIV without regressing manager behavior.
+- [x] 4.5 Update logout/session-expiry cleanup so analyst HIV step-up state is cleared with the authenticated session.
+- [x] 4.6 Update server action/API guards so password-only analyst HIV sessions are rejected when the flag is enabled.
+- [x] 4.7 Add or reuse a shared Vietnamese OTP verification page for manager and analyst HIV users while keeping `/manager/otp` as a compatibility route.
+- [x] 4.8 Redirect analyst HIV users to the normal analyst UI after successful OTP verification.
+- [x] 4.9 Add Vietnamese guidance for missing OTP email configuration, resend cooldown, lockout, invalid code, expired code, and contact-admin states.
+- [x] 4.10 Run focused auth, middleware, OTP, route compatibility, lint, typecheck, and strict OpenSpec validation.
 
 ## 5. Phase 3 Route Cleanup Tracking
 
-- [ ] 5.1 Keep GitHub issue #66 open during Phase 1 and Phase 2 implementation.
+- [x] 5.1 Keep GitHub issue #66 open during Phase 1 and Phase 2 implementation.
 - [ ] 5.2 After Phase 2 stabilizes, use issue #66 to decide the canonical shared OTP route.
 - [ ] 5.3 Preserve or intentionally migrate `/manager/otp` only under issue #66 with explicit tests and documentation.

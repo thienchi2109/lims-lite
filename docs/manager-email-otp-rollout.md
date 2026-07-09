@@ -8,6 +8,8 @@ Email OTP quản lý là bước xác thực bổ sung cho tài khoản `manager
 
 - `MANAGER_EMAIL_OTP_ENABLED`: bật OTP cho manager thường bằng `TRUE`; tắt bằng `FALSE`.
 - `MANAGER_HIV_EMAIL_OTP_ENABLED`: bật OTP cho manager có `can_access_confidential = true` bằng `TRUE`; tắt bằng `FALSE`.
+- `ANALYST_HIV_EMAIL_OTP_ENABLED`: bật OTP cho analyst có `can_access_confidential = true` bằng `TRUE`; tắt bằng `FALSE`.
+  Flag này chỉ do operator cấu hình qua environment, không có UI quản trị.
 - `MANAGER_OTP_EMAIL_PROVIDER`: dùng `resend` trong production.
 - `RESEND_API_KEY`: API key của Resend.
 - `MANAGER_OTP_EMAIL_FROM`: sender đã xác minh domain trong Resend.
@@ -17,7 +19,7 @@ Email OTP quản lý là bước xác thực bổ sung cho tài khoản `manager
 ## Thứ tự rollout production
 
 1. Deploy UI xác thực OTP, route `/api/manager/otp/*`, workflow cấu hình email trong Quản lý người dùng, và cấu hình Resend.
-2. Giữ `MANAGER_EMAIL_OTP_ENABLED=FALSE` và `MANAGER_HIV_EMAIL_OTP_ENABLED=FALSE`.
+2. Giữ `MANAGER_EMAIL_OTP_ENABLED=FALSE`, `MANAGER_HIV_EMAIL_OTP_ENABLED=FALSE`, và `ANALYST_HIV_EMAIL_OTP_ENABLED=FALSE`.
 3. Quản trị viên cấu hình email nhận OTP cho từng tài khoản quản lý trong màn hình Quản lý người dùng.
 4. Kiểm tra gửi email OTP bằng tài khoản thử nghiệm hoặc cohort nhỏ.
 5. Bật từng flag theo cohort, ưu tiên cohort nhỏ trước.

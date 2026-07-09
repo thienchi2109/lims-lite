@@ -86,7 +86,6 @@ export async function getClientActionDenial(action: ClientActionName, request?: 
     const sessionId = extractSessionId(sessionResult?.data?.session?.access_token)
 
     if (
-        userData?.role === 'manager' &&
         await shouldRequireManagerStepUp(
             {
                 userId: user.id,

@@ -7,6 +7,10 @@ export type ManagerOtpConfig = {
         enabled: boolean
         explicitlyConfigured: boolean
     }
+    analystConfidential: {
+        enabled: boolean
+        explicitlyConfigured: boolean
+    }
 }
 
 export type ManagerOtpCohortInput = {
@@ -14,7 +18,7 @@ export type ManagerOtpCohortInput = {
     can_access_confidential: boolean | null | undefined
 }
 
-type FlagName = 'MANAGER_EMAIL_OTP_ENABLED' | 'MANAGER_HIV_EMAIL_OTP_ENABLED'
+type FlagName = 'MANAGER_EMAIL_OTP_ENABLED' | 'MANAGER_HIV_EMAIL_OTP_ENABLED' | 'ANALYST_HIV_EMAIL_OTP_ENABLED'
 
 function parseFlag(env: NodeJS.ProcessEnv, name: FlagName) {
     const raw = env[name]
@@ -38,6 +42,7 @@ export function parseManagerEmailOtpConfig(env: NodeJS.ProcessEnv = process.env)
     return {
         standardManager: parseFlag(env, 'MANAGER_EMAIL_OTP_ENABLED'),
         confidentialManager: parseFlag(env, 'MANAGER_HIV_EMAIL_OTP_ENABLED'),
+        analystConfidential: parseFlag(env, 'ANALYST_HIV_EMAIL_OTP_ENABLED'),
     }
 }
 
@@ -45,11 +50,15 @@ export function requiresManagerEmailOtp(
     config: ManagerOtpConfig,
     user: ManagerOtpCohortInput,
 ): boolean {
-    if (user.role !== 'manager') {
-        return false
+    if (user.role === 'manager') {
+        return user.can_access_confidential === true
+            ? config.confidentialManager.enabled
+            : config.standardManager.enabled
     }
 
-    return user.can_access_confidential === true
-        ? config.confidentialManager.enabled
-        : config.standardManager.enabled
+    if (user.role === 'analyst' && user.can_access_confidential === true) {
+        return config.analystConfidential.enabled
+    }
+
+    return false
 }

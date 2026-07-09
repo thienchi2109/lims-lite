@@ -9,6 +9,10 @@ type ManagerOtpConfig = {
         enabled: boolean
         explicitlyConfigured: boolean
     }
+    analystConfidential: {
+        enabled: boolean
+        explicitlyConfigured: boolean
+    }
 }
 
 type ManagerOtpCohortInput = {
@@ -35,6 +39,7 @@ describe('manager email OTP configuration contract', () => {
         expect(config).toEqual({
             standardManager: { enabled: false, explicitlyConfigured: false },
             confidentialManager: { enabled: false, explicitlyConfigured: false },
+            analystConfidential: { enabled: false, explicitlyConfigured: false },
         })
     })
 
@@ -65,10 +70,12 @@ describe('manager email OTP configuration contract', () => {
         const bothEnabled = parseManagerEmailOtpConfig({
             MANAGER_EMAIL_OTP_ENABLED: 'TRUE',
             MANAGER_HIV_EMAIL_OTP_ENABLED: 'TRUE',
+            ANALYST_HIV_EMAIL_OTP_ENABLED: 'FALSE',
         })
         const bothDisabled = parseManagerEmailOtpConfig({
             MANAGER_EMAIL_OTP_ENABLED: 'FALSE',
             MANAGER_HIV_EMAIL_OTP_ENABLED: 'FALSE',
+            ANALYST_HIV_EMAIL_OTP_ENABLED: 'FALSE',
         })
 
         expect(requiresManagerEmailOtp(bothEnabled, { role: 'manager', can_access_confidential: false })).toBe(true)
@@ -77,16 +84,20 @@ describe('manager email OTP configuration contract', () => {
         expect(requiresManagerEmailOtp(bothDisabled, { role: 'manager', can_access_confidential: true })).toBe(false)
     })
 
-    it('rejects invalid flag values and never requires manager OTP for non-manager roles', async () => {
+    it('rejects invalid flag values and never requires manager OTP for non-manager roles unless analyst HIV flag is enabled', async () => {
         const { parseManagerEmailOtpConfig, requiresManagerEmailOtp } = await loadConfigContract()
 
         expect(() => parseManagerEmailOtpConfig({ MANAGER_EMAIL_OTP_ENABLED: 'true' })).toThrow(
             /MANAGER_EMAIL_OTP_ENABLED/
         )
+        expect(() => parseManagerEmailOtpConfig({ ANALYST_HIV_EMAIL_OTP_ENABLED: 'true' })).toThrow(
+            /ANALYST_HIV_EMAIL_OTP_ENABLED/
+        )
 
         const config = parseManagerEmailOtpConfig({
             MANAGER_EMAIL_OTP_ENABLED: 'TRUE',
             MANAGER_HIV_EMAIL_OTP_ENABLED: 'TRUE',
+            ANALYST_HIV_EMAIL_OTP_ENABLED: 'FALSE',
         })
 
         expect(requiresManagerEmailOtp(config, { role: 'analyst', can_access_confidential: false })).toBe(false)
@@ -101,5 +112,36 @@ describe('manager email OTP configuration contract', () => {
         })
 
         expect(requiresManagerEmailOtp(config, { role: 'analyst', can_access_confidential: true })).toBe(false)
+    })
+
+    it('requires OTP only for confidential analysts when the analyst HIV flag is TRUE', async () => {
+        const { parseManagerEmailOtpConfig, requiresManagerEmailOtp } = await loadConfigContract()
+        const config = parseManagerEmailOtpConfig({
+            MANAGER_EMAIL_OTP_ENABLED: 'FALSE',
+            MANAGER_HIV_EMAIL_OTP_ENABLED: 'FALSE',
+            ANALYST_HIV_EMAIL_OTP_ENABLED: 'TRUE',
+        })
+
+        expect(config.analystConfidential).toEqual({ enabled: true, explicitlyConfigured: true })
+        expect(requiresManagerEmailOtp(config, { role: 'analyst', can_access_confidential: true })).toBe(true)
+        expect(requiresManagerEmailOtp(config, { role: 'analyst', can_access_confidential: false })).toBe(false)
+        expect(requiresManagerEmailOtp(config, { role: 'manager', can_access_confidential: true })).toBe(false)
+    })
+
+    it('keeps analyst HIV OTP independent from manager OTP flags', async () => {
+        const { parseManagerEmailOtpConfig, requiresManagerEmailOtp } = await loadConfigContract()
+        const managerOnlyConfig = parseManagerEmailOtpConfig({
+            MANAGER_EMAIL_OTP_ENABLED: 'TRUE',
+            MANAGER_HIV_EMAIL_OTP_ENABLED: 'TRUE',
+            ANALYST_HIV_EMAIL_OTP_ENABLED: 'FALSE',
+        })
+        const analystOnlyConfig = parseManagerEmailOtpConfig({
+            MANAGER_EMAIL_OTP_ENABLED: 'FALSE',
+            MANAGER_HIV_EMAIL_OTP_ENABLED: 'FALSE',
+            ANALYST_HIV_EMAIL_OTP_ENABLED: 'TRUE',
+        })
+
+        expect(requiresManagerEmailOtp(managerOnlyConfig, { role: 'analyst', can_access_confidential: true })).toBe(false)
+        expect(requiresManagerEmailOtp(analystOnlyConfig, { role: 'manager', can_access_confidential: true })).toBe(false)
     })
 })

@@ -36,6 +36,39 @@ function mockPasswordOnlyManager() {
     })
 }
 
+function mockPasswordOnlyAnalyst(canAccessConfidential: boolean) {
+    const usersQuery = {
+        select: vi.fn(() => usersQuery),
+        eq: vi.fn(() => usersQuery),
+        single: vi.fn(async () => ({
+            data: {
+                role: 'analyst',
+                can_access_confidential: canAccessConfidential,
+                manager_otp_settings: { updated_at: '2026-06-01T00:00:00.000Z' },
+            },
+            error: null,
+        })),
+    }
+
+    mocks.createClient.mockResolvedValue({
+        auth: {
+            getUser: vi.fn(async () => ({
+                data: { user: { id: 'analyst-1' } },
+                error: null,
+            })),
+            getSession: vi.fn(async () => ({
+                data: {
+                    session: {
+                        access_token: encodeJwtPayload({ session_id: 'session-1' }),
+                    },
+                },
+                error: null,
+            })),
+        },
+        from: vi.fn(() => usersQuery),
+    })
+}
+
 function encodeJwtPayload(payload: Record<string, unknown>) {
     return ['header', Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url'), 'signature'].join('.')
 }
@@ -78,6 +111,7 @@ describe('manager email OTP client action guard contract', () => {
         vi.clearAllMocks()
         process.env.MANAGER_EMAIL_OTP_ENABLED = 'TRUE'
         process.env.MANAGER_HIV_EMAIL_OTP_ENABLED = 'FALSE'
+        process.env.ANALYST_HIV_EMAIL_OTP_ENABLED = 'FALSE'
         process.env.MANAGER_OTP_STEP_UP_SECRET = stepUpFixtureSecret
     })
 
@@ -141,5 +175,24 @@ describe('manager email OTP client action guard contract', () => {
             error: 'Yêu cầu xác thực OTP email quản lý trước khi tiếp tục',
             status: 403,
         })
+    })
+
+    it('denies shared client actions for password-only confidential analysts when analyst HIV OTP is enabled', async () => {
+        process.env.MANAGER_EMAIL_OTP_ENABLED = 'FALSE'
+        process.env.MANAGER_HIV_EMAIL_OTP_ENABLED = 'FALSE'
+        process.env.ANALYST_HIV_EMAIL_OTP_ENABLED = 'TRUE'
+        mockPasswordOnlyAnalyst(true)
+
+        await expect(getClientActionDenial('getSamples')).resolves.toEqual({
+            error: 'Yêu cầu xác thực OTP email quản lý trước khi tiếp tục',
+            status: 403,
+        })
+    })
+
+    it('allows shared client actions for standard analysts when analyst HIV OTP is enabled', async () => {
+        process.env.ANALYST_HIV_EMAIL_OTP_ENABLED = 'TRUE'
+        mockPasswordOnlyAnalyst(false)
+
+        await expect(getClientActionDenial('getSamples')).resolves.toBeNull()
     })
 })
