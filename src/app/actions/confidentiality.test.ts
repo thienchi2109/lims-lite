@@ -210,6 +210,7 @@ describe('confidentiality actions', () => {
         mockUserSelectEq.mockReturnValue({ single: mockUserSingle })
         mockUserSingle.mockResolvedValue({
             data: {
+                id: '33333333-3333-4333-8333-333333333333',
                 role: 'manager',
             },
             error: null,
@@ -282,7 +283,7 @@ describe('confidentiality actions', () => {
         expect(updatePayload).not.toHaveProperty('is_confidential')
     })
 
-    it('persists can_access_confidential when creating users', async () => {
+    it('forces can_access_confidential to false when creating users', async () => {
         const result = await createUser({
             username: 'manager1',
             full_name: 'Manager One',
@@ -299,27 +300,18 @@ describe('confidentiality actions', () => {
         )
         expect(mockUserInsert).toHaveBeenCalledWith(
             expect.objectContaining({
-                can_access_confidential: true,
+                can_access_confidential: false,
             }),
         )
     })
 
-    it('persists can_access_confidential when updating users', async () => {
-        const result = await updateUser({
-            id: '22222222-2222-4222-8222-222222222222',
-            full_name: 'Manager One',
+    it('rejects can_access_confidential when updating users', async () => {
+        await expect(updateUser({
+            id: '33333333-3333-4333-8333-333333333333',
             can_access_confidential: true,
-        } as never)
+        } as never)).rejects.toThrow(/confidential/i)
 
-        expect(result).toEqual(
-            expect.objectContaining({
-                success: true,
-            }),
-        )
-        expect(mockUserUpdate).toHaveBeenCalledWith(
-            expect.objectContaining({
-                can_access_confidential: true,
-            }),
-        )
+        expect(mockUserUpdate).not.toHaveBeenCalled()
+        expect(mockAuthUpdateUserById).not.toHaveBeenCalled()
     })
 })

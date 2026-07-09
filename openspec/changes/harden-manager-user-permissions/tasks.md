@@ -1,20 +1,20 @@
 ## 1. RED: Regression Tests First
 
-- [ ] 1.1 Add focused app tests proving `createUser` persists `can_access_confidential = false` even when the payload sends `true`.
-- [ ] 1.2 Add focused app tests proving `updateUser` rejects manager attempts to update another existing manager before profile or Auth admin mutations.
-- [ ] 1.3 Add focused app tests proving `deleteUser` rejects manager attempts to soft-delete or ban another existing manager.
-- [ ] 1.4 Add focused app tests proving manager self-edit may update permitted fields but rejects `can_access_confidential` changes.
+- [x] 1.1 Add focused app tests proving `createUser` persists `can_access_confidential = false` even when the payload sends `true`.
+- [x] 1.2 Add focused app tests proving `updateUser` rejects manager attempts to update another existing manager before profile or Auth admin mutations.
+- [x] 1.3 Add focused app tests proving `deleteUser` rejects manager attempts to soft-delete or ban another existing manager.
+- [x] 1.4 Add focused app tests proving manager self-edit may update permitted fields but rejects `can_access_confidential` changes.
 - [ ] 1.5 Add SQL/security regression tests proving authenticated manager writes cannot update/delete another manager, cannot toggle `can_access_confidential`, and cannot insert confidential-enabled users.
 - [ ] 1.6 Add SQL/security regression tests proving trusted DB roles can still update `can_access_confidential` for superadmin operations.
 
 ## 2. Server-Side User Management Guards
 
-- [ ] 2.1 Refactor `src/app/actions/users.ts` to load caller and target profile context before any profile or Auth admin mutation.
-- [ ] 2.2 Force all app-created users to persist `can_access_confidential = false`.
-- [ ] 2.3 Reject `updateUser` requests that target another existing manager.
-- [ ] 2.4 Reject `updateUser` requests that attempt to change `can_access_confidential`, including manager self-edit.
-- [ ] 2.5 Reject `deleteUser` requests that target another existing manager while preserving the existing self-delete denial.
-- [ ] 2.6 Keep Auth admin email/password/ban calls after all authorization checks so profile/Auth state cannot drift on denied requests.
+- [x] 2.1 Refactor `src/app/actions/users.ts` to load caller and target profile context before any profile or Auth admin mutation.
+- [x] 2.2 Force all app-created users to persist `can_access_confidential = false`.
+- [x] 2.3 Reject `updateUser` requests that target another existing manager.
+- [x] 2.4 Reject `updateUser` requests that attempt to change `can_access_confidential`, including manager self-edit.
+- [x] 2.5 Reject `deleteUser` requests that target another existing manager while preserving the existing self-delete denial.
+- [x] 2.6 Keep Auth admin email/password/ban calls after all authorization checks so profile/Auth state cannot drift on denied requests.
 
 ## 3. Database Defense-in-Depth
 

@@ -6,6 +6,55 @@ import { CreateUserSchema, UpdateUserSchema, PaginationSchema } from '@/types'
 import { z } from 'zod'
 import type { UserAttributes } from '@supabase/supabase-js'
 
+type UserManagementSupabase = Awaited<ReturnType<typeof createClient>>
+type UserManagementProfile = {
+    id?: string
+    role?: string | null
+}
+
+async function fetchUserManagementProfile(
+    supabase: UserManagementSupabase,
+    userId: string,
+    errorPrefix: string,
+): Promise<UserManagementProfile> {
+    const { data, error } = await supabase
+        .from('users')
+        .select('id, role')
+        .eq('id', userId)
+        .single()
+
+    if (error) throw new Error(`${errorPrefix}: ${error.message}`)
+    if (!data) throw new Error(`${errorPrefix}: User not found`)
+
+    return { ...data, id: data.id ?? userId }
+}
+
+async function requireCurrentManager(
+    supabase: UserManagementSupabase,
+    currentUser: { id: string } | null,
+    action: 'create' | 'update' | 'delete',
+) {
+    if (!currentUser) throw new Error('Unauthorized')
+
+    const profile = await fetchUserManagementProfile(
+        supabase,
+        currentUser.id,
+        'Authorization failed',
+    )
+
+    if (profile.role !== 'manager') {
+        throw new Error(`Unauthorized: Only managers can ${action} users`)
+    }
+
+    return { id: currentUser.id, role: profile.role }
+}
+
+function assertManagerTargetAllowed(currentManagerId: string, targetProfile: UserManagementProfile) {
+    if (targetProfile.role === 'manager' && targetProfile.id !== currentManagerId) {
+        throw new Error('Unauthorized: Managers cannot modify other manager accounts')
+    }
+}
+
 /**
  * Get users with pagination and filtering
  */
@@ -105,17 +154,7 @@ export async function createUser(data: z.infer<typeof CreateUserSchema>) {
     const supabase = await createClient()
     const { data: { user: currentUser } } = await supabase.auth.getUser()
     
-    // Authorization check
-    if (!currentUser) throw new Error('Unauthorized')
-    const { data: roleCheck } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', currentUser.id)
-        .single()
-        
-    if (roleCheck?.role !== 'manager') {
-        throw new Error('Unauthorized: Only managers can create users')
-    }
+    await requireCurrentManager(supabase, currentUser, 'create')
 
     const adminClient = createAdminClient()
 
@@ -175,7 +214,7 @@ export async function createUser(data: z.infer<typeof CreateUserSchema>) {
             role: validated.role,
             email: email,
             lab: validated.lab || 'Central Lab',
-            can_access_confidential: validated.can_access_confidential ?? false,
+            can_access_confidential: false,
         })
 
     if (dbError) {
@@ -197,27 +236,24 @@ export async function updateUser(data: z.infer<typeof UpdateUserSchema>) {
     const supabase = await createClient()
     const { data: { user: currentUser } } = await supabase.auth.getUser()
     
-    // Authorization check
-    if (!currentUser) throw new Error('Unauthorized')
-    const { data: roleCheck } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', currentUser.id)
-        .single()
-        
-    if (roleCheck?.role !== 'manager') {
-        throw new Error('Unauthorized: Only managers can update users')
+    const currentManager = await requireCurrentManager(supabase, currentUser, 'update')
+    const targetProfile = await fetchUserManagementProfile(
+        supabase,
+        validated.id,
+        'Failed to fetch target user',
+    )
+    assertManagerTargetAllowed(currentManager.id, targetProfile)
+
+    if (validated.can_access_confidential !== undefined) {
+        throw new Error('Unauthorized: Managers cannot change confidential access')
     }
 
     // Update public profile
-    const updateData: Partial<Pick<z.infer<typeof UpdateUserSchema>, 'full_name' | 'role' | 'email' | 'lab' | 'can_access_confidential'>> = {}
+    const updateData: Partial<Pick<z.infer<typeof UpdateUserSchema>, 'full_name' | 'role' | 'email' | 'lab'>> = {}
     if (validated.full_name) updateData.full_name = validated.full_name
     if (validated.role) updateData.role = validated.role
     if (validated.email) updateData.email = validated.email
     if (validated.lab) updateData.lab = validated.lab
-    if (validated.can_access_confidential !== undefined) {
-        updateData.can_access_confidential = validated.can_access_confidential
-    }
 
     if (Object.keys(updateData).length > 0) {
         const { error } = await supabase
@@ -255,22 +291,19 @@ export async function deleteUser(userId: string) {
     const supabase = await createClient()
     const { data: { user: currentUser } } = await supabase.auth.getUser()
     
-    // Authorization check
-    if (!currentUser) throw new Error('Unauthorized')
-    const { data: roleCheck } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', currentUser.id)
-        .single()
-        
-    if (roleCheck?.role !== 'manager') {
-        throw new Error('Unauthorized: Only managers can delete users')
-    }
+    const currentManager = await requireCurrentManager(supabase, currentUser, 'delete')
 
     // Prevent self-deletion
-    if (userId === currentUser.id) {
+    if (userId === currentManager.id) {
         throw new Error('Cannot delete your own account')
     }
+
+    const targetProfile = await fetchUserManagementProfile(
+        supabase,
+        userId,
+        'Failed to fetch target user',
+    )
+    assertManagerTargetAllowed(currentManager.id, targetProfile)
 
     // Soft delete in DB
     const { error } = await supabase
