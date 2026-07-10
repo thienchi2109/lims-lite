@@ -151,6 +151,41 @@ describe('SamplesPageClient scope contract', () => {
         )
     })
 
+    it('maps sensitivity=confidential into the samples query contract', () => {
+        mockSearchParams = new URLSearchParams('sensitivity=confidential&page=4')
+
+        render(
+            <SamplesPageClient
+                role="manager"
+                permissions={{
+                    canDiscard: true,
+                    canEdit: true,
+                    canViewResults: true,
+                    canEnterResults: false,
+                }}
+                canAccessConfidential
+                homeHref="/manager"
+                receiverOptions={[]}
+                specialties={[]}
+            />,
+        )
+
+        expect(mockUseSamples).toHaveBeenCalledWith(
+            expect.objectContaining({
+                params: expect.objectContaining({
+                    confidentialOnly: true,
+                    page: 4,
+                    pageSize: 20,
+                }),
+            }),
+        )
+        expect(mockSampleFilters).toHaveBeenCalledWith(
+            expect.objectContaining({
+                canAccessConfidential: true,
+            }),
+        )
+    })
+
     it('forces doctor sample queries to completed-only regardless of URL scope/status filters', () => {
         mockSearchParams = new URLSearchParams('scope=all&status=review&page=2')
 

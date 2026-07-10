@@ -58,6 +58,7 @@ describe('UnifiedSamplesPage receiver options', () => {
         mockGetAuthenticatedDashboardSession.mockResolvedValue({
             role: 'manager',
             fullName: 'Lãnh đạo khoa XN',
+            canAccessConfidential: true,
         })
         mockIsDashboardUserRole.mockReturnValue(true)
         mockGetSpecialties.mockResolvedValue({ data: [] })
@@ -79,5 +80,6 @@ describe('UnifiedSamplesPage receiver options', () => {
             { id: 'analyst-1', name: 'Nguyễn Thiện Chí' },
             { id: 'analyst-2', name: 'Analyst HIV' },
         ])
+        expect((capturedSamplesPageClientProps as { canAccessConfidential: boolean }).canAccessConfidential).toBe(true)
     })
 })

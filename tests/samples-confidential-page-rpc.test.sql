@@ -184,7 +184,87 @@ END $$;
 RESET ROLE;
 RESET request.jwt.claims;
 
-\echo 'Test 3: Soft-deleted confidential assay still keeps sample concealed from unauthorized RPC lookup'
+\echo 'Test 3: Unauthorized analyst receives zero rows/count for confidential-only request'
+SET ROLE authenticated;
+SET request.jwt.claims TO '{"sub":"61111111-1111-1111-1111-111111111111","role":"authenticated"}';
+
+DO $$
+DECLARE
+    v_payload JSONB;
+    v_rows INTEGER;
+    v_total_count INTEGER;
+BEGIN
+    SELECT public.get_samples_page(
+        p_scope := 'all',
+        p_confidential_only := TRUE,
+        p_page := 1,
+        p_page_size := 20
+    )
+    INTO v_payload;
+
+    v_rows := COALESCE(jsonb_array_length(v_payload->'rows'), 0);
+    v_total_count := COALESCE((v_payload->>'total_count')::INTEGER, 0);
+
+    INSERT INTO samples_confidential_page_rpc_test_results
+    VALUES (
+        'unauthorized_confidential_only_returns_zero_rows',
+        v_rows = 0 AND v_total_count = 0,
+        CASE
+            WHEN v_rows = 0 AND v_total_count = 0
+                THEN 'unauthorized confidential-only request returned no rows or counts'
+            ELSE format('unauthorized confidential-only request returned rows=%s total_count=%s', v_rows, v_total_count)
+        END
+    );
+END $$;
+
+RESET ROLE;
+RESET request.jwt.claims;
+
+\echo 'Test 4: Authorized analyst sees confidential sample in confidential-only request'
+SET ROLE authenticated;
+SET request.jwt.claims TO '{"sub":"62222222-2222-2222-2222-222222222222","role":"authenticated"}';
+
+DO $$
+DECLARE
+    v_payload JSONB;
+    v_rows INTEGER;
+    v_total_count INTEGER;
+    v_first_sample_id TEXT;
+BEGIN
+    SELECT public.get_samples_page(
+        p_search := 'BATCH4-HIV-PAGE-RPC',
+        p_scope := 'all',
+        p_confidential_only := TRUE,
+        p_page := 1,
+        p_page_size := 20
+    )
+    INTO v_payload;
+
+    v_rows := COALESCE(jsonb_array_length(v_payload->'rows'), 0);
+    v_total_count := COALESCE((v_payload->>'total_count')::INTEGER, 0);
+    v_first_sample_id := v_payload->'rows'->0->>'sample_id';
+
+    INSERT INTO samples_confidential_page_rpc_test_results
+    VALUES (
+        'authorized_confidential_only_keeps_confidential_sample',
+        v_rows = 1 AND v_total_count = 1 AND v_first_sample_id = 'BATCH4-HIV-PAGE-RPC',
+        CASE
+            WHEN v_rows = 1 AND v_total_count = 1 AND v_first_sample_id = 'BATCH4-HIV-PAGE-RPC'
+                THEN 'authorized confidential-only request returned the confidential row/count'
+            ELSE format(
+                'authorized confidential-only request returned rows=%s total_count=%s first_sample_id=%s',
+                v_rows,
+                v_total_count,
+                COALESCE(v_first_sample_id, '<null>')
+            )
+        END
+    );
+END $$;
+
+RESET ROLE;
+RESET request.jwt.claims;
+
+\echo 'Test 5: Soft-deleted confidential assay still keeps sample concealed from unauthorized RPC lookup'
 UPDATE public.assay_definitions
 SET deleted_at = NOW()
 WHERE id = (

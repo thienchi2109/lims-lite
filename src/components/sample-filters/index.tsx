@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Search, SlidersHorizontal, QrCode } from 'lucide-react'
+import { Search, SlidersHorizontal, QrCode, ShieldAlert } from 'lucide-react'
 import { type LabSpecialty } from '@/types'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -34,6 +34,7 @@ type SampleFiltersProps = {
     specialties?: LabSpecialty[]
     receiverOptions?: Array<{ id: string; name: string }>
     completedOnly?: boolean
+    canAccessConfidential?: boolean
     updateQuery?: (
         updates: Record<string, string | null>,
         action: PendingQueryAction,
@@ -45,6 +46,7 @@ export function SampleFilters({
     specialties = EMPTY_SPECIALTIES,
     receiverOptions = EMPTY_RECEIVERS,
     completedOnly = false,
+    canAccessConfidential = false,
     updateQuery,
     isPending = false,
 }: SampleFiltersProps) {
@@ -65,6 +67,11 @@ export function SampleFilters({
         setIsScannerOpen(false)
         setTimeout(() => searchInputRef.current?.focus(), 100)
     }
+
+    const visibleActiveFiltersCount =
+        !canAccessConfidential && filters.confidentialOnly
+            ? Math.max(activeFiltersCount - 1, 0)
+            : activeFiltersCount
 
     return (
         <div className="flex w-full flex-col gap-2">
@@ -117,6 +124,20 @@ export function SampleFilters({
                                 <span>Hiển thị tất cả</span>
                             </Button>
 
+                            {canAccessConfidential && (
+                                <Button
+                                    type="button"
+                                    variant={filters.confidentialOnly ? 'secondary' : 'outline'}
+                                    onClick={() => handlers.setConfidentialOnly(!filters.confidentialOnly)}
+                                    disabled={isRefreshing}
+                                    className="h-10 rounded-xl border-slate-200 bg-white px-4 font-medium text-slate-700 shadow-none hover:bg-slate-100"
+                                    aria-pressed={filters.confidentialOnly}
+                                >
+                                    <ShieldAlert className="mr-2 h-4 w-4" aria-hidden="true" />
+                                    <span>Mẫu nhạy cảm</span>
+                                </Button>
+                            )}
+
                             <FilterPopover
                                 isOpen={isFilterOpen}
                                 onOpenChange={setIsFilterOpen}
@@ -134,7 +155,7 @@ export function SampleFilters({
                                 onToDateChange={handlers.setToDate}
                                 onDateRangePreset={handlers.setDateRange}
                                 onReset={handlers.resetFilters}
-                                activeFiltersCount={activeFiltersCount}
+                                activeFiltersCount={visibleActiveFiltersCount}
                                 disabled={isRefreshing}
                             />
                         </>
@@ -187,6 +208,7 @@ export function SampleFilters({
                     selectedSpecialtyIds={filters.selectedSpecialtyIds}
                     status={filters.status}
                     rejectedOnly={filters.rejectedOnly}
+                    confidentialOnly={canAccessConfidential && filters.confidentialOnly}
                     receiverId={filters.receiverId}
                     receiverOptions={receiverOptions}
                     fromDate={filters.fromDate}
@@ -194,6 +216,7 @@ export function SampleFilters({
                     onRemoveSpecialty={handlers.toggleSpecialty}
                     onClearStatus={() => handlers.setStatus('all')}
                     onClearRejectedOnly={() => handlers.setRejectedOnly(false)}
+                    onClearConfidentialOnly={() => handlers.setConfidentialOnly(false)}
                     onClearReceiver={() => handlers.setReceiver('all')}
                     onClearDates={handlers.clearDates}
                     onResetAll={handlers.resetFilters}

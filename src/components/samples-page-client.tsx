@@ -25,6 +25,7 @@ interface SamplesPageClientProps {
         canViewResults: boolean
         canEnterResults: boolean
     }
+    canAccessConfidential?: boolean
     homeHref: string
     receiverOptions: Array<{ id: string; name: string }>
     specialties: LabSpecialty[]
@@ -33,6 +34,7 @@ interface SamplesPageClientProps {
 export function SamplesPageClient({
     role,
     permissions,
+    canAccessConfidential = false,
     homeHref,
     receiverOptions,
     specialties
@@ -54,6 +56,7 @@ export function SamplesPageClient({
         ? (statusParam as SampleStatus)
         : undefined
     const rejectedOnly = !isDoctor && parseBooleanSearchParam(searchParams.get('rejectedOnly'))
+    const confidentialOnly = !isDoctor && searchParams.get('sensitivity') === 'confidential'
 
     const pageParam = Number(searchParams.get('page') || '1')
     const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1
@@ -102,6 +105,7 @@ export function SamplesPageClient({
             receiverId: receiverId || undefined,
             specialtyIds: specialtyIds.length > 0 ? specialtyIds.join(',') : undefined,
             rejectedOnly: rejectedOnly || undefined,
+            confidentialOnly: confidentialOnly || undefined,
         }
     })
 
@@ -178,6 +182,7 @@ export function SamplesPageClient({
                         receiverOptions={receiverOptions}
                         specialties={specialties}
                         completedOnly={isDoctor}
+                        canAccessConfidential={canAccessConfidential}
                         updateQuery={queryNavigation.updateQuery}
                         isPending={queryNavigation.isFilterPending}
                     />

@@ -12,6 +12,7 @@ export type FilterState = {
     scope: 'active' | 'all'
     status: SampleStatus | 'all'
     rejectedOnly: boolean
+    confidentialOnly: boolean
     fromDate: string
     toDate: string
     receiverId: string
@@ -23,6 +24,7 @@ export type FilterHandlers = {
     setScope: (value: 'active' | 'all') => void
     setStatus: (value: SampleStatus | 'all') => void
     setRejectedOnly: (value: boolean) => void
+    setConfidentialOnly: (value: boolean) => void
     setDateRange: (range: 'today' | 'yesterday' | 'week' | 'month') => void
     setFromDate: (value: string) => void
     setToDate: (value: string) => void
@@ -79,6 +81,7 @@ export function useFilterParams({
             scope: params.get('scope') === 'all' ? 'all' : 'active',
             status: (params.get('status') as SampleStatus) || 'all',
             rejectedOnly: parseBooleanSearchParam(params.get('rejectedOnly')),
+            confidentialOnly: params.get('sensitivity') === 'confidential',
             fromDate: params.get('fromDate') || '',
             toDate: params.get('toDate') || '',
             receiverId: params.get('receiverId') || '',
@@ -159,6 +162,10 @@ export function useFilterParams({
             applyQueryUpdate({ rejectedOnly: value ? 'true' : null }, 'filter')
         },
 
+        setConfidentialOnly: (value: boolean) => {
+            applyQueryUpdate({ sensitivity: value ? 'confidential' : null }, 'filter')
+        },
+
         // Fixes Bug #2 (Date Preset Logic) - always sets BOTH dates
         setDateRange: (range: 'today' | 'yesterday' | 'week' | 'month') => {
             const today = new Date()
@@ -219,6 +226,7 @@ export function useFilterParams({
                     scope: null,
                     status: null,
                     rejectedOnly: null,
+                    sensitivity: null,
                     fromDate: null,
                     toDate: null,
                     receiverId: null,
@@ -260,6 +268,7 @@ export function useFilterParams({
         return [
             filters.status !== 'all',
             filters.rejectedOnly,
+            filters.confidentialOnly,
             filters.receiverId !== '',
             filters.fromDate !== '',
             filters.toDate !== '',

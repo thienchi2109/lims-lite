@@ -17,6 +17,7 @@ type ActiveFilterBadgesProps = {
     selectedSpecialtyIds: string[]
     status: SampleStatus | 'all'
     rejectedOnly: boolean
+    confidentialOnly: boolean
     receiverId: string
     receiverOptions: Array<{ id: string; name: string }>
     fromDate: string
@@ -24,6 +25,7 @@ type ActiveFilterBadgesProps = {
     onRemoveSpecialty: (id: string) => void
     onClearStatus: () => void
     onClearRejectedOnly: () => void
+    onClearConfidentialOnly: () => void
     onClearReceiver: () => void
     onClearDates: () => void
     onResetAll: () => void
@@ -35,6 +37,7 @@ export function ActiveFilterBadges({
     selectedSpecialtyIds,
     status,
     rejectedOnly,
+    confidentialOnly,
     receiverId,
     receiverOptions,
     fromDate,
@@ -42,13 +45,14 @@ export function ActiveFilterBadges({
     onRemoveSpecialty,
     onClearStatus,
     onClearRejectedOnly,
+    onClearConfidentialOnly,
     onClearReceiver,
     onClearDates,
     onResetAll,
     disabled = false,
 }: ActiveFilterBadgesProps) {
     const hasExplicitFilters =
-        status !== 'all' || rejectedOnly || receiverId !== '' || fromDate || toDate || selectedSpecialtyIds.length > 0
+        status !== 'all' || rejectedOnly || confidentialOnly || receiverId !== '' || fromDate || toDate || selectedSpecialtyIds.length > 0
 
     if (!hasExplicitFilters) return null
 
@@ -118,6 +122,25 @@ export function ActiveFilterBadges({
                         variant="ghost"
                         size="icon-sm"
                         onClick={onClearRejectedOnly}
+                        disabled={disabled}
+                        className="h-4 w-4 ml-1 hover:bg-transparent text-muted-foreground hover:text-foreground"
+                    >
+                        <X className="h-3 w-3" />
+                    </Button>
+                </Badge>
+            )}
+
+            {/* Confidential-only Badge */}
+            {confidentialOnly && (
+                <Badge variant="outline" className="h-7 gap-1 bg-white dark:bg-slate-900 border-dashed border-amber-300 dark:border-amber-800 pl-2 pr-1">
+                    <span className="font-normal text-muted-foreground">Chế độ:</span>
+                    <span className="font-medium text-foreground">
+                        Mẫu nhạy cảm
+                    </span>
+                    <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={onClearConfidentialOnly}
                         disabled={disabled}
                         className="h-4 w-4 ml-1 hover:bg-transparent text-muted-foreground hover:text-foreground"
                     >

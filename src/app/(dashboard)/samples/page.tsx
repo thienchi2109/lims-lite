@@ -84,6 +84,7 @@ export default async function UnifiedSamplesPage() {
                 <SamplesPageClient
                     role={role}
                     permissions={permissions}
+                    canAccessConfidential={dashboardSession.canAccessConfidential}
                     homeHref={homeHref}
                     receiverOptions={receiverOptions}
                     specialties={specialties || []}

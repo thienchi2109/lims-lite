@@ -63,6 +63,7 @@ const defaultHandlers = {
     setStatus: vi.fn(),
     setScope: vi.fn(),
     setDateRange: vi.fn(),
+    setConfidentialOnly: vi.fn(),
     setFromDate: vi.fn(),
     setToDate: vi.fn(),
     setReceiver: vi.fn(),
@@ -207,6 +208,73 @@ describe('SampleFilters scope toolbar', () => {
         screen.getByRole('button', { name: 'Hiển thị tất cả' }).click()
 
         expect(setScope).toHaveBeenCalledWith('all')
+    })
+
+    it('hides the confidential samples control when the user cannot access confidential samples', () => {
+        mockUseFilterParams.mockReturnValue({
+            filters: {
+                search: '',
+                scope: 'active',
+                status: 'all',
+                confidentialOnly: false,
+                fromDate: '',
+                toDate: '',
+                receiverId: '',
+                selectedSpecialtyIds: [],
+            },
+            handlers: defaultHandlers,
+            sort: {
+                sortBy: 'updated_at',
+                sortOrder: 'desc',
+                pageSize: 20,
+                currentSortValue: 'updated_at-desc',
+                setSortValue: vi.fn(),
+                setPageSize: vi.fn(),
+            },
+            activeFiltersCount: 0,
+            isPending: false,
+        })
+
+        render(<SampleFilters specialties={[]} receiverOptions={[]} />)
+
+        expect(screen.queryByRole('button', { name: 'Mẫu nhạy cảm' })).toBeNull()
+    })
+
+    it('shows and toggles the confidential samples control for authorized users', () => {
+        const setConfidentialOnly = vi.fn()
+
+        mockUseFilterParams.mockReturnValue({
+            filters: {
+                search: '',
+                scope: 'active',
+                status: 'all',
+                confidentialOnly: false,
+                fromDate: '',
+                toDate: '',
+                receiverId: '',
+                selectedSpecialtyIds: [],
+            },
+            handlers: {
+                ...defaultHandlers,
+                setConfidentialOnly,
+            },
+            sort: {
+                sortBy: 'updated_at',
+                sortOrder: 'desc',
+                pageSize: 20,
+                currentSortValue: 'updated_at-desc',
+                setSortValue: vi.fn(),
+                setPageSize: vi.fn(),
+            },
+            activeFiltersCount: 0,
+            isPending: false,
+        })
+
+        render(<SampleFilters specialties={[]} receiverOptions={[]} canAccessConfidential />)
+
+        screen.getByRole('button', { name: 'Mẫu nhạy cảm' }).click()
+
+        expect(setConfidentialOnly).toHaveBeenCalledWith(true)
     })
 
     it('keeps sample search, filters, sorting, and page size in one left-aligned toolbar', () => {
