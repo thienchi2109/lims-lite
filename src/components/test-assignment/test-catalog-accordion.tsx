@@ -14,6 +14,7 @@ import { useRef, useState } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { cn } from '@/lib/utils'
 import { SPECIALTY_BADGE_CLASSES } from '@/lib/specialty-badges'
+import { getAssayDefinitionMethodName } from '@/lib/assay-method-name'
 import {
     Accordion,
     AccordionItem,
@@ -232,8 +233,12 @@ function VirtualizedFlatList({
     handleMethodChange,
     variant,
 }: VirtualizedFlatListProps) {
+    'use no memo'
+
     const parentRef = useRef<HTMLDivElement>(null)
 
+    // TanStack Virtual is a React Compiler known-incompatible hook; this component is compiler-opted-out.
+    // eslint-disable-next-line react-hooks/incompatible-library
     const virtualizer = useVirtualizer({
         count: assayRows.length,
         getScrollElement: () => parentRef.current,
@@ -313,13 +318,18 @@ function TestRow({
         : null
 
     const hasMultipleMethods = assay.methods.length > 1
+    const assayMethodName = getAssayDefinitionMethodName(assay)
+    const shouldShowAssayMethodName =
+        Boolean(assayMethodName) && (!hasMultipleMethods || Boolean(assay.method_name?.trim()))
     const methodLabel = isSelected && selectedTest
         ? selectedTest.methodName
-        : assay.methods.length > 0
-            ? assay.methods.length > 1
-                ? `${assay.methods.length} phương pháp`
-                : assay.methods[0].name
-            : 'N/A'
+        : shouldShowAssayMethodName
+            ? assayMethodName
+            : assay.methods.length > 0
+                ? hasMultipleMethods
+                    ? `${assay.methods.length} phương pháp`
+                    : assay.methods[0].name
+                : 'N/A'
 
     return (
         <div data-testid={`test-row-${assay.id}`}>
