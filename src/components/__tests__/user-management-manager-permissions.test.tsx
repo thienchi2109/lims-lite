@@ -124,7 +124,7 @@ describe('manager user-management UI permissions', () => {
         fireEvent.change(screen.getByLabelText('Email nhận OTP'), {
             target: { value: 'analyst-otp@example.com' },
         })
-        fireEvent.click(screen.getByRole('checkbox', { name: 'Có quyền truy cập dữ liệu bí mật' }))
+        fireEvent.click(screen.getByRole('switch', { name: 'Có quyền truy cập dữ liệu bí mật' }))
         fireEvent.click(screen.getByRole('button', { name: 'Tạo mới' }))
 
         await waitFor(() => {
