@@ -4,7 +4,6 @@ import { getSessionTimeboxSeconds } from '@/lib/auth-session-timebox'
 import { decodeJwtPayload } from '@/lib/jwt'
 import { shouldRequireManagerStepUp } from '@/lib/manager-email-otp/guards'
 import {
-    LEGACY_MANAGER_OTP_ROUTE,
     OTP_STEP_UP_ROUTE,
     isOtpStepUpRoute,
 } from '@/lib/manager-email-otp/routes'
@@ -222,7 +221,7 @@ export async function middleware(request: NextRequest) {
         }
 
         if (
-            request.nextUrl.pathname !== LEGACY_MANAGER_OTP_ROUTE &&
+            !isOtpStepUpRoute(request.nextUrl.pathname) &&
             await shouldRequireManagerStepUp(
                 {
                     userId: user.id,
