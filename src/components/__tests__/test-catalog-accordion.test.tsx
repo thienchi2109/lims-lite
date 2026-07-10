@@ -16,8 +16,8 @@ const accordionSpies = vi.hoisted(() => ({
 }))
 
 vi.mock('@/components/ui/accordion', () => ({
-    Accordion: ({ children, type, ...props }: any) => {
-        accordionSpies.accordionProps({ type, ...props })
+    Accordion: ({ children, type, collapsible, ...props }: any) => {
+        accordionSpies.accordionProps({ type, collapsible, ...props })
         return (
             <div data-testid="accordion" data-type={type} {...props}>
                 {children}
@@ -205,6 +205,56 @@ describe('TestCatalogAccordion', () => {
         // CBC has units g/dL
         expect(screen.getByText('CBC')).toBeDefined()
         expect(screen.getByText('g/dL')).toBeDefined()
+    })
+
+    it('keeps assay-owned method visible before selection and after deselection', () => {
+        const assay = {
+            ...makeAssay('assay-elisa', 'HIV Ag/Ab', bioSpecialtyId, []),
+            method_name: 'ELISA',
+        }
+        const methodRows: GridRow[] = [
+            { type: 'group', key: `group:${bioSpecialtyId}`, label: 'Sinh hóa', badgeClass: 'bg-green-50 text-green-700', count: 1 },
+            { type: 'assay', key: 'assay-elisa', assay },
+        ]
+        const selectedElisa: SelectedTest = {
+            assayId: 'assay-elisa',
+            methodId: null,
+            assayName: 'HIV Ag/Ab',
+            methodName: 'ELISA',
+            units: 'mmol/L',
+        }
+
+        const { rerender } = render(
+            <TestCatalogAccordion {...baseProps} groupedRows={methodRows} variant="desktop" />,
+        )
+
+        const row = screen.getByTestId('test-row-assay-elisa')
+        expect(within(row).getByText('ELISA')).toBeDefined()
+        expect(within(row).queryByText('N/A')).toBeNull()
+
+        rerender(
+            <TestCatalogAccordion
+                {...baseProps}
+                groupedRows={methodRows}
+                selected={[selectedElisa]}
+                variant="desktop"
+            />,
+        )
+
+        expect(within(screen.getByTestId('test-row-assay-elisa')).getByText('ELISA')).toBeDefined()
+        expect(within(screen.getByTestId('test-row-assay-elisa')).queryByText('N/A')).toBeNull()
+
+        rerender(
+            <TestCatalogAccordion
+                {...baseProps}
+                groupedRows={methodRows}
+                selected={[]}
+                variant="desktop"
+            />,
+        )
+
+        expect(within(screen.getByTestId('test-row-assay-elisa')).getByText('ELISA')).toBeDefined()
+        expect(within(screen.getByTestId('test-row-assay-elisa')).queryByText('N/A')).toBeNull()
     })
 
     // Test #5: Selected test shows check icon
