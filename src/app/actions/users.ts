@@ -292,9 +292,8 @@ export async function updateUser(data: z.infer<typeof UpdateUserSchema>) {
     }
 
     // Update public profile
-    const updateData: Partial<Pick<z.infer<typeof UpdateUserSchema>, 'full_name' | 'role' | 'email' | 'lab' | 'can_access_confidential'>> = {}
+    const updateData: Partial<Pick<z.infer<typeof UpdateUserSchema>, 'full_name' | 'email' | 'lab' | 'can_access_confidential'>> = {}
     if (validated.full_name) updateData.full_name = validated.full_name
-    if (validated.role) updateData.role = validated.role
     if (validated.email) updateData.email = validated.email
     if (validated.lab) updateData.lab = validated.lab
     if (validated.can_access_confidential !== undefined) {
@@ -327,7 +326,7 @@ export async function updateUser(data: z.infer<typeof UpdateUserSchema>) {
     }
 
     if (validated.otpEmail) {
-        if ((validated.role ?? targetProfile.role) !== 'analyst') {
+        if (targetProfile.role !== 'analyst') {
             throw new Error('Unauthorized: Managers can only configure analyst OTP email in user edit')
         }
 

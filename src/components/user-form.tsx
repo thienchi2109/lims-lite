@@ -22,6 +22,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Info } from 'lucide-react'
 import { UserFormRoleAccessFields } from '@/components/user-form-role-access-fields'
 import { UserFormSignatureSection } from '@/components/user-form-signature-section'
+import { getUserRoleLabel } from '@/lib/role-labels'
 
 interface UserFormProps {
     user?: User
@@ -64,7 +65,6 @@ export function UserForm({ user, currentUserId, currentUserRole, onSuccess, onCa
                   full_name: user?.full_name ?? '',
                   email: user?.email || '',
                   lab: user?.lab || '',
-                  role: user?.role ?? 'analyst',
                   password: '',
                   can_access_confidential: user?.can_access_confidential ?? false,
                   otpEmail: '',
@@ -84,7 +84,8 @@ export function UserForm({ user, currentUserId, currentUserRole, onSuccess, onCa
         control: form.control,
         name: 'role',
     })
-    const isAnalystForm = selectedRole === 'analyst'
+    const effectiveRole = isEdit ? user?.role : selectedRole
+    const isAnalystForm = effectiveRole === 'analyst'
     const canEditConfidentialAccess = currentUserRole !== 'manager' || isAnalystForm
     const canConfigureAnalystOtpEmail = isAnalystForm && !isSelfEdit
 
@@ -107,7 +108,6 @@ export function UserForm({ user, currentUserId, currentUserRole, onSuccess, onCa
             const updatePayload: UpdateUser = {
                 id: userForUpdate.id,
                 full_name: updateValues.full_name || undefined,
-                role: updateValues.role ?? userForUpdate.role,
                 email: updateValues.email || undefined,
                 lab: updateValues.lab || undefined,
             }
@@ -306,7 +306,12 @@ export function UserForm({ user, currentUserId, currentUserRole, onSuccess, onCa
                     )}
                 />
 
-                <UserFormRoleAccessFields control={form.control} showConfidentialAccess={canEditConfidentialAccess} />
+                <UserFormRoleAccessFields
+                    control={form.control}
+                    showRoleSelector={!isEdit}
+                    roleLabel={isEdit ? getUserRoleLabel(user?.role) : undefined}
+                    showConfidentialAccess={canEditConfidentialAccess}
+                />
 
                 {canConfigureAnalystOtpEmail && (
                     <FormField

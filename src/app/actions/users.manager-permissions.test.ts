@@ -171,6 +171,25 @@ describe('manager user-management permissions', () => {
         )
     })
 
+    it('rolls back a manager account when OTP destination configuration fails', async () => {
+        mocks.otpSettingsUpsert.mockResolvedValueOnce({
+            error: { message: 'OTP destination unavailable' },
+        })
+
+        await expect(
+            createUser({
+                username: 'manager2',
+                full_name: 'Manager Two',
+                password: 'password123',
+                role: 'manager',
+                email: 'manager2@example.com',
+            }),
+        ).rejects.toThrow(/manager otp/i)
+
+        expect(mocks.authDeleteUser).toHaveBeenCalledWith(newManagerId)
+        expect(mocks.revalidatePath).not.toHaveBeenCalled()
+    })
+
     it('rejects manager creation without an email before creating Auth user', async () => {
         await expect(
             createUser({
@@ -200,6 +219,21 @@ describe('manager user-management permissions', () => {
 
         expect(mocks.userUpdate).not.toHaveBeenCalled()
         expect(mocks.authUpdateUserById).not.toHaveBeenCalled()
+    })
+
+    it('rejects role changes before profile, Auth, OTP, or revalidation side effects', async () => {
+        await expect(
+            updateUser({
+                id: analystId,
+                role: 'manager',
+            } as never),
+        ).rejects.toThrow(/role/i)
+
+        expect(mocks.createClient).not.toHaveBeenCalled()
+        expect(mocks.userUpdate).not.toHaveBeenCalled()
+        expect(mocks.authUpdateUserById).not.toHaveBeenCalled()
+        expect(mocks.otpSettingsUpsert).not.toHaveBeenCalled()
+        expect(mocks.revalidatePath).not.toHaveBeenCalled()
     })
 
     it('allows managers to toggle confidential access for analyst users only', async () => {
@@ -253,6 +287,21 @@ describe('manager user-management permissions', () => {
 
         expect(mocks.userUpdate).not.toHaveBeenCalled()
         expect(mocks.authUpdateUserById).not.toHaveBeenCalled()
+    })
+
+    it('retires an analyst through soft delete and an Auth ban', async () => {
+        mocks.profiles[analystId] = { id: analystId, role: 'analyst' }
+
+        await deleteUser(analystId)
+
+        expect(mocks.userUpdate).toHaveBeenCalledWith(
+            expect.objectContaining({ deleted_at: expect.any(String) }),
+        )
+        expect(mocks.userUpdateEq).toHaveBeenCalledWith('id', analystId)
+        expect(mocks.authUpdateUserById).toHaveBeenCalledWith(
+            analystId,
+            { ban_duration: '876600h' },
+        )
     })
 
     it('allows manager self-edit of permitted profile fields', async () => {
