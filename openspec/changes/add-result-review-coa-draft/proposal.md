@@ -25,8 +25,9 @@ release lifecycle.
   assessment payload, create its `sample_submissions` record and assessment
   snapshots, then move the sample to `review`.
 - Surface the submitted assessments and snapshots to managers in the approval
-  review context. CoA generation SHALL use the submission snapshot range rather
-  than mutable current assay configuration when one is available.
+  review context. When a submission is approved, CoA generation SHALL persist
+  that exact submission as the CoA report's immutable source and use its
+  snapshot range rather than mutable current assay configuration.
 - Keep draft preview ephemeral: opening, closing, or returning to edit SHALL
   not create a CoA report, upload HTML, calculate a document hash, write audit
   rows, or change sample/result state.
@@ -49,8 +50,9 @@ release lifecycle.
   client action bridge, submission action/RPC, manager approval detail,
   CoA data helpers/template mapping, query invalidation, and focused tests.
 - **Affected database**: a new append-only assessment snapshot table and enum;
-  an updated `submit_sample_for_review` SECURITY DEFINER RPC; RLS, grants, audit
-  trigger coverage, and `run_security_tests()` updates.
+  an immutable `coa_reports.source_submission_id` link; an updated
+  `submit_sample_for_review` SECURITY DEFINER RPC; RLS, grants, audit trigger
+  coverage, and `run_security_tests()` updates.
 - **Compliance and audit**: snapshot records bind the analyst's manual judgement
   to the signed submission and preserve historical assessments across
   rejection/rework/re-submission. No hard deletes or mutable draft artifacts.

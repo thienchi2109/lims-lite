@@ -176,10 +176,21 @@ The manager approval context SHALL display each submitted result's `Đánh giá`
 with its snapshot value, unit, method, and reference range. It SHALL display
 the analyst's stored conclusion and SHALL NOT recalculate that conclusion.
 
-When generating a final CoA for a submission with assessment snapshots, the
-system SHALL use that submission's snapshot reference range. For historical
-submissions without snapshots, the system SHALL fall back to the existing
-assay-definition range behavior.
+When a manager approves a submission and the system creates or queues a CoA
+report, the system SHALL persist that exact approved submission ID in
+`coa_reports.source_submission_id`. The system SHALL resolve this source from
+the active signed submission chain during approval/completion, not from a
+timestamp-based "newest assessment" lookup during document rendering.
+
+The final CoA SHALL load its assessment snapshots and reference ranges only
+through its persisted `source_submission_id`. That source ID SHALL remain
+immutable after report creation. A failed CoA generation retry SHALL preserve
+the same source ID. Historical reports with no source ID SHALL retain the
+existing assay-definition range fallback; every report created after this
+feature SHALL have a source ID.
+
+The database SHALL reject an update that changes a non-null
+`coa_reports.source_submission_id`.
 
 #### Scenario: Manager sees the analyst's submitted conclusions
 
@@ -194,5 +205,30 @@ assay-definition range behavior.
 - **WHEN** an assay's configured reference range changes after an analyst
   submits a sample and the manager later approves it
 - **THEN** the final CoA uses the reference range snapshot linked to that
-  approved submission
+  report's persisted source submission
 - **THEN** the submission's historical assessment remains unchanged
+
+#### Scenario: Rejected submission is replaced before approval
+
+- **WHEN** submission `#1` is rejected, an analyst resubmits as submission
+  `#2`, and a manager approves submission `#2`
+- **THEN** the new CoA report persists submission `#2` as
+  `source_submission_id`
+- **THEN** the final CoA reads only submission `#2` assessment snapshots
+- **THEN** submission `#1` assessments remain immutable historical records and
+  are not used for the new CoA
+
+#### Scenario: Failed CoA generation is retried
+
+- **WHEN** a CoA report created for an approved submission fails generation and
+  is retried
+- **THEN** the retry uses the report's existing `source_submission_id`
+- **THEN** the retry does not select a submission based on its timestamp,
+  submission number, or current active state
+
+#### Scenario: CoA report source cannot be rebound
+
+- **WHEN** any application or database path attempts to change a CoA report's
+  non-null `source_submission_id`
+- **THEN** the database rejects the update
+- **THEN** the report remains linked to its original approved submission

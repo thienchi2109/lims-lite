@@ -6,7 +6,8 @@
   changing the RPC signature.
 - [ ] 1.2 Add failing focused database regression tests for complete
   per-result assessments, exact-set validation, invalid/direct writes,
-  transaction rollback, stale review data, and resubmission history.
+  transaction rollback, stale review data, resubmission history, and immutable
+  CoA source-submission binding.
 - [ ] 1.3 Add failing focused TypeScript/component tests covering the draft
   watermark, omitted final signature content, visible ranges, manual-only
   assessment choices, disabled `Gửi phê duyệt`, cancellation, and manager
@@ -17,7 +18,9 @@
 - [ ] 2.1 Add a migration defining the two-value manual assessment enum and
   append-only `result_reference_assessments` snapshot table with restrictive
   foreign keys, unique `(submission_id, result_id)` constraint, comments, and
-  audit trigger.
+  audit trigger. Add immutable `coa_reports.source_submission_id` with a
+  restrictive foreign key, index, database immutability guard, and
+  historic-report compatibility.
 - [ ] 2.2 Add RLS and grants for the snapshot table: deny direct writes,
   expose an analyst's own submission records, and expose manager records only
   within the existing approval scope; document the security impact and use the
@@ -30,9 +33,14 @@
   validation; lock and snapshot result/assay display fields from database rows,
   atomically create the signed submission and assessments, then move the sample
   to `review`.
-- [ ] 2.5 Apply the migration through Docker and run
+- [ ] 2.5 Update manager approval/completion and CoA queue creation to resolve
+  the active signed submission under lock, persist it as
+  `coa_reports.source_submission_id`, and preserve that source during failed
+  report retries and amendments.
+- [ ] 2.6 Apply the migration through Docker and run
   `run_security_tests()` plus the new focused database regressions; verify the
-  obsolete RPC signature cannot bypass mandatory assessments.
+  obsolete RPC signature cannot bypass mandatory assessments and a CoA report
+  cannot be rebound to another submission.
 
 ## 3. Shared read models and CoA rendering
 
@@ -49,9 +57,10 @@
 - [ ] 3.3 Update manager approval read models and detail UI to display each
   submitted snapshot's `Đánh giá`, value, unit, method, and reference range
   without recalculating the conclusion.
-- [ ] 3.4 Update final CoA data resolution to prefer the approved submission's
-  reference-range snapshot and retain the existing assay-range fallback for
-  records that predate this feature.
+- [ ] 3.4 Update final CoA data resolution to load assessment snapshots and
+  reference ranges through each report's immutable `source_submission_id`;
+  retain the existing assay-range fallback only for historic reports without a
+  source ID.
 
 ## 4. Analyst draft-review workflow
 
@@ -79,7 +88,8 @@
 - [ ] 5.1 Run focused database, CoA-rendering, draft-dialog, client-payload,
   and approval-detail tests; include cancellation, all-assessed enablement,
   no auto-classification, atomic failure, authorization, resubmission, and
-  historical CoA fallback cases.
+  historical CoA fallback cases, plus approved-resubmission source selection
+  and failed-CoA-retry source preservation.
 - [ ] 5.2 Run `npm run lint` and `npm run typecheck`; inspect all touched files
   for Vietnamese UI copy, strict TypeScript, `api-client` mutation usage, and
   file-size boundaries.

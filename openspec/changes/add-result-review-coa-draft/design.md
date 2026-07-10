@@ -36,6 +36,8 @@ boundaries used by the existing Part 11-aware submission flow.
   `in_progress` to `review` safeguards intact.
 - Make the snapshots available to managers and prefer the recorded reference
   range when a final CoA is generated after approval.
+- Bind every CoA created after this change to the exact approved submission
+  that supplied its assessment snapshots.
 
 **Non-Goals:**
 
@@ -175,13 +177,49 @@ source of authorization truth.
 The manager approval detail query will fetch the latest active submission and
 its assessment snapshots. It will show the same Vietnamese label, `Đánh giá`,
 with the snapshot value and range, rather than recalculating the conclusion.
-Final CoA data mapping will prefer the submission snapshot range for the
-approved submission and fall back to the current assay definition only for
-historic records created before this feature.
 
 Alternative considered: permit the analyst client to insert snapshots through
 RLS. Rejected because it would allow unsigned or partial records outside the
 atomic workflow transition.
+
+### 6. Bind final CoA reports to their approved submission
+
+Add a nullable `coa_reports.source_submission_id` foreign key to
+`sample_submissions` with restrictive deletion semantics. It is nullable only
+to preserve historic CoA reports created before this change. Every new CoA
+report created through the approval workflow SHALL have this source ID, and the
+ID SHALL be immutable after report creation. A database guard SHALL reject any
+update that changes a non-null source ID, including a status-update or retry
+path.
+
+During manager approval/completion, the workflow will lock the sample and
+resolve its one active submission from the signed submission chain:
+`sample_id = current sample` and `superseded_by IS NULL`. The workflow will
+persist that exact ID when it queues or creates the CoA report. The CoA renderer
+will then load assessment snapshots and reference ranges by
+`coa_reports.source_submission_id`; it SHALL NOT re-run a "latest submission"
+query at render or retry time.
+
+When a CoA generation attempt fails and is retried, the retry SHALL preserve
+the report's stored source submission ID. If a report is amended, the
+replacement report SHALL explicitly retain or declare its source submission ID
+as part of the amendment record; it must never infer a different source based
+on timestamp or current assay configuration.
+
+This creates an immutable record linkage:
+
+```text
+coa_reports.source_submission_id
+  -> sample_submissions.id
+  -> result_reference_assessments.submission_id
+```
+
+Historic reports without a source ID retain the existing assay-definition
+fallback. New reports do not use that fallback.
+
+Alternative considered: resolve the newest submission every time a CoA is
+rendered. Rejected because a later resubmission or retry could silently change
+the signed assessment context of an already approved report.
 
 ## Risks / Trade-offs
 
@@ -199,8 +237,11 @@ atomic workflow transition.
   compares the exact server-loaded result set to the payload and rolls back on
   any mismatch.
 - **Historical CoA data has no assessment snapshots** -> Final CoA resolution
-  falls back to current assay configuration only for submissions predating this
+  falls back to current assay configuration only for reports predating this
   change; no old records are rewritten.
+- **A CoA retry uses a later submission** -> Persist
+  `coa_reports.source_submission_id` during approval/completion and prohibit
+  the renderer or retry worker from resolving a new source by timestamp.
 - **The additional review can slow urgent submission** -> Keep all assessments
   in the single document table and preserve the existing submission path once
   the analyst has completed the review.
@@ -209,14 +250,16 @@ atomic workflow transition.
 
 1. Add the assessment enum and append-only snapshot table with restrictive
    foreign keys, unique constraint, comments, RLS policies, audit trigger, and
-   security-test coverage.
+   security-test coverage. Add the immutable `coa_reports.source_submission_id`
+   link, index, and compatibility treatment for historic reports.
 2. Replace the RPC signature, preserving current signature and status
    validations while adding exact-set, enum, and stale-revision validation plus
    atomic snapshot insertion.
 3. Update the result read model and client mutation contract, then add the
    draft CoA dialog and assessment state.
-4. Extend manager approval reads and final CoA data mapping to consume
-   snapshots when present.
+4. Extend manager approval/completion and CoA queue creation to persist the
+   exact active submission as each new report's source. Load final CoA
+   snapshots only through that stored source ID.
 5. Apply the migration through Docker, run `run_security_tests()`, and execute
    focused database, component, and CoA-rendering regression tests.
 
