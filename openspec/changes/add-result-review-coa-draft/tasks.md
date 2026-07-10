@@ -39,9 +39,13 @@
 - [ ] 3.1 Extend result read models, Zod schemas, and client types to include
   configured `normal_range` and the result/assay revision data required for a
   stale-review check.
-- [ ] 3.2 Add a draft-only CoA render mode that reuses sample/result layout
-  helpers while adding `BẢN NHÁP - CHƯA GỬI DUYỆT`, omitting final
-  certification content, and exposing an injectable `Đánh giá` result cell.
+- [ ] 3.2 Extend the canonical CoA template with a draft mode, reusing its
+  document structure, sample/result layout, styles, escaping, grouping, and
+  data mapping; add only `BẢN NHÁP - CHƯA GỬI DUYỆT`, omitted final
+  certification content, the injectable `Đánh giá` result cell, and review
+  footer. Refactor existing helpers into shared presentation primitives where
+  interactive controls require it; do not create a copied or parallel draft
+  renderer.
 - [ ] 3.3 Update manager approval read models and detail UI to display each
   submitted snapshot's `Đánh giá`, value, unit, method, and reference range
   without recalculating the conclusion.

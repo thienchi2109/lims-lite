@@ -1,5 +1,29 @@
 ## ADDED Requirements
 
+### Requirement: Draft uses the canonical CoA template without duplication
+
+The system SHALL render the pre-submission draft as a mode of the existing
+canonical CoA template. It SHALL reuse the existing CoA document structure,
+sample and result presentation, styles, escaping, grouping, and data mapping.
+Draft-specific additions SHALL be limited to the draft watermark, omission of
+final-document certification sections, the `Đánh giá` result-cell slot, and
+review-footer controls.
+
+The system SHALL NOT create a parallel `DraftCoA` document renderer, copy CoA
+template markup or styles, or duplicate CoA data mapping. When interactive
+draft controls require a different rendering boundary, the system SHALL
+refactor the existing CoA template into shared canonical presentation
+primitives instead of duplicating the document implementation.
+
+#### Scenario: Draft CoA is rendered for analyst review
+
+- **WHEN** an analyst opens the pre-submission draft
+- **THEN** the system renders the draft from the canonical CoA template
+- **THEN** the draft adds only its watermark, omitted certification sections,
+  assessment cells, and review-footer controls to the shared CoA presentation
+- **THEN** the system does not invoke a parallel or copied CoA document
+  renderer
+
 ### Requirement: Analyst reviews a draft CoA before submitting a sample
 
 The system SHALL open a Vietnamese draft CoA review dialog when an authorized

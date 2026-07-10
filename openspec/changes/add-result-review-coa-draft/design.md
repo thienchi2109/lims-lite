@@ -50,13 +50,15 @@ boundaries used by the existing Part 11-aware submission flow.
 
 ## Decisions
 
-### 1. Use a full-document draft CoA dialog with an embedded assessment column
+### 1. Extend the canonical CoA template with a draft mode
 
-The existing CoA template's sample and results presentation will be reused for
-a dedicated draft render mode. The dialog will use a wide or full-screen,
-scrollable document surface so the analyst can compare all results in one
-place. It will show a prominent `BẢN NHÁP - CHƯA GỬI DUYỆT` watermark and omit
-signatures, manager approval information, and approval date.
+The draft SHALL extend the existing CoA template entry point and its existing
+sample, result, metadata, and stylesheet helpers. It SHALL be a draft mode of
+the canonical CoA document, not an independent document renderer. The dialog
+will use a wide or full-screen, scrollable document surface so the analyst can
+compare all results in one place. It will show a prominent
+`BẢN NHÁP - CHƯA GỬI DUYỆT` watermark and omit signatures, manager approval
+information, and approval date.
 
 The draft result table will add a `Đánh giá` column. Each row will use a
 shadcn `RadioGroup` with two visible `RadioGroupItem` choices, rather than a
@@ -74,17 +76,26 @@ footer will contain the confirmation message
 an action to return to editing, and `Gửi phê duyệt`. The submit action remains
 disabled until every result has an assessment.
 
+Draft-specific code is limited to the draft watermark, suppression of
+final-document certification sections, an optional `Đánh giá` result-cell slot,
+and the review-footer controls. It SHALL NOT copy or reimplement CoA document
+markup, section layout, result grouping, styles, escaping, or CoA data mapping.
+If the current HTML-rendering boundary cannot host interactive assessment
+controls directly, the existing template SHALL be refactored into shared
+canonical presentation primitives used by both final static output and draft
+interactive output. A separate `DraftCoA` document renderer, copied template
+files, or copied CoA stylesheet are prohibited.
+
 Alternative considered: show a compact confirmation table separate from the
 CoA. Rejected because it duplicates the document view that the analyst needs
 to inspect and makes cross-checking sample context, methods, values, and
 reference ranges less direct.
 
-### 2. Keep draft rendering ephemeral and isolate it from final CoA generation
+### 2. Keep the canonical draft mode ephemeral
 
-The draft will use a separate render mode or draft-specific composition around
-existing CoA helpers. It may reuse headers, patient/sample details, result
-grouping, styles, and table markup, but it will omit final-document-only
-sections and add the draft watermark and assessment controls.
+The draft mode reads existing data only. It uses the same canonical CoA
+document layout while omitting final-document-only sections and adding only the
+draft watermark and assessment controls.
 
 Opening the dialog reads existing data only. Closing it, using `Quay lại chỉnh
 sửa`, or changing assessments only updates local UI state. No draft HTML,
@@ -174,10 +185,10 @@ atomic workflow transition.
 
 ## Risks / Trade-offs
 
-- **Draft differs from the final CoA template** -> Reuse the same data mapping
-  and structural template helpers, then add only draft-specific watermark,
-  omitted signature blocks, and assessment controls. Add focused rendering
-  tests for both modes.
+- **Draft diverges from the final CoA template** -> Extend one canonical
+  template and shared presentation primitives; prohibit copied document
+  renderers, markup, styles, and data mapping. Add focused rendering tests for
+  both modes.
 - **A result or configured range changes while the dialog is open** -> Submit
   revision tokens and reject stale payloads atomically; refresh the analyst
   view before a new review begins.
