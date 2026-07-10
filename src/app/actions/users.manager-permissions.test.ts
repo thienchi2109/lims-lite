@@ -154,7 +154,7 @@ describe('manager user-management permissions', () => {
         )
     })
 
-    it('configures manager OTP email from the account email during creation', async () => {
+    it('activates a manager account only after configuring its OTP email', async () => {
         await createUser({
             username: 'manager2',
             full_name: 'Manager Two',
@@ -169,11 +169,21 @@ describe('manager user-management permissions', () => {
                 otp_email: 'manager2@example.com',
             }),
         )
+        expect(mocks.authCreateUser).toHaveBeenCalledWith(
+            expect.objectContaining({ ban_duration: '876600h' }),
+        )
+        expect(mocks.authUpdateUserById).toHaveBeenCalledWith(
+            newManagerId,
+            { ban_duration: 'none' },
+        )
     })
 
-    it('rolls back a manager account when OTP destination configuration fails', async () => {
+    it('bans a manager account when OTP rollback cannot delete its Auth user', async () => {
         mocks.otpSettingsUpsert.mockResolvedValueOnce({
             error: { message: 'OTP destination unavailable' },
+        })
+        mocks.authDeleteUser.mockResolvedValueOnce({
+            error: { message: 'Auth deletion unavailable' },
         })
 
         await expect(
@@ -187,7 +197,33 @@ describe('manager user-management permissions', () => {
         ).rejects.toThrow(/manager otp/i)
 
         expect(mocks.authDeleteUser).toHaveBeenCalledWith(newManagerId)
+        expect(mocks.authUpdateUserById).toHaveBeenCalledWith(
+            newManagerId,
+            { ban_duration: '876600h' },
+        )
         expect(mocks.revalidatePath).not.toHaveBeenCalled()
+    })
+
+    it('rejects manager creation when account activation fails after OTP configuration', async () => {
+        mocks.authUpdateUserById.mockResolvedValueOnce({
+            error: { message: 'Auth activation unavailable' },
+        })
+
+        await expect(
+            createUser({
+                username: 'manager2',
+                full_name: 'Manager Two',
+                password: 'password123',
+                role: 'manager',
+                email: 'manager2@example.com',
+            }),
+        ).rejects.toThrow(/manager account activation/i)
+
+        expect(mocks.authUpdateUserById).toHaveBeenCalledWith(
+            newManagerId,
+            { ban_duration: 'none' },
+        )
+        expect(mocks.authDeleteUser).toHaveBeenCalledWith(newManagerId)
     })
 
     it('rejects manager creation without an email before creating Auth user', async () => {

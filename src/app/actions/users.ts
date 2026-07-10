@@ -12,6 +12,8 @@ type UserManagementProfile = {
     role?: string | null
 }
 
+const userAccessBanDuration = '876600h'
+
 async function fetchUserManagementProfile(
     supabase: UserManagementSupabase,
     userId: string,
@@ -70,6 +72,24 @@ async function configureOtpDestination(
         })
 
     if (error) throw new Error(`${errorPrefix}: ${error.message}`)
+}
+
+async function rollbackCreatedAuthUser(
+    adminClient: ReturnType<typeof createAdminClient>,
+    userId: string,
+) {
+    const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId)
+    if (!deleteError) return
+
+    const { error: banError } = await adminClient.auth.admin.updateUserById(
+        userId,
+        { ban_duration: userAccessBanDuration },
+    )
+    if (banError) {
+        throw new Error(
+            `Auth cleanup failed: could not delete or ban the user (${deleteError.message}; ${banError.message})`,
+        )
+    }
 }
 
 /**
@@ -182,6 +202,7 @@ export async function createUser(data: z.infer<typeof CreateUserSchema>) {
         email: email,
         password: validated.password,
         email_confirm: true,
+        ban_duration: validated.role === 'manager' ? userAccessBanDuration : undefined,
         user_metadata: {
             full_name: validated.full_name,
             username: validated.username, // helpful for metadata
@@ -234,7 +255,7 @@ export async function createUser(data: z.infer<typeof CreateUserSchema>) {
 
     if (dbError) {
         // Rollback auth user creation if DB insert fails
-        await adminClient.auth.admin.deleteUser(authUser.user.id)
+        await rollbackCreatedAuthUser(adminClient, authUser.user.id)
         throw new Error(`Database profile creation failed: ${dbError.message}`)
     }
 
@@ -247,8 +268,17 @@ export async function createUser(data: z.infer<typeof CreateUserSchema>) {
                 'Manager OTP email configuration failed',
             )
         } catch (error) {
-            await adminClient.auth.admin.deleteUser(authUser.user.id)
+            await rollbackCreatedAuthUser(adminClient, authUser.user.id)
             throw error
+        }
+
+        const { error: activationError } = await adminClient.auth.admin.updateUserById(
+            authUser.user.id,
+            { ban_duration: 'none' },
+        )
+        if (activationError) {
+            await rollbackCreatedAuthUser(adminClient, authUser.user.id)
+            throw new Error(`Manager account activation failed: ${activationError.message}`)
         }
     }
 
@@ -261,7 +291,7 @@ export async function createUser(data: z.infer<typeof CreateUserSchema>) {
                 'Analyst OTP email configuration failed',
             )
         } catch (error) {
-            await adminClient.auth.admin.deleteUser(authUser.user.id)
+            await rollbackCreatedAuthUser(adminClient, authUser.user.id)
             throw error
         }
     }
