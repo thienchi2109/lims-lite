@@ -41,4 +41,5 @@ Add focused regression coverage that:
   sizing classes.
 
 Run the focused test, TypeScript typecheck, and relevant React quality checks.
-Verify both dialogs visually at desktop and mobile viewport sizes.
+Use rendered component tests to verify both dialogs receive the same responsive
+layout contract.
