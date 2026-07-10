@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
     updateAssayDefinition: vi.fn(),
     getMethodNameSuggestions: vi.fn(),
     createClient: vi.fn(),
+    updateUser: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -74,7 +75,7 @@ vi.mock('@/app/actions/assay-methods', () => ({
 
 vi.mock('@/app/actions/users', () => ({
     createUser: vi.fn(),
-    updateUser: vi.fn(),
+    updateUser: (...args: unknown[]) => mocks.updateUser(...args),
     deleteUser: vi.fn(),
 }))
 
@@ -172,6 +173,21 @@ describe('client action role guard', () => {
 
         expect(response.status).toBe(200)
         expect(mocks.getSamples).toHaveBeenCalledWith({ status: 'completed' })
+    })
+
+    it('rejects role-bearing update payloads before invoking the Server Action', async () => {
+        mockRole('manager')
+
+        const response = await POST(buildRequest('updateUser', {
+            id: '11111111-1111-4111-8111-111111111111',
+            role: 'manager',
+        }))
+
+        expect(response.status).toBe(400)
+        await expect(response.json()).resolves.toEqual(
+            expect.objectContaining({ error: expect.stringMatching(/role|vai trò/i) }),
+        )
+        expect(mocks.updateUser).not.toHaveBeenCalled()
     })
 
     it('denies doctor sample mutation actions before the handler runs', async () => {

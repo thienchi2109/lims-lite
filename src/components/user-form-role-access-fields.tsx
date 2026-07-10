@@ -1,7 +1,6 @@
 'use client'
 
 import type { Control } from 'react-hook-form'
-import { Checkbox } from '@/components/ui/checkbox'
 import {
     FormControl,
     FormField,
@@ -9,6 +8,7 @@ import {
     FormLabel,
     FormMessage,
 } from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
 import {
     Select,
     SelectContent,
@@ -20,39 +20,54 @@ import { USER_ROLE_OPTIONS } from '@/lib/role-labels'
 
 interface UserFormRoleAccessFieldsProps {
     control: Control
+    showRoleSelector?: boolean
+    roleLabel?: string
     showConfidentialAccess?: boolean
 }
 
 export function UserFormRoleAccessFields({
     control,
+    showRoleSelector = true,
+    roleLabel,
     showConfidentialAccess = true,
 }: UserFormRoleAccessFieldsProps) {
     return (
         <>
-            <FormField
-                control={control}
-                name="role"
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Vai trò</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Chọn vai trò" />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {USER_ROLE_OPTIONS.map((roleOption) => (
-                                    <SelectItem key={roleOption.value} value={roleOption.value}>
-                                        {roleOption.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
+            {showRoleSelector ? (
+                <FormField
+                    control={control}
+                    name="role"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Vai trò</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Chọn vai trò" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {USER_ROLE_OPTIONS.map((roleOption) => (
+                                        <SelectItem key={roleOption.value} value={roleOption.value}>
+                                            {roleOption.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            ) : (
+                <div className="space-y-2">
+                    <FormLabel>Vai trò</FormLabel>
+                    <Input
+                        aria-label="Vai trò"
+                        value={roleLabel ?? ''}
+                        readOnly
+                    />
+                </div>
+            )}
 
             {showConfidentialAccess ? (
                 <FormField
@@ -67,10 +82,29 @@ export function UserFormRoleAccessFields({
                                 </div>
                             </div>
                             <FormControl>
-                                <Checkbox
-                                    checked={Boolean(field.value)}
-                                    onCheckedChange={(checked) => field.onChange(checked === true)}
-                                />
+                                <button
+                                    type="button"
+                                    role="switch"
+                                    aria-label="Có quyền truy cập dữ liệu bí mật"
+                                    aria-checked={Boolean(field.value)}
+                                    onClick={() => field.onChange(!field.value)}
+                                    onKeyDown={(event) => {
+                                        if (event.key === ' ' || event.key === 'Enter') {
+                                            event.preventDefault()
+                                            field.onChange(!field.value)
+                                        }
+                                    }}
+                                    className={`inline-flex h-6 w-11 shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                                        field.value ? 'bg-primary' : 'bg-input'
+                                    }`}
+                                >
+                                    <span
+                                        aria-hidden="true"
+                                        className={`pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg transition-transform ${
+                                            field.value ? 'translate-x-5' : 'translate-x-0'
+                                        }`}
+                                    />
+                                </button>
                             </FormControl>
                         </FormItem>
                     )}

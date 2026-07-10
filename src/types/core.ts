@@ -78,11 +78,10 @@ export const UpdateUserSchema = z.object({
     full_name: z.string().min(1).max(100).optional(),
     email: z.string().email().optional(),
     lab: z.string().optional(),
-    role: UserRole.optional(),
     password: z.string().min(8).optional(),
     can_access_confidential: z.boolean().optional(),
     otpEmail: z.string().email('Email OTP không hợp lệ').optional(),
-})
+}).strict()
 
 export type UpdateUser = z.infer<typeof UpdateUserSchema>
 

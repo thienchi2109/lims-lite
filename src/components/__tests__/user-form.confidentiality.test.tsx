@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { User } from '@/types'
 
 const mocks = vi.hoisted(() => ({
     createUserClient: vi.fn(),
@@ -27,25 +28,6 @@ vi.mock('@/components/signature-upload-field', () => ({
     SignatureUploadField: () => null,
 }))
 
-vi.mock('@/components/ui/checkbox', () => ({
-    Checkbox: ({
-        checked,
-        onCheckedChange,
-        ...props
-    }: {
-        checked?: boolean
-        onCheckedChange?: (checked: boolean) => void
-        [key: string]: unknown
-    }) => (
-        <input
-            type="checkbox"
-            checked={checked}
-            onChange={(event) => onCheckedChange?.(event.target.checked)}
-            {...props}
-        />
-    ),
-}))
-
 vi.mock('@/components/ui/select', () => ({
     Select: ({ children }: { children: ReactNode }) => <div>{children}</div>,
     SelectContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -64,36 +46,44 @@ describe('UserForm confidentiality access', () => {
         mocks.uploadSignatureClient.mockResolvedValue({ success: true })
     })
 
-    it('shows a confidential access toggle for managers and submits it', async () => {
+    it('renders a Vietnamese keyboard-accessible confidential access switch and submits it', async () => {
         render(
             <UserForm
+                currentUserRole="manager"
                 onSuccess={vi.fn()}
                 onCancel={vi.fn()}
             />,
         )
 
         fireEvent.change(screen.getByLabelText('Tên đăng nhập'), {
-            target: { value: 'manager1' },
+            target: { value: 'analyst1' },
         })
         fireEvent.change(screen.getByLabelText('Họ và tên'), {
-            target: { value: 'Manager One' },
+            target: { value: 'Analyst One' },
         })
         fireEvent.change(screen.getByLabelText('Email'), {
-            target: { value: 'manager@example.com' },
+            target: { value: 'analyst@example.com' },
         })
         fireEvent.change(screen.getByLabelText('Mật khẩu'), {
             target: { value: 'password123' },
         })
 
-        fireEvent.click(screen.getByRole('checkbox', { name: 'Có quyền truy cập dữ liệu bí mật' }))
+        const confidentialAccess = screen.getByRole('switch', {
+            name: 'Có quyền truy cập dữ liệu bí mật',
+        })
+        expect(confidentialAccess.getAttribute('aria-checked')).toBe('false')
+
+        fireEvent.keyDown(confidentialAccess, { key: ' ' })
+        expect(confidentialAccess.getAttribute('aria-checked')).toBe('true')
+
         fireEvent.click(screen.getByRole('button', { name: 'Tạo mới' }))
 
         await waitFor(() => {
             expect(mocks.createUserClient).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    username: 'manager1',
-                    full_name: 'Manager One',
-                    email: 'manager@example.com',
+                    username: 'analyst1',
+                    full_name: 'Analyst One',
+                    email: 'analyst@example.com',
                     password: 'password123',
                     can_access_confidential: true,
                 }),
@@ -110,5 +100,42 @@ describe('UserForm confidentiality access', () => {
         )
 
         expect(screen.getByText('Bác sĩ')).toBeDefined()
+    })
+
+    it('shows role as read-only during edit and omits it from the update payload', async () => {
+        const analyst = {
+            id: '11111111-1111-4111-8111-111111111111',
+            username: 'analyst1',
+            full_name: 'Analyst One',
+            email: 'analyst@example.com',
+            lab: 'Central Lab',
+            role: 'analyst',
+            can_access_confidential: false,
+            created_at: '2026-07-10T00:00:00.000Z',
+            updated_at: '2026-07-10T00:00:00.000Z',
+        } as User
+
+        render(
+            <UserForm
+                user={analyst}
+                currentUserId="22222222-2222-4222-8222-222222222222"
+                currentUserRole="manager"
+                onSuccess={vi.fn()}
+                onCancel={vi.fn()}
+            />,
+        )
+
+        const roleField = screen.getByRole('textbox', { name: 'Vai trò' })
+        expect((roleField as HTMLInputElement).value).toBe('Kỹ thuật viên')
+        expect(roleField.hasAttribute('readonly')).toBe(true)
+        expect(screen.queryByText('Chọn vai trò')).toBeNull()
+
+        fireEvent.click(screen.getByRole('button', { name: 'Cập nhật' }))
+
+        await waitFor(() => {
+            expect(mocks.updateUserClient).toHaveBeenCalledTimes(1)
+        })
+
+        expect(mocks.updateUserClient.mock.calls[0][0]).not.toHaveProperty('role')
     })
 })

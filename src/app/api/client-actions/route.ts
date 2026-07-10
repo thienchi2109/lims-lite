@@ -50,7 +50,7 @@ import {
 } from '@/app/actions/search'
 import { generateCoA, regenerateCoA } from '@/app/actions/coa'
 import { isIsoDateString } from '@/lib/iso-date'
-import { ConfigureManagerOtpEmailSchema } from '@/types'
+import { ConfigureManagerOtpEmailSchema, UpdateUserSchema } from '@/types'
 import type { ClientActionName, ClientActionRequest } from '@/lib/client-actions/types'
 import { isAllowedOrigin, mapErrorToStatus } from './route-helpers'
 import { getClientActionDenial } from './role-guard'
@@ -199,7 +199,18 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
     approveResults: async (payload) => approveResults(payload),
     cancelApproval: async (payload) => cancelApproval(payload),
     createUser: async (payload) => createUser(payload),
-    updateUser: async (payload) => updateUser(payload),
+    updateUser: async (payload) => {
+        if (payload && typeof payload === 'object' && 'role' in payload) {
+            return { error: 'Vai trò chỉ được xác định khi tạo tài khoản' }
+        }
+
+        const parsed = UpdateUserSchema.safeParse(payload)
+        if (!parsed.success) {
+            return { error: parsed.error.issues[0]?.message ?? 'Thông tin người dùng không hợp lệ' }
+        }
+
+        return updateUser(parsed.data)
+    },
     deleteUser: async (payload) => {
         if (!payload?.userId) {
             return { error: 'User ID là bắt buộc' }
