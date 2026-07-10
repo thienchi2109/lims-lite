@@ -5,7 +5,7 @@ See `CLAUDE.md` for:
 - Stack: Next.js 16 + React 19, self-hosted Supabase/PostgreSQL
 - Goal: 21 CFR Part 11 compliant LIMS MVP
 - Compliance: soft delete/void only, all mutations auditable, respect RLS
-- Database: SQL migrations in `supabase/migrations/`, apply via Docker
+- Database: SQL migrations in `supabase/migrations/`, apply/query via Docker only
 - Localization: All UI in Vietnamese (see `docs/vietnamese_dictionary.md`)
 - Validation: Zod schemas, strict TypeScript
 - Client-side: Use `src/lib/api-client.ts` for mutations (not direct imports from `src/app/actions/*`)
@@ -20,6 +20,14 @@ See `CLAUDE.md` for:
 3. Document security impact in migration files
 4. Run `run_security_tests()` after every migration
 5. Never use Supabase Studio for schema changes
+6. Never use Supabase MCP or Supabase CLI for this repo's database
+
+### Database Access Boundary
+
+- Supabase is self-hosted in Docker for this repo.
+- The only approved database access path is `docker exec ... lims-postgres psql`.
+- Do not use Supabase MCP tools for inspection, queries, migrations, or validation.
+- Do not use Supabase CLI commands for local or remote DB operations.
 
 **Full checklist:** `docs/MIGRATION_SECURITY_CHECKLIST.md`
 

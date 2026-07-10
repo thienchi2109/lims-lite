@@ -344,6 +344,13 @@ docker compose up -d # Start Supabase       | docker compose logs -f
 | Kong | lims-kong | 8000 |
 | Studio | lims-studio | 3002 |
 
+**Database Access Boundary (CRITICAL):**
+- Supabase is self-hosted in Docker for this repo.
+- Use Docker/Postgres only for database inspection, queries, migrations, and validation.
+- Approved path: `docker exec ... lims-postgres psql`.
+- Do not use Supabase MCP tools for this repo's database.
+- Do not use Supabase CLI commands for local or remote DB operations.
+
 ## Session Management
 
 **Token Expiry:**
