@@ -11,6 +11,7 @@
 import { useCallback, useState } from 'react'
 import { fetchSampleDetail } from '@/hooks/use-sample-detail'
 import { generatePrintTemplate } from '@/lib/print-template'
+import { DEFAULT_SAMPLE_LABEL_PRESET } from '@/lib/sample-label-template'
 import { printSampleBarcodeLabel } from '@/lib/sample-label-print-client'
 import { toast } from 'sonner'
 import type { ResultWithAssay } from '@/types'
@@ -124,7 +125,7 @@ export function usePrintHandlers(
     }, [sampleId])
 
     const handlePrintBarcodeLabel = useCallback(async () => {
-        await printSampleBarcodeLabel(sampleId, { preset: 'thermal-35x22-2up' })
+        await printSampleBarcodeLabel(sampleId, { preset: DEFAULT_SAMPLE_LABEL_PRESET })
     }, [sampleId])
 
     return {

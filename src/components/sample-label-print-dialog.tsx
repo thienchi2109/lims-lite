@@ -11,10 +11,12 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
-import type { SampleLabelPreset } from '@/lib/sample-label-template'
+import {
+    DEFAULT_SAMPLE_LABEL_PRESET,
+    type SampleLabelPreset,
+} from '@/lib/sample-label-template'
 
 const STORAGE_KEY = 'sample-label-print-preset'
-const DEFAULT_PRESET: SampleLabelPreset = 'thermal-35x22-2up'
 
 const PRESETS: Array<{
     value: SampleLabelPreset
@@ -22,9 +24,14 @@ const PRESETS: Array<{
     description: string
 }> = [
     {
+        value: 'thermal-35x23-sheet-2up',
+        label: '35.5 x 22.9mm - template chuẩn',
+        description: 'Khớp stock 71.1 x 89mm, 2 cột, không gap trong driver máy in.',
+    },
+    {
         value: 'thermal-35x22-2up',
-        label: '35 x 22mm - 2 tem ngang',
-        description: 'In 2 nhãn giống nhau trên cùng một hàng decal nhiệt.',
+        label: '35 x 22mm - 2 tem ngang cũ',
+        description: 'Preset cũ cho cấu hình in 72 x 22mm, gap 2mm.',
     },
     {
         value: 'small-tube',
@@ -49,10 +56,10 @@ function isSampleLabelPreset(value: string | null): value is SampleLabelPreset {
 }
 
 function getInitialPreset() {
-    if (typeof window === 'undefined') return DEFAULT_PRESET
+    if (typeof window === 'undefined') return DEFAULT_SAMPLE_LABEL_PRESET
 
     const savedPreset = window.localStorage.getItem(STORAGE_KEY)
-    return isSampleLabelPreset(savedPreset) ? savedPreset : DEFAULT_PRESET
+    return isSampleLabelPreset(savedPreset) ? savedPreset : DEFAULT_SAMPLE_LABEL_PRESET
 }
 
 export function SampleLabelPrintDialog({

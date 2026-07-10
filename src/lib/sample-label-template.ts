@@ -1,7 +1,13 @@
 import bwipjs from 'bwip-js/browser'
 import type { SampleWithUser } from '@/types'
 
-export type SampleLabelPreset = 'thermal-35x22-2up' | 'small-tube' | 'container'
+export type SampleLabelPreset =
+    | 'thermal-35x23-sheet-2up'
+    | 'thermal-35x22-2up'
+    | 'small-tube'
+    | 'container'
+
+export const DEFAULT_SAMPLE_LABEL_PRESET: SampleLabelPreset = 'thermal-35x23-sheet-2up'
 
 interface SampleLabelOptions {
     preset?: SampleLabelPreset
@@ -31,6 +37,15 @@ const LABEL_PRESETS: Record<SampleLabelPreset, {
         barcodeHeight: 9,
         columns: 2,
         columnGap: '2mm',
+    },
+    'thermal-35x23-sheet-2up': {
+        pageWidth: '71.1mm',
+        pageHeight: '89mm',
+        labelWidth: '35.5mm',
+        labelHeight: '22.9mm',
+        barcodeHeight: 9,
+        columns: 2,
+        columnGap: '0mm',
     },
     'small-tube': {
         pageWidth: '40mm',
@@ -75,26 +90,31 @@ function getClientName(sample: SampleLabelInput) {
 }
 
 function getSampleIdFontSize(presetName: SampleLabelPreset) {
-    if (presetName === 'thermal-35x22-2up') return '6.5pt'
+    if (isTwoColumnThermalPreset(presetName)) return '6.5pt'
     if (presetName === 'small-tube') return '7.5pt'
     return '9pt'
 }
 
 function getMetaFontSize(presetName: SampleLabelPreset) {
-    if (presetName === 'thermal-35x22-2up') return '5pt'
+    if (isTwoColumnThermalPreset(presetName)) return '5pt'
     if (presetName === 'small-tube') return '6pt'
     return '7pt'
 }
 
 function getCompactMetaFontSize(presetName: SampleLabelPreset) {
-    if (presetName === 'thermal-35x22-2up') return '4.4pt'
+    if (isTwoColumnThermalPreset(presetName)) return '4.4pt'
     if (presetName === 'small-tube') return '5.2pt'
     return '6pt'
 }
 
 function getLabelPadding(presetName: SampleLabelPreset) {
-    if (presetName === 'thermal-35x22-2up') return '2mm 2mm 1mm 3mm'
+    if (isTwoColumnThermalPreset(presetName)) return '2mm 2mm 1mm 3mm'
     return '1mm 1.5mm'
+}
+
+function isTwoColumnThermalPreset(presetName: SampleLabelPreset) {
+    return presetName === 'thermal-35x22-2up'
+        || presetName === 'thermal-35x23-sheet-2up'
 }
 
 export function renderSampleBarcodeSvg(sampleId: string, height: number) {
@@ -120,13 +140,13 @@ export function generateSampleLabelHtml(
     sample: SampleLabelInput,
     options: SampleLabelOptions = {},
 ) {
-    const presetName = options.preset ?? 'thermal-35x22-2up'
+    const presetName = options.preset ?? DEFAULT_SAMPLE_LABEL_PRESET
     const preset = LABEL_PRESETS[presetName]
     const sampleId = sample.sample_id
     const clientName = getClientName(sample)
     const birthYear = getBirthYear(sample.client?.date_of_birth)
     const metaItems = [clientName, birthYear].filter(Boolean)
-    const isCompactMeta = presetName === 'thermal-35x22-2up' && metaItems.join(' ').length > 24
+    const isCompactMeta = isTwoColumnThermalPreset(presetName) && metaItems.join(' ').length > 24
     const metaClass = isCompactMeta ? 'meta compact' : 'meta'
     const barcodeSvg = renderSampleBarcodeSvg(sampleId, preset.barcodeHeight)
     const sheetColumns = Array.from({ length: preset.columns }, () => preset.labelWidth).join(' ')

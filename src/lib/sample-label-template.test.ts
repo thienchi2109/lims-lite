@@ -25,15 +25,40 @@ const sensitiveSample = {
 } as SampleWithUser
 
 describe('generateSampleLabelHtml', () => {
-    it('renders a two-column 35x22mm thermal label row with duplicate labels', () => {
+    it('keeps the legacy two-column thermal label geometry available', () => {
         const html = generateSampleLabelHtml(sensitiveSample, { preset: 'thermal-35x22-2up' })
 
         expect(html).toContain('size: 72mm 22mm')
         expect(html).toContain('grid-template-columns: 35mm 35mm')
         expect(html).toContain('column-gap: 2mm')
+        expect(html).toContain('width: 35mm')
+        expect(html).toContain('height: 22mm')
         expect(html).toContain('font-size: 6.5pt')
         expect(html.match(/class="sample-label"/g)).toHaveLength(2)
         expect(html.match(/CDC-XN-21052026-0001/g)?.length).toBeGreaterThanOrEqual(2)
+    })
+
+    it('defaults to the two-column thermal stock geometry from the printer template', () => {
+        const html = generateSampleLabelHtml(sensitiveSample)
+
+        expect(html).toContain('size: 71.1mm 89mm')
+        expect(html).toContain('grid-template-columns: 35.5mm 35.5mm')
+        expect(html).toContain('column-gap: 0mm')
+        expect(html).toContain('width: 35.5mm')
+        expect(html).toContain('height: 22.9mm')
+        expect(html).toContain('font-size: 6.5pt')
+        expect(html.match(/class="sample-label"/g)).toHaveLength(2)
+        expect(html.match(/CDC-XN-21052026-0001/g)?.length).toBeGreaterThanOrEqual(2)
+    })
+
+    it('renders the printer-template thermal stock preset explicitly', () => {
+        const html = generateSampleLabelHtml(sensitiveSample, { preset: 'thermal-35x23-sheet-2up' })
+
+        expect(html).toContain('size: 71.1mm 89mm')
+        expect(html).toContain('grid-template-columns: 35.5mm 35.5mm')
+        expect(html).toContain('column-gap: 0mm')
+        expect(html).toContain('width: 35.5mm')
+        expect(html).toContain('height: 22.9mm')
     })
 
     it('keeps 35x22mm thermal label content inside a printer-safe inset', () => {

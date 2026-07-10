@@ -18,7 +18,7 @@ describe('SampleLabelPrintDialog', () => {
         vi.mocked(window.localStorage.getItem).mockReturnValue(null)
     })
 
-    it('defaults to the 35x22mm two-column thermal preset and saves the choice before printing', () => {
+    it('defaults to the printer-template two-column thermal preset and saves the choice before printing', () => {
         const onPrint = vi.fn()
 
         render(
@@ -29,12 +29,13 @@ describe('SampleLabelPrintDialog', () => {
             />,
         )
 
-        expect(screen.getByLabelText<HTMLInputElement>('35 x 22mm - 2 tem ngang').checked).toBe(true)
+        expect(screen.getByLabelText<HTMLInputElement>('35.5 x 22.9mm - template chuẩn').checked).toBe(true)
+        expect(screen.getByLabelText<HTMLInputElement>('35 x 22mm - 2 tem ngang cũ')).toBeDefined()
 
         fireEvent.click(screen.getByRole('button', { name: 'In nhãn' }))
 
-        expect(mockSetItem).toHaveBeenCalledWith('sample-label-print-preset', 'thermal-35x22-2up')
-        expect(onPrint).toHaveBeenCalledWith('thermal-35x22-2up')
+        expect(mockSetItem).toHaveBeenCalledWith('sample-label-print-preset', 'thermal-35x23-sheet-2up')
+        expect(onPrint).toHaveBeenCalledWith('thermal-35x23-sheet-2up')
     })
 
     it('uses the last saved preset when the dialog opens', () => {

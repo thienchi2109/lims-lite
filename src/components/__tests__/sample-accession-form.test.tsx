@@ -326,7 +326,7 @@ describe('SampleAccessionForm', () => {
         fireEvent.click(screen.getByRole('button', { name: 'In nhãn' }))
 
         expect(accessionFormMocks.printSampleBarcodeLabel).toHaveBeenCalledWith('sample-created-1', {
-            preset: 'thermal-35x22-2up',
+            preset: 'thermal-35x23-sheet-2up',
         })
     })
 

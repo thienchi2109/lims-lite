@@ -2,7 +2,11 @@
 
 import { fetchSampleDetail } from '@/hooks/use-sample-detail'
 import { recordSampleLabelPrintClient } from '@/lib/api-client'
-import { generateSampleLabelHtml, type SampleLabelPreset } from '@/lib/sample-label-template'
+import {
+    DEFAULT_SAMPLE_LABEL_PRESET,
+    generateSampleLabelHtml,
+    type SampleLabelPreset,
+} from '@/lib/sample-label-template'
 import { toast } from 'sonner'
 
 interface PrintSampleBarcodeLabelOptions {
@@ -13,7 +17,7 @@ export async function printSampleBarcodeLabel(
     sampleId: string,
     options: PrintSampleBarcodeLabelOptions = {},
 ) {
-    const preset = options.preset ?? 'thermal-35x22-2up'
+    const preset = options.preset ?? DEFAULT_SAMPLE_LABEL_PRESET
 
     try {
         const sample = await fetchSampleDetail(sampleId)
