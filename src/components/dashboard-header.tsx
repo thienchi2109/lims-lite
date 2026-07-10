@@ -30,23 +30,14 @@ export function DashboardHeader({
             "sticky top-0 z-50 w-full bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/60 shadow-sm transition-all duration-200 supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-950/60",
             className
         )}>
-            {/* Desktop Layout (Two Rows) */}
-            <div className="hidden xl:flex flex-col">
-                {/* Top Row: Search Only */}
-                {canUseGlobalSearch && (
-                    <div className="border-b border-slate-200/60 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-900/50">
-                        <div className="flex items-center justify-center px-8 py-2 h-[52px] max-w-[1920px] mx-auto">
-                            <div className="flex-1 max-w-3xl">
-                                <GlobalSearch variant="full" className="w-full shadow-sm" skipShortcut />
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Bottom Row: Branding, Nav, User */}
-                <div className="px-8 py-2 h-[60px] max-w-[1920px] mx-auto w-full flex items-center justify-between">
+            {/* Desktop Layout */}
+            <div className="hidden xl:block">
+                <div
+                    data-testid="dashboard-header-desktop-row"
+                    className="px-8 py-2 h-[64px] max-w-[1920px] mx-auto w-full flex items-center gap-5"
+                >
                     {/* Left: Logo & Title */}
-                    <div className="flex items-center gap-4">
+                    <div className="flex shrink-0 items-center gap-4">
                         <div className="relative h-[38px] w-[38px] shrink-0">
                             <Image
                                 src="/cdc-logo-400x400.png"
@@ -66,8 +57,17 @@ export function DashboardHeader({
                         </div>
                     </div>
 
+                    {canUseGlobalSearch && (
+                        <div
+                            data-testid="dashboard-header-desktop-search"
+                            className="min-w-0 flex-1 max-w-sm 2xl:max-w-md"
+                        >
+                            <GlobalSearch variant="full" className="w-full shadow-sm" skipShortcut />
+                        </div>
+                    )}
+
                     {/* Right: Nav & User */}
-                    <div className="flex items-center gap-6">
+                    <div className="ml-auto flex min-w-0 items-center gap-4 2xl:gap-6">
                         <DashboardNav user={user} className="flex" />
                         {user && (
                             <>

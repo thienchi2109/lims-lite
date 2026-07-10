@@ -6,7 +6,9 @@ vi.mock('next/image', () => ({
 }))
 
 vi.mock('@/components/global-search', () => ({
-    GlobalSearch: () => <div data-testid="global-search" />,
+    GlobalSearch: ({ variant, className }: { variant?: string; className?: string }) => (
+        <div data-testid={`global-search-${variant ?? 'auto'}`} className={className} />
+    ),
 }))
 
 vi.mock('@/components/dashboard-nav', () => ({
@@ -33,8 +35,31 @@ describe('DashboardHeader doctor restrictions', () => {
             />,
         )
 
-        expect(screen.queryByTestId('global-search')).toBeNull()
+        expect(screen.queryByTestId('global-search-full')).toBeNull()
+        expect(screen.queryByTestId('global-search-compact')).toBeNull()
         expect(screen.getAllByTestId('user-profile-dropdown')).toHaveLength(2)
         expect(screen.getAllByTestId('user-profile-dropdown')[0].textContent).toBe('doctor')
+    })
+
+    it('keeps desktop global search inside the main header row', () => {
+        render(
+            <DashboardHeader
+                subtitle="Quản lý mẫu"
+                user={{
+                    full_name: 'Analyst A',
+                    role: 'analyst',
+                }}
+            />,
+        )
+
+        const desktopRow = screen.getByTestId('dashboard-header-desktop-row')
+        const desktopSearchSlot = screen.getByTestId('dashboard-header-desktop-search')
+        const desktopSearch = screen.getByTestId('global-search-full')
+
+        expect(screen.queryByTestId('dashboard-header-search-row')).toBeNull()
+        expect(desktopRow.contains(desktopSearch)).toBe(true)
+        expect(desktopSearchSlot.contains(desktopSearch)).toBe(true)
+        expect(desktopSearchSlot.className).toContain('min-w-0')
+        expect(desktopSearchSlot.className).toContain('max-w-md')
     })
 })

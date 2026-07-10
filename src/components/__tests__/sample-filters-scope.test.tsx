@@ -76,7 +76,7 @@ describe('SampleFilters scope toolbar', () => {
         vi.clearAllMocks()
     })
 
-    it('shows the visible Hiển thị tất cả control and the hidden-completed hint when active scope is effective', () => {
+    it('shows the visible Hiển thị tất cả control without the hidden-completed hint when active scope is effective', () => {
         mockUseFilterParams.mockReturnValue({
             filters: {
                 search: '',
@@ -103,7 +103,7 @@ describe('SampleFilters scope toolbar', () => {
         render(<SampleFilters specialties={[]} receiverOptions={[]} />)
 
         expect(screen.getByRole('button', { name: 'Hiển thị tất cả' })).toBeDefined()
-        expect(screen.getByText('Mặc định ẩn mẫu hoàn thành')).toBeDefined()
+        expect(screen.queryByText('Mặc định ẩn mẫu hoàn thành')).toBeNull()
         expect(screen.queryByRole('button', { name: 'Xóa tất cả' })).toBeNull()
     })
 
@@ -209,7 +209,7 @@ describe('SampleFilters scope toolbar', () => {
         expect(setScope).toHaveBeenCalledWith('all')
     })
 
-    it('renders a full-width search row above a compact control toolbar and keeps the sort trigger wide enough for full labels', () => {
+    it('keeps sample search, filters, sorting, and page size in one left-aligned toolbar', () => {
         mockUseFilterParams.mockReturnValue({
             filters: {
                 search: '',
@@ -235,16 +235,20 @@ describe('SampleFilters scope toolbar', () => {
 
         render(<SampleFilters specialties={[]} receiverOptions={[]} />)
 
-        const searchRow = screen.getByTestId('sample-filters-search-row')
         const searchShell = screen.getByTestId('sample-filters-search-shell')
         const controlsToolbar = screen.getByTestId('sample-filters-controls-toolbar')
+        const sortGroup = screen.getByTestId('sample-filters-sort-group')
         const sortTrigger = screen.getByTestId('sample-filters-sort-trigger')
 
-        expect(searchRow.className).toContain('w-full')
-        expect(searchShell.className).toContain('w-full')
+        expect(screen.queryByTestId('sample-filters-search-row')).toBeNull()
+        expect(controlsToolbar.contains(searchShell)).toBe(true)
+        expect(controlsToolbar.className).toContain('justify-start')
+        expect(searchShell.className).toContain('min-w-0')
+        expect(searchShell.className).toContain('flex-1')
         expect(searchShell.className).not.toContain('max-w-sm')
         expect(controlsToolbar.className).toContain('w-full')
         expect(controlsToolbar.className).toContain('flex-wrap')
+        expect(sortGroup.className).not.toContain('ml-auto')
         expect(sortTrigger.className).toContain('min-w-')
         expect(sortTrigger.className).not.toContain('w-[140px]')
     })

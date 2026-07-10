@@ -67,11 +67,14 @@ export function SampleFilters({
     }
 
     return (
-        <div className="flex w-full flex-col gap-3">
-            <div data-testid="sample-filters-search-row" className="w-full">
+        <div className="flex w-full flex-col gap-2">
+            <div
+                data-testid="sample-filters-controls-toolbar"
+                className="flex w-full flex-wrap items-center justify-start gap-2 rounded-2xl border border-slate-200 bg-slate-50/85 p-2 shadow-sm shadow-slate-200/60"
+            >
                 <div
                     data-testid="sample-filters-search-shell"
-                    className="relative flex w-full items-center overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/70 ring-1 ring-slate-950/5 transition-all duration-200 focus-within:border-sky-300 focus-within:shadow-sky-100/80 focus-within:ring-sky-100"
+                    className="relative flex h-10 min-w-0 flex-1 basis-full items-center overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm shadow-slate-200/70 ring-1 ring-slate-950/5 transition-all duration-200 focus-within:border-sky-300 focus-within:shadow-sky-100/80 focus-within:ring-sky-100 sm:basis-72 md:max-w-md"
                 >
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70 pointer-events-none" />
                     <Input
@@ -81,7 +84,7 @@ export function SampleFilters({
                         value={filters.search}
                         onChange={(e) => handlers.setSearch(e.target.value)}
                         disabled={isRefreshing}
-                        className="h-12 w-full border-0 bg-transparent pl-11 pr-14 text-sm font-medium text-slate-700 placeholder:text-slate-400 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                        className="h-10 w-full border-0 bg-transparent pl-11 pr-12 text-sm font-medium text-slate-700 placeholder:text-slate-400 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                     <Button
                         type="button"
@@ -95,13 +98,8 @@ export function SampleFilters({
                         <QrCode className="h-4 w-4" />
                     </Button>
                 </div>
-            </div>
 
-            <div
-                data-testid="sample-filters-controls-toolbar"
-                className="flex w-full flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/85 p-2 shadow-sm shadow-slate-200/60"
-            >
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
                     {completedOnly ? (
                         <div className="rounded-xl border border-emerald-200 bg-emerald-50/90 px-4 py-2.5 text-sm font-medium text-emerald-700 shadow-sm shadow-emerald-100/70">
                             Chỉ mẫu đã hoàn thành
@@ -143,11 +141,9 @@ export function SampleFilters({
                     )}
                 </div>
 
-                <div className="hidden h-8 w-px bg-slate-200 md:block" />
-
                 {isRefreshing && <PendingStatePill label="Đang cập nhật danh sách..." />}
 
-                <div className="ml-auto flex flex-wrap items-center gap-2">
+                <div data-testid="sample-filters-sort-group" className="flex shrink-0 flex-wrap items-center gap-2">
                     <Select value={sort.currentSortValue} onValueChange={sort.setSortValue} disabled={isRefreshing}>
                         <SelectTrigger
                             data-testid="sample-filters-sort-trigger"
@@ -189,7 +185,6 @@ export function SampleFilters({
                 <ActiveFilterBadges
                     specialties={specialties}
                     selectedSpecialtyIds={filters.selectedSpecialtyIds}
-                    scope={filters.scope}
                     status={filters.status}
                     rejectedOnly={filters.rejectedOnly}
                     receiverId={filters.receiverId}
