@@ -136,6 +136,14 @@ describe('manager email OTP middleware contract', () => {
         expect(new URL(location ?? '').pathname).toBe('/otp')
     })
 
+    it('allows password-only manager sessions to view the canonical OTP route', async () => {
+        mockPasswordOnlyManagerSession()
+
+        const response = await middleware(createRequest('/otp'))
+
+        expect(response.headers.get('location')).toBeNull()
+    })
+
     it('clears stale manager step-up cookies when redirecting back to OTP verification', async () => {
         mockPasswordOnlyManagerSession()
 
@@ -175,6 +183,17 @@ describe('manager email OTP middleware contract', () => {
 
         expect(location).not.toBeNull()
         expect(new URL(location ?? '').pathname).toBe('/otp')
+    })
+
+    it('allows password-only confidential analyst sessions to view the canonical OTP route', async () => {
+        process.env.MANAGER_EMAIL_OTP_ENABLED = 'FALSE'
+        process.env.MANAGER_HIV_EMAIL_OTP_ENABLED = 'FALSE'
+        process.env.ANALYST_HIV_EMAIL_OTP_ENABLED = 'TRUE'
+        mockPasswordOnlyAnalystSession(true)
+
+        const response = await middleware(createRequest('/otp'))
+
+        expect(response.headers.get('location')).toBeNull()
     })
 
     it('allows standard analysts without OTP even when analyst HIV OTP is enabled', async () => {
