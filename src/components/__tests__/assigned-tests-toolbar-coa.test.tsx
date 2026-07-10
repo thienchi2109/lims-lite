@@ -115,7 +115,7 @@ describe('AssignedTestsToolbar CoA desktop actions', () => {
         expect(onPrintCoABody).toHaveBeenCalledTimes(1)
     })
 
-    it('shows a desktop barcode label print action beside the requisition print action', () => {
+    it('does not show a desktop barcode label print action', () => {
         const onPrintBarcodeLabel = vi.fn()
 
         render(
@@ -139,9 +139,8 @@ describe('AssignedTestsToolbar CoA desktop actions', () => {
             />,
         )
 
-        fireEvent.click(screen.getAllByRole('button', { name: 'In nhãn barcode' })[0])
-
-        expect(onPrintBarcodeLabel).toHaveBeenCalledTimes(1)
+        expect(screen.queryByRole('button', { name: 'In nhãn barcode' })).toBeNull()
+        expect(onPrintBarcodeLabel).not.toHaveBeenCalled()
     })
 
     it('points analysts to profile signature upload when submit is blocked by missing signature', () => {

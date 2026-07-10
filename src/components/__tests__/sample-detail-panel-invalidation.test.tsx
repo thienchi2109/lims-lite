@@ -85,7 +85,7 @@ describe('SampleDetailPanel invalidation contract', () => {
         fireEvent.click(screen.getByRole('button', { name: 'In nhãn' }))
 
         expect(mockPrintSampleBarcodeLabel).toHaveBeenCalledWith('sample-1', {
-            preset: 'thermal-35x22-2up',
+            preset: 'thermal-35x23-sheet-2up',
         })
     })
 })
