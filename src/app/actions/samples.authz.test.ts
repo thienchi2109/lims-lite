@@ -108,14 +108,14 @@ describe('sample mutation authorization', () => {
         const result = await recordSampleLabelPrint({
             sampleId: '77777777-7777-4777-8777-777777777777',
             copies: 1,
-            preset: 'thermal-35x22-2up',
+            preset: 'thermal-35x23-sheet-2up',
         })
 
         expect(mockRequireAuth).toHaveBeenCalled()
         expect(mockRpc).toHaveBeenCalledWith('record_sample_label_print', {
             p_sample_id: '77777777-7777-4777-8777-777777777777',
             p_copies: 1,
-            p_label_preset: 'thermal-35x22-2up',
+            p_label_preset: 'thermal-35x23-sheet-2up',
         })
         expect(result).toEqual({ data: { id: 'sample-1' } })
     })

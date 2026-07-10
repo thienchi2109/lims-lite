@@ -16,6 +16,7 @@ vi.mock('@/lib/api-client', () => ({
 }))
 
 vi.mock('@/lib/sample-label-template', () => ({
+    DEFAULT_SAMPLE_LABEL_PRESET: 'thermal-35x23-sheet-2up',
     generateSampleLabelHtml: mockGenerateSampleLabelHtml,
 }))
 
@@ -89,5 +90,18 @@ describe('printSampleBarcodeLabel', () => {
         expect(window.open).not.toHaveBeenCalled()
         expect(printWindow.print).not.toHaveBeenCalled()
         expect(mockToastError).toHaveBeenCalledWith('Không có quyền in nhãn')
+    })
+
+    it('uses the printer stock preset by default', async () => {
+        await printSampleBarcodeLabel('sample-uuid')
+
+        expect(mockRecordSampleLabelPrintClient).toHaveBeenCalledWith({
+            sampleId: 'sample-uuid',
+            copies: 1,
+            preset: 'thermal-35x23-sheet-2up',
+        })
+        expect(mockGenerateSampleLabelHtml).toHaveBeenCalledWith(sample, {
+            preset: 'thermal-35x23-sheet-2up',
+        })
     })
 })

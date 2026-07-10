@@ -25,10 +25,17 @@ import {
     SAMPLE_NOT_FOUND_ERROR,
 } from '@/lib/data/confidential-samples'
 
+const SAMPLE_LABEL_PRESETS = [
+    'thermal-35x23-sheet-2up',
+    'thermal-35x22-2up',
+    'small-tube',
+    'container',
+] as const
+
 const RecordSampleLabelPrintSchema = z.object({
     sampleId: z.string().uuid(),
     copies: z.number().int().min(1).max(20).default(1),
-    preset: z.enum(['thermal-35x22-2up', 'small-tube', 'container']).default('thermal-35x22-2up'),
+    preset: z.enum(SAMPLE_LABEL_PRESETS).default('thermal-35x23-sheet-2up'),
 })
 
 export type RecordSampleLabelPrintInput = z.input<typeof RecordSampleLabelPrintSchema>
