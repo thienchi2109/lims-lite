@@ -2,11 +2,11 @@
 
 import {
     Dialog,
-    DialogContent,
     DialogHeader,
     DialogTitle,
     DialogDescription
 } from '@/components/ui/dialog'
+import { FormDialogContent } from '@/components/ui/form-dialog-content'
 import { UserForm } from './user-form'
 import { User } from '@/types'
 
@@ -29,7 +29,7 @@ export function UserDialog({
 }: UserDialogProps) {
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[500px]">
+            <FormDialogContent>
                 <DialogHeader>
                     <DialogTitle>{mode === 'create' ? 'Thêm người dùng' : 'Sửa người dùng'}</DialogTitle>
                     <DialogDescription>
@@ -43,7 +43,7 @@ export function UserDialog({
                     onSuccess={() => onOpenChange(false)}
                     onCancel={() => onOpenChange(false)}
                 />
-            </DialogContent>
+            </FormDialogContent>
         </Dialog>
     )
 }

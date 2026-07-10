@@ -122,6 +122,11 @@ describe('AssayDefinitionDialog detail mode', () => {
       />,
     )
 
+    const dialog = screen.getByRole('dialog')
+    expect(dialog.className).toContain('sm:max-w-[700px]')
+    expect(dialog.className).toContain('max-h-[90vh]')
+    expect(dialog.className).toContain('overflow-y-auto')
+
     expect(screen.getByText('Chi tiết chỉ tiêu xét nghiệm')).toBeDefined()
     expect(screen.getByText('HIV Ag/Ab')).toBeDefined()
     expect(screen.getByText('Miễn dịch')).toBeDefined()

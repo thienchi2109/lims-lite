@@ -3,12 +3,12 @@
 import { useEffect, useState } from 'react'
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { FormDialogContent } from '@/components/ui/form-dialog-content'
 import { Button } from '@/components/ui/button'
 import { Loader2 } from 'lucide-react'
 import { LabSpecialty } from '@/types'
@@ -98,7 +98,7 @@ export function AssayDefinitionDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+      <FormDialogContent>
         <DialogHeader>
           <DialogTitle>
             {mode === 'create'
@@ -160,7 +160,7 @@ export function AssayDefinitionDialog({
             </Button>
           )}
         </DialogFooter>
-      </DialogContent>
+      </FormDialogContent>
     </Dialog>
   )
 }
