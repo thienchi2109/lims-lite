@@ -7,7 +7,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createHash } from 'crypto'
-import type { SampleData, UserRole, LatestSubmission, Gender } from '@/types'
+import type { SampleData, LatestSubmission, Gender } from '@/types'
 import { getActiveSignature, downloadSignature } from '@/app/actions/signatures'
 
 // ============================================================================
@@ -24,7 +24,7 @@ export interface TestResult {
     lab_specialty_name: string | null
 }
 
-export type GenerateCoAFailureCode = 'ALREADY_READY'
+export type GenerateCoAFailureCode = 'ALREADY_READY' | 'IN_PROGRESS'
 
 export type GenerateCoAResult =
     | { success: true; coaId: string; filePath: string }
@@ -53,7 +53,10 @@ interface SubmissionQueryResult {
     submission_number: number
     signature_meaning: string
     user: { full_name: string } | null
-    signature: { signature_hash: string } | null
+    signature: {
+        signature_hash: string
+        signature_path: string
+    } | null
 }
 
 /**
@@ -119,17 +122,16 @@ interface TestResultQueryRow {
 /**
  * Validate sample is eligible for CoA generation based on user role
  *
- * Role-specific validation rules:
- * - Analyst: sample.status must be 'completed' AND all results must be 'approved'
- * - Manager: sample.status can be 'review' or 'completed', needs at least one 'approved' result
+ * Final CoA validation rules:
+ * - Sample status must be completed.
+ * - Every result must be approved.
  *
  * @param sampleId - The sample ID to validate
  * @param userRole - The role of the user attempting generation
  * @returns ValidationResult with valid flag and Vietnamese error message if invalid
  */
 export async function validateSampleForCoAGeneration(
-    sampleId: string,
-    userRole: UserRole
+    sampleId: string
 ): Promise<ValidationResult> {
     const supabase = await createClient()
 
@@ -145,22 +147,11 @@ export async function validateSampleForCoAGeneration(
         return { valid: false, error: 'Không tìm thấy thông tin mẫu' }
     }
 
-    // 2. Role-specific status validation
-    if (userRole === 'analyst') {
-        // Analysts can only generate CoA for completed samples
-        if (sample.status !== 'completed') {
-            return {
-                valid: false,
-                error: 'Chỉ có thể tạo CoA cho mẫu đã hoàn thành (completed)'
-            }
-        }
-    } else {
-        // Managers can generate for review or completed samples
-        if (sample.status !== 'review' && sample.status !== 'completed') {
-            return {
-                valid: false,
-                error: 'Chỉ có thể tạo CoA cho mẫu ở trạng thái xem xét hoặc hoàn thành'
-            }
+    // 2. Final reports require a completed approval workflow for every role.
+    if (sample.status !== 'completed') {
+        return {
+            valid: false,
+            error: 'Chỉ có thể tạo CoA cuối cùng cho mẫu đã hoàn thành'
         }
     }
 
@@ -178,25 +169,14 @@ export async function validateSampleForCoAGeneration(
         return { valid: false, error: 'Không có kết quả xét nghiệm cho mẫu này' }
     }
 
-    // 4. Role-specific results approval validation
+    // 4. Every final result must be approved.
     const approvedResults = results.filter(r => r.status === 'approved')
     const unapprovedCount = results.length - approvedResults.length
 
-    if (userRole === 'analyst') {
-        // Analysts require ALL results to be approved
-        if (unapprovedCount > 0) {
-            return {
-                valid: false,
-                error: `Không thể tạo CoA: ${unapprovedCount} kết quả chưa được phê duyệt`
-            }
-        }
-    } else {
-        // Managers require at least one approved result
-        if (approvedResults.length === 0) {
-            return {
-                valid: false,
-                error: 'Cần ít nhất một kết quả đã được phê duyệt để tạo CoA'
-            }
+    if (unapprovedCount > 0) {
+        return {
+            valid: false,
+            error: `Không thể tạo CoA: ${unapprovedCount} kết quả chưa được phê duyệt`
         }
     }
 
@@ -226,7 +206,10 @@ export async function fetchLatestSubmission(
             submission_number,
             signature_meaning,
             user:users!sample_submissions_user_id_fkey(full_name),
-            signature:user_signatures!sample_submissions_signature_id_fkey(signature_hash)
+            signature:user_signatures!sample_submissions_signature_id_fkey(
+                signature_hash,
+                signature_path
+            )
         `)
         .eq('sample_id', sampleId)
         .is('superseded_by', null)
@@ -246,6 +229,7 @@ export async function fetchLatestSubmission(
         performerName: result.user?.full_name ?? null,
         signatureId: result.signature_id,
         signatureHash: result.signature?.signature_hash ?? '',
+        signaturePath: result.signature?.signature_path ?? '',
         submittedAt: result.submitted_at,
         submissionNumber: result.submission_number,
         signatureMeaning: result.signature_meaning,
@@ -298,6 +282,7 @@ export async function fetchSampleWithApprover(sampleId: string): Promise<SampleD
         .eq('status', 'approved')
         .not('approved_by', 'is', null)
         .order('approved_at', { ascending: false })
+        .order('id', { ascending: false })
         .limit(1)
         .single()
 
@@ -464,6 +449,30 @@ export async function fetchSignatureDataUri(
         dataUri: downloadResult.dataUri,
         signatureId: signature.id,
         signatureHash: signature.signature_hash,
+    }
+}
+
+export async function fetchStoredSignatureDataUri(
+    signatureId: string,
+    signaturePath: string,
+    signatureHash: string,
+): Promise<SignatureDataResult | null> {
+    if (!signaturePath || !signatureHash) {
+        return null
+    }
+
+    const downloadResult = await downloadSignature(
+        signaturePath,
+        { useServiceRole: true },
+    )
+    if (!downloadResult.success || !downloadResult.dataUri) {
+        return null
+    }
+
+    return {
+        dataUri: downloadResult.dataUri,
+        signatureId,
+        signatureHash,
     }
 }
 

@@ -1,155 +1,111 @@
 /**
- * Test: CoA Reports RLS Policy - Manager Update Permissions
+ * CoA report authorization regression tests.
  *
- * Validates that coa_reports_update_managers RLS policy allows
- * managers to update CoA records in ANY status, not just 'failed'
- *
- * Bug Fix: Migration 091 changed USING clause from:
- * "(get_user_role() = 'manager') AND (status = 'failed')"
- * to:
- * "(get_user_role() = 'manager')"
- *
- * This prevents PGRST116 errors when updating non-failed CoA records
+ * Direct authenticated updates are disabled. Generation state transitions
+ * must use the claim-bound SECURITY DEFINER RPCs introduced in Phase 4.
  */
 
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { execSync } from 'child_process'
+import { execFileSync } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 
-// Helper to run SQL query
 function runSQL(query) {
-    const result = execSync(
-        `docker exec lims-postgres psql -U postgres -d postgres -t -A -c "${query.replace(/"/g, '\\"')}"`,
-        { encoding: 'utf-8' }
-    )
-    return result.trim()
+    return execFileSync(
+        'docker',
+        [
+            'exec',
+            'lims-postgres',
+            'psql',
+            '-U',
+            'postgres',
+            '-d',
+            'postgres',
+            '-t',
+            '-A',
+            '-c',
+            query,
+        ],
+        { encoding: 'utf8' },
+    ).trim()
 }
 
 async function readWorkspaceFile(relativePath) {
     return readFile(new URL(`../${relativePath}`, import.meta.url), 'utf8')
 }
 
-test('migration 091 file exists and contains correct policy', async () => {
-    const content = await readWorkspaceFile('supabase/migrations/091_fix_coa_reports_update_policy.sql')
+test('migration 172 revokes direct authenticated CoA updates', async () => {
+    const content = await readWorkspaceFile(
+        'supabase/migrations/172_harden_coa_generation_transitions.sql',
+    )
 
-    // Should drop old policy
-    assert.match(content, /DROP POLICY IF EXISTS "coa_reports_update_managers"/)
-
-    // Should create new policy
-    assert.match(content, /CREATE POLICY "coa_reports_update_managers"/)
-
-    // USING clause should only check role, not status
-    assert.match(content, /USING \(get_user_role\(\) = 'manager'::user_role\)/)
-
-    // Should NOT restrict to status='failed' in USING clause
-    const usingMatch = content.match(/USING \((.*?)\)/s)
-    if (usingMatch) {
-        const usingClause = usingMatch[1]
-        assert.doesNotMatch(usingClause, /status\s*=\s*'failed'/)
-    }
-
-    // WITH CHECK should validate status transitions
-    assert.match(content, /WITH CHECK/)
-    assert.match(content, /status = ANY/)
-    assert.match(content, /pending/)
-    assert.match(content, /ready/)
-    assert.match(content, /failed/)
+    assert.match(
+        content,
+        /REVOKE UPDATE ON TABLE public\.coa_reports FROM authenticated/,
+    )
 })
 
-test('coa_reports_update_managers policy exists in database', () => {
-    const query = `
-        SELECT COUNT(*) as count
-        FROM pg_policy
-        WHERE polrelid = 'public.coa_reports'::regclass
-        AND polname = 'coa_reports_update_managers';
-    `
-    const count = runSQL(query)
-    assert.equal(count, '1', 'Policy should exist in database')
-})
-
-test('USING clause allows managers to update any status', () => {
-    const query = `
-        SELECT pg_get_expr(polqual, polrelid) as using_clause
-        FROM pg_policy
-        WHERE polrelid = 'public.coa_reports'::regclass
-        AND polname = 'coa_reports_update_managers';
-    `
-    const usingClause = runSQL(query)
-
-    // Should only check role
-    assert.match(usingClause, /get_user_role\(\) = 'manager'::user_role/)
-
-    // Should NOT restrict by status
-    assert.doesNotMatch(usingClause, /status\s*=\s*'failed'/)
-    assert.doesNotMatch(usingClause, /AND\s+\(status/)
-})
-
-test('WITH CHECK clause validates status transitions', () => {
-    const query = `
-        SELECT pg_get_expr(polwithcheck, polrelid) as check_clause
-        FROM pg_policy
-        WHERE polrelid = 'public.coa_reports'::regclass
-        AND polname = 'coa_reports_update_managers';
-    `
-    const checkClause = runSQL(query)
-
-    // Should require manager role
-    assert.match(checkClause, /get_user_role\(\) = 'manager'::user_role/)
-
-    // Should validate status is one of: pending, ready, failed
-    assert.match(checkClause, /status = ANY/)
-    assert.match(checkClause, /pending/)
-    assert.match(checkClause, /ready/)
-    assert.match(checkClause, /failed/)
-})
-
-test('policy allows updating pending CoA to ready', () => {
-    // The fix removes the status='failed' restriction from USING clause
-    // This allows managers to update records in any status
-    const query = `
-        SELECT pg_get_expr(polqual, polrelid) as using_clause
-        FROM pg_policy
-        WHERE polrelid = 'public.coa_reports'::regclass
-        AND polname = 'coa_reports_update_managers';
-    `
-    const usingClause = runSQL(query)
-
-    // The USING clause determines which rows can be selected for UPDATE
-    // It should NOT contain status restrictions
-    const statusRestricted = usingClause.includes("status = 'failed'") ||
-                            usingClause.includes("AND (status")
-
-    assert.equal(statusRestricted, false, 'USING clause should not restrict by status')
-})
-
-test('policy still requires manager role for security', () => {
-    const query = `
+test('authenticated users can read but cannot update CoA reports', () => {
+    const privileges = runSQL(`
         SELECT
-            pg_get_expr(polqual, polrelid) as using_clause,
-            pg_get_expr(polwithcheck, polrelid) as check_clause
-        FROM pg_policy
-        WHERE polrelid = 'public.coa_reports'::regclass
-        AND polname = 'coa_reports_update_managers';
-    `
-    const result = runSQL(query)
-    const [usingClause, checkClause] = result.split('|')
+            has_table_privilege(
+                'authenticated',
+                'public.coa_reports',
+                'SELECT'
+            ),
+            has_table_privilege(
+                'authenticated',
+                'public.coa_reports',
+                'UPDATE'
+            );
+    `)
 
-    // Both clauses should require manager role
-    assert.match(usingClause, /get_user_role\(\) = 'manager'::user_role/)
-    assert.match(checkClause, /get_user_role\(\) = 'manager'::user_role/)
+    assert.equal(privileges, 't|f')
 })
 
-test('policy comment documents the change', () => {
-    const query = `
-        SELECT obj_description(oid) as comment
-        FROM pg_policy
-        WHERE polrelid = 'public.coa_reports'::regclass
-        AND polname = 'coa_reports_update_managers';
-    `
-    const comment = runSQL(query)
+test('claim-bound CoA transition RPCs are SECURITY DEFINER', () => {
+    const securityDefinerCount = runSQL(`
+        SELECT COUNT(*)
+        FROM pg_proc
+        WHERE oid IN (
+            'public.claim_coa_report_regeneration(uuid,integer)'::regprocedure,
+            'public.complete_coa_report_generation(uuid,uuid,text,text,uuid)'::regprocedure,
+            'public.fail_coa_report_generation(uuid,uuid,text,boolean)'::regprocedure
+        )
+          AND prosecdef
+          AND EXISTS (
+              SELECT 1
+              FROM unnest(proconfig) AS setting
+              WHERE setting = 'search_path=public, extensions'
+          );
+    `)
 
-    // Should have a comment explaining the policy
-    assert.notEqual(comment, '', 'Policy should have a comment')
-    assert.match(comment, /manager/i)
+    assert.equal(securityDefinerCount, '3')
+})
+
+test('only authenticated users can execute CoA transition RPCs', () => {
+    const privileges = runSQL(`
+        SELECT
+            bool_and(has_function_privilege('authenticated', oid, 'EXECUTE')),
+            bool_and(NOT has_function_privilege('anon', oid, 'EXECUTE')),
+            bool_and(NOT has_function_privilege('service_role', oid, 'EXECUTE'))
+        FROM pg_proc
+        WHERE oid IN (
+            'public.claim_coa_report_regeneration(uuid,integer)'::regprocedure,
+            'public.complete_coa_report_generation(uuid,uuid,text,text,uuid)'::regprocedure,
+            'public.fail_coa_report_generation(uuid,uuid,text,boolean)'::regprocedure
+        );
+    `)
+
+    assert.equal(privileges, 't|t|t')
+})
+
+test('registered security tests enforce the CoA provenance contract', () => {
+    const result = runSQL(`
+        SELECT passed
+        FROM public.run_security_tests()
+        WHERE test_name = 'CoA Report Provenance Guard';
+    `)
+
+    assert.equal(result, 't')
 })

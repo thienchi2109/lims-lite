@@ -9,7 +9,6 @@
  * - Warning status handling
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // ============================================================================
@@ -20,6 +19,9 @@ const mockRpc = vi.fn()
 const mockFrom = vi.fn()
 const mockCreateAdminClient = vi.hoisted(() => vi.fn())
 const mockGetUser = vi.fn()
+const mockGenerateCoA = vi.hoisted(() => vi.fn())
+const mockQueueCoAReportForGeneration = vi.hoisted(() => vi.fn())
+const mockFailCoAReportGeneration = vi.hoisted(() => vi.fn())
 
 // Create chainable mock for different query scenarios
 function createChainableMock() {
@@ -58,6 +60,17 @@ vi.mock('@/lib/supabase/server', () => ({
     createAdminClient: mockCreateAdminClient,
 }))
 
+vi.mock('@/app/actions/coa', () => ({
+    generateCoA: (...args: unknown[]) => mockGenerateCoA(...args),
+}))
+
+vi.mock('@/lib/coa/report-provenance', () => ({
+    queueCoAReportForGeneration: (...args: unknown[]) =>
+        mockQueueCoAReportForGeneration(...args),
+    failCoAReportGeneration: (...args: unknown[]) =>
+        mockFailCoAReportGeneration(...args),
+}))
+
 // Mock next/cache
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
@@ -77,7 +90,6 @@ const TEST_RESULT_ID_1 = 'a1111111-1111-4111-8111-111111111111'
 const TEST_RESULT_ID_2 = 'b2222222-2222-4222-8222-222222222222'
 const TEST_SAMPLE_ID = 'c3333333-3333-4333-8333-333333333333'
 const TEST_USER_ID = 'd4444444-4444-4444-8444-444444444444'
-const TEST_SESSION_ID = 'e5555555-5555-4555-8555-555555555555'
 
 // ============================================================================
 // HELPER SETUP
@@ -180,15 +192,30 @@ function setupConfidentialSampleLookup(hasConfidential: boolean) {
             vi.clearAllMocks()
             mockRpc.mockReset()
             fromChain = createChainableMock()
-        adminFromChain = {
-            select: vi.fn(() => adminFromChain),
-            in: vi.fn(() => adminFromChain),
-            eq: vi.fn(() => Promise.resolve({ data: [], error: null })),
-        }
-        mockCreateAdminClient.mockReturnValue({
-            from: () => adminFromChain,
+            mockQueueCoAReportForGeneration.mockResolvedValue({
+                reportId: 'f6666666-6666-4666-8666-666666666666',
+                status: 'pending',
+                filePath: null,
+                sourceSubmissionId: 'a7777777-7777-4777-8777-777777777777',
+                claimed: true,
+                generationClaimId: 'b8888888-8888-4888-8888-888888888888',
+                previousStatus: null,
+            })
+            mockFailCoAReportGeneration.mockResolvedValue(true)
+            mockGenerateCoA.mockResolvedValue({
+                success: true,
+                coaId: 'f6666666-6666-4666-8666-666666666666',
+                filePath: 'coa.html',
+            })
+            adminFromChain = {
+                select: vi.fn(() => adminFromChain),
+                in: vi.fn(() => adminFromChain),
+                eq: vi.fn(() => Promise.resolve({ data: [], error: null })),
+            }
+            mockCreateAdminClient.mockReturnValue({
+                from: () => adminFromChain,
+            })
         })
-    })
 
     describe('Blocked QC Sessions', () => {
         it('blocks approval when QC session status is blocked', async () => {
@@ -706,6 +733,20 @@ function setupConfidentialSampleLookup(hasConfidential: boolean) {
                     rejected_by: null,
                 })
             )
+            expect(mockQueueCoAReportForGeneration).toHaveBeenCalledWith(
+                TEST_SAMPLE_ID,
+            )
+            expect(mockGenerateCoA).toHaveBeenCalledWith(
+                TEST_SAMPLE_ID,
+                undefined,
+                expect.objectContaining({
+                    reportId: 'f6666666-6666-4666-8666-666666666666',
+                    generationClaimId: 'b8888888-8888-4888-8888-888888888888',
+                }),
+            )
+            expect(
+                mockQueueCoAReportForGeneration.mock.invocationCallOrder[0],
+            ).toBeLessThan(mockGenerateCoA.mock.invocationCallOrder[0])
         })
 
         it('keeps sample in review without clearing rejection fields when not all results are approved', async () => {

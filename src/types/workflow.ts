@@ -167,6 +167,7 @@ export const LatestSubmissionSchema = z.object({
     performerName: z.string().nullable(),
     signatureId: z.string().uuid(),
     signatureHash: z.string(),
+    signaturePath: z.string(),
     submittedAt: z.string(),
     submissionNumber: z.number().int().positive(),
     signatureMeaning: z.string(),

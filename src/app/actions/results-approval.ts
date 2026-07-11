@@ -10,6 +10,10 @@ import {
 } from '@/types'
 import { generateCoA } from './coa'
 import { firstRelation, type RelationValue } from '@/lib/supabase/relations'
+import {
+    failCoAReportGeneration,
+    queueCoAReportForGeneration,
+} from '@/lib/coa/report-provenance'
 
 type ResultAssayRelation = {
     is_confidential: boolean | null
@@ -242,24 +246,29 @@ export async function approveResults(data: ApproveResults) {
             // Failures are recorded in coa_reports so Manager can see and retry
             if (newStatus === 'completed') {
                 const completedSampleId = sampleIds[0]
-                await markCoAGenerationPending(completedSampleId)
-                void generateCoA(completedSampleId)
-                    .then(async (result) => {
-                        if (!result.success) {
-                            if (!shouldRecordAutoCoAFailure(result)) {
-                                return
+                const report = await queueCoAReportForGeneration(completedSampleId)
+                if (report?.claimed && report.generationClaimId) {
+                    void generateCoA(completedSampleId, undefined, report)
+                        .then((result) => {
+                            if (!result.success && result.shouldRecordFailure !== false) {
+                                console.error(
+                                    'Auto CoA generation failed for sample',
+                                    completedSampleId,
+                                    result.error,
+                                )
                             }
-                            console.error('Auto CoA generation failed for sample', completedSampleId, result.error)
-                            await recordCoAFailure(completedSampleId, result.error)
-                        }
-                    })
-                    .catch(async (err) => {
-                        console.error('Auto CoA generation crashed for sample', completedSampleId, err)
-                        await recordCoAFailure(
-                            completedSampleId,
-                            err instanceof Error ? err.message : 'Lỗi không xác định khi tạo CoA'
-                        )
-                    })
+                        })
+                        .catch(async (err) => {
+                            console.error('Auto CoA generation crashed for sample', completedSampleId, err)
+                            await failCoAReportGeneration(
+                                report.reportId,
+                                report.generationClaimId!,
+                                err instanceof Error ? err.message : 'Lỗi không xác định khi tạo CoA'
+                                ,
+                                false,
+                            )
+                        })
+                }
             }
         }
 
@@ -274,119 +283,6 @@ export async function approveResults(data: ApproveResults) {
             return { error: 'Invalid input data' }
         }
         return { error: error instanceof Error ? error.message : 'Failed to approve results' }
-    }
-}
-
-/**
- * Records a CoA generation failure in coa_reports so the UI can surface it.
- * Creates a new 'failed' record or updates an existing one.
- */
-async function recordCoAFailure(sampleId: string, errorMessage: string): Promise<void> {
-    try {
-        const supabase = await createClient()
-
-        const { data: existing, error: fetchError } = await supabase
-            .from('coa_reports')
-            .select('id, status')
-            .eq('sample_id', sampleId)
-            .is('deleted_at', null)
-            .maybeSingle()
-        if (fetchError) {
-            throw fetchError
-        }
-
-        if (existing) {
-            if (existing.status === 'ready') {
-                return
-            }
-            const { error: updateError } = await supabase
-                .from('coa_reports')
-                .update({ status: 'failed' as const, error_message: errorMessage })
-                .eq('id', existing.id)
-            if (updateError) {
-                throw updateError
-            }
-        } else {
-            const { error: insertError } = await supabase
-                .from('coa_reports')
-                .insert({
-                    sample_id: sampleId,
-                    file_path: '',
-                    file_hash: '',
-                    version: 1,
-                    status: 'failed' as const,
-                    error_message: errorMessage,
-                })
-            if (insertError) {
-                throw insertError
-            }
-        }
-    } catch (dbErr) {
-        console.error('Failed to record CoA failure status for sample', sampleId, dbErr)
-    }
-}
-
-/**
- * Avoid downgrading a valid ready CoA for business outcomes
- * (e.g. "already ready"). Only technical generation failures should be
- * persisted as failed.
- */
-function shouldRecordAutoCoAFailure(
-    result: Exclude<Awaited<ReturnType<typeof generateCoA>>, { success: true }>
-): boolean {
-    return result.shouldRecordFailure !== false && result.code !== 'ALREADY_READY'
-}
-
-/**
- * Persist a pending marker before background CoA generation starts.
- * This keeps manager UI observable even if background execution is interrupted.
- */
-async function markCoAGenerationPending(sampleId: string): Promise<void> {
-    try {
-        const supabase = await createClient()
-        const { data: existing, error: fetchError } = await supabase
-            .from('coa_reports')
-            .select('id, status')
-            .eq('sample_id', sampleId)
-            .is('deleted_at', null)
-            .maybeSingle()
-        if (fetchError) {
-            throw fetchError
-        }
-
-        if (existing) {
-            if (existing.status === 'ready') {
-                return
-            }
-
-            const { error: updateError } = await supabase
-                .from('coa_reports')
-                .update({
-                    status: 'pending' as const,
-                    error_message: null,
-                })
-                .eq('id', existing.id)
-            if (updateError) {
-                throw updateError
-            }
-            return
-        }
-
-        const { error: insertError } = await supabase
-            .from('coa_reports')
-            .insert({
-                sample_id: sampleId,
-                file_path: '',
-                file_hash: '',
-                version: 1,
-                status: 'pending' as const,
-                error_message: null,
-            })
-        if (insertError) {
-            throw insertError
-        }
-    } catch (dbErr) {
-        console.error('Failed to mark CoA generation pending for sample', sampleId, dbErr)
     }
 }
 

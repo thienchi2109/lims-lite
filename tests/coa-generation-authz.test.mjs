@@ -18,7 +18,7 @@ function sliceFunctionBody(content, startMarker, endMarker) {
     return content.slice(startIndex, endMarker ? endIndex : undefined)
 }
 
-test('generateCoA requires authenticated manager', async () => {
+test('generateCoA requires an authenticated analyst or manager', async () => {
     const content = await readWorkspaceFile('src/app/actions/coa.ts')
 
     const generateCoABody = sliceFunctionBody(
@@ -28,6 +28,8 @@ test('generateCoA requires authenticated manager', async () => {
     )
 
     assert.match(generateCoABody, /supabase\.auth\.getUser\(\)/)
-    assert.match(generateCoABody, /\.role\s*!==\s*['"]manager['"]/)
+    assert.match(
+        generateCoABody,
+        /userRole\s*!==\s*['"]analyst['"]\s*&&\s*userRole\s*!==\s*['"]manager['"]/
+    )
 })
-

@@ -23,6 +23,15 @@ import {
     isConfidentialAssociatedSample,
 } from '@/lib/data/confidential-samples'
 import { getCoAStampDataUri } from '@/lib/coa/stamp'
+import {
+    claimCoAReportForRegeneration,
+    completeCoAReportGeneration,
+    failCoAReportGeneration,
+    fetchSnapshotTestResults,
+    fetchSubmissionById,
+    queueCoAReportForGeneration,
+    type CoAReportSource,
+} from '@/lib/coa/report-provenance'
 
 // Import extracted modules
 import {
@@ -33,11 +42,13 @@ import {
     validateSampleForCoAGeneration,
     fetchLatestSubmission,
     fetchSignatureDataUri,
+    fetchStoredSignatureDataUri,
     type GenerateCoAResult,
 } from '@/lib/coa/helpers'
 import { renderCoATemplate } from '@/lib/coa/template'
 
 const CONCEALED_COA_SAMPLE_ERROR = 'Không tìm thấy thông tin mẫu'
+const COA_GENERATION_IN_PROGRESS_ERROR = 'CoA đang được tạo bởi một tiến trình khác'
 
 async function denyUnauthorizedConfidentialCoA(
     sampleId: string,
@@ -63,6 +74,24 @@ async function denyUnauthorizedConfidentialCoA(
         console.error('Error checking CoA confidential sample association:', error)
         return CONCEALED_COA_SAMPLE_ERROR
     }
+}
+
+async function failClaimedCoAGeneration(
+    report: CoAReportSource,
+    error: string,
+): Promise<GenerateCoAResult> {
+    if (!report.generationClaimId) {
+        return { success: false, error, shouldRecordFailure: false }
+    }
+
+    await failCoAReportGeneration(
+        report.reportId,
+        report.generationClaimId,
+        error,
+        report.previousStatus === 'ready',
+    )
+
+    return { success: false, error, shouldRecordFailure: false }
 }
 
 // ============================================================================
@@ -106,8 +135,11 @@ async function denyUnauthorizedConfidentialCoA(
  */
 export async function generateCoA(
     sampleId: string,
-    manualInputs?: CoAManualInputs
+    manualInputs?: CoAManualInputs,
+    claimedReport?: CoAReportSource,
 ): Promise<GenerateCoAResult> {
+    let activeReport = claimedReport ?? null
+
     try {
         const supabase = await createClient()
 
@@ -159,19 +191,55 @@ export async function generateCoA(
         }
 
         // Role-specific validation for sample status and results
-        const validationResult = await validateSampleForCoAGeneration(sampleId, userRole)
+        const validationResult = await validateSampleForCoAGeneration(sampleId)
         if (!validationResult.valid) {
             return { success: false, error: validationResult.error || 'Lỗi xác thực mẫu' }
+        }
+
+        const version = 1
+        const coaReport =
+            activeReport
+            ?? await queueCoAReportForGeneration(sampleId, version)
+        if (!coaReport) {
+            return {
+                success: false,
+                error: 'Không thể xác định nguồn dữ liệu đã duyệt cho CoA',
+            }
+        }
+        activeReport = coaReport
+
+        if (coaReport.status === 'ready') {
+            return {
+                success: false,
+                code: 'ALREADY_READY',
+                shouldRecordFailure: false,
+                error: 'CoA đã được tạo cho mẫu này. Sử dụng chức năng tạo lại CoA nếu cần cập nhật.'
+            }
+        }
+
+        if (!coaReport.claimed || !coaReport.generationClaimId) {
+            return {
+                success: false,
+                code: 'IN_PROGRESS',
+                shouldRecordFailure: false,
+                error: COA_GENERATION_IN_PROGRESS_ERROR,
+            }
         }
 
         // Step 1: Fetch sample data
         const sample = await fetchSampleWithApprover(sampleId)
         if (!sample) {
-            return { success: false, error: 'Không tìm thấy thông tin mẫu' }
+            return failClaimedCoAGeneration(
+                coaReport,
+                'Không tìm thấy thông tin mẫu',
+            )
         }
 
         if (!sample.approved_by) {
-            return { success: false, error: 'Mẫu chưa được phê duyệt' }
+            return failClaimedCoAGeneration(
+                coaReport,
+                'Mẫu chưa được phê duyệt',
+            )
         }
 
         const approverId = sample.approved_by
@@ -182,10 +250,10 @@ export async function generateCoA(
 
         if (!signatureResult.success) {
             console.error('No active signature found for approver:', signatureResult.error)
-            return {
-                success: false,
-                error: 'Người phê duyệt chưa tải lên chữ ký điện tử. Vui lòng yêu cầu quản lý tải lên chữ ký trước khi tạo CoA.'
-            }
+            return failClaimedCoAGeneration(
+                coaReport,
+                'Người phê duyệt chưa tải lên chữ ký điện tử. Vui lòng yêu cầu quản lý tải lên chữ ký trước khi tạo CoA.',
+            )
         }
 
         const signature = signatureResult.signature
@@ -195,10 +263,10 @@ export async function generateCoA(
 
         if (!downloadResult.success) {
             console.error('Failed to download signature file:', downloadResult.error)
-            return {
-                success: false,
-                error: 'Không thể tải xuống chữ ký điện tử. File chữ ký có thể bị hỏng. Vui lòng yêu cầu quản lý tải lên lại chữ ký.'
-            }
+            return failClaimedCoAGeneration(
+                coaReport,
+                'Không thể tải xuống chữ ký điện tử. File chữ ký có thể bị hỏng. Vui lòng yêu cầu quản lý tải lên lại chữ ký.',
+            )
         }
 
         // Signature downloaded successfully - use it
@@ -214,44 +282,67 @@ export async function generateCoA(
             .single()
 
         if (approverError || !approverData) {
-            return { success: false, error: 'Không tìm thấy thông tin người phê duyệt' }
+            return failClaimedCoAGeneration(
+                coaReport,
+                'Không tìm thấy thông tin người phê duyệt',
+            )
         }
 
         // ========================================
         // FETCH PERFORMER (ANALYST) SIGNATURE
         // ========================================
 
-        const submission = await fetchLatestSubmission(sampleId)
+        const submission = coaReport.sourceSubmissionId
+            ? await fetchSubmissionById(coaReport.sourceSubmissionId)
+            : await fetchLatestSubmission(sampleId)
+        if (coaReport.sourceSubmissionId && !submission) {
+            return failClaimedCoAGeneration(
+                coaReport,
+                'Không thể tải hồ sơ nguồn đã duyệt của CoA',
+            )
+        }
+
         let performerSignatureDataUri: string | undefined
         let performerSignatureId: string | undefined
         let performerName: string | undefined
         let performerSignatureMeaning: string | undefined
 
         if (submission) {
-            // Validate signature belongs to the submitter (cross-user validation)
-            const performerSig = await fetchSignatureDataUri(
-                submission.performerId,
-                submission.signatureHash  // Verify hash matches submission record
-            )
+            const performerSig = coaReport.sourceSubmissionId
+                ? await fetchStoredSignatureDataUri(
+                    submission.signatureId,
+                    submission.signaturePath,
+                    submission.signatureHash,
+                )
+                : await fetchSignatureDataUri(
+                    submission.performerId,
+                    submission.signatureHash,
+                )
 
             if (performerSig) {
-                // Additional validation: signature ID must match submission record
-                if (performerSig.signatureId !== submission.signatureId) {
-                    console.warn('Signature ID mismatch - using current active signature', {
-                        submissionSignatureId: submission.signatureId,
-                        currentSignatureId: performerSig.signatureId,
-                    })
-                }
-
                 performerSignatureDataUri = performerSig.dataUri
                 performerSignatureId = submission.signatureId
                 performerName = submission.performerName ?? undefined
                 performerSignatureMeaning = submission.signatureMeaning
+            } else if (coaReport.sourceSubmissionId) {
+                return failClaimedCoAGeneration(
+                    coaReport,
+                    'Không thể tải chữ ký đã lưu của người thực hiện',
+                )
             }
         }
 
-        // Step 7: Fetch test results
-        const results = await fetchTestResults(sampleId)
+        // Step 7: Resolve immutable snapshots for sourced reports.
+        // Historic reports without a source retain the assay-range fallback.
+        const results = coaReport.sourceSubmissionId
+            ? await fetchSnapshotTestResults(coaReport.sourceSubmissionId)
+            : await fetchTestResults(sampleId)
+        if (coaReport.sourceSubmissionId && results.length === 0) {
+            return failClaimedCoAGeneration(
+                coaReport,
+                'Không thể tải ảnh chụp kết quả đã duyệt của CoA',
+            )
+        }
 
         // Step 7.5: Fetch testing date from audit logs
         const testingDate = await fetchTestingDate(sampleId)
@@ -272,37 +363,14 @@ export async function generateCoA(
             performerSignatureMeaning,
         }
 
-        // Step 9: Check for existing CoA record (excluding soft-deleted)
-        const version = 1 // TODO Phase 4: Implement versioning logic
-        const { data: existingCoa, error: checkError } = await supabase
-            .from('coa_reports')
-            .select('id, status, file_path')
-            .eq('sample_id', sampleId)
-            .eq('version', version)
-            .is('deleted_at', null)
-            .maybeSingle()
-
-        if (checkError) {
-            console.error('Error checking existing CoA:', checkError)
-            return { success: false, error: 'Lỗi khi kiểm tra CoA hiện có' }
-        }
-
-        // If CoA exists and is ready, return non-technical business failure
-        // so callers can avoid downgrading ready -> failed.
-        if (existingCoa && existingCoa.status === 'ready') {
-            return {
-                success: false,
-                code: 'ALREADY_READY',
-                shouldRecordFailure: false,
-                error: 'CoA đã được tạo cho mẫu này. Sử dụng chức năng tạo lại CoA nếu cần cập nhật.'
-            }
-        }
-
         let managerStampSrc: string
         try {
             managerStampSrc = await getCoAStampDataUri()
         } catch {
-            return { success: false, error: 'Không thể tải con dấu điện tử để tạo CoA' }
+            return failClaimedCoAGeneration(
+                coaReport,
+                'Không thể tải con dấu điện tử để tạo CoA',
+            )
         }
 
         const html = renderCoATemplate(coaData, { managerStampSrc })
@@ -321,74 +389,61 @@ export async function generateCoA(
 
         if (uploadError) {
             console.error('HTML upload error:', uploadError)
-            return { success: false, error: 'Tải lên file CoA thất bại' }
+            return failClaimedCoAGeneration(
+                coaReport,
+                'Tải lên file CoA thất bại',
+            )
         }
 
-        // Step 11: Insert or Update coa_reports record
-        let coaId: string
+        const completion = await completeCoAReportGeneration(
+            coaReport.reportId,
+            coaReport.generationClaimId,
+            {
+                filePath,
+                fileHash: htmlHash,
+                signatureId,
+            },
+        )
 
-        if (existingCoa) {
-            // Update existing pending/failed record
-            const { data: updatedCoa, error: updateError } = await supabase
-                .from('coa_reports')
-                .update({
-                    file_path: filePath,
-                    file_hash: htmlHash,
-                    signature_id: signatureId,
-                    status: 'ready',
-                    error_message: null,
-                    generated_at: new Date().toISOString(),
-                })
-                .eq('id', existingCoa.id)
-                .select('id')
-                .single()
-
-            if (updateError || !updatedCoa) {
-                console.error('Update coa_reports error:', updateError)
-                // Try to clean up uploaded file
-                await supabase.storage.from('coa-reports').remove([filePath])
-                return { success: false, error: 'Lưu thông tin CoA thất bại' }
+        if (!completion) {
+            const { error: cleanupError } = await supabase.storage
+                .from('coa-reports')
+                .remove([filePath])
+            if (cleanupError) {
+                console.error('Failed to clean up unclaimed CoA file:', cleanupError)
             }
+            return failClaimedCoAGeneration(
+                coaReport,
+                'Lưu thông tin CoA thất bại',
+            )
+        }
 
-            // Clean up old file if it exists
-            if (existingCoa.file_path) {
-                await supabase.storage.from('coa-reports').remove([existingCoa.file_path])
+        if (
+            completion.previousFilePath
+            && completion.previousFilePath !== filePath
+        ) {
+            const { error: cleanupError } = await supabase.storage
+                .from('coa-reports')
+                .remove([completion.previousFilePath])
+            if (cleanupError) {
+                console.error('Failed to remove replaced CoA file:', cleanupError)
             }
-
-            coaId = updatedCoa.id
-        } else {
-            // Insert new record
-            const { data: newCoa, error: insertError } = await supabase
-                .from('coa_reports')
-                .insert({
-                    sample_id: sampleId,
-                    file_path: filePath,
-                    file_hash: htmlHash,
-                    signature_id: signatureId,
-                    version,
-                    status: 'ready',
-                })
-                .select('id')
-                .single()
-
-            if (insertError || !newCoa) {
-                console.error('Insert coa_reports error:', insertError)
-                // Try to clean up uploaded file
-                await supabase.storage.from('coa-reports').remove([filePath])
-                return { success: false, error: 'Lưu thông tin CoA thất bại' }
-            }
-
-            coaId = newCoa.id
         }
 
         return {
             success: true,
-            coaId,
+            coaId: completion.reportId,
             filePath
         }
 
     } catch (error) {
         console.error('Generate CoA error:', error)
+        if (activeReport?.claimed) {
+            return failClaimedCoAGeneration(
+                activeReport,
+                'Đã xảy ra lỗi khi tạo CoA',
+            )
+        }
         return { success: false, error: 'Đã xảy ra lỗi khi tạo CoA' }
     }
 }
@@ -455,72 +510,24 @@ export async function regenerateCoA(
             }
         }
 
-        // Check if CoA exists (excluding soft-deleted)
-        const version = 1 // TODO Phase 4: Implement versioning logic
-        const { data: existingCoa, error: checkError } = await supabase
-            .from('coa_reports')
-            .select('id, status, file_path')
-            .eq('sample_id', sampleId)
-            .eq('version', version)
-            .is('deleted_at', null)
-            .maybeSingle()
-
-        if (checkError) {
-            console.error('Error checking existing CoA:', checkError)
-            return { success: false, error: 'Lỗi khi kiểm tra CoA hiện có' }
-        }
-
-        // If CoA exists with status='ready', save state before marking as failed
-        let previousState: { status: string; filePath: string | null } | null = null
-
-        if (existingCoa && existingCoa.status === 'ready') {
-            // Save previous state for potential restoration
-            previousState = {
-                status: existingCoa.status,
-                filePath: existingCoa.file_path
-            }
-
-            // Mark as failed so generateCoA can update it
-            const { error: updateError } = await supabase
-                .from('coa_reports')
-                .update({ status: 'failed', error_message: 'Regenerating CoA' })
-                .eq('id', existingCoa.id)
-
-            if (updateError) {
-                console.error('Error marking CoA as failed:', updateError)
-                return { success: false, error: 'Lỗi khi chuẩn bị tạo lại CoA' }
+        const report = await claimCoAReportForRegeneration(sampleId, 1)
+        if (!report) {
+            return {
+                success: false,
+                error: 'Không thể xác nhận quyền tạo lại CoA',
             }
         }
 
-        // Now call generateCoA which will update the existing record
-        const result = await generateCoA(sampleId, manualInputs)
-
-        // If regeneration failed and we had a previously ready CoA, restore it
-        if (!result.success && previousState && existingCoa) {
-            console.warn('Regeneration failed, restoring previous ready state for CoA:', existingCoa.id)
-            const { error: restoreError } = await supabase
-                .from('coa_reports')
-                .update({
-                    status: previousState.status,
-                    file_path: previousState.filePath,
-                    error_message: null
-                })
-                .eq('id', existingCoa.id)
-
-            if (restoreError) {
-                console.error('Failed to restore previous CoA state:', restoreError)
-                // Return error indicating both regeneration and restoration failed
-                return {
-                    success: false,
-                    error: 'Tạo lại CoA thất bại và không thể khôi phục trạng thái trước đó. Vui lòng liên hệ quản trị viên.'
-                }
+        if (!report.claimed || !report.generationClaimId) {
+            return {
+                success: false,
+                code: 'IN_PROGRESS',
+                shouldRecordFailure: false,
+                error: COA_GENERATION_IN_PROGRESS_ERROR,
             }
-
-            // State restored, return the original generation error
-            return result
         }
 
-        return result
+        return generateCoA(sampleId, manualInputs, report)
     } catch (error) {
         console.error('Regenerate CoA error:', error)
         return { success: false, error: 'Đã xảy ra lỗi khi tạo lại CoA' }

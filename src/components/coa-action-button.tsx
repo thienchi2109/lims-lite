@@ -57,6 +57,7 @@ export function CoAActionButton({ sampleId, coaStatus }: CoAActionButtonProps) {
                     <Button
                         variant="ghost"
                         size="icon"
+                        aria-label={tooltipText}
                         onClick={handleGenerateCoA}
                         disabled={isGenerating}
                         className="h-8 w-8 text-slate-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-950 disabled:opacity-50"

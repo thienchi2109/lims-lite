@@ -148,7 +148,6 @@ describe('CoA confidentiality actions', () => {
         })
         expect(mockValidateSampleForCoAGeneration).toHaveBeenCalledWith(
             'sample-1',
-            'analyst',
         )
         expect(mockIsConfidentialAssociatedSample).not.toHaveBeenCalled()
     })
