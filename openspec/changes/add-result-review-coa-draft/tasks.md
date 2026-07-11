@@ -1,98 +1,88 @@
-## 1. Submission-contract regression coverage
+## Phase 1: Secure assessment snapshot foundation
 
-- [ ] 1.1 Locate all current callers of `submit_sample_for_review`, the
-  signed-submission tests, and the approval/CoA result-read queries; document
-  their required result, signature, status, and supersession behavior before
-  changing the RPC signature.
-- [ ] 1.2 Add failing focused database regression tests for complete
-  per-result assessments, exact-set validation, invalid/direct writes,
-  transaction rollback, stale review data, resubmission history, and immutable
-  CoA source-submission binding.
-- [ ] 1.3 Add failing focused TypeScript/component tests covering the draft
-  watermark, omitted final signature content, visible ranges, manual-only
-  assessment choices, disabled `Gửi phê duyệt`, cancellation, and manager
-  display of persisted assessments.
+- [ ] 1.1 Locate current callers of `submit_sample_for_review`, signed
+  submission tests, direct-write protections, and relevant result/assay
+  revision fields. Record the existing signature, ownership, status,
+  completeness, numbering, and supersession behavior.
+- [ ] 1.2 Add failing database regression tests for exact per-result
+  assessments, duplicate/foreign/invalid payload values, stale review data,
+  transaction rollback, direct-write denial, and resubmission history.
+- [ ] 1.3 Add a migration defining the two-value assessment enum and append-only
+  `result_reference_assessments` table with restrictive foreign keys, unique
+  `(submission_id, result_id)` constraint, comments, audit trigger, RLS, grants,
+  and documented security impact.
+- [ ] 1.4 Implement
+  `submit_sample_for_review_with_assessments(UUID, JSONB)` with the existing
+  secure checks plus server-side exact-result-set, enum, and revision-token
+  validation. Lock database rows, construct snapshots server-side, and create
+  the submission, snapshots, and status transition atomically.
+- [ ] 1.5 Apply the migration through Docker and run
+  `SELECT * FROM run_security_tests();`. Keep the existing one-argument RPC and
+  client caller unchanged for this phase.
 
-## 2. Immutable assessment persistence
+## Phase 2: Mandatory analyst draft review
 
-- [ ] 2.1 Add a migration defining the two-value manual assessment enum and
-  append-only `result_reference_assessments` snapshot table with restrictive
-  foreign keys, unique `(submission_id, result_id)` constraint, comments, and
-  audit trigger. Add immutable `coa_reports.source_submission_id` with a
-  restrictive foreign key, index, database immutability guard, and
-  historic-report compatibility.
-- [ ] 2.2 Add RLS and grants for the snapshot table: deny direct writes,
-  expose an analyst's own submission records, and expose manager records only
-  within the existing approval scope; document the security impact and use the
-  repository's `DROP POLICY IF EXISTS` pattern.
-- [ ] 2.3 Replace the public one-argument
-  `submit_sample_for_review(UUID)` RPC with the required JSON assessment
-  payload signature, preserving its secure role, ownership, signature,
-  completeness, status, submission-number, and supersession checks.
-- [ ] 2.4 Implement server-side exact-result-set, enum, and revision-token
-  validation; lock and snapshot result/assay display fields from database rows,
-  atomically create the signed submission and assessments, then move the sample
-  to `review`.
-- [ ] 2.5 Update manager approval/completion and CoA queue creation to resolve
-  the active signed submission under lock, persist it as
-  `coa_reports.source_submission_id`, and preserve that source during failed
-  report retries and amendments.
-- [ ] 2.6 Apply the migration through Docker and run
-  `run_security_tests()` plus the new focused database regressions; verify the
-  obsolete RPC signature cannot bypass mandatory assessments and a CoA report
-  cannot be rebound to another submission.
-
-## 3. Shared read models and CoA rendering
-
-- [ ] 3.1 Extend result read models, Zod schemas, and client types to include
-  configured `normal_range` and the result/assay revision data required for a
-  stale-review check.
-- [ ] 3.2 Extend the canonical CoA template with a draft mode, reusing its
+- [ ] 2.1 Add failing focused TypeScript/component tests for the watermark,
+  omitted final certification content, visible ranges, manual-only assessment
+  choices, disabled `Gửi phê duyệt`, cancellation, stale-data failure, and
+  successful query invalidation.
+- [ ] 2.2 Extend result read models, Zod schemas, and client types with
+  `normal_range` and the result/assay revision data required by the reviewed
+  submission contract.
+- [ ] 2.3 Extend the canonical CoA template with a draft mode that reuses
   document structure, sample/result layout, styles, escaping, grouping, and
-  data mapping; add only `BẢN NHÁP - CHƯA GỬI DUYỆT`, omitted final
-  certification content, the injectable `Đánh giá` result cell, and review
-  footer. Refactor existing helpers into shared presentation primitives where
-  interactive controls require it; do not create a copied or parallel draft
-  renderer.
-- [ ] 3.3 Update manager approval read models and detail UI to display each
-  submitted snapshot's `Đánh giá`, value, unit, method, and reference range
+  data mapping. Add only draft watermarking, suppressed certification content,
+  the injectable `Đánh giá` cell, and the review footer.
+- [ ] 2.4 Replace the minimal analyst confirmation with a responsive Vietnamese
+  draft CoA dialog. Keep assessments in local state, route the validated payload
+  through `src/lib/api-client.ts`, and refresh the analyst view after a
+  successful submission.
+- [ ] 2.5 Move the application caller to
+  `submit_sample_for_review_with_assessments`. Once focused tests prove the
+  assessment-aware path, remove or revoke the legacy one-argument
+  `submit_sample_for_review(UUID)` RPC in a secure migration and re-run
+  `run_security_tests()`.
+
+## Phase 3: Manager assessment review
+
+- [ ] 3.1 Add failing focused tests proving that manager approval detail renders
+  the submitted snapshot assessment, value, unit, method, and reference range
   without recalculating the conclusion.
-- [ ] 3.4 Update final CoA data resolution to load assessment snapshots and
-  reference ranges through each report's immutable `source_submission_id`;
-  retain the existing assay-range fallback only for historic reports without a
-  source ID.
+- [ ] 3.2 Extend approval read models and manager detail UI to consume immutable
+  snapshot data for the active submission.
+- [ ] 3.3 Invalidate and refetch manager queries after a reviewed submission,
+  rejection, and resubmission. Verify that prior submission history remains
+  visible where the existing workflow exposes it.
 
-## 4. Analyst draft-review workflow
+## Phase 4: Final CoA provenance
 
-- [ ] 4.1 Define and validate the client submission payload containing result
-  identifiers, one of the two manual assessments, and reviewed revision tokens;
-  route the mutation through `src/lib/api-client.ts`.
-- [ ] 4.2 Replace the current minimal analyst confirmation with a responsive,
-  Vietnamese draft CoA dialog containing the sample context, full result
-  review table, and per-row `Đánh giá` controls.
-- [ ] 4.3 Keep assessments in local dialog state until confirmation; ensure
-  closing or returning to edit performs no mutation and preserves the sample's
-  current status.
-- [ ] 4.4 Add the exact confirmation copy and only enable `Gửi phê duyệt`
-  after every displayed result has an assessment; submit through the existing
-  electronic-signature path with the new payload.
-- [ ] 4.5 Handle server rejection for stale, incomplete, or invalid review
-  data by preserving a clear Vietnamese error, refreshing current sample data
-  where required, and leaving workflow state unchanged.
-- [ ] 4.6 Invalidate and refetch analyst and manager queries after successful
-  submission so the sample moves to the existing review experience with its
-  assessment history available.
+- [ ] 4.1 Add failing database and CoA regression tests for immutable report
+  source binding, reference-range changes after submission, rejected and
+  replaced submissions, historic-report fallback, failed generation retry, and
+  regeneration.
+- [ ] 4.2 Add a migration for nullable `coa_reports.source_submission_id` with
+  restrictive foreign key, index, comments, immutability guard, historic-report
+  compatibility, RLS/grant review, and documented security impact.
+- [ ] 4.3 Update manager approval/completion and CoA queue creation to resolve
+  the approved active submission under lock and persist it as
+  `source_submission_id`.
+- [ ] 4.4 Update final CoA data resolution, retries, and regeneration to load
+  snapshots and ranges through the immutable source ID. Retain the existing
+  assay-range fallback only for historic reports without a source ID.
+- [ ] 4.5 Apply the migration through Docker and run
+  `SELECT * FROM run_security_tests();`.
 
-## 5. Verification and compliance checks
+## Phase Gates and Final Verification
 
-- [ ] 5.1 Run focused database, CoA-rendering, draft-dialog, client-payload,
-  and approval-detail tests; include cancellation, all-assessed enablement,
-  no auto-classification, atomic failure, authorization, resubmission, and
-  historical CoA fallback cases, plus approved-resubmission source selection
-  and failed-CoA-retry source preservation.
-- [ ] 5.2 Run `npm run lint` and `npm run typecheck`; inspect all touched files
-  for Vietnamese UI copy, strict TypeScript, `api-client` mutation usage, and
-  file-size boundaries.
-- [ ] 5.3 Run `openspec validate add-result-review-coa-draft --strict` and
-  record any follow-up issue required for work intentionally outside this
-  change.
+- [ ] 5.1 Before starting a phase, review only its stated dependencies and keep
+  unrelated refactors outside the change.
+- [ ] 5.2 After every phase, run its focused database and component tests,
+  `npm run lint`, and `npm run typecheck`. Inspect touched files for Vietnamese
+  UI copy, strict TypeScript, `api-client` mutation usage, and file-size
+  boundaries.
+- [ ] 5.3 After Phase 4, run the complete focused suite spanning submission,
+  draft rendering, manager approval, CoA rendering, retries, authorization, and
+  historic fallback.
+- [ ] 5.4 Run `openspec validate add-result-review-coa-draft --strict` after
+  document changes and before implementation. File a follow-up issue for any
+  work intentionally outside these phase boundaries.
