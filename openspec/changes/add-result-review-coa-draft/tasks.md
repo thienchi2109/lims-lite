@@ -1,22 +1,30 @@
 ## Phase 1: Secure assessment snapshot foundation
 
-- [ ] 1.1 Locate current callers of `submit_sample_for_review`, signed
+- [x] 1.1 Locate current callers of `submit_sample_for_review`, signed
   submission tests, direct-write protections, and relevant result/assay
   revision fields. Record the existing signature, ownership, status,
   completeness, numbering, and supersession behavior.
-- [ ] 1.2 Add failing database regression tests for exact per-result
+  - Recorded: the live one-argument `submit_sample_for_review(UUID)` remains
+    analyst-only and signature-gated; it locks the sample, requires
+    `in_progress`, requires at least one non-empty result, atomically numbers
+    submissions, links resubmissions through `superseded_by`, and clears
+    rejection metadata. It has no separate sample-owner check. Result and assay
+    revision tokens are `results.updated_at` and
+    `assay_definitions.updated_at`; snapshot display values use `name`, `value`,
+    `units`, `method_name`, and `normal_range`.
+- [x] 1.2 Add failing database regression tests for exact per-result
   assessments, duplicate/foreign/invalid payload values, stale review data,
   transaction rollback, direct-write denial, and resubmission history.
-- [ ] 1.3 Add a migration defining the two-value assessment enum and append-only
+- [x] 1.3 Add a migration defining the two-value assessment enum and append-only
   `result_reference_assessments` table with restrictive foreign keys, unique
   `(submission_id, result_id)` constraint, comments, audit trigger, RLS, grants,
   and documented security impact.
-- [ ] 1.4 Implement
+- [x] 1.4 Implement
   `submit_sample_for_review_with_assessments(UUID, JSONB)` with the existing
   secure checks plus server-side exact-result-set, enum, and revision-token
   validation. Lock database rows, construct snapshots server-side, and create
   the submission, snapshots, and status transition atomically.
-- [ ] 1.5 Apply the migration through Docker and run
+- [x] 1.5 Apply the migration through Docker and run
   `SELECT * FROM run_security_tests();`. Keep the existing one-argument RPC and
   client caller unchanged for this phase.
 
