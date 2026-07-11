@@ -24,6 +24,10 @@ const CoAReportQueueResponseSchema = z.object({
     claimed: z.boolean(),
     generation_claim_id: z.string().uuid().nullable(),
     previous_status: z.enum(['ready', 'failed']).nullable(),
+    blocked_reason: z
+        .literal('HISTORIC_REPORT_WITHOUT_SOURCE')
+        .nullable()
+        .optional(),
 })
 
 const JoinedSpecialtySchema = z.object({
@@ -84,6 +88,7 @@ export interface CoAReportSource {
     claimed: boolean
     generationClaimId: string | null
     previousStatus: 'ready' | 'failed' | null
+    blockedReason?: 'HISTORIC_REPORT_WITHOUT_SOURCE'
 }
 
 function firstJoined<T>(value: T | T[] | null): T | null {
@@ -161,6 +166,7 @@ export async function claimCoAReportForRegeneration(
         claimed: parsed.data.claimed,
         generationClaimId: parsed.data.generation_claim_id,
         previousStatus: parsed.data.previous_status,
+        blockedReason: parsed.data.blocked_reason ?? undefined,
     }
 }
 

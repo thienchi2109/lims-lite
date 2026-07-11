@@ -49,6 +49,8 @@ import { renderCoATemplate } from '@/lib/coa/template'
 
 const CONCEALED_COA_SAMPLE_ERROR = 'Không tìm thấy thông tin mẫu'
 const COA_GENERATION_IN_PROGRESS_ERROR = 'CoA đang được tạo bởi một tiến trình khác'
+const HISTORIC_COA_REGENERATION_BLOCKED_ERROR =
+    'Không thể tạo lại CoA lịch sử vì báo cáo chưa có nguồn dữ liệu đã duyệt bất biến'
 
 async function denyUnauthorizedConfidentialCoA(
     sampleId: string,
@@ -529,6 +531,14 @@ export async function regenerateCoA(
             return {
                 success: false,
                 error: 'Không thể xác nhận quyền tạo lại CoA',
+            }
+        }
+
+        if (report.blockedReason === 'HISTORIC_REPORT_WITHOUT_SOURCE') {
+            return {
+                success: false,
+                shouldRecordFailure: false,
+                error: HISTORIC_COA_REGENERATION_BLOCKED_ERROR,
             }
         }
 

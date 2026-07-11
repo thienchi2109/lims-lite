@@ -187,6 +187,33 @@ describe('CoA report generation transitions', () => {
         )
     })
 
+    it('returns the historic regeneration blocked reason from the RPC', async () => {
+        mockRpc.mockResolvedValue({
+            data: {
+                report_id: '33333333-3333-4333-8333-333333333333',
+                status: 'ready',
+                file_path: 'sample/historic.html',
+                source_submission_id: null,
+                claimed: false,
+                generation_claim_id: null,
+                previous_status: null,
+                blocked_reason: 'HISTORIC_REPORT_WITHOUT_SOURCE',
+            },
+            error: null,
+        })
+
+        const report = await claimCoAReportForRegeneration(
+            '44444444-4444-4444-8444-444444444444',
+        )
+
+        expect(report).toEqual(
+            expect.objectContaining({
+                claimed: false,
+                blockedReason: 'HISTORIC_REPORT_WITHOUT_SOURCE',
+            }),
+        )
+    })
+
     it('records generation failure with the same claim', async () => {
         mockRpc.mockResolvedValue({ data: true, error: null })
 
