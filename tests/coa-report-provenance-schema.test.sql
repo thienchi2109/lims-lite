@@ -21,6 +21,9 @@ DECLARE
     v_transition_functions_exist BOOLEAN;
     v_direct_update_revoked BOOLEAN;
     v_checker_definition TEXT;
+    v_wall_clock_contract_definition TEXT;
+    v_wall_clock_baseline_definition TEXT;
+    v_claim_rpc_definitions TEXT;
 BEGIN
     SELECT EXISTS (
         SELECT 1
@@ -107,6 +110,29 @@ BEGIN
     )
     INTO v_checker_definition;
 
+    SELECT pg_get_functiondef(
+        'public.test_coa_generation_wall_clock_contract()'::regprocedure
+    )
+    INTO v_wall_clock_contract_definition;
+
+    SELECT pg_get_functiondef(
+        'public.test_coa_generation_wall_clock_contract_v1()'::regprocedure
+    )
+    INTO v_wall_clock_baseline_definition;
+
+    SELECT STRING_AGG(p.prosrc, E'\n' ORDER BY p.proname)
+    INTO v_claim_rpc_definitions
+    FROM pg_proc AS p
+    JOIN pg_namespace AS n
+      ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'
+      AND p.proname IN (
+          'queue_coa_report_for_generation',
+          'claim_coa_report_regeneration',
+          'complete_coa_report_generation',
+          'fail_coa_report_generation'
+      );
+
     IF NOT v_source_column_exists
        OR NOT v_source_function_exists
        OR NOT v_source_guard_exists
@@ -131,19 +157,33 @@ BEGIN
     END IF;
 
     IF v_checker_definition NOT ILIKE
-       '%test_coa_report_provenance_guard_approval_revalidation_baseline()%'
+       '%test_coa_generation_wall_clock_contract()%'
        OR v_checker_definition NOT ILIKE
+       '%digest(v_contract_source, ''sha256''::TEXT)%'
+       OR v_wall_clock_contract_definition NOT ILIKE
+       '%test_coa_generation_wall_clock_contract_v1()%'
+       OR v_wall_clock_contract_definition NOT ILIKE
        '%digest(v_baseline_source, ''sha256''::TEXT)%'
-       OR v_checker_definition NOT ILIKE
+       OR v_wall_clock_contract_definition NOT ILIKE
        '%v_complete_source%'
-       OR v_checker_definition NOT ILIKE
+       OR v_wall_clock_contract_definition NOT ILIKE
        '%FROM public.samples%'
-       OR v_checker_definition NOT ILIKE
+       OR v_wall_clock_contract_definition NOT ILIKE
        '%FOR UPDATE%'
-       OR v_checker_definition NOT ILIKE
-       '%result.status <> ''''approved''''%' THEN
+       OR v_wall_clock_contract_definition NOT ILIKE
+       '%result.status <> ''''approved''''%'
+       OR v_wall_clock_baseline_definition NOT ILIKE
+       '%clock_timestamp()%'
+       OR v_wall_clock_baseline_definition NOT ILIKE
+       '%public.coa_generation_lease_duration()%'
+       OR v_wall_clock_baseline_definition NOT ILIKE
+       '%STRPOS(LOWER(v_complete_source), ''for update'')%'
+       OR v_claim_rpc_definitions NOT ILIKE '%clock_timestamp()%'
+       OR v_claim_rpc_definitions NOT ILIKE
+       '%public.coa_generation_lease_duration()%'
+       OR v_claim_rpc_definitions ILIKE '%NOW()%' THEN
         RAISE EXCEPTION
-            'CoA security checker must enforce completion approval revalidation';
+            'CoA security checker must enforce wall-clock leases and completion approval revalidation';
     END IF;
 END;
 $$;
