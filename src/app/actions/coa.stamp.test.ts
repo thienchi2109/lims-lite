@@ -337,6 +337,27 @@ describe('generateCoA stamp rendering', () => {
         )
     })
 
+    it('records a claim-bound failure when the stored performer signature is invalid', async () => {
+        mockSuccessfulClient()
+        mockFetchStoredSignatureDataUri.mockResolvedValue(null)
+
+        const result = await generateCoA('sample-1')
+
+        expect(result).toEqual({
+            success: false,
+            error: 'Không thể tải chữ ký đã lưu của người thực hiện',
+            shouldRecordFailure: false,
+        })
+        expect(mockFailCoAReportGeneration).toHaveBeenCalledWith(
+            'coa-1',
+            '77777777-7777-4777-8777-777777777777',
+            'Không thể tải chữ ký đã lưu của người thực hiện',
+            false,
+        )
+        expect(mockFetchSignatureDataUri).not.toHaveBeenCalled()
+        expect(mockRenderCoATemplate).not.toHaveBeenCalled()
+    })
+
     it('uses the assay-range fallback only for a historic report without a source', async () => {
         mockSuccessfulClient()
         mockQueueCoAReportForGeneration.mockResolvedValue({

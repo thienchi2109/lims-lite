@@ -318,7 +318,7 @@ export async function getSignatureHistory(): Promise<GetSignatureHistoryResult> 
  */
 export async function downloadSignature(
     signaturePath: string,
-    options?: { useServiceRole?: boolean }
+    options?: { useServiceRole?: boolean; expectedHash?: string }
 ): Promise<
     | { success: true; dataUri: string; mimeType: string }
     | { success: false; error: string }
@@ -341,10 +341,38 @@ export async function downloadSignature(
 
         // Convert to base64
         const arrayBuffer = await data.arrayBuffer()
+        let pathMimeType: 'image/png' | 'image/jpeg' | null = null
+        if (signaturePath.toLowerCase().endsWith('.png')) {
+            pathMimeType = 'image/png'
+        } else if (/\.(?:jpe?g)$/i.test(signaturePath)) {
+            pathMimeType = 'image/jpeg'
+        }
+
+        const shouldVerifyIntegrity = options?.expectedHash !== undefined
+        if (shouldVerifyIntegrity) {
+            const mimeTypeAllowed = SIGNATURE_VALIDATION.allowedMimeTypes.some(
+                (mimeType) => mimeType === data.type,
+            )
+            if (!mimeTypeAllowed || data.type !== pathMimeType) {
+                return {
+                    success: false,
+                    error: 'Định dạng file chữ ký không hợp lệ',
+                }
+            }
+
+            if (generateFileHash(arrayBuffer) !== options.expectedHash) {
+                return {
+                    success: false,
+                    error: 'Xác minh tính toàn vẹn chữ ký thất bại',
+                }
+            }
+        }
+
         const base64 = Buffer.from(arrayBuffer).toString('base64')
 
-        // Determine MIME type from file extension
-        const mimeType = signaturePath.endsWith('.png') ? 'image/png' : 'image/jpeg'
+        const mimeType = shouldVerifyIntegrity
+            ? data.type
+            : pathMimeType ?? 'image/jpeg'
         const dataUri = `data:${mimeType};base64,${base64}`
 
         return { success: true, dataUri, mimeType }

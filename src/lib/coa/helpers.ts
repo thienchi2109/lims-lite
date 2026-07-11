@@ -7,7 +7,12 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createHash } from 'crypto'
-import type { SampleData, LatestSubmission, Gender } from '@/types'
+import {
+    SIGNATURE_VALIDATION,
+    type SampleData,
+    type LatestSubmission,
+    type Gender,
+} from '@/types'
 import { getActiveSignature, downloadSignature } from '@/app/actions/signatures'
 
 // ============================================================================
@@ -463,9 +468,33 @@ export async function fetchStoredSignatureDataUri(
 
     const downloadResult = await downloadSignature(
         signaturePath,
-        { useServiceRole: true },
+        { useServiceRole: true, expectedHash: signatureHash },
     )
     if (!downloadResult.success || !downloadResult.dataUri) {
+        return null
+    }
+
+    const dataUriMatch = /^data:([^;,]+);base64,([A-Za-z0-9+/]+={0,2})$/
+        .exec(downloadResult.dataUri)
+    if (!dataUriMatch) {
+        return null
+    }
+
+    const [, dataUriMimeType, base64Payload] = dataUriMatch
+    const mimeTypeAllowed = SIGNATURE_VALIDATION.allowedMimeTypes.some(
+        (mimeType) => mimeType === downloadResult.mimeType,
+    )
+    if (!mimeTypeAllowed || dataUriMimeType !== downloadResult.mimeType) {
+        return null
+    }
+
+    const downloadedBytes = Buffer.from(base64Payload, 'base64')
+    if (downloadedBytes.toString('base64') !== base64Payload) {
+        return null
+    }
+
+    const signatureBuffer = Uint8Array.from(downloadedBytes).buffer
+    if (!await verifySignatureHash(signatureBuffer, signatureHash)) {
         return null
     }
 

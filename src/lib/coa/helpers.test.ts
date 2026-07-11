@@ -1,6 +1,8 @@
+import { createHash } from 'crypto'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockFrom = vi.fn()
+const mockDownloadSignature = vi.fn()
 let resultQuery: {
     select: ReturnType<typeof vi.fn>
     eq: ReturnType<typeof vi.fn>
@@ -14,14 +16,23 @@ vi.mock('@/lib/supabase/server', () => ({
 
 vi.mock('@/app/actions/signatures', () => ({
     getActiveSignature: vi.fn(),
-    downloadSignature: vi.fn(),
+    downloadSignature: (...args: unknown[]) => mockDownloadSignature(...args),
 }))
 
 import {
     fetchSampleWithApprover,
+    fetchStoredSignatureDataUri,
     fetchTestResults,
     validateSampleForCoAGeneration,
 } from './helpers'
+
+function sha256(bytes: Buffer): string {
+    return createHash('sha256').update(bytes).digest('hex')
+}
+
+function createDataUri(mimeType: string, bytes: Buffer): string {
+    return `data:${mimeType};base64,${bytes.toString('base64')}`
+}
 
 function createResultQuery(data: unknown[]) {
     const query = {
@@ -221,5 +232,109 @@ describe('fetchSampleWithApprover', () => {
             'id',
             { ascending: false },
         )
+    })
+})
+
+describe('fetchStoredSignatureDataUri', () => {
+    const signatureId = '11111111-1111-4111-8111-111111111111'
+    const signaturePath = 'user-1/performer-signature.png'
+    const originalBytes = Buffer.from('stored performer signature')
+
+    beforeEach(() => {
+        vi.clearAllMocks()
+    })
+
+    it('returns the stored signature when downloaded bytes match the stored hash', async () => {
+        const dataUri = createDataUri('image/png', originalBytes)
+        mockDownloadSignature.mockResolvedValue({
+            success: true,
+            dataUri,
+            mimeType: 'image/png',
+        })
+
+        const result = await fetchStoredSignatureDataUri(
+            signatureId,
+            signaturePath,
+            sha256(originalBytes),
+        )
+
+        expect(result).toEqual({
+            dataUri,
+            signatureId,
+            signatureHash: sha256(originalBytes),
+        })
+        expect(mockDownloadSignature).toHaveBeenCalledWith(
+            signaturePath,
+            {
+                useServiceRole: true,
+                expectedHash: sha256(originalBytes),
+            },
+        )
+    })
+
+    it('rejects the stored signature when the stored hash does not match', async () => {
+        mockDownloadSignature.mockResolvedValue({
+            success: true,
+            dataUri: createDataUri('image/png', originalBytes),
+            mimeType: 'image/png',
+        })
+
+        const result = await fetchStoredSignatureDataUri(
+            signatureId,
+            signaturePath,
+            sha256(Buffer.from('different signature')),
+        )
+
+        expect(result).toBeNull()
+    })
+
+    it('rejects the stored signature when the storage object is missing', async () => {
+        mockDownloadSignature.mockResolvedValue({
+            success: false,
+            error: 'Tải xuống file chữ ký thất bại',
+        })
+
+        const result = await fetchStoredSignatureDataUri(
+            signatureId,
+            signaturePath,
+            sha256(originalBytes),
+        )
+
+        expect(result).toBeNull()
+    })
+
+    it('rejects the stored signature when downloaded bytes are corrupted', async () => {
+        mockDownloadSignature.mockResolvedValue({
+            success: true,
+            dataUri: createDataUri(
+                'image/png',
+                Buffer.from('corrupted performer signature'),
+            ),
+            mimeType: 'image/png',
+        })
+
+        const result = await fetchStoredSignatureDataUri(
+            signatureId,
+            signaturePath,
+            sha256(originalBytes),
+        )
+
+        expect(result).toBeNull()
+    })
+
+    it('rejects the stored signature when the downloaded MIME type is invalid', async () => {
+        mockDownloadSignature.mockResolvedValue({
+            success: true,
+            dataUri: createDataUri('image/svg+xml', originalBytes),
+            mimeType: 'image/svg+xml',
+        })
+
+        const result = await fetchStoredSignatureDataUri(
+            signatureId,
+            signaturePath,
+            sha256(originalBytes),
+        )
+
+        expect(result).toBeNull()
     })
 })
