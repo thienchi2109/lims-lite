@@ -83,17 +83,26 @@ async function failClaimedCoAGeneration(
     error: string,
 ): Promise<GenerateCoAResult> {
     if (!report.generationClaimId) {
-        return { success: false, error, shouldRecordFailure: false }
+        return { success: false, error, shouldRecordFailure: true }
     }
 
-    await failCoAReportGeneration(
-        report.reportId,
-        report.generationClaimId,
-        error,
-        report.previousStatus === 'ready',
-    )
+    try {
+        const failureRecorded = await failCoAReportGeneration(
+            report.reportId,
+            report.generationClaimId,
+            error,
+            report.previousStatus === 'ready',
+        )
 
-    return { success: false, error, shouldRecordFailure: false }
+        return {
+            success: false,
+            error,
+            shouldRecordFailure: !failureRecorded,
+        }
+    } catch (failureError) {
+        console.error('Failed to record CoA generation failure:', failureError)
+        return { success: false, error, shouldRecordFailure: true }
+    }
 }
 
 // ============================================================================
