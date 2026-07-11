@@ -13,8 +13,7 @@
     "react-doctor:diff": "npm run lint && react-doctor . --verbose --offline --yes --diff --no-lint",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:run": "vitest run",
-    "test:coa-claim-rollout": "node --test --test-concurrency=1 tests/coa-claim-rollout-preflight.test.mjs"
+    "test:run": "vitest run"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
