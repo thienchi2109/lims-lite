@@ -20,6 +20,7 @@ DECLARE
     v_claim_columns_exist BOOLEAN;
     v_transition_functions_exist BOOLEAN;
     v_direct_update_revoked BOOLEAN;
+    v_checker_definition TEXT;
 BEGIN
     SELECT EXISTS (
         SELECT 1
@@ -101,6 +102,11 @@ BEGIN
         'UPDATE'
     );
 
+    SELECT pg_get_functiondef(
+        'public.test_coa_report_provenance_guard()'::regprocedure
+    )
+    INTO v_checker_definition;
+
     IF NOT v_source_column_exists
        OR NOT v_source_function_exists
        OR NOT v_source_guard_exists
@@ -122,6 +128,16 @@ BEGIN
     ) THEN
         RAISE EXCEPTION
             'run_security_tests() must enforce the CoA provenance contract';
+    END IF;
+
+    IF v_checker_definition NOT ILIKE
+       '%test_coa_report_provenance_guard_claim_baseline()%'
+       OR v_checker_definition NOT ILIKE
+       '%digest(v_queue_source, ''sha256''::TEXT)%'
+       OR v_checker_definition NOT ILIKE
+       '%digest(v_regeneration_source, ''sha256''::TEXT)%' THEN
+        RAISE EXCEPTION
+            'CoA security checker must pin confidential claim authorization';
     END IF;
 END;
 $$;
