@@ -1,10 +1,16 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockRefresh = vi.hoisted(() => vi.fn())
 const mockRegenerateCoAClient = vi.hoisted(() => vi.fn())
 const mockToastSuccess = vi.hoisted(() => vi.fn())
+
+class ResizeObserverMock {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+}
 
 vi.mock('next/navigation', () => ({
     useRouter: () => ({ refresh: mockRefresh }),
@@ -27,7 +33,12 @@ import { CoAActionButton } from '@/components/coa-action-button'
 describe('CoAActionButton', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        vi.stubGlobal('ResizeObserver', ResizeObserverMock)
         mockRegenerateCoAClient.mockResolvedValue({ success: true })
+    })
+
+    afterEach(() => {
+        vi.unstubAllGlobals()
     })
 
     it('retries a failed CoA through the API client', async () => {

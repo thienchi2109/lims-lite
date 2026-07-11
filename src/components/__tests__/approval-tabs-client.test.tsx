@@ -521,10 +521,9 @@ describe('ApprovalTabsClient', () => {
 
         await waitFor(() => {
             expect(screen.getAllByTestId('selected-sample-id')[0].textContent).toBe('sample-2')
+            expect(screen.getByTestId('approval-inspector-sample').textContent).toBe('CDC-XN-0002')
+            expect(screen.getByTestId('approval-inspector-results').textContent).toBe('result-2')
         })
-
-        expect(screen.getByTestId('approval-inspector-sample').textContent).toBe('CDC-XN-0002')
-        expect(screen.getByTestId('approval-inspector-results').textContent).toBe('result-2')
     })
 
     it('preserves client-selected detail when server refresh returns stale empty selection props', async () => {
