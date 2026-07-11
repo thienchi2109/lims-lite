@@ -22,6 +22,24 @@ See `CLAUDE.md` for:
 5. Never use Supabase Studio for schema changes
 6. Never use Supabase MCP or Supabase CLI for this repo's database
 
+### Applied Migration Immutability (NON-NEGOTIABLE)
+
+- A migration becomes immutable immediately after it is executed against any
+  persistent database, including the repo's local Docker database.
+- Never edit its SQL, rename it, reorder it, delete it, squash it, or reuse its
+  filename/version. An uncommitted or untracked migration can still be applied;
+  Git status is not evidence that it is safe to change.
+- If applied status is uncertain, treat the migration as applied until database
+  evidence proves otherwise.
+- Fixes and follow-up changes MUST use a new, next-numbered forward-only
+  migration. The new migration should validate its expected baseline, make the
+  smallest required change, and verify the resulting state.
+- Never patch a database by modifying and re-running an applied migration.
+  Apply only the new forward-only migration through
+  `docker exec ... lims-postgres psql`.
+- Tests and documentation may be updated, but the historical applied migration
+  file must remain byte-for-byte unchanged.
+
 ### Database Access Boundary
 
 - Supabase is self-hosted in Docker for this repo.

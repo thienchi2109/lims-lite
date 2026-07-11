@@ -10,8 +10,9 @@
 
 1. **Compliance First**: Soft delete/void only, all changes auditable, respect RLS
 2. **Database via Migrations**: SQL in `supabase/migrations/`, include RLS policies
-3. **Vietnamese Localization**: All UI in Vietnamese (see `docs/vietnamese_dictionary.md`)
-4. **Type Safety**: Zod schemas, strict TypeScript, no `any` types
+3. **Applied Migrations Are Immutable**: Never modify migration history after execution; use a new forward-only migration
+4. **Vietnamese Localization**: All UI in Vietnamese (see `docs/vietnamese_dictionary.md`)
+5. **Type Safety**: Zod schemas, strict TypeScript, no `any` types
 
 ## ⚠️ ENFORCEMENT CHECKLIST (Read Before Every Action)
 
@@ -20,6 +21,9 @@
 
 **BEFORE editing code, ASK:** Am I about to use the `Edit` tool?
 → **STOP.** Use `mcp__filesystem-with-morph__edit_file` with `// ... existing code ...` placeholders.
+
+**BEFORE editing a migration file, ASK:** Has this migration been executed against any persistent database, including local Docker?
+→ **STOP if yes or uncertain.** Do not edit, rename, reorder, delete, squash, or re-run it. Create the next forward-only migration instead. Git status does not determine whether a migration has been applied.
 
 **BEFORE generating code with a library, ASK:** Does this involve Supabase, React, Zod, TanStack, Recharts, or any external package?
 → **STOP.** Use Context7: `resolve-library-id` → `query-docs` FIRST.
@@ -44,6 +48,7 @@
 | Create files >350 lines | Split into focused modules |
 | Skip skills that might apply | Invoke skill, then decide |
 | Use `cat`, `head`, `tail` | Use `Read` tool |
+| Edit, rename, delete, reorder, squash, or re-run an applied migration | Add a new next-numbered forward-only migration |
 
 ## 🐛 DEBUGGING & PROBLEM-SOLVING (AUTO-INVOKE SKILLS)
 
@@ -383,6 +388,27 @@ docker compose up -d # Start Supabase       | docker compose logs -f
 6. Invalid sessions redirect to `/login`
 
 ## Database Migrations
+
+### Applied Migration Immutability (NON-NEGOTIABLE)
+
+1. A migration is considered applied as soon as its SQL has been executed
+   against any persistent database, including `lims-postgres` in local Docker.
+2. Applied migration files are historical records. Their contents, filename,
+   version, and ordering MUST remain unchanged.
+3. Uncommitted or untracked does not mean unapplied. Never use Git state to
+   decide whether a migration can be edited.
+4. If application status cannot be proven, assume the migration was applied.
+5. Every correction MUST be a new, next-numbered forward-only migration. The
+   patch migration should:
+   - fail closed when its required baseline is missing;
+   - make only the corrective change;
+   - verify the final schema, function, policy, or privilege state;
+   - be idempotent when practical without weakening baseline checks.
+6. Never modify an applied migration and re-run it to patch a database. Apply
+   the new migration through `docker exec ... lims-postgres psql`, then run its
+   focused SQL regression and `run_security_tests()`.
+7. Tests and documentation may change independently, but the applied migration
+   file itself must remain byte-for-byte unchanged.
 
 ```bash
 # Apply migration
