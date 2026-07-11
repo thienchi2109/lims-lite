@@ -4,8 +4,9 @@ import { redirect } from 'next/navigation'
 import { getSamplesForApprovalCount, getSamplesWithTab } from '@/app/actions/sample-approvals'
 import { getSample } from '@/app/actions/samples'
 import { getResultsBySample } from '@/app/actions/results'
+import { getSampleSubmissionReview } from '@/app/actions/submission-reviews'
 import { DashboardHeader } from '@/components/dashboard-header'
-import type { ResultWithAssay } from '@/types'
+import type { ResultWithAssay, SampleSubmissionReview } from '@/types'
 import { ApprovalTabsClient } from '@/components/approval-tabs-client'
 import { ApprovalMobileLayout } from '@/components/approval-mobile-layout'
 import { ApprovalLayoutSwitcher } from '@/components/approval-layout-switcher'
@@ -68,14 +69,28 @@ export default async function ApprovalsPage({ searchParams }: ApprovalsPageProps
     // Fetch selected sample and results if ID is present
     let selectedSample = null
     let results: ResultWithAssay[] = []
+    let submissionReview: SampleSubmissionReview = { submissions: [] }
+    let sampleLoadError: string | null = null
 
     if (selection.selectedSampleId) {
         const { data: sampleData } = await getSample(selection.selectedSampleId)
         if (sampleData) {
             selectedSample = sampleData
-            const { data: resultsData } = await getResultsBySample(selection.selectedSampleId)
+            const [
+                { data: resultsData },
+                { data: submissionReviewData, error: submissionReviewError },
+            ] = await Promise.all([
+                getResultsBySample(selection.selectedSampleId),
+                getSampleSubmissionReview(selection.selectedSampleId),
+            ])
             if (resultsData) {
                 results = resultsData
+            }
+            if (submissionReviewData) {
+                submissionReview = submissionReviewData
+            }
+            if (submissionReviewError) {
+                sampleLoadError = submissionReviewError
             }
         }
     }
@@ -122,6 +137,8 @@ export default async function ApprovalsPage({ searchParams }: ApprovalsPageProps
                                         selectedSampleId={selection.selectedSampleId ?? undefined}
                                         initialSample={selectedSample}
                                         initialResults={results}
+                                        initialSubmissionReview={submissionReview}
+                                        initialSampleLoadError={sampleLoadError}
                                     />
                                 </Suspense>
                             </div>
@@ -140,6 +157,8 @@ export default async function ApprovalsPage({ searchParams }: ApprovalsPageProps
                                         samples={queueSamples}
                                         selectedSample={selectedSample}
                                         results={results}
+                                        submissionReview={submissionReview}
+                                        initialSampleLoadError={sampleLoadError}
                                         tab={tab}
                                         reviewCount={reviewCount}
                                     />

@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
     getMethodNameSuggestions: vi.fn(),
     createClient: vi.fn(),
     updateUser: vi.fn(),
+    getSampleSubmissionReview: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -45,6 +46,11 @@ vi.mock('@/app/actions/sample-approvals', () => ({
 vi.mock('@/app/actions/results', () => ({
     getResultsBySample: vi.fn(),
     saveBatchResults: vi.fn(),
+}))
+
+vi.mock('@/app/actions/submission-reviews', () => ({
+    getSampleSubmissionReview: (...args: unknown[]) =>
+        mocks.getSampleSubmissionReview(...args),
 }))
 
 vi.mock('@/app/actions/results-approval', () => ({
@@ -164,6 +170,9 @@ describe('client action role guard', () => {
         mocks.createAssayDefinition.mockResolvedValue({ success: true })
         mocks.updateAssayDefinition.mockResolvedValue({ success: true })
         mocks.getMethodNameSuggestions.mockResolvedValue({ data: ['CLIA'] })
+        mocks.getSampleSubmissionReview.mockResolvedValue({
+            data: { submissions: [] },
+        })
     })
 
     it('allows doctor to call the completed samples read action', async () => {
@@ -326,5 +335,20 @@ describe('client action role guard', () => {
         expect(response.status).toBe(200)
         await expect(response.json()).resolves.toEqual({ data: ['CLIA'] })
         expect(mocks.getMethodNameSuggestions).toHaveBeenCalledTimes(1)
+    })
+
+    it('dispatches manager submission review reads through the client-action bridge', async () => {
+        mockRole('manager')
+        const sampleId = '11111111-1111-4111-8111-111111111111'
+
+        const response = await POST(
+            buildRequest('getSampleSubmissionReview', { sampleId }),
+        )
+
+        expect(response.status).toBe(200)
+        await expect(response.json()).resolves.toEqual({
+            data: { submissions: [] },
+        })
+        expect(mocks.getSampleSubmissionReview).toHaveBeenCalledWith(sampleId)
     })
 })

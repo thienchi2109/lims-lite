@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 
 const mockInvalidateQueries = vi.fn()
+const mockRefetchQueries = vi.fn()
 const mockRefresh = vi.fn()
 const mockPush = vi.fn()
 
@@ -18,6 +20,7 @@ vi.mock('@/components/ui/dialog', () => ({
 vi.mock('@tanstack/react-query', () => ({
     useQueryClient: () => ({
         invalidateQueries: mockInvalidateQueries,
+        refetchQueries: mockRefetchQueries,
     }),
 }))
 
@@ -51,6 +54,7 @@ describe('RejectSampleDialog rejection invalidation', () => {
     })
 
     it('invalidates approval queue caches and badge counts after a successful reject', async () => {
+        const user = userEvent.setup()
         mockRejectSampleClient.mockResolvedValue({ success: true })
 
         const onOpenChange = vi.fn()
@@ -62,15 +66,26 @@ describe('RejectSampleDialog rejection invalidation', () => {
 
         rerender(<RejectSampleDialog sampleId="sample-1" open onOpenChange={onOpenChange} />)
 
-        fireEvent.change(screen.getByPlaceholderText('Nhập lý do từ chối...'), {
-            target: { value: 'Need to re-check' },
-        })
-        fireEvent.click(screen.getByRole('button', { name: 'Từ chối mẫu' }))
+        await user.type(
+            screen.getByPlaceholderText('Nhập lý do từ chối...'),
+            'Cần kiểm tra lại',
+        )
+        await user.click(screen.getByRole('button', { name: 'Từ chối mẫu' }))
 
         await waitFor(() =>
-            expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: approvalKeys.count }),
+            expect(mockInvalidateQueries).toHaveBeenCalledWith({
+                queryKey: approvalKeys.all,
+                refetchType: 'all',
+            }),
         )
-        expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: approvalKeys.all })
+        expect(mockInvalidateQueries).toHaveBeenCalledWith({
+            queryKey: approvalKeys.all,
+            refetchType: 'all',
+        })
+        expect(mockInvalidateQueries).not.toHaveBeenCalledWith({
+            queryKey: approvalKeys.count,
+        })
         expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: rejectionKeys.count })
+        expect(mockRefetchQueries).not.toHaveBeenCalled()
     })
 })

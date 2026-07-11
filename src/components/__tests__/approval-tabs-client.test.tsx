@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
 const mockReplace = vi.fn()
 const mockRefresh = vi.fn()
 const mockFetchSampleResultsClient = vi.fn()
+const mockFetchSampleSubmissionReviewClient = vi.fn()
 const mockFetchSampleDetail = vi.fn()
 const mockUseFaviconBadge = vi.fn()
 const mockUseApprovalQueue = vi.fn()
@@ -34,6 +36,8 @@ vi.mock('@/lib/supabase/client', () => ({
 vi.mock('@/lib/api-client', () => ({
     fetchSamplesForApprovalCountClient: vi.fn().mockResolvedValue({ data: 1 }),
     fetchSampleResultsClient: (...args: unknown[]) => mockFetchSampleResultsClient(...args),
+    fetchSampleSubmissionReviewClient: (...args: unknown[]) =>
+        mockFetchSampleSubmissionReviewClient(...args),
 }))
 
 vi.mock('@/hooks/use-favicon-badge', () => ({
@@ -86,12 +90,21 @@ vi.mock('@/components/approval-queue-table', () => ({
 }))
 
 vi.mock('@/components/approval-inspector-column', () => ({
-    ApprovalInspectorColumn: ({ sample, results, isLoadingSample, loadErrorMessage }: any) => (
+    ApprovalInspectorColumn: ({
+        sample,
+        results,
+        submissionReview,
+        isLoadingSample,
+        loadErrorMessage,
+    }: any) => (
         <div>
             <div data-testid="approval-inspector-loading">{String(Boolean(isLoadingSample))}</div>
             <div data-testid="approval-inspector-error">{loadErrorMessage ?? ''}</div>
             <div data-testid="approval-inspector-sample">{sample?.sample_id ?? 'none'}</div>
             <div data-testid="approval-inspector-results">{results.map((result: any) => result.id).join(',')}</div>
+            <div data-testid="approval-inspector-submissions">
+                {submissionReview?.submissions.length ?? 0}
+            </div>
         </div>
     ),
 }))
@@ -164,6 +177,20 @@ const updatedServerSample = {
     sample_id: 'CDC-XN-0002',
 } as SampleWithUser
 const updatedServerResults = [{ id: 'result-2' }] as ResultWithAssay[]
+const emptySubmissionReview = { submissions: [] }
+const submissionReviewFixture = {
+    submissions: [
+        {
+            id: '11111111-1111-4111-8111-111111111111',
+            sample_id: '22222222-2222-4222-8222-222222222222',
+            submitted_at: '2026-07-11T03:00:00.000Z',
+            submission_number: 1,
+            superseded_by: null,
+            is_active: true,
+            assessments: [],
+        },
+    ],
+}
 
 function renderWithQueryClient(ui: ReactNode) {
     const queryClient = new QueryClient({
@@ -204,7 +231,11 @@ describe('ApprovalTabsClient', () => {
         mockReplace.mockClear()
         mockRefresh.mockClear()
         mockFetchSampleDetail.mockReset()
-        mockFetchSampleResultsClient.mockReset()
+    mockFetchSampleResultsClient.mockReset()
+    mockFetchSampleSubmissionReviewClient.mockReset()
+    mockFetchSampleSubmissionReviewClient.mockResolvedValue({
+        data: emptySubmissionReview,
+    })
         mockUseFaviconBadge.mockClear()
         consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
         mockUseApprovalQueue.mockImplementation(({ tab }: { tab: 'review' | 'completed' }) => ({
@@ -248,13 +279,37 @@ describe('ApprovalTabsClient', () => {
         expect(screen.getByTestId('approval-inspector-results').textContent).toBe('result-1')
     })
 
+    it('keeps the initial snapshot load error visible for a deep link', async () => {
+        renderWithQueryClient(
+            <ApprovalTabsClient
+                tab="review"
+                samples={samples}
+                reviewCount={1}
+                selectedSampleId="sample-1"
+                initialSample={initialSample}
+                initialResults={initialResults}
+                initialSampleLoadError="Không thể tải dữ liệu đánh giá đã gửi"
+            />,
+        )
+
+        await waitFor(() => {
+            expect(screen.getByTestId('approval-inspector-error').textContent).toBe(
+                'Không thể tải dữ liệu đánh giá đã gửi',
+            )
+        })
+    })
+
     it('updates the detail panel client-side when switching samples without queue navigation', async () => {
+        const user = userEvent.setup()
         mockFetchSampleDetail.mockResolvedValue({
             id: 'sample-2',
             sample_id: 'CDC-XN-0002',
         })
         mockFetchSampleResultsClient.mockResolvedValue({
             data: [{ id: 'result-2' }],
+        })
+        mockFetchSampleSubmissionReviewClient.mockResolvedValue({
+            data: submissionReviewFixture,
         })
 
         renderWithQueryClient(
@@ -268,7 +323,7 @@ describe('ApprovalTabsClient', () => {
             />,
         )
 
-        fireEvent.click(screen.getAllByTestId('select-sample-2')[0])
+        await user.click(screen.getAllByTestId('select-sample-2')[0])
 
         expect(mockReplace).not.toHaveBeenCalled()
         expect(mockRefresh).not.toHaveBeenCalled()
@@ -283,11 +338,14 @@ describe('ApprovalTabsClient', () => {
         })
 
         expect(screen.getByTestId('approval-inspector-results').textContent).toBe('result-2')
+        expect(screen.getByTestId('approval-inspector-submissions').textContent).toBe('1')
         expect(mockFetchSampleDetail).toHaveBeenCalledWith('sample-2')
         expect(mockFetchSampleResultsClient).toHaveBeenCalledWith('sample-2')
+        expect(mockFetchSampleSubmissionReviewClient).toHaveBeenCalledWith('sample-2')
     })
 
     it('keeps rendering the previous detail while the next sample is still loading', async () => {
+        const user = userEvent.setup()
         const sampleDeferred = deferredPromise<{ id: string; sample_id: string }>()
         const resultsDeferred = deferredPromise<{ data: Array<{ id: string }> }>()
 
@@ -305,7 +363,7 @@ describe('ApprovalTabsClient', () => {
             />,
         )
 
-        fireEvent.click(screen.getAllByTestId('select-sample-2')[0])
+        await user.click(screen.getAllByTestId('select-sample-2')[0])
 
         await waitFor(() => {
             expect(screen.getByTestId('approval-inspector-loading').textContent).toBe('true')
@@ -323,6 +381,7 @@ describe('ApprovalTabsClient', () => {
     })
 
     it('preserves the client-selected detail when stale server props rerender while a request is in-flight', async () => {
+        const user = userEvent.setup()
         const sampleDeferred = deferredPromise<{ id: string; sample_id: string }>()
         const resultsDeferred = deferredPromise<{ data: Array<{ id: string }> }>()
 
@@ -340,7 +399,7 @@ describe('ApprovalTabsClient', () => {
             />,
         )
 
-        fireEvent.click(screen.getAllByTestId('select-sample-2')[0])
+        await user.click(screen.getAllByTestId('select-sample-2')[0])
 
         await waitFor(() => {
             expect(screen.getByTestId('approval-inspector-loading').textContent).toBe('true')
@@ -369,6 +428,7 @@ describe('ApprovalTabsClient', () => {
     })
 
     it('surfaces an explicit error state when detail fetch fails', async () => {
+        const user = userEvent.setup()
         mockFetchSampleDetail.mockRejectedValue(new Error('network failed'))
         mockFetchSampleResultsClient.mockResolvedValue({ data: [] })
 
@@ -383,7 +443,7 @@ describe('ApprovalTabsClient', () => {
             />,
         )
 
-        fireEvent.click(screen.getAllByTestId('select-sample-2')[0])
+        await user.click(screen.getAllByTestId('select-sample-2')[0])
 
         await waitFor(() => {
             expect(screen.getByTestId('approval-inspector-error').textContent).toBe(
@@ -393,6 +453,7 @@ describe('ApprovalTabsClient', () => {
     })
 
     it('retries the same sample after a detail fetch failure', async () => {
+        const user = userEvent.setup()
         mockFetchSampleDetail
             .mockRejectedValueOnce(new Error('network failed'))
             .mockResolvedValueOnce({
@@ -414,7 +475,7 @@ describe('ApprovalTabsClient', () => {
             />,
         )
 
-        fireEvent.click(screen.getAllByTestId('select-sample-2')[0])
+        await user.click(screen.getAllByTestId('select-sample-2')[0])
 
         await waitFor(() => {
             expect(screen.getByTestId('approval-inspector-error').textContent).toBe(
@@ -422,7 +483,7 @@ describe('ApprovalTabsClient', () => {
             )
         })
 
-        fireEvent.click(screen.getAllByTestId('select-sample-2')[0])
+        await user.click(screen.getAllByTestId('select-sample-2')[0])
 
         await waitFor(() => {
             expect(screen.getByTestId('approval-inspector-sample').textContent).toBe('CDC-XN-0002')
@@ -467,6 +528,7 @@ describe('ApprovalTabsClient', () => {
     })
 
     it('preserves client-selected detail when server refresh returns stale empty selection props', async () => {
+        const user = userEvent.setup()
         originalReplaceState(null, '', '/manager/approvals?tab=review')
         mockFetchSampleDetail.mockResolvedValue({
             id: 'sample-2',
@@ -487,7 +549,7 @@ describe('ApprovalTabsClient', () => {
             />,
         )
 
-        fireEvent.click(screen.getByTestId('select-sample-2'))
+        await user.click(screen.getByTestId('select-sample-2'))
 
         await waitFor(() => {
             expect(screen.getByTestId('approval-inspector-sample').textContent).toBe('CDC-XN-0002')
@@ -509,6 +571,7 @@ describe('ApprovalTabsClient', () => {
     })
 
     it('switches tabs with local URL sync and clears stale sample selection', async () => {
+        const user = userEvent.setup()
         renderWithQueryClient(
             <ApprovalTabsClient
                 tab="review"
@@ -520,9 +583,7 @@ describe('ApprovalTabsClient', () => {
             />,
         )
 
-        await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Đã duyệt KQ' }))
-        })
+        await user.click(screen.getByRole('button', { name: 'Đã duyệt KQ' }))
 
         expect(mockReplace).not.toHaveBeenCalled()
         expect(mockRefresh).not.toHaveBeenCalled()

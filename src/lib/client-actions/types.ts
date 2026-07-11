@@ -9,6 +9,7 @@ export type ClientActionName =
     | 'recordSampleLabelPrint'
     | 'getSampleTests'
     | 'getResultsBySample'
+    | 'getSampleSubmissionReview'
     | 'saveBatchResults'
     | 'submitSampleForReview'
     | 'getAssayDefinitions'

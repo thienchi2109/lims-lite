@@ -22,11 +22,17 @@ import {
 import { SampleDetailPanel } from '@/components/sample-detail-panel'
 import { AssignedTestsPanel } from '@/components/assigned-tests-panel'
 import { ApprovalActions } from '@/components/approval-actions'
-import type { SampleWithUser, ResultWithAssay } from '@/types'
+import { SubmittedAssessmentReview } from '@/components/submitted-assessment-review'
+import type {
+    SampleWithUser,
+    ResultWithAssay,
+    SampleSubmissionReview,
+} from '@/types'
 
 interface ApprovalMobileDetailProps {
     sample: SampleWithUser | null
     results: ResultWithAssay[]
+    submissionReview?: SampleSubmissionReview | null
     open: boolean
     onClose: () => void
     isLoadingSample?: boolean
@@ -36,6 +42,7 @@ interface ApprovalMobileDetailProps {
 export function ApprovalMobileDetail({
     sample,
     results,
+    submissionReview = null,
     open,
     onClose,
     isLoadingSample = false,
@@ -74,6 +81,8 @@ export function ApprovalMobileDetail({
                         <>
                             <SampleDetailPanel sample={sample} />
 
+                            <SubmittedAssessmentReview review={submissionReview} />
+
                             {/* Test results */}
                             <AssignedTestsPanel
                                 sampleId={sample.id}
@@ -90,11 +99,15 @@ export function ApprovalMobileDetail({
 
                 {/* Sticky footer with compact approval actions */}
                 <div className="shrink-0 border-t border-slate-200 dark:border-slate-800 px-4 py-3 bg-white dark:bg-slate-950">
-                    {sample ? (
+                    {sample && !loadErrorMessage ? (
                         <ApprovalActions sampleId={sample.id} results={results} compact />
                     ) : (
                         <div className="text-sm text-slate-500 dark:text-slate-400">
-                            {isLoadingSample ? 'Đang tải thao tác mẫu...' : 'Chưa có mẫu được chọn'}
+                            {loadErrorMessage
+                                ? 'Không thể phê duyệt khi dữ liệu đánh giá chưa tải được'
+                                : isLoadingSample
+                                  ? 'Đang tải thao tác mẫu...'
+                                  : 'Chưa có mẫu được chọn'}
                         </div>
                     )}
                 </div>

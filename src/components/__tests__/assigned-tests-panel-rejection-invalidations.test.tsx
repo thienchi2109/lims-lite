@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 
 const mockInvalidateQueries = vi.fn().mockResolvedValue(undefined)
+const mockRefetchQueries = vi.fn().mockResolvedValue(undefined)
 const mockPush = vi.fn()
 const mockFetchTests = vi.fn()
 const capturedSpecialties: unknown[] = []
@@ -10,6 +12,7 @@ const capturedSpecialties: unknown[] = []
 vi.mock('@tanstack/react-query', () => ({
     useQueryClient: () => ({
         invalidateQueries: mockInvalidateQueries,
+        refetchQueries: mockRefetchQueries,
     }),
 }))
 
@@ -172,22 +175,35 @@ describe('AssignedTestsPanel rejection invalidation', () => {
     })
 
     it('invalidates approval and rejection counts after submit for review', async () => {
+        const user = userEvent.setup()
         render(<AssignedTestsPanel sampleId="sample-1" />)
 
         expect(screen.queryByRole('button', { name: 'Complete draft review' })).toBeNull()
-        fireEvent.click(screen.getByRole('button', { name: 'Submit for review' }))
-        fireEvent.click(screen.getByRole('button', { name: 'Complete draft review' }))
+        await user.click(screen.getByRole('button', { name: 'Submit for review' }))
+        await user.click(screen.getByRole('button', { name: 'Complete draft review' }))
 
         await waitFor(() =>
-            expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: approvalKeys.count }),
+            expect(mockInvalidateQueries).toHaveBeenCalledWith({
+                queryKey: approvalKeys.all,
+                refetchType: 'all',
+            }),
         )
+        expect(mockInvalidateQueries).toHaveBeenCalledWith({
+            queryKey: approvalKeys.all,
+            refetchType: 'all',
+        })
+        expect(mockInvalidateQueries).not.toHaveBeenCalledWith({
+            queryKey: approvalKeys.count,
+        })
         expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: rejectionKeys.count })
+        expect(mockRefetchQueries).not.toHaveBeenCalled()
         expect(mockFetchTests).toHaveBeenCalled()
     })
 
-    it('keeps the default specialties reference stable across rerenders', () => {
+    it('keeps the default specialties reference stable across rerenders', async () => {
+        const user = userEvent.setup()
         const { rerender } = render(<AssignedTestsPanel sampleId="sample-1" />)
-        fireEvent.click(screen.getByRole('button', { name: 'Open assignment' }))
+        await user.click(screen.getByRole('button', { name: 'Open assignment' }))
 
         rerender(<AssignedTestsPanel sampleId="sample-1" />)
 

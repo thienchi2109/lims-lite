@@ -4,17 +4,19 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
 const mockUseApprovalQueue = vi.fn()
 const mockFetchSampleDetail = vi.fn()
 const mockFetchSampleResultsClient = vi.fn()
+const mockFetchSampleSubmissionReviewClient = vi.fn()
 
 // Mock child components for isolation
 vi.mock('@/components/approval-mobile-list', () => ({
-    ApprovalMobileList: ({ samples, selectedSampleId, onSelectSample }: any) => (
+    ApprovalMobileList: ({ samples, onSelectSample }: any) => (
         <div data-testid="mobile-list">
             {samples.map((s: any) => (
                 <button key={s.id} data-testid={`card-${s.id}`} onClick={() => onSelectSample(s.id)}>
@@ -26,10 +28,20 @@ vi.mock('@/components/approval-mobile-list', () => ({
 }))
 
 vi.mock('@/components/approval-mobile-detail', () => ({
-    ApprovalMobileDetail: ({ sample, open, onClose }: any) =>
+    ApprovalMobileDetail: ({
+        sample,
+        submissionReview,
+        open,
+        onClose,
+        loadErrorMessage,
+    }: any) =>
         open && sample ? (
             <div data-testid="mobile-detail">
                 <span>{sample.sample_id}</span>
+                <span data-testid="mobile-detail-error">{loadErrorMessage ?? ''}</span>
+                <span data-testid="mobile-submission-count">
+                    {submissionReview?.submissions.length ?? 0}
+                </span>
                 <button data-testid="close-drawer" onClick={onClose}>Close</button>
             </div>
         ) : null,
@@ -75,6 +87,8 @@ vi.mock('@/hooks/use-sample-detail', () => ({
 
 vi.mock('@/lib/api-client', () => ({
     fetchSampleResultsClient: (...args: unknown[]) => mockFetchSampleResultsClient(...args),
+    fetchSampleSubmissionReviewClient: (...args: unknown[]) =>
+        mockFetchSampleSubmissionReviewClient(...args),
 }))
 
 // Mock next/navigation
@@ -155,6 +169,10 @@ beforeEach(() => {
     mockReplace.mockClear()
     mockFetchSampleDetail.mockReset()
     mockFetchSampleResultsClient.mockReset()
+    mockFetchSampleSubmissionReviewClient.mockReset()
+    mockFetchSampleSubmissionReviewClient.mockResolvedValue({
+        data: { submissions: [] },
+    })
     mockSearchParams = new URLSearchParams()
     originalReplaceState(null, '', '/manager/approvals')
     historyReplaceSpy = vi.spyOn(window.history, 'replaceState').mockImplementation((...args) => {
@@ -187,6 +205,32 @@ describe('ApprovalMobileLayout', () => {
         expect(screen.getByTestId('mobile-list')).toBeDefined()
         expect(screen.getByText('CDC-XN-0001')).toBeDefined()
         expect(screen.getByText('CDC-XN-0002')).toBeDefined()
+    })
+
+    it('keeps the initial snapshot load error visible in the detail drawer', async () => {
+        mockSearchParams = new URLSearchParams('tab=review&sampleId=uuid-1')
+        originalReplaceState(
+            null,
+            '',
+            '/manager/approvals?tab=review&sampleId=uuid-1',
+        )
+
+        renderWithQueryClient(
+            <ApprovalMobileLayout
+                samples={mockSamples}
+                selectedSample={mockSelectedSample}
+                results={mockResults}
+                initialSampleLoadError="Không thể tải dữ liệu đánh giá đã gửi"
+                tab="review"
+                reviewCount={2}
+            />,
+        )
+
+        await waitFor(() => {
+            expect(screen.getByTestId('mobile-detail-error').textContent).toBe(
+                'Không thể tải dữ liệu đánh giá đã gửi',
+            )
+        })
     })
 
     it('renders tab switcher with review and completed tabs', () => {
@@ -235,7 +279,8 @@ describe('ApprovalMobileLayout', () => {
         expect(screen.getByTestId('mobile-detail')).toBeDefined()
     })
 
-    it('closes the detail drawer immediately when the close button is pressed', () => {
+    it('closes the detail drawer immediately when the close button is pressed', async () => {
+        const user = userEvent.setup()
         originalReplaceState(null, '', '/manager/approvals?tab=review&sampleId=uuid-1')
 
         renderWithQueryClient(
@@ -250,7 +295,7 @@ describe('ApprovalMobileLayout', () => {
 
         expect(screen.getByTestId('mobile-detail')).toBeDefined()
 
-        fireEvent.click(screen.getByTestId('close-drawer'))
+        await user.click(screen.getByTestId('close-drawer'))
 
         expect(mockReplace).not.toHaveBeenCalled()
         expect(historyReplaceSpy?.mock.calls.at(-1)?.[2]).toBe('/manager/approvals?tab=review')
@@ -258,8 +303,24 @@ describe('ApprovalMobileLayout', () => {
     })
 
     it('loads and shows drawer client-side when a sample is selected', async () => {
+        const user = userEvent.setup()
         mockFetchSampleDetail.mockResolvedValueOnce(mockSelectedSample)
         mockFetchSampleResultsClient.mockResolvedValueOnce({ data: mockResults })
+        mockFetchSampleSubmissionReviewClient.mockResolvedValueOnce({
+            data: {
+                submissions: [
+                    {
+                        id: '11111111-1111-4111-8111-111111111111',
+                        sample_id: '22222222-2222-4222-8222-222222222222',
+                        submitted_at: '2026-07-11T03:00:00.000Z',
+                        submission_number: 1,
+                        superseded_by: null,
+                        is_active: true,
+                        assessments: [],
+                    },
+                ],
+            },
+        })
 
         renderWithQueryClient(
             <ApprovalMobileLayout
@@ -271,21 +332,24 @@ describe('ApprovalMobileLayout', () => {
             />,
         )
 
-        fireEvent.click(screen.getByTestId('card-uuid-1'))
+        await user.click(screen.getByTestId('card-uuid-1'))
 
         expect(mockReplace).not.toHaveBeenCalled()
         expect(historyReplaceSpy?.mock.calls.at(-1)?.[2]).toContain('sampleId=uuid-1')
         await waitFor(() => {
             expect(mockFetchSampleDetail).toHaveBeenCalledWith('uuid-1')
             expect(mockFetchSampleResultsClient).toHaveBeenCalledWith('uuid-1')
+            expect(mockFetchSampleSubmissionReviewClient).toHaveBeenCalledWith('uuid-1')
         })
 
         await waitFor(() => {
             expect(screen.getByTestId('mobile-detail').textContent).toContain('CDC-XN-0001')
         })
+        expect(screen.getByTestId('mobile-submission-count').textContent).toBe('1')
     })
 
-    it('navigates to completed tab when clicking tab trigger', () => {
+    it('navigates to completed tab when clicking tab trigger', async () => {
+        const user = userEvent.setup()
         renderWithQueryClient(
             <ApprovalMobileLayout
                 samples={mockSamples}
@@ -296,12 +360,13 @@ describe('ApprovalMobileLayout', () => {
             />,
         )
 
-        fireEvent.click(screen.getByTestId('tab-completed'))
+        await user.click(screen.getByTestId('tab-completed'))
         expect(historyReplaceSpy?.mock.calls.at(-1)?.[2]).toContain('tab=completed')
         expect(screen.getByTestId('approval-header').textContent).toBe('2-completed')
     })
 
-    it('clears sampleId from URL when switching tabs', () => {
+    it('clears sampleId from URL when switching tabs', async () => {
+        const user = userEvent.setup()
         // Set searchParams with an existing sampleId to prove delete works
         originalReplaceState(null, '', '/manager/approvals?tab=review&sampleId=uuid-1')
         historyReplaceSpy?.mockClear()
@@ -316,13 +381,14 @@ describe('ApprovalMobileLayout', () => {
             />,
         )
 
-        fireEvent.click(screen.getByTestId('tab-completed'))
+        await user.click(screen.getByTestId('tab-completed'))
         const calledUrl = historyReplaceSpy?.mock.calls.at(-1)?.[2] as string
         expect(calledUrl).toContain('tab=completed')
         expect(calledUrl).not.toContain('sampleId')
     })
 
     it('keeps the active tab in the URL when selecting a sample after a local tab switch', async () => {
+        const user = userEvent.setup()
         originalReplaceState(null, '', '/manager/approvals?tab=review')
         historyReplaceSpy?.mockClear()
         mockFetchSampleDetail.mockResolvedValueOnce(mockSelectedSample)
@@ -338,8 +404,8 @@ describe('ApprovalMobileLayout', () => {
             />,
         )
 
-        fireEvent.click(screen.getByTestId('tab-completed'))
-        fireEvent.click(screen.getByTestId('card-uuid-1'))
+        await user.click(screen.getByTestId('tab-completed'))
+        await user.click(screen.getByTestId('card-uuid-1'))
 
         await waitFor(() => {
             expect(mockFetchSampleDetail).toHaveBeenCalledWith('uuid-1')

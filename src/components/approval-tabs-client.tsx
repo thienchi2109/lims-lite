@@ -5,11 +5,11 @@ import { usePathname, useRouter } from 'next/navigation'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { ApprovalQueueContent } from '@/components/approval-queue-content'
-import type { ApprovalQueueSample, ApprovalTab, ResultWithAssay, SampleWithUser } from '@/types'
+import type { ApprovalQueueSample, ApprovalTab, ResultWithAssay, SampleSubmissionReview, SampleWithUser } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import { fetchSamplesForApprovalCountClient } from '@/lib/api-client'
 import { useFaviconBadge } from '@/hooks/use-favicon-badge'
-import { useApprovalSampleCoreCache } from '@/hooks/use-approval-sample-core'
+import { useApprovalSampleCoreCache, type ApprovalSampleCoreData } from '@/hooks/use-approval-sample-core'
 import { useApprovalQueue } from '@/hooks/use-approval-queue'
 import { useApprovalUrlState } from '@/hooks/use-approval-url-state'
 import { buildApprovalQueueUrl, replaceApprovalQueueUrl } from '@/lib/approval-queue-url'
@@ -23,7 +23,11 @@ interface ApprovalTabsClientProps {
     selectedSampleId?: string
     initialSample: SampleWithUser | null
     initialResults: ResultWithAssay[]
+    initialSubmissionReview?: SampleSubmissionReview
+    initialSampleLoadError?: string | null
 }
+
+const EMPTY_SUBMISSION_REVIEW: SampleSubmissionReview = { submissions: [] }
 
 export function ApprovalTabsClient({
     tab,
@@ -32,6 +36,8 @@ export function ApprovalTabsClient({
     selectedSampleId,
     initialSample,
     initialResults,
+    initialSubmissionReview = EMPTY_SUBMISSION_REVIEW,
+    initialSampleLoadError = null,
 }: ApprovalTabsClientProps) {
     const router = useRouter()
     const pathname = usePathname()
@@ -49,8 +55,11 @@ export function ApprovalTabsClient({
     const [activeResults, setActiveResults] = useState<ResultWithAssay[]>(
         hasServerSelection ? initialResults : [],
     )
+    const [activeSubmissionReview, setActiveSubmissionReview] = useState<SampleSubmissionReview | null>(
+        hasServerSelection ? initialSubmissionReview : null,
+    )
     const [isLoadingSample, setIsLoadingSample] = useState(false)
-    const [sampleLoadError, setSampleLoadError] = useState<string | null>(null)
+    const [sampleLoadError, setSampleLoadError] = useState<string | null>(hasServerSelection ? initialSampleLoadError : null)
     const tabRef = useRef<ApprovalTab>(tab)
     const sampleRequestIdRef = useRef(0)
     const isClientSelectionRef = useRef(false)
@@ -58,6 +67,7 @@ export function ApprovalTabsClient({
         sampleId: serverSampleId,
         initialSample,
         initialResults,
+        initialSubmissionReview,
     })
     const approvalQueue = useApprovalQueue({
         tab: activeTab,
@@ -69,9 +79,10 @@ export function ApprovalTabsClient({
     useFaviconBadge(liveReviewCount)
 
     const applyActiveDetail = useCallback(
-        (nextDetail: { sample: SampleWithUser; results: ResultWithAssay[] } | null) => {
+        (nextDetail: ApprovalSampleCoreData | null) => {
             setActiveSample(nextDetail?.sample ?? null)
             setActiveResults(nextDetail?.results ?? [])
+            setActiveSubmissionReview(nextDetail?.submissionReview ?? null)
         },
         [],
     )
@@ -95,22 +106,31 @@ export function ApprovalTabsClient({
 
             const nextDetail =
                 hasServerSelection && initialSample
-                    ? { sample: initialSample, results: initialResults }
+                    ? {
+                          sample: initialSample,
+                          results: initialResults,
+                          submissionReview: initialSubmissionReview,
+                      }
                     : null
             const hasSyncedSample = activeSample === (nextDetail?.sample ?? null)
             const hasSyncedResults = nextDetail
                 ? activeResults === nextDetail.results
                 : activeResults.length === 0
-            const hasSyncedStatus = sampleLoadError === null && !isLoadingSample
+            const nextLoadError = hasServerSelection ? initialSampleLoadError : null
+            const hasSyncedStatus =
+                sampleLoadError === nextLoadError && !isLoadingSample
+            const hasSyncedReview = nextDetail
+                ? activeSubmissionReview === nextDetail.submissionReview
+                : activeSubmissionReview === null
 
-            if (hasSyncedSample && hasSyncedResults && hasSyncedStatus) {
+            if (hasSyncedSample && hasSyncedResults && hasSyncedReview && hasSyncedStatus) {
                 isClientSelectionRef.current = false
                 return
             }
 
             sampleRequestIdRef.current += 1
             applyActiveDetail(nextDetail)
-            setSampleLoadError(null)
+            setSampleLoadError(nextLoadError)
             setIsLoadingSample(false)
             isClientSelectionRef.current = false
         })
@@ -122,9 +142,12 @@ export function ApprovalTabsClient({
         applyActiveDetail,
         activeResults,
         activeSample,
+        activeSubmissionReview,
         hasServerSelection,
         initialResults,
         initialSample,
+        initialSampleLoadError,
+        initialSubmissionReview,
         isLoadingSample,
         sampleLoadError,
         serverSampleId,
@@ -278,6 +301,7 @@ export function ApprovalTabsClient({
             onSelectSample={handleSelectSample}
             sample={activeSample}
             results={activeResults}
+            submissionReview={activeSubmissionReview}
             isLoadingSample={isLoadingSample}
             sampleLoadError={sampleLoadError}
         />

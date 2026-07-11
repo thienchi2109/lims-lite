@@ -124,6 +124,21 @@ describe('ApprovalMobileDetail', () => {
         expect(screen.getByTestId('approval-actions').textContent).toContain('2 results')
     })
 
+    it('hides approval actions when the submitted assessment cannot be loaded', () => {
+        render(
+            <ApprovalMobileDetail
+                sample={mockSample}
+                results={mockResults}
+                open={true}
+                onClose={vi.fn()}
+                loadErrorMessage="Không thể tải dữ liệu đánh giá đã gửi"
+            />,
+        )
+
+        expect(screen.getByText('Không thể tải dữ liệu đánh giá đã gửi')).toBeDefined()
+        expect(screen.queryByTestId('approval-actions')).toBeNull()
+    })
+
     it('renders sample ID in the drawer header', () => {
         render(
             <ApprovalMobileDetail

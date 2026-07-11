@@ -53,12 +53,12 @@
 
 ## Phase 3: Manager assessment review
 
-- [ ] 3.1 Add failing focused tests proving that manager approval detail renders
+- [x] 3.1 Add failing focused tests proving that manager approval detail renders
   the submitted snapshot assessment, value, unit, method, and reference range
   without recalculating the conclusion.
-- [ ] 3.2 Extend approval read models and manager detail UI to consume immutable
+- [x] 3.2 Extend approval read models and manager detail UI to consume immutable
   snapshot data for the active submission.
-- [ ] 3.3 Invalidate and refetch manager queries after a reviewed submission,
+- [x] 3.3 Invalidate and refetch manager queries after a reviewed submission,
   rejection, and resubmission. Verify that prior submission history remains
   visible where the existing workflow exposes it.
 
@@ -86,6 +86,9 @@
   unrelated refactors outside the change.
   - Phase 2 evidence: reviewed the analyst draft-review dependencies and kept
     manager review and final CoA provenance work in Phases 3 and 4 untouched.
+  - Phase 3 evidence: reviewed the manager approval read path, immutable
+    submission snapshots, and existing cache invalidation boundaries; no
+    migration or Phase 4 CoA provenance work was required.
 - [ ] 5.2 After every phase, run its focused database and component tests,
   `npm run lint`, and `npm run typecheck`. Inspect touched files for Vietnamese
   UI copy, strict TypeScript, `api-client` mutation usage, and file-size
@@ -93,6 +96,14 @@
   - Phase 2 evidence: 68 focused Vitest tests passed, changed-file ESLint and
     typecheck passed, React Doctor scored 100/100, and Docker SQL regression
     plus `run_security_tests()` passed.
+  - Phase 3 evidence: 63 focused Vitest tests across 12 files passed, lint
+    completed with no errors, typecheck passed, React Doctor scored 100/100,
+    Docker security tests passed 27/27, and OpenSpec strict validation passed.
+    UI copy remains Vietnamese, Zod and TypeScript stay strict, client
+    mutations use `api-client.ts`, and all new source files plus the expanded
+    approval components remain within the configured size boundary. Existing
+    shared route/client modules remain above the preferred limit and were
+    changed only at their extension points.
 - [ ] 5.3 After Phase 4, run the complete focused suite spanning submission,
   draft rendering, manager approval, CoA rendering, retries, authorization, and
   historic fallback.

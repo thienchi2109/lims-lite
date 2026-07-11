@@ -3,7 +3,12 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
-import { sampleKeys, invalidateSampleQueries, approvalKeys, rejectionKeys } from '@/types/query-keys'
+import {
+    sampleKeys,
+    invalidateSampleQueries,
+    approvalKeys,
+    rejectionKeys,
+} from '@/types/query-keys'
 import {
     Table,
     TableBody,
@@ -114,7 +119,10 @@ export function AssignedTestsPanel({
 
     const handleReviewSubmitted = async () => {
         await invalidateSampleQueries(queryClient, sampleId, { includeResults: false })
-        queryClient.invalidateQueries({ queryKey: approvalKeys.count })
+        await queryClient.invalidateQueries({
+            queryKey: approvalKeys.all,
+            refetchType: 'all',
+        })
         queryClient.invalidateQueries({ queryKey: rejectionKeys.count })
         fetchTests()
     }

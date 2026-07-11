@@ -14,11 +14,20 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { ApprovalMobileList } from '@/components/approval-mobile-list'
 import { ApprovalMobileDetail } from '@/components/approval-mobile-detail'
-import { useApprovalSampleCoreCache } from '@/hooks/use-approval-sample-core'
+import {
+    useApprovalSampleCoreCache,
+    type ApprovalSampleCoreData,
+} from '@/hooks/use-approval-sample-core'
 import { useApprovalQueue } from '@/hooks/use-approval-queue'
 import { useApprovalUrlState } from '@/hooks/use-approval-url-state'
 import { buildApprovalQueueUrl, replaceApprovalQueueUrl } from '@/lib/approval-queue-url'
-import type { SampleWithUser, ResultWithAssay, ApprovalQueueSample, ApprovalTab } from '@/types'
+import type {
+    SampleWithUser,
+    ResultWithAssay,
+    ApprovalQueueSample,
+    ApprovalTab,
+    SampleSubmissionReview,
+} from '@/types'
 import { ApprovalQueueErrorState } from '@/components/approval-queue-error-state'
 import { ApprovalPageHeader } from '@/components/approval-page-header'
 
@@ -26,14 +35,20 @@ interface ApprovalMobileLayoutProps {
     samples: ApprovalQueueSample[]
     selectedSample: SampleWithUser | null
     results: ResultWithAssay[]
+    submissionReview?: SampleSubmissionReview
+    initialSampleLoadError?: string | null
     tab: 'review' | 'completed'
     reviewCount: number
 }
+
+const EMPTY_SUBMISSION_REVIEW: SampleSubmissionReview = { submissions: [] }
 
 export function ApprovalMobileLayout({
     samples,
     selectedSample,
     results,
+    submissionReview = EMPTY_SUBMISSION_REVIEW,
+    initialSampleLoadError = null,
     tab,
     reviewCount,
 }: ApprovalMobileLayoutProps) {
@@ -51,14 +66,21 @@ export function ApprovalMobileLayout({
     const [activeResults, setActiveResults] = useState<ResultWithAssay[]>(
         hasServerSelection ? results : [],
     )
+    const [activeSubmissionReview, setActiveSubmissionReview] =
+        useState<SampleSubmissionReview | null>(
+            hasServerSelection ? submissionReview : null,
+        )
     const [isLoadingSample, setIsLoadingSample] = useState(false)
-    const [sampleLoadError, setSampleLoadError] = useState<string | null>(null)
+    const [sampleLoadError, setSampleLoadError] = useState<string | null>(
+        hasServerSelection ? initialSampleLoadError : null,
+    )
     const sampleRequestIdRef = useRef(0)
     const isClientSelectionRef = useRef(false)
     const { getCachedSampleCore, loadSampleCore } = useApprovalSampleCoreCache({
         sampleId: serverSampleId,
         initialSample: selectedSample,
         initialResults: results,
+        initialSubmissionReview: submissionReview,
     })
     const approvalQueue = useApprovalQueue({
         tab: activeTab,
@@ -77,9 +99,10 @@ export function ApprovalMobileLayout({
     const queueSamples = approvalQueue.data ?? (activeTab === tab ? samples : [])
 
     const applyActiveDetail = useCallback(
-        (nextDetail: { sample: SampleWithUser; results: ResultWithAssay[] } | null) => {
+        (nextDetail: ApprovalSampleCoreData | null) => {
             setActiveSample(nextDetail?.sample ?? null)
             setActiveResults(nextDetail?.results ?? [])
+            setActiveSubmissionReview(nextDetail?.submissionReview ?? null)
         },
         [],
     )
@@ -99,22 +122,36 @@ export function ApprovalMobileLayout({
 
             const nextDetail =
                 hasServerSelection && selectedSample
-                    ? { sample: selectedSample, results }
+                    ? {
+                          sample: selectedSample,
+                          results,
+                          submissionReview,
+                      }
                     : null
             const hasSyncedSample = activeSample === (nextDetail?.sample ?? null)
             const hasSyncedResults = nextDetail
                 ? activeResults === nextDetail.results
                 : activeResults.length === 0
-            const hasSyncedStatus = sampleLoadError === null && !isLoadingSample
+            const nextLoadError = hasServerSelection ? initialSampleLoadError : null
+            const hasSyncedStatus =
+                sampleLoadError === nextLoadError && !isLoadingSample
+            const hasSyncedReview = nextDetail
+                ? activeSubmissionReview === nextDetail.submissionReview
+                : activeSubmissionReview === null
 
-            if (hasSyncedSample && hasSyncedResults && hasSyncedStatus) {
+            if (
+                hasSyncedSample &&
+                hasSyncedResults &&
+                hasSyncedReview &&
+                hasSyncedStatus
+            ) {
                 isClientSelectionRef.current = false
                 return
             }
 
             sampleRequestIdRef.current += 1
             applyActiveDetail(nextDetail)
-            setSampleLoadError(null)
+            setSampleLoadError(nextLoadError)
             setIsLoadingSample(false)
             isClientSelectionRef.current = false
         })
@@ -126,12 +163,15 @@ export function ApprovalMobileLayout({
         applyActiveDetail,
         activeResults,
         activeSample,
+        activeSubmissionReview,
         hasServerSelection,
+        initialSampleLoadError,
         isLoadingSample,
         results,
         sampleLoadError,
         selectedSample,
         serverSampleId,
+        submissionReview,
         urlSampleId,
     ])
 
@@ -275,6 +315,7 @@ export function ApprovalMobileLayout({
                     <ApprovalMobileDetail
                         sample={activeSample}
                         results={activeResults}
+                        submissionReview={activeSubmissionReview}
                         open={isDrawerOpen}
                         onClose={handleCloseDrawer}
                         isLoadingSample={isLoadingSample}

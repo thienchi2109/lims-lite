@@ -4,12 +4,18 @@ import { AlertCircle } from 'lucide-react'
 import { ApprovalActions } from '@/components/approval-actions'
 import { AssignedTestsPanel } from '@/components/assigned-tests-panel'
 import { SampleDetailPanel } from '@/components/sample-detail-panel'
+import { SubmittedAssessmentReview } from '@/components/submitted-assessment-review'
 import { StickyPanelShell } from '@/components/ui/sticky-panel-shell'
-import type { ResultWithAssay, SampleWithUser } from '@/types'
+import type {
+    ResultWithAssay,
+    SampleSubmissionReview,
+    SampleWithUser,
+} from '@/types'
 
 interface ApprovalInspectorColumnProps {
     sample: SampleWithUser | null
     results: ResultWithAssay[]
+    submissionReview?: SampleSubmissionReview | null
     isLoadingSample?: boolean
     loadErrorMessage?: string | null
 }
@@ -25,6 +31,7 @@ function EmptyPanelMessage({ message }: { message: string }) {
 export function ApprovalInspectorColumn({
     sample,
     results,
+    submissionReview = null,
     isLoadingSample = false,
     loadErrorMessage = null,
 }: ApprovalInspectorColumnProps) {
@@ -65,6 +72,10 @@ export function ApprovalInspectorColumn({
                             </div>
                         )}
 
+                        <div className="max-h-[45%] shrink-0 overflow-y-auto border-b border-slate-200">
+                            <SubmittedAssessmentReview review={submissionReview} />
+                        </div>
+
                         <div className="min-h-0 flex-1">
                             <AssignedTestsPanel
                                 sampleId={sample.id}
@@ -73,9 +84,11 @@ export function ApprovalInspectorColumn({
                             />
                         </div>
 
-                        <div className="border-t border-slate-200 bg-white px-4 py-3">
-                            <ApprovalActions sampleId={sample.id} results={results} compact />
-                        </div>
+                        {!loadErrorMessage && (
+                            <div className="border-t border-slate-200 bg-white px-4 py-3">
+                                <ApprovalActions sampleId={sample.id} results={results} compact />
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <EmptyPanelMessage message="Chọn một mẫu để xem xét nghiệm và thao tác phê duyệt." />

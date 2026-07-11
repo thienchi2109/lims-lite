@@ -89,4 +89,17 @@ describe('ApprovalInspectorColumn', () => {
         expect(screen.getByTestId('approval-actions').textContent).toBe('sample-1')
         expect(screen.getByText('Đang tải chi tiết mẫu...')).toBeDefined()
     })
+
+    it('hides approval actions when the submitted assessment cannot be loaded', () => {
+        render(
+            <ApprovalInspectorColumn
+                sample={sample as never}
+                results={[]}
+                loadErrorMessage="Không thể tải dữ liệu đánh giá đã gửi"
+            />,
+        )
+
+        expect(screen.getByText('Không thể tải dữ liệu đánh giá đã gửi')).toBeDefined()
+        expect(screen.queryByTestId('approval-actions')).toBeNull()
+    })
 })

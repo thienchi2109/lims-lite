@@ -17,6 +17,7 @@ import type {
     DiscardSample,
     CreateClient,
     CoAManualInputs,
+    SampleSubmissionReview,
 } from '@/types'
 import type { SubmitResultReview } from '@/types'
 import type { ClientActionName } from '@/lib/client-actions/types'
@@ -178,6 +179,13 @@ export function fetchSampleTestsClient(sampleId: string) {
 
 export function fetchSampleResultsClient(sampleId: string, options?: CallClientActionOptions) {
     return callClientAction('getResultsBySample', { sampleId }, options)
+}
+
+export function fetchSampleSubmissionReviewClient(sampleId: string) {
+    return callClientAction<{ data?: SampleSubmissionReview; error?: string }>(
+        'getSampleSubmissionReview',
+        { sampleId },
+    )
 }
 
 export function saveBatchResultsClient(data: SaveBatchResults) {

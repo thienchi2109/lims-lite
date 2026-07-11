@@ -12,6 +12,7 @@ import {
 } from '@/app/actions/sample-tests'
 import { getSamplesForApprovalCount, getRejectedSamplesCount, getSamplesWithTab, submitSampleForReview, rejectSample, discardSample } from '@/app/actions/sample-approvals'
 import { getResultsBySample, saveBatchResults } from '@/app/actions/results'
+import { getSampleSubmissionReview } from '@/app/actions/submission-reviews'
 import { approveResults, cancelApproval } from '@/app/actions/results-approval'
 import { getAssayDefinitions as fetchAssayDefinitions } from '@/app/actions/assay-queries'
 import { getMethodNameSuggestions, getMethods } from '@/app/actions/assay-lookups'
@@ -98,6 +99,12 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
             return { error: 'Sample ID is required' }
         }
         return getResultsBySample(payload.sampleId)
+    },
+    getSampleSubmissionReview: async (payload) => {
+        if (!payload?.sampleId) {
+            return { error: 'Sample ID is required' }
+        }
+        return getSampleSubmissionReview(payload.sampleId)
     },
     saveBatchResults: async (payload) => saveBatchResults(payload),
     submitSampleForReview: async (payload) => submitSampleForReview(payload),
