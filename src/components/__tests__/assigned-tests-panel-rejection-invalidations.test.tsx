@@ -19,8 +19,19 @@ vi.mock('next/navigation', () => ({
     }),
 }))
 
-vi.mock('@/lib/api-client', () => ({
-    submitSampleForReviewClient: vi.fn(),
+vi.mock('@/components/result-review-draft-dialog', () => ({
+    ResultReviewDraftDialog: ({
+        open,
+        onSubmitted,
+    }: {
+        open: boolean
+        onSubmitted: () => Promise<void>
+    }) =>
+        open ? (
+            <button onClick={() => void onSubmitted()}>
+                Complete draft review
+            </button>
+        ) : null,
 }))
 
 vi.mock('@/hooks/use-assigned-tests-data', () => ({
@@ -151,11 +162,8 @@ vi.mock('sonner', () => ({
     },
 }))
 
-import { submitSampleForReviewClient } from '@/lib/api-client'
 import { AssignedTestsPanel } from '../assigned-tests-panel'
 import { approvalKeys, rejectionKeys } from '@/types/query-keys'
-
-const mockSubmitSampleForReviewClient = vi.mocked(submitSampleForReviewClient)
 
 describe('AssignedTestsPanel rejection invalidation', () => {
     beforeEach(() => {
@@ -164,14 +172,11 @@ describe('AssignedTestsPanel rejection invalidation', () => {
     })
 
     it('invalidates approval and rejection counts after submit for review', async () => {
-        mockSubmitSampleForReviewClient.mockResolvedValue({ success: true })
-
         render(<AssignedTestsPanel sampleId="sample-1" />)
 
-        expect(screen.queryByRole('button', { name: 'Xác nhận gửi' })).toBeNull()
+        expect(screen.queryByRole('button', { name: 'Complete draft review' })).toBeNull()
         fireEvent.click(screen.getByRole('button', { name: 'Submit for review' }))
-        expect(screen.getByRole('button', { name: 'Xác nhận gửi' })).not.toBeNull()
-        fireEvent.click(screen.getByRole('button', { name: 'Xác nhận gửi' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Complete draft review' }))
 
         await waitFor(() =>
             expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: approvalKeys.count }),

@@ -7,7 +7,7 @@
  * This module orchestrates all template sections into the complete HTML output.
  */
 
-import type { CoAData } from '@/types'
+import type { CoAData, ResultReferenceAssessment } from '@/types'
 import { escapeHtml } from './escape'
 import { getStylesheet, renderWatermark } from './styles'
 import { renderHeader } from './header'
@@ -16,9 +16,12 @@ import { renderResultsTable } from './results-table'
 import { renderSignatures } from './signatures'
 import { renderAbsoluteFooter } from './footer'
 import { renderMetadata } from './metadata'
+import { renderDraftReviewFooter } from './draft-review-footer'
 
 export interface CoATemplateRenderOptions {
+    assessments?: Record<string, ResultReferenceAssessment>
     managerStampSrc?: string
+    mode?: 'draft' | 'final'
 }
 
 // Re-export section functions for testing and direct usage
@@ -29,6 +32,7 @@ export { renderResultsTable } from './results-table'
 export { renderSignatures } from './signatures'
 export { renderAbsoluteFooter } from './footer'
 export { renderMetadata } from './metadata'
+export { renderDraftReviewFooter } from './draft-review-footer'
 
 /**
  * Generate HTML from CoA template
@@ -38,7 +42,10 @@ export function renderCoATemplate(
     coaData: CoAData,
     options: CoATemplateRenderOptions = {}
 ): string {
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(coaData.sample.sample_id_display)}&margin=0`
+    const isDraft = options.mode === 'draft'
+    const qrCodeUrl = isDraft
+        ? undefined
+        : `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(coaData.sample.sample_id_display)}&margin=0`
     const logoUrl = "https://i.postimg.cc/8zFZ52j1/cdc-logo-150.png"
     const dateStr = coaData.approvalDate
 
@@ -67,17 +74,22 @@ export function renderCoATemplate(
 
 <body>
     <div class="page">
-        ${renderWatermark()}
+        ${renderWatermark(isDraft ? 'BẢN NHÁP - CHƯA GỬI DUYỆT' : undefined)}
         <div class="content">
             ${renderHeader(coaData, logoUrl, qrCodeUrl)}
             ${renderPatientInfo(coaData)}
-            ${renderResultsTable(coaData.results)}
-            ${renderSignatures(coaData, footerDateStr, {
-                managerStampSrc: options.managerStampSrc,
+            ${renderResultsTable(coaData.results, {
+                assessments: options.assessments,
+                showAssessment: isDraft,
             })}
+            ${isDraft
+                ? renderDraftReviewFooter()
+                : renderSignatures(coaData, footerDateStr, {
+                    managerStampSrc: options.managerStampSrc,
+                })}
         </div>
         ${renderAbsoluteFooter()}
-        ${renderMetadata(coaData)}
+        ${isDraft ? '' : renderMetadata(coaData)}
     </div>
 </body>
 

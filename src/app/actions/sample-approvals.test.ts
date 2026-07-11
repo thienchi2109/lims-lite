@@ -424,24 +424,92 @@ describe('approval confidentiality filtering', () => {
 
 describe('authorized analyst workflow continuity', () => {
     const TEST_ANALYST_ID = 'e5555555-5555-4555-8555-555555555555'
+    const TEST_RESULT_ID = 'f6666666-6666-4666-8666-666666666666'
 
     beforeEach(() => {
         vi.clearAllMocks()
         mockIsAuthError.mockReturnValue(false)
         mockRequireRole.mockResolvedValue({ id: TEST_ANALYST_ID, role: 'analyst' })
-        mockRpc.mockResolvedValue({ data: true, error: null })
+        mockRpc.mockResolvedValue({
+            data: { submission_id: 'd4444444-4444-4444-8444-444444444444' },
+            error: null,
+        })
     })
 
-    it('preserves review submission for analysts with confidential workflow access', async () => {
-        const result = await submitSampleForReview('confidential-sample-id')
+    it('submits reviewed assessments through the assessment-aware RPC', async () => {
+        const assessments = [
+            {
+                result_id: TEST_RESULT_ID,
+                assessment: 'within_reference_range' as const,
+                result_updated_at: '2026-07-11T08:00:00.000Z',
+                assay_updated_at: '2026-07-11T07:00:00.000Z',
+            },
+        ]
+        const result = await submitSampleForReview({
+            sampleId: TEST_SAMPLE_ID,
+            assessments,
+        })
 
         expect(result).toEqual({ success: true })
         expect(mockRequireRole).toHaveBeenCalledWith('analyst')
-        expect(mockRpc).toHaveBeenCalledWith('submit_sample_for_review', {
-            p_sample_id: 'confidential-sample-id',
+        expect(mockRpc).toHaveBeenCalledWith('submit_sample_for_review_with_assessments', {
+            p_sample_id: TEST_SAMPLE_ID,
+            p_assessments: assessments,
         })
         expect(mockRevalidatePath).toHaveBeenCalledWith('/analyst/samples')
         expect(mockRevalidatePath).toHaveBeenCalledWith('/manager/samples')
         expect(mockRevalidatePath).toHaveBeenCalledWith('/samples')
+    })
+
+    it('returns a Vietnamese message when reviewed data is stale', async () => {
+        mockRpc.mockResolvedValueOnce({
+            data: null,
+            error: {
+                message: 'Assessment payload is stale; review the current result data before submitting',
+            },
+        })
+
+        const result = await submitSampleForReview({
+            sampleId: TEST_SAMPLE_ID,
+            assessments: [
+                {
+                    result_id: TEST_RESULT_ID,
+                    assessment: 'within_reference_range',
+                    result_updated_at: '2026-07-11T08:00:00.000Z',
+                    assay_updated_at: '2026-07-11T07:00:00.000Z',
+                },
+            ],
+        })
+
+        expect(result).toEqual({
+            error: 'Dữ liệu kết quả đã thay đổi. Vui lòng mở lại bản nháp.',
+        })
+        expect(mockRevalidatePath).not.toHaveBeenCalled()
+    })
+
+    it('does not expose untranslated RPC errors to the analyst UI', async () => {
+        mockRpc.mockResolvedValueOnce({
+            data: null,
+            error: {
+                message: 'Sample must be in progress to submit for review',
+            },
+        })
+
+        const result = await submitSampleForReview({
+            sampleId: TEST_SAMPLE_ID,
+            assessments: [
+                {
+                    result_id: TEST_RESULT_ID,
+                    assessment: 'within_reference_range',
+                    result_updated_at: '2026-07-11T08:00:00.000Z',
+                    assay_updated_at: '2026-07-11T07:00:00.000Z',
+                },
+            ],
+        })
+
+        expect(result).toEqual({
+            error: 'Không thể gửi mẫu để phê duyệt. Vui lòng tải lại dữ liệu và thử lại.',
+        })
+        expect(mockRevalidatePath).not.toHaveBeenCalled()
     })
 })

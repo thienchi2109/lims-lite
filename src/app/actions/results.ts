@@ -18,8 +18,10 @@ import { getActiveQCSessionsForAssays } from './qc-operations'
 type ResultAssayRelation = {
     name: string | null
     units: string | null
+    normal_range: string | null
     method_name: string | null
     validation_rules: Record<string, unknown> | null
+    updated_at: string
     lab_specialties: RelationValue<{
         name: string | null
         display_order: number | null
@@ -33,6 +35,15 @@ type ResultMethodRelation = {
 type ResultSampleRelation = {
     sample_id: string | null
     status: ResultWithAssay['sample_status']
+    type: string | null
+    received_at: string | null
+    clients: RelationValue<{
+        name: string | null
+        date_of_birth: string | null
+        gender: ResultWithAssay['client_gender']
+        address: string | null
+        health_insurance_num: string | null
+    }>
 }
 
 type ResultUserRelation = {
@@ -65,8 +76,10 @@ export async function getResultsBySample(sampleId: string) {
                     id,
                     name,
                     units,
+                    normal_range,
                     method_name,
                     validation_rules,
+                    updated_at,
                     lab_specialties (
                         name,
                         display_order
@@ -75,7 +88,19 @@ export async function getResultsBySample(sampleId: string) {
                 method:methods!results_method_id_fkey(
                     name
                 ),
-                sample:samples!results_sample_id_fkey(sample_id, status),
+                sample:samples!results_sample_id_fkey(
+                    sample_id,
+                    status,
+                    type,
+                    received_at,
+                    clients (
+                        name,
+                        date_of_birth,
+                        gender,
+                        address,
+                        health_insurance_num
+                    )
+                ),
                 entered_by_user:users!results_entered_by_fkey(full_name)
             `
             )
@@ -93,16 +118,26 @@ export async function getResultsBySample(sampleId: string) {
             const labSpecialty = firstRelation(assay?.lab_specialties)
             const method = firstRelation(result.method as RelationValue<ResultMethodRelation>)
             const sample = firstRelation(result.sample as RelationValue<ResultSampleRelation>)
+            const client = firstRelation(sample?.clients)
             const enteredByUser = firstRelation(result.entered_by_user as RelationValue<ResultUserRelation>)
 
             return {
                 ...result,
                 assay_name: assay?.name || 'Unknown',
                 assay_units: assay?.units || null,
+                normal_range: assay?.normal_range || null,
                 method_name: method?.name || assay?.method_name || null,
                 validation_rules: assay?.validation_rules || {},
+                assay_updated_at: assay?.updated_at || result.updated_at,
                 sample_id_display: sample?.sample_id || '',
                 sample_status: sample?.status || null,
+                sample_type: sample?.type || null,
+                received_date: sample?.received_at || null,
+                client_name: client?.name || null,
+                client_dob: client?.date_of_birth || null,
+                client_gender: client?.gender || null,
+                client_address: client?.address || null,
+                client_health_insurance_num: client?.health_insurance_num || null,
                 entered_by_name: enteredByUser?.full_name || null,
                 lab_specialty_name: labSpecialty?.name || null,
                 lab_specialty_order: labSpecialty?.display_order ?? 9999,

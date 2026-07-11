@@ -14,24 +14,18 @@ import {
 } from '@/components/ui/table'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Loader2, AlertCircle, AlertTriangle } from 'lucide-react'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import Link from 'next/link'
+import { Loader2, AlertCircle } from 'lucide-react'
 import {
     Dialog,
     DialogContent,
     DialogDescription,
-    DialogFooter,
-    DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
-import { submitSampleForReviewClient } from '@/lib/api-client'
 import type { LabSpecialty } from '@/types'
 import { ResultCellEditor } from '@/components/result-cell-editor'
 import { BatchSaveToolbar } from '@/components/batch-save-toolbar'
 import { ResultStatusBadge } from '@/components/result-status-badge'
 import { AssignedTestsToolbar } from '@/components/assigned-tests-toolbar'
-import { toast } from 'sonner'
 import { TestAssignmentModule } from '@/components/test-assignment-module'
 import { useResultsEditor } from '@/hooks/use-results-editor'
 import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard'
@@ -43,6 +37,7 @@ import { markLocalSamplesMutation } from '@/lib/samples-realtime'
 import { QCRowIndicator } from '@/components/qc/qc-row-indicator'
 import { CoAPreviewDialog } from '@/components/coa-preview-dialog'
 import { DocumentPreviewDialog } from '@/components/document-preview-dialog'
+import { ResultReviewDraftDialog } from '@/components/result-review-draft-dialog'
 import type { ResultWithAssay } from '@/types'
 
 interface AssignedTestsPanelProps {
@@ -75,8 +70,7 @@ export function AssignedTestsPanel({
         closePrintPreview,
         printPreview,
     } = usePrintHandlers(sampleId, results)
-    const [showSubmitDialog, setShowSubmitDialog] = useState(false)
-    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [showReviewDialog, setShowReviewDialog] = useState(false)
     const [showAssignmentDialog, setShowAssignmentDialog] = useState(false)
     const [previewSampleId, setPreviewSampleId] = useState<string | null>(null)
     const { hasSignature, isLoading: signatureLoading } = useSignatureStatus()
@@ -118,27 +112,11 @@ export function AssignedTestsPanel({
         return ['assigned', 'in_progress'].includes(sampleStatus)
     }, [sampleStatus])
 
-    const handleSubmitForReview = async () => {
-        setIsSubmitting(true)
-        try {
-            const result = await submitSampleForReviewClient(sampleId)
-            if (result.error) {
-                toast.error(result.error)
-            } else {
-                toast.success('Đã gửi mẫu để duyệt')
-                setShowSubmitDialog(false)
-                await invalidateSampleQueries(queryClient, sampleId, { includeResults: false })
-                queryClient.invalidateQueries({ queryKey: approvalKeys.count })
-                queryClient.invalidateQueries({ queryKey: rejectionKeys.count })
-                fetchTests()
-            }
-        } catch (err) {
-            const message = err instanceof Error ? err.message : 'Có lỗi xảy ra khi gửi duyệt'
-            toast.error(message)
-            console.error(err)
-        }
-
-        setIsSubmitting(false)
+    const handleReviewSubmitted = async () => {
+        await invalidateSampleQueries(queryClient, sampleId, { includeResults: false })
+        queryClient.invalidateQueries({ queryKey: approvalKeys.count })
+        queryClient.invalidateQueries({ queryKey: rejectionKeys.count })
+        fetchTests()
     }
 
     if (loading) {
@@ -183,7 +161,7 @@ export function AssignedTestsPanel({
                 isGeneratingCoA={isGeneratingCoA}
                 onPrint={handlePrint}
                 onGenerateCoA={handleGenerateCoA}
-                onSubmitForReview={() => setShowSubmitDialog(true)}
+                    onSubmitForReview={() => setShowReviewDialog(true)}
                 onOpenAssignment={() => setShowAssignmentDialog(true)}
                 onPreviewCoA={handleOpenCoAPreview}
                 onPrintCoABody={handlePrintCoABody}
@@ -287,61 +265,15 @@ export function AssignedTestsPanel({
                 />
             </div>
 
-            <Dialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Xác nhận gửi duyệt</DialogTitle>
-                        <DialogDescription>
-                            Bạn có chắc chắn muốn gửi mẫu này để duyệt không? Trạng thái mẫu sẽ chuyển sang
-                            &quot;Chờ duyệt&quot; và bạn sẽ không thể chỉnh sửa kết quả cho đến khi quản lý phản hồi.
-                        </DialogDescription>
-                    </DialogHeader>
-                    {!signatureLoading && !hasSignature && (
-                        <Alert variant="destructive" className="my-4">
-                            <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-                            <AlertTitle>Chữ ký chưa được thiết lập</AlertTitle>
-                            <AlertDescription>
-                                <Link
-                                    href="/profile?tab=signature"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="underline hover:no-underline"
-                                    aria-label="Tải lên chữ ký điện tử"
-                                >
-                                    Vui lòng tải lên chữ ký điện tử
-                                </Link>
-                                {' '}trước khi nộp kết quả xét nghiệm.
-                            </AlertDescription>
-                        </Alert>
-                    )}
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowSubmitDialog(false)} disabled={isSubmitting}>
-                            Hủy
-                        </Button>
-                        <Button
-                            onClick={handleSubmitForReview}
-                            disabled={!hasSignature || signatureLoading || isSubmitting}
-                            title={!hasSignature ? "Vui lòng tải lên chữ ký trước khi nộp" : undefined}
-                            aria-disabled={!hasSignature || signatureLoading}
-                            className="bg-emerald-600 hover:bg-emerald-700"
-                        >
-                            {signatureLoading ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Đang kiểm tra...
-                                </>
-                            ) : isSubmitting ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Đang gửi...
-                                </>
-                            ) : (
-                                'Xác nhận gửi'
-                            )}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <ResultReviewDraftDialog
+                hasSignature={hasSignature}
+                onOpenChange={setShowReviewDialog}
+                onSubmitted={handleReviewSubmitted}
+                open={showReviewDialog}
+                results={results}
+                sampleId={sampleId}
+                signatureLoading={signatureLoading}
+            />
             <Dialog open={showAssignmentDialog} onOpenChange={setShowAssignmentDialog}>
                 <DialogContent className="max-w-[90vw] overflow-hidden border-none bg-transparent p-0 shadow-none sm:max-w-[1200px]">
                     <DialogTitle className="sr-only">Chỉ định xét nghiệm</DialogTitle>

@@ -34,7 +34,12 @@ export function getStylesheet(): string {
         .watermark-text {
             font-size: 100px; font-weight: bold; color: #93c5fd;
             opacity: 0.1; transform: rotate(-45deg); white-space: nowrap;
-            letter-spacing: 0.2em; font-family: 'Times New Roman', serif;
+            letter-spacing: 0; font-family: 'Times New Roman', serif;
+        }
+
+        .watermark-text.draft {
+            max-width: 180mm; white-space: normal; text-align: center;
+            font-size: 44px; color: #dc2626; opacity: 0.12;
         }
 
         .content { position: relative; z-index: 10; padding-bottom: 120px; }
@@ -73,6 +78,13 @@ export function getStylesheet(): string {
         .res-unit { text-align: center; }
         .res-range { text-align: center; font-style: italic; }
         .res-method { text-align: center; font-size: 12px; }
+        .res-assessment { text-align: center; font-size: 12px; font-weight: 600; }
+
+        .draft-review-footer {
+            margin-top: 24px; border: 1px solid #f59e0b; padding: 12px;
+            background: #fffbeb; color: #92400e; text-align: center;
+            font-weight: 600;
+        }
 
         .signatures { display: flex; justify-content: space-between; margin-top: 32px; }
         .sig-col { width: 45%; text-align: center; }
@@ -112,11 +124,13 @@ export function getStylesheet(): string {
 /**
  * Render watermark overlay
  */
-export function renderWatermark(): string {
+export function renderWatermark(label = 'CDC CẦN THƠ'): string {
+    const className = label === 'CDC CẦN THƠ' ? 'watermark-text' : 'watermark-text draft'
+
     return `
         <!-- WATERMARK -->
         <div class="watermark">
-            <div class="watermark-text">CDC CẦN THƠ</div>
+            <div class="${className}">${label}</div>
         </div>
     `
 }

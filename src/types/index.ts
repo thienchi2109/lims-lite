@@ -11,6 +11,9 @@ export * from './lab'
 // Workflow types: approval, signatures, CoA
 export * from './workflow'
 
+// Result review types: manual assessments and submission payloads
+export * from './result-review'
+
 // Analytics types: search, reports, dashboard
 export * from './analytics'
 

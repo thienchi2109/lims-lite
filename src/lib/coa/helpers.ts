@@ -15,6 +15,7 @@ import { getActiveSignature, downloadSignature } from '@/app/actions/signatures'
 // ============================================================================
 
 export interface TestResult {
+    result_id?: string
     assay_name: string
     value: string | null
     unit: string | null

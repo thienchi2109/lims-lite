@@ -9,6 +9,10 @@ import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { requireRole, isAuthError } from '@/lib/auth-helpers'
 import {
+    SubmitResultReviewSchema,
+    type SubmitResultReview,
+} from '@/types'
+import {
     RejectSampleSchema,
     DiscardSampleSchema,
     type RejectSample,
@@ -273,24 +277,39 @@ export async function getRejectedSamplesCount() {
  * Submits a sample for review (Analyst)
  * Changes status from 'in_progress' to 'review'
  */
-export async function submitSampleForReview(sampleId: string) {
+export async function submitSampleForReview(data: SubmitResultReview) {
     try {
         const auth = await requireRole('analyst')
         if (isAuthError(auth)) return { error: 'Chỉ có kỹ thuật viên mới có thể gửi duyệt kết quả' }
 
+        const validatedData = SubmitResultReviewSchema.parse(data)
         const supabase = await createClient()
 
-        const { data: rpcResult, error: rpcError } = await supabase.rpc('submit_sample_for_review', {
-            p_sample_id: sampleId,
-        })
+        const { data: rpcResult, error: rpcError } = await supabase.rpc(
+            'submit_sample_for_review_with_assessments',
+            {
+                p_sample_id: validatedData.sampleId,
+                p_assessments: validatedData.assessments,
+            },
+        )
 
         if (rpcError) {
-            console.error('Error in submit_sample_for_review RPC:', rpcError)
-            return { error: rpcError.message }
+            console.error('Error in submit_sample_for_review_with_assessments RPC:', rpcError)
+            if (rpcError.message.includes('Assessment payload is stale')) {
+                return {
+                    error: 'Dữ liệu kết quả đã thay đổi. Vui lòng mở lại bản nháp.',
+                }
+            }
+            if (/^E\d+:\s*/.test(rpcError.message)) {
+                return { error: rpcError.message.replace(/^E\d+:\s*/, '') }
+            }
+            return {
+                error: 'Không thể gửi mẫu để phê duyệt. Vui lòng tải lại dữ liệu và thử lại.',
+            }
         }
 
         if (!rpcResult) {
-            return { error: 'Failed to submit sample for review' }
+            return { error: 'Không thể gửi mẫu để phê duyệt' }
         }
 
         revalidatePath('/analyst/samples')
@@ -300,7 +319,7 @@ export async function submitSampleForReview(sampleId: string) {
         return { success: true }
     } catch (error) {
         console.error('Error in submitSampleForReview:', error)
-        return { error: error instanceof Error ? error.message : 'Failed to submit sample' }
+        return { error: 'Dữ liệu gửi duyệt không hợp lệ' }
     }
 }
 

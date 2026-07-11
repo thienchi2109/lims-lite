@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { Gender } from './core'
 import type { SampleStatus } from './core'
 import { SampleDataSchema } from './lab'
 
@@ -291,6 +290,7 @@ export type CoAManualInputs = z.infer<typeof CoAManualInputsSchema>
 export const CoADataSchema = z.object({
     sample: SampleDataSchema,
     results: z.array(z.object({
+        result_id: z.string().uuid().optional(),
         assay_name: z.string(),
         value: z.string().nullable(),
         unit: z.string().nullable(),

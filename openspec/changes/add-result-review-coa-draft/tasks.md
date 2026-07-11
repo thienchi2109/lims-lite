@@ -30,22 +30,22 @@
 
 ## Phase 2: Mandatory analyst draft review
 
-- [ ] 2.1 Add failing focused TypeScript/component tests for the watermark,
+- [x] 2.1 Add failing focused TypeScript/component tests for the watermark,
   omitted final certification content, visible ranges, manual-only assessment
   choices, disabled `Gửi phê duyệt`, cancellation, stale-data failure, and
   successful query invalidation.
-- [ ] 2.2 Extend result read models, Zod schemas, and client types with
+- [x] 2.2 Extend result read models, Zod schemas, and client types with
   `normal_range` and the result/assay revision data required by the reviewed
   submission contract.
-- [ ] 2.3 Extend the canonical CoA template with a draft mode that reuses
+- [x] 2.3 Extend the canonical CoA template with a draft mode that reuses
   document structure, sample/result layout, styles, escaping, grouping, and
   data mapping. Add only draft watermarking, suppressed certification content,
   the injectable `Đánh giá` cell, and the review footer.
-- [ ] 2.4 Replace the minimal analyst confirmation with a responsive Vietnamese
+- [x] 2.4 Replace the minimal analyst confirmation with a responsive Vietnamese
   draft CoA dialog. Keep assessments in local state, route the validated payload
   through `src/lib/api-client.ts`, and refresh the analyst view after a
   successful submission.
-- [ ] 2.5 Move the application caller to
+- [x] 2.5 Move the application caller to
   `submit_sample_for_review_with_assessments`. Once focused tests prove the
   assessment-aware path, remove or revoke the legacy one-argument
   `submit_sample_for_review(UUID)` RPC in a secure migration and re-run

@@ -100,12 +100,7 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
         return getResultsBySample(payload.sampleId)
     },
     saveBatchResults: async (payload) => saveBatchResults(payload),
-    submitSampleForReview: async (payload) => {
-        if (!payload?.sampleId) {
-            return { error: 'Sample ID is required' }
-        }
-        return submitSampleForReview(payload.sampleId)
-    },
+    submitSampleForReview: async (payload) => submitSampleForReview(payload),
     getAssayDefinitions: async (payload) => fetchAssayDefinitions(payload),
     getMethods: async () => getMethods(),
     getMethodNameSuggestions: async () => getMethodNameSuggestions(),

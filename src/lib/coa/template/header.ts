@@ -10,7 +10,11 @@ import { escapeHtml } from './escape'
 /**
  * Render header section with logo, organization info, and QR code
  */
-export function renderHeader(coaData: CoAData, logoUrl: string, qrCodeUrl: string): string {
+export function renderHeader(coaData: CoAData, logoUrl: string, qrCodeUrl?: string): string {
+    const qrCode = qrCodeUrl
+        ? `<img src="${escapeHtml(qrCodeUrl)}" class="qr-img" alt="QR Code" />`
+        : ''
+
     return `
         <!-- HEADER -->
         <div class="header">
@@ -25,7 +29,7 @@ export function renderHeader(coaData: CoAData, logoUrl: string, qrCodeUrl: strin
                 <div class="form-name-en">ANALYSIS RESULTS</div>
             </div>
             <div class="header-right">
-                <img src="${escapeHtml(qrCodeUrl)}" class="qr-img" alt="QR Code" />
+                ${qrCode}
                 <div class="sample-id-box">${escapeHtml(coaData.sample.sample_id_display)}</div>
             </div>
         </div>

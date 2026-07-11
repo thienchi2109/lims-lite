@@ -18,6 +18,7 @@ import type {
     CreateClient,
     CoAManualInputs,
 } from '@/types'
+import type { SubmitResultReview } from '@/types'
 import type { ClientActionName } from '@/lib/client-actions/types'
 import type { SampleLabelPreset } from '@/lib/sample-label-template'
 
@@ -183,8 +184,8 @@ export function saveBatchResultsClient(data: SaveBatchResults) {
     return callClientAction('saveBatchResults', data)
 }
 
-export function submitSampleForReviewClient(sampleId: string) {
-    return callClientAction('submitSampleForReview', { sampleId })
+export function submitSampleForReviewClient(data: SubmitResultReview) {
+    return callClientAction('submitSampleForReview', data)
 }
 
 export function fetchAssayDefinitionsClient(params?: Record<string, unknown>) {
