@@ -620,6 +620,11 @@ BEGIN
 
     v_second_submission_id := (v_response ->> 'submission_id')::UUID;
 
+    IF v_second_submission_id IS NULL
+       OR v_response ->> 'new_status' <> 'review' THEN
+        RAISE EXCEPTION 'resubmission did not return the signed review submission';
+    END IF;
+
     IF NOT EXISTS (
         SELECT 1
         FROM public.sample_submissions
