@@ -193,7 +193,11 @@ export async function generateCoA(
         // Role-specific validation for sample status and results
         const validationResult = await validateSampleForCoAGeneration(sampleId)
         if (!validationResult.valid) {
-            return { success: false, error: validationResult.error || 'Lỗi xác thực mẫu' }
+            const validationError = validationResult.error || 'Lỗi xác thực mẫu'
+            if (activeReport?.claimed) {
+                return failClaimedCoAGeneration(activeReport, validationError)
+            }
+            return { success: false, error: validationError }
         }
 
         const version = 1
@@ -405,7 +409,15 @@ export async function generateCoA(
             },
         )
 
-        if (!completion) {
+        if (completion.status === 'indeterminate') {
+            return {
+                success: false,
+                shouldRecordFailure: false,
+                error: 'Không thể xác nhận trạng thái lưu CoA',
+            }
+        }
+
+        if (completion.status === 'rejected') {
             const { error: cleanupError } = await supabase.storage
                 .from('coa-reports')
                 .remove([filePath])
@@ -418,13 +430,15 @@ export async function generateCoA(
             )
         }
 
+        const previousFilePath =
+            completion.previousFilePath ?? coaReport.filePath
         if (
-            completion.previousFilePath
-            && completion.previousFilePath !== filePath
+            previousFilePath
+            && previousFilePath !== filePath
         ) {
             const { error: cleanupError } = await supabase.storage
                 .from('coa-reports')
-                .remove([completion.previousFilePath])
+                .remove([previousFilePath])
             if (cleanupError) {
                 console.error('Failed to remove replaced CoA file:', cleanupError)
             }

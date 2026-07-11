@@ -7,9 +7,14 @@
 
 import { z } from 'zod'
 
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient, createClient } from '@/lib/supabase/server'
 import type { LatestSubmission } from '@/types'
 import type { TestResult } from './helpers'
+export {
+    completeCoAReportGeneration,
+    type CompleteCoAReportInput,
+    type CompleteCoAReportOutcome,
+} from './report-completion'
 
 const CoAReportQueueResponseSchema = z.object({
     report_id: z.string().uuid(),
@@ -19,11 +24,6 @@ const CoAReportQueueResponseSchema = z.object({
     claimed: z.boolean(),
     generation_claim_id: z.string().uuid().nullable(),
     previous_status: z.enum(['ready', 'failed']).nullable(),
-})
-
-const CoAReportCompletionResponseSchema = z.object({
-    report_id: z.string().uuid(),
-    previous_file_path: z.string().nullable(),
 })
 
 const JoinedSpecialtySchema = z.object({
@@ -69,16 +69,11 @@ const SubmissionRowSchema = z.object({
         z.object({ full_name: z.string().nullable() }),
         z.array(z.object({ full_name: z.string().nullable() })),
     ]).nullable(),
-    signature: z.union([
-        z.object({
-            signature_hash: z.string().min(1),
-            signature_path: z.string().min(1),
-        }),
-        z.array(z.object({
-            signature_hash: z.string().min(1),
-            signature_path: z.string().min(1),
-        })),
-    ]).nullable(),
+})
+
+const SubmissionSignatureSchema = z.object({
+    signature_hash: z.string().min(1),
+    signature_path: z.string().min(1),
 })
 
 export interface CoAReportSource {
@@ -89,17 +84,6 @@ export interface CoAReportSource {
     claimed: boolean
     generationClaimId: string | null
     previousStatus: 'ready' | 'failed' | null
-}
-
-export interface CompleteCoAReportInput {
-    filePath: string
-    fileHash: string
-    signatureId: string
-}
-
-export interface CompleteCoAReportResult {
-    reportId: string
-    previousFilePath: string | null
 }
 
 function firstJoined<T>(value: T | T[] | null): T | null {
@@ -180,40 +164,6 @@ export async function claimCoAReportForRegeneration(
     }
 }
 
-export async function completeCoAReportGeneration(
-    reportId: string,
-    generationClaimId: string,
-    input: CompleteCoAReportInput,
-): Promise<CompleteCoAReportResult | null> {
-    const supabase = await createClient()
-    const { data, error } = await supabase.rpc(
-        'complete_coa_report_generation',
-        {
-            p_report_id: reportId,
-            p_generation_claim_id: generationClaimId,
-            p_file_path: input.filePath,
-            p_file_hash: input.fileHash,
-            p_signature_id: input.signatureId,
-        },
-    )
-
-    if (error) {
-        console.error('Complete CoA generation error:', error)
-        return null
-    }
-
-    const parsed = CoAReportCompletionResponseSchema.safeParse(data)
-    if (!parsed.success) {
-        console.error('Invalid CoA completion response:', parsed.error)
-        return null
-    }
-
-    return {
-        reportId: parsed.data.report_id,
-        previousFilePath: parsed.data.previous_file_path,
-    }
-}
-
 export async function failCoAReportGeneration(
     reportId: string,
     generationClaimId: string,
@@ -258,11 +208,7 @@ export async function fetchSubmissionById(
             submitted_at,
             submission_number,
             signature_meaning,
-            user:users!sample_submissions_user_id_fkey(full_name),
-            signature:user_signatures!sample_submissions_signature_id_fkey(
-                signature_hash,
-                signature_path
-            )
+            user:users!sample_submissions_user_id_fkey(full_name)
         `)
         .eq('id', submissionId)
         .maybeSingle()
@@ -279,9 +225,25 @@ export async function fetchSubmissionById(
     }
 
     const user = firstJoined(parsed.data.user)
-    const signature = firstJoined(parsed.data.signature)
-    if (!signature) {
-        console.error('CoA source submission is missing its stored signature')
+    const adminClient = createAdminClient()
+    const { data: signatureData, error: signatureError } = await adminClient
+        .from('user_signatures')
+        .select('signature_hash, signature_path')
+        .eq('id', parsed.data.signature_id)
+        .eq('user_id', parsed.data.user_id)
+        .maybeSingle()
+
+    if (signatureError || !signatureData) {
+        console.error(
+            'Fetch CoA source submission signature error:',
+            signatureError,
+        )
+        return null
+    }
+
+    const signature = SubmissionSignatureSchema.safeParse(signatureData)
+    if (!signature.success) {
+        console.error('Invalid CoA source submission signature:', signature.error)
         return null
     }
 
@@ -290,8 +252,8 @@ export async function fetchSubmissionById(
         performerId: parsed.data.user_id,
         performerName: user?.full_name ?? null,
         signatureId: parsed.data.signature_id,
-        signatureHash: signature.signature_hash,
-        signaturePath: signature.signature_path,
+        signatureHash: signature.data.signature_hash,
+        signaturePath: signature.data.signature_path,
         submittedAt: parsed.data.submitted_at,
         submissionNumber: parsed.data.submission_number,
         signatureMeaning: parsed.data.signature_meaning,

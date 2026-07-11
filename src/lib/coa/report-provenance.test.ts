@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockFrom = vi.fn()
+const mockAdminFrom = vi.fn()
 const mockRpc = vi.fn()
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -8,11 +9,13 @@ vi.mock('@/lib/supabase/server', () => ({
         from: mockFrom,
         rpc: mockRpc,
     })),
+    createAdminClient: vi.fn(() => ({
+        from: mockAdminFrom,
+    })),
 }))
 
 import {
     claimCoAReportForRegeneration,
-    completeCoAReportGeneration,
     failCoAReportGeneration,
     fetchSubmissionById,
     fetchSnapshotTestResults,
@@ -184,41 +187,6 @@ describe('CoA report generation transitions', () => {
         )
     })
 
-    it('completes generation only through the claim-bound RPC', async () => {
-        mockRpc.mockResolvedValue({
-            data: {
-                report_id: '33333333-3333-4333-8333-333333333333',
-                previous_file_path: 'sample/old.html',
-            },
-            error: null,
-        })
-
-        const result = await completeCoAReportGeneration(
-            '33333333-3333-4333-8333-333333333333',
-            '77777777-7777-4777-8777-777777777777',
-            {
-                filePath: 'sample/new.html',
-                fileHash: 'html-hash',
-                signatureId: '66666666-6666-4666-8666-666666666666',
-            },
-        )
-
-        expect(mockRpc).toHaveBeenCalledWith(
-            'complete_coa_report_generation',
-            {
-                p_report_id: '33333333-3333-4333-8333-333333333333',
-                p_generation_claim_id: '77777777-7777-4777-8777-777777777777',
-                p_file_path: 'sample/new.html',
-                p_file_hash: 'html-hash',
-                p_signature_id: '66666666-6666-4666-8666-666666666666',
-            },
-        )
-        expect(result).toEqual({
-            reportId: '33333333-3333-4333-8333-333333333333',
-            previousFilePath: 'sample/old.html',
-        })
-    })
-
     it('records generation failure with the same claim', async () => {
         mockRpc.mockResolvedValue({ data: true, error: null })
 
@@ -255,12 +223,13 @@ describe('fetchSubmissionById', () => {
             user: {
                 full_name: 'Nguyễn Kỹ Thuật',
             },
-            signature: {
-                signature_hash: 'source-signature-hash',
-                signature_path: '55555555/source-signature.png',
-            },
         })
         mockFrom.mockReturnValue(query)
+        const signatureQuery = createSubmissionQuery({
+            signature_hash: 'source-signature-hash',
+            signature_path: '55555555/source-signature.png',
+        })
+        mockAdminFrom.mockReturnValue(signatureQuery)
 
         const submission = await fetchSubmissionById(
             '22222222-2222-4222-8222-222222222222',
@@ -269,6 +238,15 @@ describe('fetchSubmissionById', () => {
         expect(query.eq).toHaveBeenCalledWith(
             'id',
             '22222222-2222-4222-8222-222222222222',
+        )
+        expect(mockAdminFrom).toHaveBeenCalledWith('user_signatures')
+        expect(signatureQuery.eq).toHaveBeenCalledWith(
+            'id',
+            '66666666-6666-4666-8666-666666666666',
+        )
+        expect(signatureQuery.eq).toHaveBeenCalledWith(
+            'user_id',
+            '55555555-5555-4555-8555-555555555555',
         )
         expect(submission).toEqual({
             submissionId: '22222222-2222-4222-8222-222222222222',
@@ -294,8 +272,8 @@ describe('fetchSubmissionById', () => {
             user: {
                 full_name: 'Nguyễn Kỹ Thuật',
             },
-            signature: null,
         }))
+        mockAdminFrom.mockReturnValue(createSubmissionQuery(null))
 
         const submission = await fetchSubmissionById(
             '22222222-2222-4222-8222-222222222222',

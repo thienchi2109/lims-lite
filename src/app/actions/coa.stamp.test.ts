@@ -118,6 +118,7 @@ function mockSuccessfulClient(
         previousStatus: existingCoa?.status === 'ready' ? 'ready' : 'failed',
     })
     mockCompleteCoAReportGeneration.mockResolvedValue({
+        status: 'completed',
         reportId: existingCoa?.id ?? 'coa-1',
         previousFilePath: existingCoa?.file_path ?? null,
     })
@@ -449,6 +450,94 @@ describe('generateCoA stamp rendering', () => {
             'coa-failed',
             '77777777-7777-4777-8777-777777777777',
             result.error,
+            false,
+        )
+    })
+
+    it('records failed validation against a claimed initial report', async () => {
+        mockSuccessfulClient()
+        mockValidateSampleForCoAGeneration.mockResolvedValue({
+            valid: false,
+            error: 'Mẫu không còn đủ điều kiện tạo CoA',
+        })
+        const claimedReport = {
+            reportId: 'coa-1',
+            status: 'pending' as const,
+            filePath: null,
+            sourceSubmissionId: 'submission-source-1',
+            claimed: true,
+            generationClaimId: '77777777-7777-4777-8777-777777777777',
+            previousStatus: null,
+        }
+
+        const result = await generateCoA('sample-1', undefined, claimedReport)
+
+        expect(result.success).toBe(false)
+        expect(mockFailCoAReportGeneration).toHaveBeenCalledWith(
+            'coa-1',
+            '77777777-7777-4777-8777-777777777777',
+            'Mẫu không còn đủ điều kiện tạo CoA',
+            false,
+        )
+        expect(mockQueueCoAReportForGeneration).not.toHaveBeenCalled()
+    })
+
+    it('restores a ready regeneration when validation fails after claiming it', async () => {
+        mockSuccessfulClient(
+            {
+                id: 'coa-ready',
+                status: 'ready',
+                file_path: 'sample/existing.html',
+            },
+            [
+                { data: { role: 'manager' }, error: null },
+                { data: { role: 'manager' }, error: null },
+            ],
+        )
+        mockValidateSampleForCoAGeneration.mockResolvedValue({
+            valid: false,
+            error: 'Mẫu không còn đủ điều kiện tạo CoA',
+        })
+
+        const result = await regenerateCoA('sample-1')
+
+        expect(result.success).toBe(false)
+        expect(mockFailCoAReportGeneration).toHaveBeenCalledWith(
+            'coa-ready',
+            '77777777-7777-4777-8777-777777777777',
+            'Mẫu không còn đủ điều kiện tạo CoA',
+            true,
+        )
+    })
+
+    it('keeps the uploaded file when completion is indeterminate', async () => {
+        const { remove } = mockSuccessfulClient()
+        mockCompleteCoAReportGeneration.mockResolvedValue({
+            status: 'indeterminate',
+        })
+
+        const result = await generateCoA('sample-1')
+
+        expect(result.success).toBe(false)
+        expect(remove).not.toHaveBeenCalled()
+        expect(mockFailCoAReportGeneration).not.toHaveBeenCalled()
+    })
+
+    it('removes the uploaded file and fails the claim when completion is rejected', async () => {
+        const { upload, remove } = mockSuccessfulClient()
+        mockCompleteCoAReportGeneration.mockResolvedValue({
+            status: 'rejected',
+        })
+
+        const result = await generateCoA('sample-1')
+        const uploadedFilePath = upload.mock.calls[0][0]
+
+        expect(result.success).toBe(false)
+        expect(remove).toHaveBeenCalledWith([uploadedFilePath])
+        expect(mockFailCoAReportGeneration).toHaveBeenCalledWith(
+            'coa-1',
+            '77777777-7777-4777-8777-777777777777',
+            'Lưu thông tin CoA thất bại',
             false,
         )
     })
