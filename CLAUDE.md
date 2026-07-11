@@ -129,6 +129,19 @@ If catching yourself thinking:
 > **This is NOT optional.** Context engineering determines whether tasks succeed or fail at scale.
 > **Invoke `Skill` tool with `context-engineering`** AT THE START of any session involving complex work.
 
+## Session Memory Recall (CRITICAL)
+
+**MANDATORY:** At the start of every session in this repository, before
+planning, code exploration, or edits:
+
+- Recall repo-scoped durable memory from agentmemory for the current workspace.
+- Use recalled decisions, constraints, prior issue context, and verified
+  workflows to guide discovery.
+- Re-check drift-prone facts against the current repository, GitHub, or runtime
+  state before relying on them.
+- If recall is unavailable or empty, state that briefly and continue with
+  repository inspection. Never silently skip the recall step.
+
 ## Context-Mode Usage (CRITICAL)
 
 **MANDATORY:** Use context-mode for repo work in this workspace.
