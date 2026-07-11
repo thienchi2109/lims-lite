@@ -84,13 +84,18 @@
 
 - [ ] 5.1 Before starting a phase, review only its stated dependencies and keep
   unrelated refactors outside the change.
+  - Phase 2 evidence: reviewed the analyst draft-review dependencies and kept
+    manager review and final CoA provenance work in Phases 3 and 4 untouched.
 - [ ] 5.2 After every phase, run its focused database and component tests,
   `npm run lint`, and `npm run typecheck`. Inspect touched files for Vietnamese
   UI copy, strict TypeScript, `api-client` mutation usage, and file-size
   boundaries.
+  - Phase 2 evidence: 68 focused Vitest tests passed, changed-file ESLint and
+    typecheck passed, React Doctor scored 100/100, and Docker SQL regression
+    plus `run_security_tests()` passed.
 - [ ] 5.3 After Phase 4, run the complete focused suite spanning submission,
   draft rendering, manager approval, CoA rendering, retries, authorization, and
   historic fallback.
-- [ ] 5.4 Run `openspec validate add-result-review-coa-draft --strict` after
+- [x] 5.4 Run `openspec validate add-result-review-coa-draft --strict` after
   document changes and before implementation. File a follow-up issue for any
   work intentionally outside these phase boundaries.
