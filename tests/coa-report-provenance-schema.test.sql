@@ -131,13 +131,19 @@ BEGIN
     END IF;
 
     IF v_checker_definition NOT ILIKE
-       '%test_coa_report_provenance_guard_claim_baseline()%'
+       '%test_coa_report_provenance_guard_approval_revalidation_baseline()%'
        OR v_checker_definition NOT ILIKE
-       '%digest(v_queue_source, ''sha256''::TEXT)%'
+       '%digest(v_baseline_source, ''sha256''::TEXT)%'
        OR v_checker_definition NOT ILIKE
-       '%digest(v_regeneration_source, ''sha256''::TEXT)%' THEN
+       '%v_complete_source%'
+       OR v_checker_definition NOT ILIKE
+       '%FROM public.samples%'
+       OR v_checker_definition NOT ILIKE
+       '%FOR UPDATE%'
+       OR v_checker_definition NOT ILIKE
+       '%result.status <> ''''approved''''%' THEN
         RAISE EXCEPTION
-            'CoA security checker must pin confidential claim authorization';
+            'CoA security checker must enforce completion approval revalidation';
     END IF;
 END;
 $$;
