@@ -64,32 +64,35 @@
 
 ## Phase 4: Final CoA provenance
 
-- [ ] 4.1 Add failing database and CoA regression tests for immutable report
+- [x] 4.1 Add failing database and CoA regression tests for immutable report
   source binding, reference-range changes after submission, rejected and
   replaced submissions, historic-report fallback, failed generation retry, and
   regeneration.
-- [ ] 4.2 Add a migration for nullable `coa_reports.source_submission_id` with
+- [x] 4.2 Add a migration for nullable `coa_reports.source_submission_id` with
   restrictive foreign key, index, comments, immutability guard, historic-report
   compatibility, RLS/grant review, and documented security impact.
-- [ ] 4.3 Update manager approval/completion and CoA queue creation to resolve
+- [x] 4.3 Update manager approval/completion and CoA queue creation to resolve
   the approved active submission under lock and persist it as
   `source_submission_id`.
-- [ ] 4.4 Update final CoA data resolution, retries, and regeneration to load
+- [x] 4.4 Update final CoA data resolution, retries, and regeneration to load
   snapshots and ranges through the immutable source ID. Retain the existing
   assay-range fallback only for historic reports without a source ID.
-- [ ] 4.5 Apply the migration through Docker and run
+- [x] 4.5 Apply the migration through Docker and run
   `SELECT * FROM run_security_tests();`.
 
 ## Phase Gates and Final Verification
 
-- [ ] 5.1 Before starting a phase, review only its stated dependencies and keep
+- [x] 5.1 Before starting a phase, review only its stated dependencies and keep
   unrelated refactors outside the change.
   - Phase 2 evidence: reviewed the analyst draft-review dependencies and kept
     manager review and final CoA provenance work in Phases 3 and 4 untouched.
   - Phase 3 evidence: reviewed the manager approval read path, immutable
     submission snapshots, and existing cache invalidation boundaries; no
     migration or Phase 4 CoA provenance work was required.
-- [ ] 5.2 After every phase, run its focused database and component tests,
+  - Phase 4 evidence: limited the implementation to immutable CoA provenance,
+    approval/queue binding, retries, regeneration, authorization, and historic
+    fallback. Follow-up Issues #74 and #75 remained outside this change.
+- [x] 5.2 After every phase, run its focused database and component tests,
   `npm run lint`, and `npm run typecheck`. Inspect touched files for Vietnamese
   UI copy, strict TypeScript, `api-client` mutation usage, and file-size
   boundaries.
@@ -104,7 +107,13 @@
     approval components remain within the configured size boundary. Existing
     shared route/client modules remain above the preferred limit and were
     changed only at their extension points.
-- [ ] 5.3 After Phase 4, run the complete focused suite spanning submission,
+  - Phase 4 evidence: all 174 Vitest files passed with 999 tests passed and 4
+    skipped; the six focused CoA SQL regression suites and all 28 security tests
+    passed. On 2026-07-12, repository lint completed with 0 errors and 96
+    pre-existing warnings, and typecheck passed. Touched-file sizes were
+    inspected; existing shared action, helper, and regression-test modules
+    remain above the preferred boundary.
+- [x] 5.3 After Phase 4, run the complete focused suite spanning submission,
   draft rendering, manager approval, CoA rendering, retries, authorization, and
   historic fallback.
 - [x] 5.4 Run `openspec validate add-result-review-coa-draft --strict` after
