@@ -10,6 +10,30 @@ See `CLAUDE.md` for:
 - Validation: Zod schemas, strict TypeScript
 - Client-side: Use `src/lib/api-client.ts` for mutations (not direct imports from `src/app/actions/*`)
 
+## Environment Responsibilities (CRITICAL)
+
+- This workspace (`/root/lims-lite`) is source-control only: inspect, edit, test,
+  commit, and push code.
+- Do not deploy or operate production Docker containers, PostgreSQL, Storage,
+  backups, or Cloudflare Tunnel in this environment.
+- The authoritative build, deployment, and operations environment is the home
+  server:
+  - Hostname: `khoa-xn-cdc`
+  - Tailscale IP: `100.93.19.42`
+  - SSH user: `khoa-xn-cdc`
+  - Production checkout: `/opt/lims-lite`
+- Connect from this environment with
+  `ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42`.
+- Windows/Termius clients must be connected to the same Tailscale tailnet and
+  use `C:\Users\admin\.ssh\id_ed25519_lims_home`. Password authentication is
+  disabled and must not be re-enabled.
+- After connecting, run production commands from `/opt/lims-lite` and prefix
+  Docker operations with `sudo -n`.
+- Only the home server may run the production Cloudflare Tunnel connector.
+  Never start LIMS or Tunnel containers in this workspace.
+- Never commit or copy SSH private keys, Tunnel tokens, `.env` secrets, or
+  `age` identities into the repository.
+
 ## Database Migration Security (CRITICAL)
 
 **MANDATORY:** Follow security checklist for RLS policy migrations.
@@ -42,8 +66,10 @@ See `CLAUDE.md` for:
 
 ### Database Access Boundary
 
-- Supabase is self-hosted in Docker for this repo.
-- The only approved database access path is `docker exec ... lims-postgres psql`.
+- Production Supabase/PostgreSQL is self-hosted in Docker on the home server.
+- This workspace must not run or operate the production database.
+- The only approved database access path is SSH to the home server followed by
+  `sudo -n docker exec ... lims-postgres psql`.
 - Do not use Supabase MCP tools for inspection, queries, migrations, or validation.
 - Do not use Supabase CLI commands for local or remote DB operations.
 
@@ -51,18 +77,21 @@ See `CLAUDE.md` for:
 
 ### Post-Migration Commands
 ```bash
-# Apply migration
-Get-Content supabase\migrations\XXX_name.sql | docker exec -i lims-postgres psql -U postgres -d postgres
+# Apply a committed migration from the home-server checkout
+rtk ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42 \
+  "cd /opt/lims-lite && sudo -n docker exec -i lims-postgres psql -U postgres -d postgres -v ON_ERROR_STOP=1 < supabase/migrations/XXX_name.sql"
 
 # Run security tests (MANDATORY)
-docker exec lims-postgres psql -U postgres -d postgres -c "SELECT * FROM run_security_tests();"
+rtk ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42 \
+  "sudo -n docker exec lims-postgres psql -U postgres -d postgres -c 'SELECT * FROM run_security_tests();'"
 
 # Verify policy state
-docker exec lims-postgres psql -U postgres -d postgres -c "SELECT polname FROM pg_policy WHERE polrelid = 'public.TABLE_NAME'::regclass;"
+rtk ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42 \
+  "sudo -n docker exec lims-postgres psql -U postgres -d postgres -c \"SELECT polname FROM pg_policy WHERE polrelid = 'public.TABLE_NAME'::regclass;\""
 
-# Test application
-npm run typecheck
-npm run dev
+# Test source in this workspace and verify the deployed application
+rtk npm run typecheck
+rtk curl -fsS https://cdclims.cloud/auth/v1/health
 ```
 
 ## Superpowers Skills

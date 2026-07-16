@@ -14,6 +14,30 @@
 4. **Vietnamese Localization**: All UI in Vietnamese (see `docs/vietnamese_dictionary.md`)
 5. **Type Safety**: Zod schemas, strict TypeScript, no `any` types
 
+## Environment Responsibilities (CRITICAL)
+
+- `/root/lims-lite` is the source-control workspace. Use it to inspect, edit,
+  test, commit, and push code only.
+- Do not deploy or operate production Docker containers, PostgreSQL, Storage,
+  backups, or Cloudflare Tunnel in this environment.
+- The home server is the authoritative build, deployment, and operations host:
+  - Hostname: `khoa-xn-cdc`
+  - Tailscale IP: `100.93.19.42`
+  - SSH user: `khoa-xn-cdc`
+  - Production checkout: `/opt/lims-lite`
+- Connect from this environment with
+  `ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42`.
+- Windows/Termius clients use
+  `C:\Users\admin\.ssh\id_ed25519_lims_home` while connected to the same
+  Tailscale tailnet. Password authentication is disabled and must stay disabled.
+- Code is pushed from this workspace. The home server pulls that code, builds
+  images, applies migrations, runs containers and Tunnel, and handles backups,
+  logs, monitoring, and rollback.
+- Run production commands from `/opt/lims-lite` with `sudo -n` for Docker.
+  Never run the production Tunnel connector in this workspace.
+- Never store SSH private keys, Tunnel tokens, `.env` secrets, or `age`
+  identities in the repository.
+
 ## ⚠️ ENFORCEMENT CHECKLIST (Read Before Every Action)
 
 **BEFORE searching code, ASK:** Do I need broad semantic discovery, symbol graph context, or an exact string lookup?
@@ -22,7 +46,7 @@
 **BEFORE editing code, ASK:** Am I about to use the `Edit` tool?
 → **STOP.** Use `mcp__filesystem-with-morph__edit_file` with `// ... existing code ...` placeholders.
 
-**BEFORE editing a migration file, ASK:** Has this migration been executed against any persistent database, including local Docker?
+**BEFORE editing a migration file, ASK:** Has this migration been executed against any persistent database, including the home-server Docker database?
 → **STOP if yes or uncertain.** Do not edit, rename, reorder, delete, squash, or re-run it. Create the next forward-only migration instead. Git status does not determine whether a migration has been applied.
 
 **BEFORE generating code with a library, ASK:** Does this involve Supabase, React, Zod, TanStack, Recharts, or any external package?
@@ -348,7 +372,7 @@ mkdir -p src/components/feature  # ✅ bash-style
 ```bash
 npm run dev          # Dev server :3000     | npm run typecheck  # Type check
 npm run build        # Production build     | npm run lint       # ESLint
-docker compose up -d # Start Supabase       | docker compose logs -f
+ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42 # Connect to production home server
 ```
 
 ## Backend (Self-hosted Supabase)
@@ -363,9 +387,10 @@ docker compose up -d # Start Supabase       | docker compose logs -f
 | Studio | lims-studio | 3002 |
 
 **Database Access Boundary (CRITICAL):**
-- Supabase is self-hosted in Docker for this repo.
-- Use Docker/Postgres only for database inspection, queries, migrations, and validation.
-- Approved path: `docker exec ... lims-postgres psql`.
+- Production Supabase/PostgreSQL is self-hosted in Docker on the home server.
+- Do not run or operate the production database in `/root/lims-lite`.
+- Approved path: SSH to `khoa-xn-cdc@100.93.19.42`, then use
+  `sudo -n docker exec ... lims-postgres psql`.
 - Do not use Supabase MCP tools for this repo's database.
 - Do not use Supabase CLI commands for local or remote DB operations.
 
@@ -405,7 +430,7 @@ docker compose up -d # Start Supabase       | docker compose logs -f
 ### Applied Migration Immutability (NON-NEGOTIABLE)
 
 1. A migration is considered applied as soon as its SQL has been executed
-   against any persistent database, including `lims-postgres` in local Docker.
+   against any persistent database, including `lims-postgres` on the home server.
 2. Applied migration files are historical records. Their contents, filename,
    version, and ordering MUST remain unchanged.
 3. Uncommitted or untracked does not mean unapplied. Never use Git state to
@@ -589,8 +614,26 @@ Check: RLS policies → triggers → Zod schema matches DB
 
 ## Deployment
 
-**Local:** `docker compose up -d` → `npm run dev` → http://localhost:3000
-**Production:** See `docs/DOCKER_SETUP.md` | **Cloud:** `docs/DEPLOYMENT_RAILWAY.md`
+**Source workspace:** `/root/lims-lite`
+
+- Inspect, edit, test, commit, and push code only.
+- Do not run production containers, database services, or Cloudflare Tunnel.
+
+**Production home server:** `khoa-xn-cdc@100.93.19.42`
+
+```bash
+ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42
+cd /opt/lims-lite
+git pull --ff-only
+sudo -n docker compose ps
+```
+
+- The home server pulls pushed code and performs image builds, migrations,
+  container recreate/restart, logs, backups, rollback, and Tunnel operations.
+- Password SSH authentication is disabled. Use the authorized SSH key over
+  Tailscale and never re-enable password authentication.
+- Only the home server may run the production Cloudflare Tunnel connector.
+- Public production URL: `https://cdclims.cloud`.
 
 ## Key Principles
 
