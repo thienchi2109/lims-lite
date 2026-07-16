@@ -6,6 +6,7 @@ readonly OPS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly BACKUP_SCRIPT="${OPS_DIR}/backup.sh"
 readonly RESTORE_SCRIPT="${OPS_DIR}/restore.sh"
 readonly VERIFY_SCRIPT="${OPS_DIR}/verify.sh"
+readonly IMAGE_MANIFEST_SCRIPT="${OPS_DIR}/image-manifest.sh"
 readonly TEST_ID="$$"
 readonly SOURCE_PROJECT="lims-rehearsal-${TEST_ID}"
 readonly TARGET_PROJECT="lims-rehearsal-restored-${TEST_ID}"
@@ -167,6 +168,45 @@ assert_command_fails \
 "${VERIFY_SCRIPT}" assert-return-volumes \
     --postgres-volume lims-lite-return-postgres-data \
     --storage-volume lims-lite-return-storage-data
+
+fake_bin="${temp_dir}/fake-bin"
+portable_image_manifest="${temp_dir}/portable-images.tsv"
+mkdir -p "${fake_bin}"
+cat > "${fake_bin}/docker" <<'SH'
+#!/usr/bin/env bash
+case "$*" in
+    *'{{.Id}}'*)
+        printf '%s\n' 'sha256:destination-store-id'
+        ;;
+    *'{{.Architecture}}'*)
+        printf '%s\n' 'amd64'
+        ;;
+    *'{{json .RepoDigests}}'*)
+        printf '%s\n' '["example/image@sha256:portable-digest"]'
+        ;;
+    *)
+        exit 2
+        ;;
+esac
+SH
+chmod +x "${fake_bin}/docker"
+printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
+    service \
+    example/image@sha256:portable-digest \
+    example/image@sha256:portable-digest \
+    sha256:source-store-id \
+    amd64 \
+    2026-07-16T00:00:00Z \
+    > "${portable_image_manifest}"
+
+PATH="${fake_bin}:${PATH}" \
+    "${IMAGE_MANIFEST_SCRIPT}" "${portable_image_manifest}"
+
+sed 's/portable-digest/wrong-digest/g' \
+    "${portable_image_manifest}" \
+    > "${temp_dir}/wrong-images.tsv"
+assert_command_fails env PATH="${fake_bin}:${PATH}" \
+    "${IMAGE_MANIFEST_SCRIPT}" "${temp_dir}/wrong-images.tsv"
 
 cat > "${temp_dir}/coa-server.py" <<'PY'
 import json
