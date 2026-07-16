@@ -41,10 +41,10 @@
 ## ⚠️ ENFORCEMENT CHECKLIST (Read Before Every Action)
 
 **BEFORE searching code, ASK:** Do I need broad semantic discovery, symbol graph context, or an exact string lookup?
-→ **STOP.** In this repo, prefer `gitnexus` first for graph-backed discovery. Use Morph `codebase_search` only as a single in-flight semantic search when needed. If Morph returns `429`, fall back immediately to `gitnexus` and then `rg` for exact text lookups.
+→ **STOP.** In this repo, prefer `gitnexus` first for graph-backed discovery, then use `rg` for exact text lookups.
 
 **BEFORE editing code, ASK:** Am I about to use the `Edit` tool?
-→ **STOP.** Use `mcp__filesystem-with-morph__edit_file` with `// ... existing code ...` placeholders.
+→ **STOP.** Use `apply_patch` for file changes.
 
 **BEFORE editing a migration file, ASK:** Has this migration been executed against any persistent database, including the home-server Docker database?
 → **STOP if yes or uncertain.** Do not edit, rename, reorder, delete, squash, or re-run it. Create the next forward-only migration instead. Git status does not determine whether a migration has been applied.
@@ -63,10 +63,8 @@
 
 | ❌ NEVER | ✅ ALWAYS |
 |----------|-----------|
-| Parallel Morph search from multiple agents | Single-flight Morph search only; otherwise use GitNexus |
-| Keep retrying Morph after `429` | Fall back to `gitnexus` then `rg` |
-| `grep`, `Grep`, `rg` for broad semantic search | `gitnexus` first, Morph as secondary semantic tool |
-| `Edit` tool for file changes | `edit_file` MCP tool |
+| `grep`, `Grep`, `rg` for broad semantic search | `gitnexus` first; use `rg` for exact lookups |
+| `Edit` tool for file changes | `apply_patch` |
 | Generate library code from memory | Context7 lookup first |
 | Manual symbol lookup / callers | GitNexus `context` / `impact` |
 | Create files >350 lines | Split into focused modules |
@@ -173,7 +171,7 @@ planning, code exploration, or edits:
 - Use `ctx_batch_execute` for grouped reads, searches, status checks, `gh`/`git` inspection, and multi-command context gathering.
 - Use `ctx_execute` for tests, typecheck, lint, builds, and any command that can produce more than a few lines of output.
 - Use `ctx_execute_file` when analyzing a file without editing it.
-- Use `mcp__filesystem-with-morph__edit_file` for file edits, with `// ... existing code ...` placeholders for unchanged sections.
+- Use `apply_patch` for file edits.
 - Do not use direct shell/`exec_command` for repo exploration, tests, lint/typecheck, `git status`, `git diff`, `gh pr view`, or long command output unless context-mode cannot perform the action.
 - Direct shell is acceptable only for truly tiny commands with fixed short output or interactive/process-control cases; still prefix commands with `rtk`.
 
@@ -223,28 +221,21 @@ Read `.claude/skills/context-engineering/references/` for:
 |------|------|-------|
 | File autocomplete | File Suggestion | rg + fzf fuzzy matching (~50ms) |
 | Find code by concept | GitNexus | `gitnexus query <term>` first in this repo |
-| Find code by semantic natural-language search | Morph `codebase_search` | Single-flight only; do not run parallel Morph searches |
 | Find symbol context | GitNexus | `gitnexus context <symbol> --file <path>` - definitions, callers, callees |
 | Impact analysis | GitNexus | `gitnexus impact <symbol>` - upstream blast radius before changes |
-| Exact string / config lookup | `rg` | Use after GitNexus or when Morph is rate-limited |
-| Edit code | edit_file | `mcp__filesystem-with-morph__edit_file` - use `// ... existing code ...` |
+| Exact string / config lookup | `rg` | Use for literals, config keys, and SQL text |
+| Edit code | `apply_patch` | Keep changes focused and preserve unrelated work |
 | Create file | write_file | Only for new files |
 | Library docs | Context7 | `mcp__context7__resolve-library-id` → `mcp__context7__query-docs` |
 
 **Hybrid Search Strategy:**
 - **Layer 1 (Graph Context):** GitNexus - `query`, `context`, `impact`
-- **Layer 2 (Semantic):** Morph `codebase_search` for one broad natural-language search at a time
-- **Layer 3 (Exact Text):** `rg` for config keys, SQL text, literals, and fallback after Morph `429`
+- **Layer 2 (Exact Text):** `rg` for config keys, SQL text, and literals
+- **Layer 3 (Direct Reading):** Targeted reads for configuration and business logic
 
 **MCP Tools - USE PROACTIVELY:**
 
-1. **Morph (warpgrep / `codebase_search`)** - For broad semantic exploration only:
-   - Do not launch more than one Morph search at a time
-   - Do not assign parallel Morph searches to multiple subagents in the same task
-   - If Morph returns `429`, stop using it for the current task/session and switch to GitNexus + `rg`
-  **Workflow:** GitNexus → single Morph search if needed → `rg` / direct reads → edit_file → verify
-
-2. **Context7** - For ANY library/framework questions:
+1. **Context7** - For ANY library/framework questions:
    - Code generation with external libraries (Supabase, React, Zod, etc.)
    - Setup or configuration steps
    - API documentation lookup
@@ -252,7 +243,7 @@ Read `.claude/skills/context-engineering/references/` for:
 
       NOTE: Always use context7 when I need code generation, setup or configuration steps, or library/API documentation. This means you should automatically use the Context7 MCP tools to resolve library id and get library docs without me having to explicitly ask.
 
-3. **GitNexus**
+2. **GitNexus**
 This machine has a working global `gitnexus` CLI. Use it as the default graph-based code intelligence tool for this repo.
 If multiple GitNexus indexes exist on this machine, prefer `--repo lims-lite` in this workspace.
 
@@ -266,7 +257,7 @@ If multiple GitNexus indexes exist on this machine, prefer `--repo lims-lite` in
     - Graph-backed concept lookup when raw text search is too shallow
 
     **❌ DON'T use GitNexus for:**
-    - Simple string/config searches (use Morph or direct file reads)
+    - Simple string/config searches (use `rg` or direct file reads)
     - Understanding business logic flow end-to-end without first reading the code
     - Requests where the user explicitly asked to read specific files
     - Blindly running `gitnexus analyze` in this repo without approval
@@ -285,7 +276,7 @@ If multiple GitNexus indexes exist on this machine, prefer `--repo lims-lite` in
     3. **`gitnexus query <term>`**
       - Graph-backed concept search across the indexed repo
       - Prefer `gitnexus query <term> --repo lims-lite` when more than one repo is indexed
-      - Use after Morph when you know the concept/module and want relationship-aware results
+      - Use when you know the concept/module and want relationship-aware results
 
     4. **`gitnexus context <symbol> --file <path>`**
       - Best default for a known symbol

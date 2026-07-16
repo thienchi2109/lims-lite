@@ -183,7 +183,7 @@ planning, code exploration, or edits:
 - Use `ctx_batch_execute` for grouped reads, searches, status checks, `gh`/`git` inspection, and multi-command context gathering.
 - Use `ctx_execute` for tests, typecheck, lint, builds, and any command that can produce more than a few lines of output.
 - Use `ctx_execute_file` when analyzing a file without editing it.
-- Use `mcp__filesystem-with-morph__edit_file` for file edits, with `// ... existing code ...` placeholders for unchanged sections.
+- Use `apply_patch` for file edits.
 - Do not use direct shell/`exec_command` for repo exploration, tests, lint/typecheck, `git status`, `git diff`, `gh pr view`, or long command output unless context-mode cannot perform the action.
 - Direct shell is acceptable only for truly tiny commands with fixed short output or interactive/process-control cases; still prefix commands with `rtk`.
 
@@ -194,13 +194,11 @@ planning, code exploration, or edits:
 - Use `gitnexus context <symbol> --file <path>` to inspect a known symbol and its callers/callees
 - Use `gitnexus impact <symbol>` before refactors, renames, or dependency-sensitive edits
 - Use `gitnexus query <term>` when you know the concept/module and want graph-backed discovery beyond raw text search
-- Use Morph or targeted file reads for semantic exploration, configuration lookup, and business-logic walkthroughs
+- Use targeted file reads for configuration lookup and business-logic walkthroughs
 - Run `gitnexus status` or `gitnexus list` before assuming a repo is already indexed
 - Do not run `gitnexus analyze` in `E:\lims-lite` unless the user explicitly asks or you are working in an isolated worktree, because it generates repo files such as `AGENTS.md`, `CLAUDE.md`, and `.claude/skills/*`
-- Treat Morph `codebase_search` / `warp_grep` as single-flight only in this repo: do not launch parallel Morph searches from multiple subagents or parallel tool calls in the same turn
-- In subagent-driven work, the coordinator may use Morph once for broad semantic discovery; subagents should use `gitnexus`, targeted file reads, or `rg` instead of issuing their own Morph searches
-- If Morph returns `429`, stop issuing more Morph searches for the current task/session and fall back immediately to `gitnexus query/context/impact`, then `rg` for exact text lookups
-- When falling back after a Morph `429`, prefer `gitnexus` first if the repo is indexed; use `rg` only for exact-string/config search or when graph results are insufficient
+- Prefer `gitnexus` first when the repo is indexed; use `rg` for exact-string
+  and configuration lookups or when graph results are insufficient
 
 ## Quality Check
 
