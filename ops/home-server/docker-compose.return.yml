@@ -1,0 +1,18 @@
+services:
+  postgres:
+    volumes:
+      - type: volume
+        source: postgres-data
+        target: /var/lib/postgresql/data
+
+  storage:
+    volumes:
+      - type: volume
+        source: storage-data
+        target: /var/lib/storage
+
+volumes:
+  postgres-data:
+    name: ${RETURN_POSTGRES_VOLUME:?RETURN_POSTGRES_VOLUME is required}
+  storage-data:
+    name: ${RETURN_STORAGE_VOLUME:?RETURN_STORAGE_VOLUME is required}
