@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: supabase/postgres:15.1.1.28
+    image: supabase/postgres:15.1.1.28@sha256:33b96010b760e41a987542c8c043369022a16b16cd88941790d5fcf06cd2484c
     container_name: lims-postgres
     restart: unless-stopped
     ports:
@@ -27,7 +27,7 @@ services:
       retries: 5
 
   auth:
-    image: supabase/gotrue:v2.143.0
+    image: supabase/gotrue:v2.143.0@sha256:f0a7d58bdae384cff916206a8a86e3d370b89b8a99c97ac91a3711169791554e
     container_name: lims-auth
     restart: unless-stopped
     depends_on:
@@ -55,7 +55,7 @@ services:
       - "127.0.0.1:9999:9999"
 
   rest:
-    image: postgrest/postgrest:v12.0.2
+    image: postgrest/postgrest:v12.0.2@sha256:79369c0cdf9d7112ed4e327bc1b80156be11575dd66fbda245077a2d13b803bc
     container_name: lims-rest
     restart: unless-stopped
     depends_on:
@@ -73,7 +73,7 @@ services:
       - "127.0.0.1:3001:3000"
 
   storage:
-    image: supabase/storage-api:v0.46.4
+    image: supabase/storage-api:v0.46.4@sha256:3aed9cc6df7c0e8060d1bf7dafc15edb085e68cc158a3dbe966be6ca5ac0d726
     container_name: lims-storage
     restart: unless-stopped
     depends_on:
@@ -99,7 +99,7 @@ services:
       - "127.0.0.1:5000:5000"
 
   realtime:
-    image: supabase/realtime:v2.33.66
+    image: supabase/realtime:v2.33.66@sha256:01bb0007a31c9c069a3ef62a39977ed8c231e7685cea61f0d2c250b4e94715ae
     container_name: lims-realtime
     restart: unless-stopped
     # Compatibility note: default seccomp profile crashes in current VPS runtime.
@@ -133,7 +133,7 @@ services:
       - "127.0.0.1:4000:4000"
 
   kong:
-    image: kong:2.8.1
+    image: kong:2.8.1@sha256:1b53405d8680a09d6f44494b7990bf7da2ea43f84a258c59717d4539abf09f6d
     container_name: lims-kong
     restart: unless-stopped
     depends_on:
@@ -159,7 +159,7 @@ services:
       - ./supabase/kong.yml:/var/lib/kong/kong.yml:ro
 
   meta:
-    image: supabase/postgres-meta:v0.84.2
+    image: supabase/postgres-meta:v0.84.2@sha256:d0a96973e9f1b6303f7500421a459af3d7273b3f9f1db38610899f9f573da7c7
     container_name: lims-meta
     restart: unless-stopped
     # Compatibility note: default seccomp profile crashes in current VPS runtime.
@@ -179,7 +179,7 @@ services:
       - "127.0.0.1:8080:8080"
 
   studio:
-    image: supabase/studio:latest
+    image: supabase/studio@sha256:5f7a6900725d658edddf1b7639826be7d5369559751c9e9b020d128f0f060b42
     container_name: lims-studio
     restart: unless-stopped
     # Compatibility note: default seccomp profile crashes in current VPS runtime.
@@ -260,9 +260,11 @@ services:
       - default
 
   nginx:
-    image: nginx:alpine
+    image: nginx@sha256:b0f7830b6bfaa1258f45d94c240ab668ced1b3651c8a222aefe6683447c7bf55
     container_name: lims-nginx
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:8088:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
@@ -274,7 +276,7 @@ services:
       - default
 
   tunnel:
-    image: cloudflare/cloudflared
+    image: cloudflare/cloudflared@sha256:6d91c121b803126f7a5344005d17a9324788fc09d305b6e2560ec6040a7ae283
     container_name: lims-tunnel
     command: tunnel run
     environment:
