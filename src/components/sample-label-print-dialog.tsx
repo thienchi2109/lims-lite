@@ -26,7 +26,7 @@ const PRESETS: Array<{
     {
         value: 'thermal-35x23-sheet-2up',
         label: '35.5 x 22.9mm - template chuẩn',
-        description: 'Khớp stock 71.1 x 89mm, 2 cột, không gap trong driver máy in.',
+        description: 'In đúng 1 hàng tem 71.1 x 22.9mm, gồm 2 cột không gap.',
     },
     {
         value: 'thermal-35x22-2up',
