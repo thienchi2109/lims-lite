@@ -68,6 +68,9 @@ export function renderResultsTable(
                 const assessment = result.result_id
                     ? options.assessments?.[result.result_id]
                     : undefined
+                const resultValueClass = assessment === 'outside_reference_range'
+                    ? 'res-value res-value-outside-reference-range'
+                    : 'res-value'
                 const assessmentCell = options.showAssessment
                     ? `<td class="res-assessment">${escapeHtml(
                         assessment ? ASSESSMENT_LABELS[assessment] : 'Chưa đánh giá',
@@ -78,7 +81,7 @@ export function renderResultsTable(
                     <tr>
                         <td style="text-align: center;">${escapeHtml(String(totalIndex))}</td>
                         <td class="res-name">${escapeHtml(result.assay_name)}</td>
-                        <td class="res-value">${escapeHtml(result.value || '-')}</td>
+                        <td class="${resultValueClass}">${escapeHtml(result.value || '-')}</td>
                         <td class="res-unit">${escapeHtml(result.unit || '')}</td>
                         <td class="res-range">${escapeHtml(result.normal_range || '')}</td>
                         <td class="res-method">${escapeHtml(result.method_name || '')}</td>

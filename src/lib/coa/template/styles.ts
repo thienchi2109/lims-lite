@@ -74,7 +74,8 @@ export function getStylesheet(): string {
         .res-table th { background-color: #dbeafe; font-weight: 600; text-align: center; }
         .res-group-header td { background-color: #ffe4e6; font-weight: bold; color: #be123c; text-transform: uppercase; padding-left: 16px; }
         .res-name { font-weight: 500; text-align: left; }
-        .res-value { font-weight: bold; text-align: center; font-size: 15px; }
+        .res-value { font-weight: 400; text-align: center; font-size: 15px; }
+        .res-value-outside-reference-range { font-weight: 700; }
         .res-unit { text-align: center; }
         .res-range { text-align: center; font-style: italic; }
         .res-method { text-align: center; font-size: 12px; }
