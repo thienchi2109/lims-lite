@@ -21,8 +21,8 @@ Approved Stitch reference:
 - **Genre:** modern-minimal public-service portal.
 - **Theme:** custom `Clinical Integrity`, using off-white paper, charcoal ink,
   cool neutral rules, and a restrained CDC teal accent.
-- **Typography:** `Be Vietnam Pro` for strong Vietnamese rendering and a
-  distinct portal identity without changing the rest of the application.
+- **Typography:** the application's existing `Inter` system font for visual
+  consistency with login and dashboard surfaces.
 - **Motion:** no entrance choreography; only targeted hover/press transitions
   with reduced-motion fallbacks.
 - **Enrichment:** the existing CDC logo only. No decorative hero imagery.

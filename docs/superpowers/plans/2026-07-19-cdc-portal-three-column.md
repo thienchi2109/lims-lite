@@ -9,8 +9,8 @@ three-item desktop row and mobile stacked layout.
 
 **Architecture:** Keep `src/app/page.tsx` as a static React Server Component.
 Represent destinations as module-level data, use `next/link` for `/login`, and
-use secure anchor elements for absolute URLs. Load `Be Vietnam Pro` with
-`next/font/google` at page scope. Tailwind responsive utilities define one
+use secure anchor elements for absolute URLs. Reuse the application's existing
+`Inter` font through `font-sans`. Tailwind responsive utilities define one
 column by default and three columns at `lg`.
 
 **Tech Stack:** Next.js 16 App Router, React 19, Tailwind CSS 4, Lucide React,
