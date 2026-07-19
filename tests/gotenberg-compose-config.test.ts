@@ -1,3 +1,6 @@
+/**
+ * Validates the private Gotenberg image and Compose contract for CoA PDF infrastructure.
+ */
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
