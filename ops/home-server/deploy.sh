@@ -12,6 +12,53 @@ die() {
     exit 1
 }
 
+retry_command() {
+    local description="$1"
+    shift
+
+    local max_attempts="${DEPLOY_VERIFY_ATTEMPTS:-30}"
+    local delay_seconds="${DEPLOY_VERIFY_DELAY_SECONDS:-1}"
+    local attempt=1
+
+    while ! "$@"; do
+        if ((attempt >= max_attempts)); then
+            printf 'ERROR: %s failed after %d attempts\n' \
+                "${description}" "${max_attempts}" >&2
+            return 1
+        fi
+
+        printf 'Waiting for %s (%d/%d)\n' \
+            "${description}" "${attempt}" "${max_attempts}" >&2
+        sleep "${delay_seconds}"
+        ((attempt += 1))
+    done
+}
+
+verify_internal_root() {
+    sudo -n docker exec lims-nginx wget -qO- \
+        http://127.0.0.1/ >/dev/null
+}
+
+verify_internal_auth() {
+    sudo -n docker exec lims-nginx wget -qO- \
+        http://127.0.0.1/auth/v1/health >/dev/null
+}
+
+verify_internal_coa() {
+    local response
+
+    response="$(
+        sudo -n docker exec lims-nginx wget -qO- \
+            http://127.0.0.1/coa/access
+    )"
+    grep --quiet 'CDC LIMS' <<<"${response}"
+}
+
+verify_public_auth() {
+    curl --fail --silent --show-error --max-time 30 \
+        "${PUBLIC_BASE_URL}/auth/v1/health" >/dev/null
+}
+
 [[ "$(id -un)" == "${EXPECTED_USER}" ]] \
     || die "deploy must run as ${EXPECTED_USER}"
 command -v flock >/dev/null 2>&1 || die "flock is required"
@@ -71,15 +118,10 @@ sudo -n docker compose -p lims-lite build app
 sudo -n docker compose -p lims-lite up -d \
     --no-deps --force-recreate app nginx
 
-sudo -n docker exec lims-nginx wget -qO- \
-    http://127.0.0.1/ >/dev/null
-sudo -n docker exec lims-nginx wget -qO- \
-    http://127.0.0.1/auth/v1/health >/dev/null
-sudo -n docker exec lims-nginx wget -qO- \
-    http://127.0.0.1/coa/access \
-    | grep --quiet 'CDC LIMS'
-curl --fail --silent --show-error --max-time 30 \
-    "${PUBLIC_BASE_URL}/auth/v1/health" >/dev/null
+retry_command "internal portal" verify_internal_root
+retry_command "internal auth health" verify_internal_auth
+retry_command "internal CoA portal" verify_internal_coa
+retry_command "public auth health" verify_public_auth
 
 trap - ERR
 printf 'Deployment completed: %s\n' "$(git rev-parse HEAD)"
