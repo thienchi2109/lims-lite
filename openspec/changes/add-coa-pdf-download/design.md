@@ -65,6 +65,19 @@ The conversion request will set `emulatedMediaType=print`, `printBackground=true
 
 URL conversion was rejected because it would require forwarding authentication into Chromium and would make conversion dependent on public routing and browser session state.
 
+The app-facing conversion API accepts only authorized released HTML. Route and UI
+callers cannot supply a conversion URL, `Request`, `Headers`, cookies, bearer
+credentials, or an alternate gateway path. The client builds the multipart
+request itself, lets native `FormData` set the multipart boundary, and returns
+fully received PDF bytes plus a sanitized gateway `x-request-id` when present.
+
+A response is successful only when it has an `application/pdf` content type and
+its bytes begin with the PDF signature. The client exposes typed, non-sensitive
+failures for configuration, authentication, timeout, service availability,
+gateway rejection, and invalid responses. It emits no logs and performs no
+automatic retry; route handlers own metadata-only operational logging and
+Vietnamese error mapping. No client failure may trigger a raw Gotenberg fallback.
+
 ### 5. Keep external logo and QR resources for the MVP
 
 Gotenberg may make outbound HTTPS requests for the fixed logo and QR URLs already embedded in released HTML. Conversion must fail if either resource cannot be loaded or returns an error; the application must not return a visually incomplete PDF.

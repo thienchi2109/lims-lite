@@ -139,8 +139,12 @@ The application MUST construct a new allowlisted server-to-server request for th
 - **THEN** the multipart request SHALL contain the authorized HTML as `index.html` and only explicitly supported conversion fields
 - **AND** it SHALL call only `POST /v1/convert/html` at the gateway base URL configured by `GOTENBERG_URL`
 - **AND** that base URL SHALL identify the PDF gateway rather than raw Gotenberg
+- **AND** its app-facing API SHALL accept only the authorized released HTML and SHALL NOT accept a caller-supplied URL, `Request`, `Headers`, cookie, bearer credential, or alternate gateway path
 - **AND** it SHALL add only the dedicated gateway bearer credential
+- **AND** native `FormData` SHALL create the multipart boundary without a caller-supplied multipart `Content-Type`
 - **AND** it SHALL NOT forward `Cookie`, incoming `Authorization`, proxy authorization, Supabase session headers, CoA tokens, service-role credentials, or other incoming request headers
+- **AND** it SHALL accept success only when the response has an `application/pdf` content type and begins with the PDF signature
+- **AND** it SHALL return the fully received PDF bytes and capture a sanitized gateway `x-request-id` when present
 
 #### Scenario: Gateway credential is missing or rejected
 
@@ -149,6 +153,8 @@ The application MUST construct a new allowlisted server-to-server request for th
 - **THEN** the system SHALL fail closed with a Vietnamese PDF-specific error
 - **AND** it SHALL NOT attempt raw Gotenberg as a fallback
 - **AND** it SHALL NOT expose the credential or document content in logs
+- **AND** the client SHALL expose only a typed non-sensitive failure plus a sanitized gateway `x-request-id` when present
+- **AND** it SHALL NOT automatically retry or call another conversion endpoint
 
 #### Scenario: Released HTML requests a denied network address
 

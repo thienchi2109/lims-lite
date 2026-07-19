@@ -25,11 +25,28 @@
 
 ## Phase 4. Xây authenticated PDF gateway client
 
-- [ ] 4.1 Viết failing tests cho server-only authenticated gateway client: `POST /v1/convert/html`, `index.html`, `emulatedMediaType=print`, `printBackground=true`, `preferCssPageSize=true`, `skipNetworkIdleEvent=false`, `failOnResourceLoadingFailed=true` và `failOnResourceHttpStatusCodes=[400,599]`.
-- [ ] 4.2 Viết failing tests cho bearer đọc từ `PDF_GATEWAY_TOKEN_FILE`, missing/rejected credential, timeout, non-PDF response, unavailable service, request-ID propagation, không log HTML/token và không forward cookie, incoming auth header, CoA token, Supabase session hoặc service-role credential.
-- [ ] 4.3 Implement client dùng native `fetch`/`FormData`, lấy gateway base URL từ compatibility setting `GOTENBERG_URL`, chỉ gọi `POST /v1/convert/html`, và không cho phép route/UI hoặc client truy cập raw Gotenberg.
-- [ ] 4.4 Thêm static regression test xác nhận app không resolve/kết nối raw Gotenberg và không fallback sang raw Gotenberg khi gateway lỗi hoặc từ chối credential.
-- [ ] 4.5 Chạy focused tests và ghi commit boundary cho conversion client.
+> Giữ Phase 4 trong cùng OpenSpec change và một branch/PR. Thực hiện tuần tự ba
+> TDD slice 4A, 4B và 4C; mỗi slice phải về green và có commit boundary riêng.
+> Chưa thêm route/UI caller trước Phase 5.
+
+### Slice 4A. Khóa multipart contract và success path
+
+- [ ] 4.1 Viết failing tests cho `POST /v1/convert/html`, file `index.html`, `emulatedMediaType=print`, `printBackground=true`, `preferCssPageSize=true`, `skipNetworkIdleEvent=false`, `failOnResourceLoadingFailed=true` và `failOnResourceHttpStatusCodes=[400,599]`; để native `FormData` tự tạo multipart `Content-Type` boundary.
+- [ ] 4.2 Viết failing tests khóa API server-only chỉ nhận authorized released HTML, không nhận caller-supplied URL, `Request`, `Headers`, cookie hoặc credential; success chỉ được trả sau khi response có `Content-Type: application/pdf`, bắt đầu bằng PDF signature và gateway `x-request-id` được thu thập khi hiện diện.
+- [ ] 4.3 Implement success path tối thiểu dưới `src/lib/coa/pdf/` bằng native `fetch`/`FormData`, lấy base URL từ compatibility setting `GOTENBERG_URL`, ghép cố định `/v1/convert/html`, trả PDF bytes cùng sanitized gateway request ID, chạy focused tests về green và ghi commit boundary cho Slice 4A.
+
+### Slice 4B. Khóa credential và failure model
+
+- [ ] 4.4 Viết failing tests cho bearer đọc từ `PDF_GATEWAY_TOKEN_FILE`: env path thiếu, file không đọc được, token rỗng, credential bị gateway từ chối, timeout, service unavailable, gateway error và non-PDF response.
+- [ ] 4.5 Viết failing tests xác nhận client không forward cookie, incoming `Authorization`, CoA token, Supabase session hoặc service-role credential; không log HTML/token/response body; thu thập sanitized gateway `x-request-id` trên success và failure khi hiện diện.
+- [ ] 4.6 Implement typed non-sensitive failure model, timeout cleanup và dedicated bearer header; không automatic retry, không tự ghi log và không fallback raw Gotenberg. Chạy focused tests về green và ghi commit boundary cho Slice 4B.
+
+### Slice 4C. Khóa application boundary
+
+- [ ] 4.7 Viết static regression tests xác nhận application source không chứa raw Gotenberg host/path, không resolve hoặc kết nối `gotenberg:3000` hay `/forms/chromium/convert/html`, và route/UI không thể cung cấp conversion URL hoặc auth headers cho client.
+- [ ] 4.8 Viết failure-path regression test xác nhận mỗi conversion attempt chỉ tạo tối đa một gateway request; gateway timeout, unavailable, non-PDF hoặc rejected credential không gây retry hay fallback sang endpoint thứ hai.
+- [ ] 4.9 Chạy toàn bộ focused gateway-client tests cùng `tests/pdf-gateway-auth-and-contract.test.ts`, `tests/pdf-gateway-compose-config.test.ts`, `tests/gotenberg-compose-config.test.ts` và `rtk npm run typecheck`; xác nhận mọi file mới dưới 350 dòng.
+- [ ] 4.10 Ghi commit boundary cho Slice 4C và xác nhận Phase 4 chưa thêm staff/client route, UI, database, migration hoặc deployment operation.
 
 ## Phase 5. Thêm luồng PDF cho staff
 
