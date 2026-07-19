@@ -30,7 +30,7 @@ The system SHALL allow analysts, managers, doctors, and authenticated clients to
 - **GIVEN** the requester is unauthenticated, lacks the required role, does not own the sample, or cannot access a confidential-associated sample
 - **WHEN** the requester requests the PDF
 - **THEN** the system SHALL reject the request using the same concealment and authorization semantics as the corresponding HTML route
-- **AND** the system SHALL NOT call Gotenberg
+- **AND** the system SHALL NOT call the PDF gateway or raw Gotenberg
 
 ### Requirement: PDF derives from the released HTML artifact
 
@@ -41,14 +41,16 @@ The system MUST generate the PDF from the exact stored HTML snapshot associated 
 - **GIVEN** the latest ready CoA HTML object is available
 - **AND** its computed SHA-256 hash matches `coa_reports.file_hash`
 - **WHEN** an authorized PDF request reaches the conversion boundary
-- **THEN** the system SHALL submit that HTML snapshot to Gotenberg as `index.html`
+- **THEN** the system SHALL submit that HTML snapshot as `index.html` to authenticated `POST /v1/convert/html` on the PDF gateway
+- **AND** the application SHALL authenticate with the dedicated bearer credential read from `PDF_GATEWAY_TOKEN_FILE`
+- **AND** the application SHALL NOT connect directly to raw Gotenberg
 
 #### Scenario: Stored HTML fails integrity validation
 
 - **GIVEN** the stored CoA HTML is missing or its computed hash does not match `coa_reports.file_hash`
 - **WHEN** an authorized PDF request reaches integrity validation
 - **THEN** the system SHALL fail closed with a Vietnamese error
-- **AND** the system SHALL NOT submit the document to Gotenberg
+- **AND** the system SHALL NOT submit the document to the PDF gateway or raw Gotenberg
 - **AND** the system SHALL NOT return a PDF
 
 ### Requirement: PDF preserves the released CoA print presentation
@@ -59,7 +61,7 @@ The system SHALL render the released CoA using print media, CSS-defined A4 page 
 
 - **GIVEN** the released HTML contains the current CoA CSS, logo, QR code, signatures, manager stamp, watermark, and footer
 - **AND** all required external resources load successfully
-- **WHEN** Gotenberg converts the HTML
+- **WHEN** the authenticated PDF gateway converts the HTML through its fixed Gotenberg upstream
 - **THEN** the PDF SHALL preserve the existing print styles and colors
 - **AND** Chromium SHALL NOT add its own header, footer, or page margin
 
@@ -76,7 +78,7 @@ The system SHALL stream the generated PDF directly to the requester and SHALL NO
 
 #### Scenario: Successful conversion is returned without persistence
 
-- **GIVEN** Gotenberg returns a successful PDF conversion
+- **GIVEN** the authenticated PDF gateway returns a successful PDF conversion
 - **WHEN** the application returns the response to the requester
 - **THEN** the response SHALL contain the generated PDF bytes
 - **AND** no PDF object SHALL be uploaded to Supabase Storage
@@ -113,7 +115,7 @@ The system SHALL allow no more than five authorized PDF conversion attempts per 
 - **WHEN** another PDF request is made
 - **THEN** the system SHALL return HTTP `429`
 - **AND** the response SHALL provide a Vietnamese retry message
-- **AND** the system SHALL NOT call Gotenberg
+- **AND** the system SHALL NOT call the PDF gateway or raw Gotenberg
 - **AND** HTML preview SHALL remain available
 
 #### Scenario: Limiter state reaches its hard capacity
@@ -123,19 +125,30 @@ The system SHALL allow no more than five authorized PDF conversion attempts per 
 - **THEN** the limiter SHALL remove expired keys first
 - **AND** if all 10,000 remaining keys are active, the system SHALL reject the new key with HTTP `429`
 - **AND** the limiter SHALL NOT evict an active key or reset its active counter
-- **AND** the system SHALL NOT call Gotenberg
+- **AND** the system SHALL NOT call the PDF gateway or raw Gotenberg
 - **AND** the limiter SHALL NOT retain more than 10,000 keys
 
-### Requirement: Conversion requests protect credentials and internal networks
+### Requirement: Conversion requests use the authenticated gateway and protect credentials
 
-The system MUST construct a new allowlisted server-to-server request for Gotenberg, MUST NOT forward LIMS authentication material, and MUST deny Chromium access to non-public network ranges.
+The application MUST construct a new allowlisted server-to-server request for the private PDF gateway, MUST authenticate with the LIMS-specific bearer credential from `PDF_GATEWAY_TOKEN_FILE`, MUST NOT forward incoming LIMS authentication material, and MUST NOT resolve or connect directly to raw Gotenberg. The gateway MUST prevent its bearer and Gotenberg control headers from reaching the fixed upstream, while Chromium continues denying non-public network ranges.
 
 #### Scenario: Authorized HTML is submitted for conversion
 
 - **GIVEN** an authorized route has loaded and verified a released HTML artifact
-- **WHEN** the conversion client creates the Gotenberg request
+- **WHEN** the conversion client creates the gateway request
 - **THEN** the multipart request SHALL contain the authorized HTML as `index.html` and only explicitly supported conversion fields
-- **AND** it SHALL NOT forward `Cookie`, `Authorization`, proxy authorization, Supabase session headers, CoA tokens, service-role credentials, or incoming request headers
+- **AND** it SHALL call only `POST /v1/convert/html` at the gateway base URL configured by `GOTENBERG_URL`
+- **AND** that base URL SHALL identify the PDF gateway rather than raw Gotenberg
+- **AND** it SHALL add only the dedicated gateway bearer credential
+- **AND** it SHALL NOT forward `Cookie`, incoming `Authorization`, proxy authorization, Supabase session headers, CoA tokens, service-role credentials, or other incoming request headers
+
+#### Scenario: Gateway credential is missing or rejected
+
+- **GIVEN** the gateway bearer secret is missing, unreadable, malformed, or rejected
+- **WHEN** conversion is requested
+- **THEN** the system SHALL fail closed with a Vietnamese PDF-specific error
+- **AND** it SHALL NOT attempt raw Gotenberg as a fallback
+- **AND** it SHALL NOT expose the credential or document content in logs
 
 #### Scenario: Released HTML requests a denied network address
 
@@ -153,7 +166,7 @@ After a short-lived CoA token establishes the client identity, the system SHALL 
 #### Scenario: Identified client PDF request succeeds
 
 - **GIVEN** a valid CoA token has established the client identity
-- **WHEN** Gotenberg returns a valid PDF response
+- **WHEN** the authenticated PDF gateway returns a valid PDF response
 - **THEN** the system SHALL persist a successful PDF access outcome after conversion completes
 - **AND** the system SHALL deliver the PDF only after the audit insert succeeds
 
@@ -173,27 +186,31 @@ After a short-lived CoA token establishes the client identity, the system SHALL 
 - **AND** the system SHALL emit a non-sensitive operational alert with a trace ID
 - **AND** the system SHALL NOT recursively attempt another audit insert
 
-### Requirement: PDF failures are isolated from core CoA workflows
+### Requirement: PDF gateway failures are isolated from core CoA workflows
 
-The system SHALL treat Gotenberg as an optional internal service whose failure affects only PDF download.
+The system SHALL treat the authenticated gateway and its Gotenberg upstream as optional internal services whose failure affects only PDF download.
 
-#### Scenario: Gotenberg is unavailable or times out
+#### Scenario: Gateway authentication or conversion path fails
 
 - **GIVEN** an authorized PDF request passes report and integrity validation
-- **WHEN** Gotenberg is unavailable, unhealthy, returns an error, or exceeds the configured timeout
+- **WHEN** the gateway rejects authentication, the gateway or Gotenberg is unavailable, either service returns an error, or conversion exceeds the configured timeout
 - **THEN** the system SHALL return an explicit Vietnamese PDF error
+- **AND** the system SHALL NOT fall back to raw Gotenberg
 - **AND** the system SHALL NOT fall back to the browser print dialog
 - **AND** CoA creation and HTML preview SHALL remain operational
 
-### Requirement: Gotenberg is internal and font-compatible
+### Requirement: PDF gateway and Gotenberg are internal and font-compatible
 
-The deployment MUST run a custom Gotenberg 8 service with Times New Roman on the private Docker network and MUST NOT expose its API through a host port, Nginx, or Cloudflare Tunnel.
+The deployment MUST run the authenticated PDF gateway and a custom Gotenberg 8 service with Times New Roman on separate private Docker bridges. The application MUST reach only the gateway, only the gateway MAY reach raw Gotenberg, and neither API may be exposed through a host port, Nginx, Cloudflare Tunnel, or Tailscale.
 
 #### Scenario: Production service is deployed
 
 - **WHEN** the production Compose stack starts
-- **THEN** the app SHALL reach Gotenberg through its internal service URL
+- **THEN** the app SHALL reach only the authenticated gateway through `GOTENBERG_URL=http://pdf-gateway:8080`
+- **AND** the app SHALL receive its bearer through `PDF_GATEWAY_TOKEN_FILE`
+- **AND** raw Gotenberg SHALL remain unreachable from the app
+- **AND** only the gateway SHALL reach raw Gotenberg through `pdf-upstream`
 - **AND** Gotenberg SHALL expose a container health check
 - **AND** the custom image SHALL resolve `Times New Roman` to the installed Microsoft font
-- **AND** the container SHALL run with bounded compute resources
-- **AND** application health SHALL NOT depend on Gotenberg health
+- **AND** both PDF containers SHALL run with bounded compute resources
+- **AND** application health SHALL NOT depend on gateway or Gotenberg health
