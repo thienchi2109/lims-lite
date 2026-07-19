@@ -28,6 +28,16 @@ sudo -n install -d -m 700 -o root -g root /opt/lims-lite-secrets
 umask 077
 ```
 
+Compose file-backed secrets giữ nguyên owner, group và quyền của file nguồn trên
+host. Hai container chạy non-root, nên file phải do `root` sở hữu, chỉ cấp
+group-read cho đúng GID của consumer:
+
+- LIMS app chạy GID `1001`.
+- PDF gateway chạy GID `10001`.
+
+Thư mục cha vẫn là `root:root 0700`; không cấp quyền đọc cho user/group khác
+trên host.
+
 Tạo secret segment từ 32 byte ngẫu nhiên mật mã, chuyển sang base64url và ghép
 client ID:
 
@@ -43,7 +53,8 @@ Ghi token cho LIMS, không in token ra terminal:
 ```bash
 printf '%s' "${token}" \
   | sudo -n tee /opt/lims-lite-secrets/pdf-gateway-lims-token >/dev/null
-sudo -n chmod 600 /opt/lims-lite-secrets/pdf-gateway-lims-token
+sudo -n chown root:1001 /opt/lims-lite-secrets/pdf-gateway-lims-token
+sudo -n chmod 640 /opt/lims-lite-secrets/pdf-gateway-lims-token
 ```
 
 Ghi policy chỉ chứa digest:
@@ -67,11 +78,13 @@ sudo -n tee /opt/lims-lite-secrets/pdf-gateway-client-policy.json >/dev/null <<E
   ]
 }
 EOF
-sudo -n chmod 600 /opt/lims-lite-secrets/pdf-gateway-client-policy.json
+sudo -n chown root:10001 /opt/lims-lite-secrets/pdf-gateway-client-policy.json
+sudo -n chmod 640 /opt/lims-lite-secrets/pdf-gateway-client-policy.json
 unset token secret digest
 ```
 
-Không commit hai file secret này vào Git.
+Không dùng `0644`, `0666` hoặc quyền world-readable. Không commit hai file
+secret này vào Git.
 
 ## 2. Cấu hình environment
 
@@ -110,6 +123,27 @@ Kỳ vọng:
 - `read_only=true`, `cap_drop=["ALL"]`,
   `security_opt=["no-new-privileges:true"]`.
 - Không có Tailscale, Funnel hoặc Cloudflare route tới gateway.
+
+Sau khi container đã healthy, xác nhận owner/group/mode, khả năng đọc và việc
+mỗi container chỉ được mount secret của chính nó:
+
+```bash
+sudo -n docker exec lims-app sh -eu -c '
+  id
+  stat -c "%n %u:%g %a" /run/secrets/pdf_gateway_lims_token
+  test -r /run/secrets/pdf_gateway_lims_token
+  test "$(stat -c "%u:%g:%a" /run/secrets/pdf_gateway_lims_token)" = "0:1001:640"
+  test ! -e /run/secrets/pdf_gateway_client_policy
+'
+
+sudo -n docker exec lims-pdf-gateway sh -eu -c '
+  id
+  stat -c "%n %u:%g %a" /run/secrets/pdf_gateway_client_policy
+  test -r /run/secrets/pdf_gateway_client_policy
+  test "$(stat -c "%u:%g:%a" /run/secrets/pdf_gateway_client_policy)" = "0:10001:640"
+  test ! -e /run/secrets/pdf_gateway_lims_token
+'
+```
 
 ## 4. Deploy trong phiên được phê duyệt
 
