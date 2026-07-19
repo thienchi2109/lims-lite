@@ -37,9 +37,9 @@
 
 ### Slice 4B. Khóa credential và failure model
 
-- [ ] 4.4 Viết failing tests cho bearer đọc từ `PDF_GATEWAY_TOKEN_FILE`: env path thiếu, file không đọc được, token rỗng, credential bị gateway từ chối, timeout, service unavailable, gateway error và non-PDF response.
-- [ ] 4.5 Viết failing tests xác nhận client không forward cookie, incoming `Authorization`, CoA token, Supabase session hoặc service-role credential; không log HTML/token/response body; thu thập sanitized gateway `x-request-id` trên success và failure khi hiện diện.
-- [ ] 4.6 Implement typed non-sensitive failure model, timeout cleanup và dedicated bearer header; không automatic retry, không tự ghi log và không fallback raw Gotenberg. Chạy focused tests về green và ghi commit boundary cho Slice 4B.
+- [x] 4.4 Viết failing tests cho bearer đọc từ `PDF_GATEWAY_TOKEN_FILE`: env path thiếu, file không đọc được, token rỗng, credential bị gateway từ chối, timeout, service unavailable, gateway error và non-PDF response.
+- [x] 4.5 Viết failing tests xác nhận client không forward cookie, incoming `Authorization`, CoA token, Supabase session hoặc service-role credential; không log HTML/token/response body; thu thập sanitized gateway `x-request-id` trên success và failure khi hiện diện.
+- [x] 4.6 Implement typed non-sensitive failure model, timeout cleanup và dedicated bearer header; không automatic retry, không tự ghi log và không fallback raw Gotenberg. Chạy focused tests về green và ghi commit boundary cho Slice 4B.
 
 ### Slice 4C. Khóa application boundary
 

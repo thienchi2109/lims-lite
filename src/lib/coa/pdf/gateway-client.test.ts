@@ -204,7 +204,10 @@ describe('convertHtmlToPdf', () => {
         )
         await expect(
             gatewayClient.convertHtmlToPdf('<html></html>')
-        ).rejects.toThrow('invalid PDF response')
+        ).rejects.toMatchObject({
+            name: 'PdfGatewayError',
+            code: 'invalid_response',
+        })
 
         fetchSpy.mockResolvedValueOnce(
             createGatewayResponse({
@@ -213,7 +216,10 @@ describe('convertHtmlToPdf', () => {
         )
         await expect(
             gatewayClient.convertHtmlToPdf('<html></html>')
-        ).rejects.toThrow('invalid PDF response')
+        ).rejects.toMatchObject({
+            name: 'PdfGatewayError',
+            code: 'invalid_response',
+        })
     })
 
     test('rejects non-success responses even when the body looks like a PDF', async () => {
@@ -223,7 +229,10 @@ describe('convertHtmlToPdf', () => {
 
         await expect(
             gatewayClient.convertHtmlToPdf('<html></html>')
-        ).rejects.toThrow('invalid PDF response')
+        ).rejects.toMatchObject({
+            name: 'PdfGatewayError',
+            code: 'service_unavailable',
+        })
     })
 
     test('drops a malformed gateway request ID', async () => {
