@@ -222,6 +222,7 @@ describe('generateCoA stamp rendering', () => {
         mockFetchSnapshotTestResults.mockResolvedValue([
             {
                 result_id: 'result-1',
+                assessment: 'within_reference_range',
                 assay_name: 'Glucose',
                 value: '5,2',
                 unit: 'mmol/L',
@@ -262,6 +263,9 @@ describe('generateCoA stamp rendering', () => {
             }),
             {
                 managerStampSrc: 'data:image/svg+xml;base64,stamp-data',
+                assessments: {
+                    'result-1': 'within_reference_range',
+                },
             },
         )
     })
@@ -303,8 +307,19 @@ describe('generateCoA stamp rendering', () => {
         mockFetchSnapshotTestResults.mockResolvedValue([
             {
                 result_id: 'result-1',
+                assessment: 'within_reference_range',
                 assay_name: 'Glucose',
                 value: '5,2',
+                unit: 'mmol/L',
+                normal_range: '4,1 - 5,9 mmol/L',
+                method_name: 'Máy sinh hóa tự động AU400',
+                lab_specialty_name: 'Sinh hóa',
+            },
+            {
+                result_id: 'result-2',
+                assessment: 'outside_reference_range',
+                assay_name: 'Glucose đói',
+                value: '8,2',
                 unit: 'mmol/L',
                 normal_range: '4,1 - 5,9 mmol/L',
                 method_name: 'Máy sinh hóa tự động AU400',
@@ -329,11 +344,23 @@ describe('generateCoA stamp rendering', () => {
             expect.objectContaining({
                 results: [
                     expect.objectContaining({
+                        result_id: 'result-1',
+                        assessment: 'within_reference_range',
                         normal_range: '4,1 - 5,9 mmol/L',
+                    }),
+                    expect.objectContaining({
+                        result_id: 'result-2',
+                        assessment: 'outside_reference_range',
                     }),
                 ],
             }),
-            expect.any(Object),
+            {
+                managerStampSrc: 'data:image/svg+xml;base64,stamp-data',
+                assessments: {
+                    'result-1': 'within_reference_range',
+                    'result-2': 'outside_reference_range',
+                },
+            },
         )
     })
 
@@ -389,6 +416,18 @@ describe('generateCoA stamp rendering', () => {
         expect(mockFetchTestResults).toHaveBeenCalledWith('sample-1')
         expect(mockFetchSubmissionById).not.toHaveBeenCalled()
         expect(mockFetchSnapshotTestResults).not.toHaveBeenCalled()
+        expect(mockRenderCoATemplate).toHaveBeenCalledWith(
+            expect.objectContaining({
+                results: [
+                    expect.objectContaining({
+                        result_id: 'result-legacy',
+                    }),
+                ],
+            }),
+            {
+                managerStampSrc: 'data:image/svg+xml;base64,stamp-data',
+            },
+        )
     })
 
     it('regenerates a failed report from its existing source submission', async () => {

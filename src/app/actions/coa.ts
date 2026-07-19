@@ -17,7 +17,12 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getActiveSignature, downloadSignature } from './signatures'
-import type { CoAData, CoAManualInputs, UserRole } from '@/types'
+import type {
+    CoAData,
+    CoAManualInputs,
+    ResultReferenceAssessment,
+    UserRole,
+} from '@/types'
 import {
     getUserConfidentialAccess,
     isConfidentialAssociatedSample,
@@ -358,6 +363,17 @@ export async function generateCoA(
                 'Không thể tải ảnh chụp kết quả đã duyệt của CoA',
             )
         }
+        const assessments = coaReport.sourceSubmissionId
+            ? results.reduce<Record<string, ResultReferenceAssessment>>(
+                (assessmentByResultId, result) => {
+                    if (result.result_id && result.assessment) {
+                        assessmentByResultId[result.result_id] = result.assessment
+                    }
+                    return assessmentByResultId
+                },
+                {},
+            )
+            : undefined
 
         // Step 7.5: Fetch testing date from audit logs
         const testingDate = await fetchTestingDate(sampleId)
@@ -388,7 +404,12 @@ export async function generateCoA(
             )
         }
 
-        const html = renderCoATemplate(coaData, { managerStampSrc })
+        const html = renderCoATemplate(
+            coaData,
+            coaReport.sourceSubmissionId
+                ? { managerStampSrc, assessments }
+                : { managerStampSrc },
+        )
         const htmlHash = generateHtmlHash(html)
 
         // Step 10: Upload HTML to storage
