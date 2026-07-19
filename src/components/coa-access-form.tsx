@@ -1,288 +1,274 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2, XCircle, LogOut, Phone, Search, CheckCircle } from 'lucide-react'
+import {
+  Loader2,
+  LogOut,
+  Phone,
+  Search,
+  ShieldCheck,
+  XCircle,
+} from 'lucide-react'
+
+import { CoAAccessSampleCard } from '@/components/coa-access-sample-card'
+import { CoAPreviewDialog } from '@/components/coa-preview-dialog'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { CoAPreviewDialog } from '@/components/coa-preview-dialog'
-import { CoAAccessSampleCard } from '@/components/coa-access-sample-card'
 import type { CoAAuthResponse, CoASampleInfo } from '@/types'
 
-// ============================================================================
-// VALIDATION SCHEMA
-// ============================================================================
-
 const CoAAccessFormSchema = z.object({
-    phone: z.string()
-        .min(10, 'Số điện thoại không hợp lệ')
-        .max(15, 'Số điện thoại không hợp lệ')
-        .regex(/^(0|\+?84)[0-9]{9,10}$/, 'Số điện thoại không đúng định dạng'),
+  phone: z
+    .string()
+    .min(10, 'Số điện thoại không hợp lệ')
+    .max(15, 'Số điện thoại không hợp lệ')
+    .regex(/^(0|\+?84)[0-9]{9,10}$/, 'Số điện thoại không đúng định dạng'),
 })
 
 type CoAAccessFormData = z.infer<typeof CoAAccessFormSchema>
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
+interface CoAAccessFormProps {
+  onAuthenticatedChange?: (authenticated: boolean) => void
+}
 
-export function CoAAccessForm() {
-    const [isLoading, setIsLoading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
-    const [authResponse, setAuthResponse] = useState<CoAAuthResponse | null>(null)
-    const [previewSample, setPreviewSample] = useState<{
-        sampleId: string
-        sampleIdDisplay: string
-    } | null>(null)
+export function CoAAccessForm({ onAuthenticatedChange }: CoAAccessFormProps) {
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [authResponse, setAuthResponse] = useState<CoAAuthResponse | null>(null)
+  const [previewSample, setPreviewSample] = useState<{
+    sampleId: string
+    sampleIdDisplay: string
+  } | null>(null)
+  const previewScrollPosition = useRef(0)
 
-    const {
-        register,
-        handleSubmit,
-        formState: { errors },
-        reset,
-    } = useForm<CoAAccessFormData>({
-        resolver: zodResolver(CoAAccessFormSchema),
-        defaultValues: {
-            phone: '',
-        },
-    })
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<CoAAccessFormData>({
+    resolver: zodResolver(CoAAccessFormSchema),
+    defaultValues: { phone: '' },
+  })
 
-    // ========================================================================
-    // AUTHENTICATION HANDLER
-    // ========================================================================
+  const onSubmit = async (data: CoAAccessFormData) => {
+    setIsLoading(true)
+    setError(null)
 
-    const onSubmit = async (data: CoAAccessFormData) => {
-        setIsLoading(true)
-        setError(null)
+    try {
+      const response = await fetch('/api/coa/authenticate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      const result: CoAAuthResponse = await response.json()
 
-        try {
-            const response = await fetch('/api/coa/authenticate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data),
-            })
-
-            const result: CoAAuthResponse = await response.json()
-
-            if (!response.ok || !result.success) {
-                // Generic error message
-                setError(result.error || 'Không tìm thấy thông tin khách hàng')
-                setAuthResponse(null)
-                return
-            }
-
-            // Success - show samples
-            setAuthResponse(result)
-            setError(null)
-        } catch (err) {
-            console.error('Auth error:', err)
-            setError('Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.')
-        } finally {
-            setIsLoading(false)
-        }
-    }
-
-    // ========================================================================
-    // PREVIEW HANDLERS
-    // ========================================================================
-
-    const handlePreviewOpen = (sampleId: string, sampleIdDisplay: string) => {
-        setPreviewSample({ sampleId, sampleIdDisplay })
-    }
-
-    const handlePreviewOpenChange = (open: boolean) => {
-        if (!open) {
-            setPreviewSample(null)
-        }
-    }
-
-    const handleLogout = useCallback(() => {
-        void fetch('/api/coa/logout', { method: 'POST' })
-        setPreviewSample(null)
+      if (!response.ok || !result.success) {
+        setError(result.error || 'Không tìm thấy thông tin khách hàng')
         setAuthResponse(null)
-        setError(null)
-        reset()
-    }, [reset])
+        return
+      }
 
-    const handleUnauthorizedPreviewRecovery = useCallback(() => {
-        handleLogout()
-    }, [handleLogout])
-
-    // ========================================================================
-    // RENDER: AUTHENTICATED VIEW (Samples List)
-    // ========================================================================
-
-    if (authResponse && authResponse.success) {
-        return (
-            <>
-                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xl shadow-slate-200/50 ring-1 ring-slate-100 flex flex-col animate-in fade-in zoom-in-95 duration-300">
-                {/* Header */}
-                <div className="bg-slate-50/50 px-6 py-5 border-b border-slate-100 shrink-0 flex items-center justify-between">
-                    <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm">
-                                {(authResponse.client_name || 'K').charAt(0).toUpperCase()}
-                            </div>
-                            <h2 className="text-base font-bold text-slate-800">
-                                {authResponse.client_name || 'Khách hàng'}
-                            </h2>
-                        </div>
-                        <p className="text-xs text-slate-500 pl-10">
-                            Tìm thấy <strong className="text-blue-600">{authResponse.samples?.length || 0}</strong> mẫu xét nghiệm
-                        </p>
-                    </div>
-                    <Button
-                        onClick={handleLogout}
-                        variant="ghost"
-                        size="sm"
-                        className="text-slate-500 hover:text-red-600 hover:bg-red-50 h-9 px-3 rounded-full"
-                    >
-                        <LogOut className="mr-2 h-4 w-4" />
-                        Thoát
-                    </Button>
-                </div>
-
-                {/* Samples List - Scrollable */}
-                <ScrollArea className="h-[450px] w-full bg-slate-50/30">
-                    <div className="p-6">
-                        {authResponse.samples && authResponse.samples.length > 0 ? (
-                            <div className="space-y-4">
-                                {authResponse.samples.map((sample: CoASampleInfo) => (
-                                    <CoAAccessSampleCard
-                                        key={sample.id}
-                                        sample={sample}
-                                        onPreview={handlePreviewOpen}
-                                    />
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="flex flex-col items-center justify-center py-12 text-center">
-                                <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-                                    <Search className="w-8 h-8 text-slate-400" />
-                                </div>
-                                <h3 className="text-slate-900 font-medium mb-1">Không tìm thấy kết quả</h3>
-                                <p className="text-slate-500 text-sm max-w-xs mx-auto">
-                                    Hiện chưa có kết quả xét nghiệm nào hoàn thành cho số điện thoại này.
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                </ScrollArea>
-                </div>
-
-                <CoAPreviewDialog
-                    open={Boolean(previewSample)}
-                    onOpenChange={handlePreviewOpenChange}
-                    sampleId={previewSample?.sampleId ?? ''}
-                    title="Phiếu Kết Quả Phân Tích"
-                    subtitle={
-                        previewSample ? `Mã số mẫu: ${previewSample.sampleIdDisplay}` : undefined
-                    }
-                    route="client"
-                    onUnauthorized={handleUnauthorizedPreviewRecovery}
-                />
-            </>
-        )
+      setAuthResponse(result)
+      setError(null)
+      onAuthenticatedChange?.(true)
+    } catch (authError) {
+      console.error('Auth error:', authError)
+      setError('Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.')
+    } finally {
+      setIsLoading(false)
     }
+  }
 
-    // ========================================================================
-    // RENDER: LOGIN FORM
-    // ========================================================================
+  const handlePreviewOpen = (sampleId: string, sampleIdDisplay: string) => {
+    previewScrollPosition.current = window.scrollY
+    setPreviewSample({ sampleId, sampleIdDisplay })
+  }
+
+  const handlePreviewOpenChange = (open: boolean) => {
+    if (open) return
+
+    setPreviewSample(null)
+    requestAnimationFrame(() => {
+      if (window.scrollY !== previewScrollPosition.current) {
+        window.scrollTo({ top: previewScrollPosition.current, behavior: 'auto' })
+      }
+    })
+  }
+
+  const handleLogout = useCallback(() => {
+    void fetch('/api/coa/logout', { method: 'POST' })
+    setPreviewSample(null)
+    setAuthResponse(null)
+    setError(null)
+    reset()
+    onAuthenticatedChange?.(false)
+  }, [onAuthenticatedChange, reset])
+
+  const handleUnauthorizedPreviewRecovery = useCallback(() => {
+    handleLogout()
+  }, [handleLogout])
+
+  if (authResponse?.success) {
+    const sampleCount = authResponse.samples?.length ?? 0
 
     return (
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xl shadow-slate-200/50 ring-1 ring-slate-100">
-            {/* Form Header */}
-            <div className="bg-slate-50/50 px-6 py-6 border-b border-slate-100">
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
-                        <Phone className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="text-left">
-                        <h2 className="text-xl font-bold text-slate-900">
-                            Đăng Nhập
-                        </h2>
-                        <p className="text-sm text-slate-500 font-medium">
-                            Nhập số điện thoại để tra cứu
-                        </p>
-                    </div>
+      <>
+        <section className="overflow-hidden rounded-lg border border-[#DDE4E1] bg-white shadow-[0_8px_28px_rgba(23,32,29,0.05)]">
+          <header className="flex items-start justify-between gap-4 border-b border-[#DDE4E1] px-4 py-4 sm:items-center sm:px-6">
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[#E8F3F0] text-sm font-bold text-[#087F6A]">
+                  {(authResponse.client_name || 'K').charAt(0).toUpperCase()}
+                </span>
+                <div className="min-w-0">
+                  <h1 className="truncate text-base font-semibold text-[#17201D] sm:text-lg">
+                    {authResponse.client_name || 'Khách hàng'}
+                  </h1>
+                  <p className="mt-0.5 text-sm text-[#65716D]">
+                    {sampleCount} mẫu xét nghiệm
+                  </p>
                 </div>
+              </div>
             </div>
 
-            {/* Form Body */}
-            <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
-                {/* Error Alert */}
-                {error && (
-                    <Alert variant="destructive" className="bg-red-50 border-red-200 animate-in fade-in slide-in-from-top-2">
-                        <XCircle className="h-4 w-4 text-red-600" />
-                        <AlertDescription className="text-red-900 font-medium">{error}</AlertDescription>
-                    </Alert>
-                )}
+            <Button
+              onClick={handleLogout}
+              variant="ghost"
+              size="sm"
+              title="Thoát"
+              className="h-10 shrink-0 px-3 text-[#65716D] hover:bg-red-50 hover:text-red-700"
+            >
+              <LogOut className="size-4 sm:mr-2" aria-hidden="true" />
+              <span className="sr-only sm:not-sr-only">Thoát</span>
+            </Button>
+          </header>
 
-                {/* Phone Number Field */}
-                <div className="space-y-2.5 text-left">
-                    <Label htmlFor="phone" className="text-slate-700 font-semibold text-sm ml-1">
-                        Số điện thoại đăng ký <span className="text-red-500">*</span>
-                    </Label>
-                    <div className="relative">
-                        <Input
-                            id="phone"
-                            type="tel"
-                            placeholder="Ví dụ: 0987654321"
-                            {...register('phone')}
-                            disabled={isLoading}
-                            className={`h-12 pl-4 text-lg tracking-wide transition-all duration-200 ${errors.phone
-                                ? 'border-red-300 focus-visible:ring-red-200 bg-red-50/30'
-                                : 'border-slate-200 hover:border-blue-300 focus-visible:ring-blue-100 focus-visible:border-blue-500'
-                                }`}
-                        />
-                        {/* Icon indicator inside input could go here if needed */}
-                    </div>
-                    {errors.phone ? (
-                        <p className="text-sm text-red-600 flex items-center gap-1.5 font-medium ml-1 animate-in slide-in-from-left-1">
-                            <XCircle className="w-3.5 h-3.5" />
-                            {errors.phone.message}
-                        </p>
-                    ) : (
-                        <p className="text-xs text-slate-500 ml-1">
-                            Nhập chính xác số điện thoại bạn đã cung cấp khi gửi mẫu.
-                        </p>
-                    )}
-                </div>
+          <div className="bg-[#F7F9F8] p-4 sm:p-6">
+            {sampleCount > 0 ? (
+              <div
+                data-testid="coa-results-grid"
+                className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2"
+              >
+                {authResponse.samples?.map((sample: CoASampleInfo) => (
+                  <CoAAccessSampleCard
+                    key={sample.id}
+                    sample={sample}
+                    onPreview={handlePreviewOpen}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <span className="flex size-12 items-center justify-center rounded-lg bg-[#E8F3F0] text-[#087F6A]">
+                  <Search className="size-5" aria-hidden="true" />
+                </span>
+                <h2 className="mt-4 font-semibold text-[#17201D]">Không tìm thấy kết quả</h2>
+                <p className="mt-1 max-w-sm text-sm leading-6 text-[#65716D]">
+                  Hiện chưa có kết quả xét nghiệm nào hoàn thành cho số điện thoại này.
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
 
-                {/* Submit Button */}
-                <Button
-                    type="submit"
-                    className="w-full h-12 text-base bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-bold shadow-lg shadow-blue-500/25 rounded-lg transition-all active:scale-[0.98]"
-                    disabled={isLoading}
-                >
-                    {isLoading ? (
-                        <>
-                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                            Đang xử lý...
-                        </>
-                    ) : (
-                        <>
-                            <Search className="mr-2 h-5 w-5" />
-                            Tra Cứu Ngay
-                        </>
-                    )}
-                </Button>
-            </form>
-
-            {/* Security Footer */}
-            <div className="py-4 bg-slate-50 border-t border-slate-100 text-center">
-                <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400 font-medium">
-                    <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
-                    Được bảo mật bởi CDC LIMS
-                </div>
-            </div>
-        </div>
+        <CoAPreviewDialog
+          open={Boolean(previewSample)}
+          onOpenChange={handlePreviewOpenChange}
+          sampleId={previewSample?.sampleId ?? ''}
+          title="Phiếu Kết Quả Phân Tích"
+          subtitle={
+            previewSample ? `Mã số mẫu: ${previewSample.sampleIdDisplay}` : undefined
+          }
+          route="client"
+          onUnauthorized={handleUnauthorizedPreviewRecovery}
+        />
+      </>
     )
+  }
+
+  return (
+    <section className="overflow-hidden rounded-lg border border-[#DDE4E1] bg-white shadow-[0_8px_28px_rgba(23,32,29,0.06)]">
+      <header className="border-b border-[#DDE4E1] px-5 py-5 sm:px-6">
+        <div className="flex items-center gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[#E8F3F0] text-[#087F6A]">
+            <Phone className="size-5" aria-hidden="true" />
+          </span>
+          <div>
+            <h2 className="text-lg font-semibold text-[#17201D]">Tra cứu bằng số điện thoại</h2>
+            <p className="mt-0.5 text-sm text-[#65716D]">Nhập thông tin đã đăng ký gửi mẫu</p>
+          </div>
+        </div>
+      </header>
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 p-5 sm:p-6">
+        {error && (
+          <Alert
+            variant="destructive"
+            className="border-red-200 bg-red-50 animate-in fade-in slide-in-from-top-2"
+          >
+            <XCircle className="size-4 text-red-600" />
+            <AlertDescription className="font-medium text-red-900">{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <div className="space-y-2 text-left">
+          <Label htmlFor="phone" className="text-sm font-semibold text-[#35413D]">
+            Số điện thoại đăng ký <span className="text-red-600">*</span>
+          </Label>
+          <Input
+            id="phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="Ví dụ: 0987654321"
+            {...register('phone')}
+            disabled={isLoading}
+            className={[
+              'h-12 rounded-lg border-[#CCD6D2] px-4 text-base',
+              'focus-visible:border-[#087F6A] focus-visible:ring-[#D2E9E3]',
+              errors.phone ? 'border-red-300 bg-red-50/40' : '',
+            ].join(' ')}
+          />
+          {errors.phone ? (
+            <p className="flex items-center gap-1.5 text-sm font-medium text-red-600">
+              <XCircle className="size-3.5" aria-hidden="true" />
+              {errors.phone.message}
+            </p>
+          ) : (
+            <p className="text-xs leading-5 text-[#65716D]">
+              Nhập chính xác số điện thoại đã cung cấp khi gửi mẫu.
+            </p>
+          )}
+        </div>
+
+        <Button
+          type="submit"
+          className="h-12 w-full rounded-lg bg-[#087F6A] text-base font-semibold text-white shadow-sm hover:bg-[#066B5A] focus-visible:ring-[#087F6A]"
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 size-5 animate-spin" aria-hidden="true" />
+              Đang xử lý...
+            </>
+          ) : (
+            <>
+              <Search className="mr-2 size-5" aria-hidden="true" />
+              Tra Cứu Ngay
+            </>
+          )}
+        </Button>
+      </form>
+
+      <footer className="flex items-center justify-center gap-2 border-t border-[#DDE4E1] bg-[#FAFBFA] px-5 py-3.5 text-xs font-medium text-[#65716D]">
+        <ShieldCheck className="size-4 text-[#087F6A]" aria-hidden="true" />
+        Phiên tra cứu được bảo vệ bởi CDC LIMS
+      </footer>
+    </section>
+  )
 }

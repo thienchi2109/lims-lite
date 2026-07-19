@@ -63,7 +63,7 @@ describe('CoAAccessForm public preview flow', () => {
 
     await waitFor(() => expect(screen.getByText('Nguyen Van A')).toBeDefined())
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Tải Kết Quả' })[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Xem phiếu kết quả' }))
 
     await waitFor(() =>
       expect(screen.getByTitle('Phiếu Kết Quả Phân Tích').getAttribute('srcdoc')).toContain(
@@ -114,7 +114,7 @@ describe('CoAAccessForm public preview flow', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Tra Cứu Ngay' }))
 
     await waitFor(() => expect(screen.getByText('Nguyen Van A')).toBeDefined())
-    fireEvent.click(screen.getAllByRole('button', { name: 'Tải Kết Quả' })[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Xem phiếu kết quả' }))
 
     await waitFor(() => expect(screen.getByText('Không tìm thấy phiếu kết quả')).toBeDefined())
     expect(screen.getByText('BN-99210')).toBeDefined()
@@ -169,7 +169,7 @@ describe('CoAAccessForm public preview flow', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Tra Cứu Ngay' }))
 
     await waitFor(() => expect(screen.getByText('Nguyen Van A')).toBeDefined())
-    fireEvent.click(screen.getAllByRole('button', { name: 'Tải Kết Quả' })[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Xem phiếu kết quả' }))
 
     await waitFor(() =>
       expect(screen.getByText('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại')).toBeDefined(),
@@ -180,5 +180,40 @@ describe('CoAAccessForm public preview flow', () => {
     await waitFor(() => expect(logoutSpy).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Tra Cứu Ngay' })).toBeDefined())
     expect(screen.queryByText('Nguyen Van A')).toBeNull()
+  })
+
+  it('notifies the portal shell when authentication state changes', async () => {
+    const onAuthenticatedChange = vi.fn()
+    mockAuthenticatedSamples()
+
+    render(<CoAAccessForm onAuthenticatedChange={onAuthenticatedChange} />)
+
+    fireEvent.change(screen.getByLabelText('Số điện thoại đăng ký *'), {
+      target: { value: '0987654321' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Tra Cứu Ngay' }))
+
+    await waitFor(() => expect(onAuthenticatedChange).toHaveBeenCalledWith(true))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Thoát' }))
+
+    expect(onAuthenticatedChange).toHaveBeenLastCalledWith(false)
+  })
+
+  it('uses document scrolling and a responsive result grid after authentication', async () => {
+    mockAuthenticatedSamples()
+
+    render(<CoAAccessForm />)
+
+    fireEvent.change(screen.getByLabelText('Số điện thoại đăng ký *'), {
+      target: { value: '0987654321' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Tra Cứu Ngay' }))
+
+    await waitFor(() => expect(screen.getByText('Nguyen Van A')).toBeDefined())
+
+    expect(document.querySelector('[data-radix-scroll-area-viewport]')).toBeNull()
+    expect(screen.getByTestId('coa-results-grid').className).toContain('grid-cols-1')
+    expect(screen.getByTestId('coa-results-grid').className).toContain('xl:grid-cols-2')
   })
 })

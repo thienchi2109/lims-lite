@@ -1,6 +1,6 @@
 'use client'
 
-import { CheckCircle, Download, Loader2 } from 'lucide-react'
+import { CheckCircle2, Clock3, FileText } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import type { CoASampleInfo } from '@/types'
@@ -10,118 +10,76 @@ interface CoAAccessSampleCardProps {
   onPreview: (sampleId: string, sampleIdDisplay: string) => void
 }
 
+function formatDate(dateString: string | null) {
+  if (!dateString) return 'Chưa cập nhật'
+
+  return new Intl.DateTimeFormat('vi-VN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(dateString))
+}
+
 export function CoAAccessSampleCard({ sample, onPreview }: CoAAccessSampleCardProps) {
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'N/A'
-    const date = new Date(dateString)
-    return new Intl.DateTimeFormat('vi-VN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date)
-  }
-
   return (
-    <div className="group relative cursor-default rounded-xl border border-slate-200 bg-white p-5 transition-all duration-300 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-100/50">
-      <div className={`absolute left-0 top-4 bottom-4 w-1 rounded-r-full transition-colors ${sample.has_coa ? 'bg-green-500' : 'bg-amber-400'}`} />
-
-      <div className="flex flex-col gap-4 pl-3">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="mb-1 flex items-center gap-2">
-              <h3 className="text-lg font-bold tracking-tight text-slate-900">
-                {sample.sample_id_display}
-              </h3>
-              {sample.has_coa ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-[10px] font-bold uppercase text-green-700">
-                  <CheckCircle className="h-3 w-3" /> Hoàn thành
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700">
-                  <Loader2 className="h-3 w-3 animate-spin" /> Đang xử lý
-                </span>
-              )}
-            </div>
-            <p className="text-sm font-medium text-slate-600">
-              {sample.sample_type || 'Mẫu xét nghiệm'}
-            </p>
-          </div>
-
-          <div className="hidden sm:block">
-            {sample.has_coa && (
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onPreview(sample.id, sample.sample_id_display)
-                }}
-                size="sm"
-                className="bg-blue-600 font-medium text-white shadow-sm transition-all hover:bg-blue-700 hover:shadow-blue-200"
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Tải Kết Quả
-              </Button>
-            )}
-          </div>
+    <article className="min-w-0 rounded-lg border border-[#DDE4E1] bg-white p-4 shadow-[0_3px_12px_rgba(23,32,29,0.03)] sm:p-5">
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="break-words text-lg font-semibold leading-6 text-[#17201D]">
+            {sample.sample_id_display}
+          </h2>
+          <p className="mt-1 break-words text-sm leading-5 text-[#65716D]">
+            {sample.sample_type || 'Mẫu xét nghiệm'}
+          </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-slate-100 pt-2">
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Ngày nhận mẫu
-            </span>
-            <div className="text-sm font-semibold text-slate-700">
-              {formatDate(sample.received_date)}
-            </div>
-          </div>
-          <div>
-            {sample.has_coa && sample.approved_at ? (
-              <>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Ngày trả kết quả
-                </span>
-                <div className="text-sm font-semibold text-slate-700">
-                  {formatDate(sample.approved_at)}
-                </div>
-              </>
-            ) : sample.has_coa ? (
-              <>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Trạng thái
-                </span>
-                <div className="text-sm font-semibold text-slate-700">Đang cập nhật</div>
-              </>
-            ) : (
-              <>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Trạng thái
-                </span>
-                <div className="text-sm font-semibold text-slate-700">Đang phân tích</div>
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="sm:hidden mt-2">
-          {sample.has_coa ? (
-            <Button
-              onClick={(e) => {
-                e.stopPropagation()
-                onPreview(sample.id, sample.sample_id_display)
-              }}
-              className="w-full bg-blue-600 text-white hover:bg-blue-700"
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Tải Kết Quả
-            </Button>
-          ) : (
-            <div className="w-full rounded border border-amber-100 bg-amber-50 py-2 text-center text-xs font-medium text-amber-600">
-              Kết quả đang được xử lý
-            </div>
-          )}
-        </div>
+        {sample.has_coa ? (
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#B8D8CF] bg-[#EEF7F4] px-2.5 py-1 text-xs font-semibold text-[#087F6A]">
+            <CheckCircle2 className="size-3.5" aria-hidden="true" />
+            Hoàn thành
+          </span>
+        ) : (
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+            <Clock3
+              data-testid="coa-pending-icon"
+              className="size-3.5"
+              aria-hidden="true"
+            />
+            Đang xử lý
+          </span>
+        )}
       </div>
-    </div>
+
+      <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-[#E5EAE8] pt-4">
+        <div className="min-w-0">
+          <dt className="text-xs font-medium leading-5 text-[#7A8581]">Ngày nhận mẫu</dt>
+          <dd className="mt-0.5 break-words text-xs font-semibold leading-5 text-[#35413D] sm:text-sm">
+            {formatDate(sample.received_date)}
+          </dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-xs font-medium leading-5 text-[#7A8581]">
+            {sample.has_coa ? 'Ngày phê duyệt' : 'Trạng thái'}
+          </dt>
+          <dd className="mt-0.5 break-words text-xs font-semibold leading-5 text-[#35413D] sm:text-sm">
+            {sample.has_coa ? formatDate(sample.approved_at) : 'Đang phân tích'}
+          </dd>
+        </div>
+      </dl>
+
+      {sample.has_coa && (
+        <div className="mt-4 flex justify-end">
+          <Button
+            onClick={() => onPreview(sample.id, sample.sample_id_display)}
+            className="h-11 w-full rounded-lg bg-[#087F6A] px-4 font-semibold text-white hover:bg-[#066B5A] sm:w-auto"
+          >
+            <FileText className="mr-2 size-4" aria-hidden="true" />
+            Xem phiếu kết quả
+          </Button>
+        </div>
+      )}
+    </article>
   )
 }
