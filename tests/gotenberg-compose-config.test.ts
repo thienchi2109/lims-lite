@@ -9,6 +9,57 @@ import { describe, expect, test } from 'vitest'
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
+type DockerfileInstruction = {
+  arguments: string
+  command: string
+}
+
+function parseDockerfileInstructions(
+  dockerfile: string
+): DockerfileInstruction[] {
+  const logicalLines: string[] = []
+  let currentInstruction = ''
+
+  for (const rawLine of dockerfile.split(/\r?\n/)) {
+    const trimmedLine = rawLine.trim()
+
+    if (!trimmedLine || trimmedLine.startsWith('#')) {
+      continue
+    }
+
+    const continuesOnNextLine = trimmedLine.endsWith('\\')
+    const instructionFragment = continuesOnNextLine
+      ? trimmedLine.slice(0, -1).trimEnd()
+      : trimmedLine
+
+    currentInstruction = [currentInstruction, instructionFragment]
+      .filter(Boolean)
+      .join(' ')
+
+    if (!continuesOnNextLine) {
+      logicalLines.push(currentInstruction)
+      currentInstruction = ''
+    }
+  }
+
+  if (currentInstruction) {
+    throw new Error('Dockerfile ends with an unfinished continuation')
+  }
+
+  return logicalLines.map((line) => {
+    const instructionMatch = /^([a-z]+)\s+(.+)$/i.exec(line)
+
+    if (!instructionMatch) {
+      throw new Error(`Invalid Dockerfile instruction: ${line}`)
+    }
+
+    return {
+      command: instructionMatch[1].toUpperCase(),
+      arguments: instructionMatch[2].trim(),
+    }
+  })
+}
+
 function loadComposeConfig() {
   const environment = { ...process.env }
   const exampleEnvironment = loadExampleEnvironment()
@@ -60,29 +111,58 @@ const composeConfig = loadComposeConfig()
 const gotenbergService = composeConfig.services.gotenberg
 const appService = composeConfig.services.app
 
+test('ignores comments while parsing executable Dockerfile instructions', () => {
+  expect(
+    parseDockerfileInstructions(`
+      # FROM misleading/image:latest
+      FROM trusted/image:1
+
+      # RUN apt-get install unsafe-package
+      RUN echo safe \\
+        && echo complete
+    `)
+  ).toEqual([
+    { command: 'FROM', arguments: 'trusted/image:1' },
+    { command: 'RUN', arguments: 'echo safe && echo complete' },
+  ])
+})
+
 describe('Gotenberg Compose infrastructure', () => {
   test('builds the custom pinned Gotenberg 8 image with Times New Roman', () => {
     const dockerfile = readFileSync(
       resolve(repositoryRoot, 'ops/gotenberg/Dockerfile'),
       'utf8'
     )
+    const dockerfileInstructions = parseDockerfileInstructions(dockerfile)
+    const instructionArguments = (command: string) =>
+      dockerfileInstructions
+        .filter((instruction) => instruction.command === command)
+        .map((instruction) => instruction.arguments)
+    const runInstructions = instructionArguments('RUN').join('\n')
 
     expect(gotenbergService.build.context).toBe(
       resolve(repositoryRoot, 'ops/gotenberg')
     )
     expect(gotenbergService.build.dockerfile).toBe('Dockerfile')
-    expect(dockerfile).toContain(
-      'FROM gotenberg/gotenberg:8.34.0@sha256:67097317623a503ba2a6a7e9ae8db6929a1f7e1bbd88077bacf2d325fbdab923'
+    expect(instructionArguments('FROM')).toEqual([
+      'gotenberg/gotenberg:8.34.0@sha256:67097317623a503ba2a6a7e9ae8db6929a1f7e1bbd88077bacf2d325fbdab923',
+    ])
+    expect(instructionArguments('USER')).toEqual(['root', 'gotenberg'])
+    expect(instructionArguments('ARG')).toContain(
+      'DEBIAN_FRONTEND=noninteractive'
     )
-    expect(dockerfile).toMatch(/USER root/)
-    expect(dockerfile).toMatch(/DEBIAN_FRONTEND=noninteractive/)
-    expect(dockerfile).toMatch(/trixie contrib non-free/)
-    expect(dockerfile).toMatch(/msttcorefonts\/accepted-mscorefonts-eula/)
-    expect(dockerfile).toMatch(
+    expect(runInstructions).toMatch(/trixie contrib non-free/)
+    expect(runInstructions).toMatch(
+      /msttcorefonts\/accepted-mscorefonts-eula/
+    )
+    expect(runInstructions).toMatch(
       /apt-get install[\s\S]*ttf-mscorefonts-installer/
     )
-    expect(dockerfile).toContain('fc-match "Times New Roman"')
-    expect(dockerfile.trimEnd()).toMatch(/USER gotenberg$/)
+    expect(runInstructions).toContain('fc-match "Times New Roman"')
+    expect(dockerfileInstructions.at(-1)).toEqual({
+      command: 'USER',
+      arguments: 'gotenberg',
+    })
   })
 
   test('keeps Gotenberg private and optional for application startup', () => {
@@ -96,13 +176,21 @@ describe('Gotenberg Compose infrastructure', () => {
     expect(composeConfig.services.nginx.depends_on).not.toHaveProperty(
       'gotenberg'
     )
+    expect(JSON.stringify(appService.healthcheck.test)).not.toMatch(
+      /gotenberg|GOTENBERG_URL/i
+    )
   })
 
   test('defines health and resource boundaries for Chromium conversion', () => {
     expect(gotenbergService.restart).toBe('unless-stopped')
-    expect(gotenbergService.healthcheck.test.join(' ')).toContain(
-      'http://localhost:3000/health'
-    )
+    expect(gotenbergService.healthcheck.test).toEqual([
+      'CMD',
+      'curl',
+      '--fail',
+      '--silent',
+      '--show-error',
+      'http://localhost:3000/health',
+    ])
     expect(gotenbergService.healthcheck).toMatchObject({
       interval: '30s',
       retries: 3,
@@ -121,8 +209,13 @@ describe('Gotenberg Compose infrastructure', () => {
       resolve(repositoryRoot, 'ops/gotenberg/Dockerfile'),
       'utf8'
     )
+    const executableDockerfile = parseDockerfileInstructions(dockerfile)
+      .map(
+        (instruction) => `${instruction.command} ${instruction.arguments}`
+      )
+      .join('\n')
     const forbiddenOverrides =
-      /CHROMIUM_(?:PROXY_SERVER|HOST_RESOLVER_RULES|ALLOW_LIST)|--chromium-(?:proxy-server|host-resolver-rules|allow-list)/i
+      /CHROMIUM_(?:PROXY_SERVER|HOST_RESOLVER_RULES|ALLOW_LIST)|--chromium-(?:proxy-server|host-resolver-rules|allow-list)|(?:HTTP|HTTPS|ALL|NO)_PROXY/i
 
     expect(gotenbergService.environment).toMatchObject({
       API_TIMEOUT: '30s',
@@ -141,9 +234,10 @@ describe('Gotenberg Compose infrastructure', () => {
       JSON.stringify({
         command: gotenbergService.command,
         entrypoint: gotenbergService.entrypoint,
+        environment: gotenbergService.environment,
       })
     ).not.toMatch(forbiddenOverrides)
-    expect(dockerfile).not.toMatch(forbiddenOverrides)
+    expect(executableDockerfile).not.toMatch(forbiddenOverrides)
   })
 
   test('documents the internal application service URL', () => {
