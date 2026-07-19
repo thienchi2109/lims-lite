@@ -1,7 +1,10 @@
+/* Hallmark · redesign: CDC access rail · theme: Clinical Integrity
+ * pre-emit critique: P5 H4 E5 S5 R5 V4 · equal-3-column: stakeholder override
+ */
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import Image from 'next/image'
-import { FlaskConical, Activity, Package, GraduationCap, ExternalLink, ArrowRight } from 'lucide-react'
+import Link from 'next/link'
+import { ArrowRight, ArrowUpRight, FileSearch, FlaskConical, Package } from 'lucide-react'
 
 export const metadata: Metadata = {
     title: 'Cổng thông tin dành cho CDC',
@@ -14,138 +17,157 @@ const apps = [
         description: 'Hệ thống quản lý thông tin xét nghiệm',
         icon: FlaskConical,
         href: '/login',
-        color: 'from-blue-500 to-indigo-600',
-        glowColor: 'group-hover:shadow-blue-500/25',
-        iconColor: 'text-blue-50',
+        keepTitleSuffixTogether: null,
         external: false,
-    },
-    {
-        title: 'CVMEMS',
-        description: 'Hệ thống quản lý trang thiết bị y tế',
-        icon: Activity,
-        href: 'https://www.cvmems.vn',
-        color: 'from-emerald-500 to-teal-600',
-        glowColor: 'group-hover:shadow-emerald-500/25',
-        iconColor: 'text-emerald-50',
-        external: true,
     },
     {
         title: 'Quản lý TBYT CDC',
         description: 'Quản lý thiết bị y tế CDC',
         icon: Package,
         href: 'https://quan-ly-tbyt.pages.dev/',
-        color: 'from-amber-500 to-orange-600',
-        glowColor: 'group-hover:shadow-amber-500/25',
-        iconColor: 'text-amber-50',
+        keepTitleSuffixTogether: null,
         external: true,
     },
     {
-        title: 'Đào tạo nhân lực y tế',
-        description: 'Hệ thống quản lý đào tạo nhân lực ngành y tế',
-        icon: GraduationCap,
-        href: 'https://daotaoytct.vn',
-        color: 'from-purple-500 to-violet-600',
-        glowColor: 'group-hover:shadow-purple-500/25',
-        iconColor: 'text-purple-50',
+        title: 'Cổng tra cứu kết quả xét nghiệm',
+        description: 'Tra cứu và xác thực phiếu kết quả xét nghiệm',
+        icon: FileSearch,
+        href: 'https://cdclims.cloud/coa/access',
+        keepTitleSuffixTogether: 'xét nghiệm',
         external: true,
     },
 ] as const
 
+type PortalApp = (typeof apps)[number]
+
+const portalCardClassName = [
+    'group flex min-h-[276px] h-full flex-col rounded-lg border border-[#DDE4E1]',
+    'bg-white p-6 text-[#17201D] shadow-[0_4px_14px_rgba(23,32,29,0.04)]',
+    'transition-[transform,border-color,box-shadow] duration-200 ease-out',
+    'hover:-translate-y-1 hover:border-[#A6C9C0] hover:shadow-[0_16px_36px_rgba(23,32,29,0.08)]',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#087F6A]',
+    'focus-visible:ring-offset-4 focus-visible:ring-offset-[#F7F9F8]',
+    'active:translate-y-0 motion-reduce:transform-none motion-reduce:transition-none',
+].join(' ')
+
+function PortalCard({ app }: { app: PortalApp }) {
+    const Icon = app.icon
+    const ActionIcon = app.external ? ArrowUpRight : ArrowRight
+
+    const content = (
+        <>
+            <div className="flex items-start justify-between gap-4">
+                <span className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-[#E8F3F0] text-[#087F6A]">
+                    <Icon className="size-6" aria-hidden="true" />
+                </span>
+                <span className="pt-1 text-xs font-semibold uppercase text-[#65716D]">
+                    Cổng truy cập
+                </span>
+            </div>
+
+            <div className="mt-8">
+                <h2 className="max-w-[18ch] min-w-0 text-2xl font-semibold leading-8 text-[#17201D]">
+                    {app.keepTitleSuffixTogether ? (
+                        <>
+                            {app.title.slice(0, -app.keepTitleSuffixTogether.length)}
+                            <span className="whitespace-nowrap">
+                                {app.keepTitleSuffixTogether}
+                            </span>
+                        </>
+                    ) : (
+                        app.title
+                    )}
+                </h2>
+                <p className="mt-3 max-w-[36ch] text-base leading-7 text-[#65716D]">
+                    {app.description}
+                </p>
+            </div>
+
+            <div className="mt-auto flex items-center justify-between gap-4 border-t border-[#E5EAE8] pt-5">
+                <span className="whitespace-nowrap text-sm font-semibold text-[#087F6A]">
+                    Truy cập hệ thống
+                </span>
+                <ActionIcon
+                    className="size-5 shrink-0 text-[#087F6A] transition-transform duration-200 group-hover:translate-x-1 group-focus-visible:translate-x-1 motion-reduce:transition-none"
+                    aria-hidden="true"
+                />
+            </div>
+        </>
+    )
+
+    if (app.external) {
+        return (
+            <a
+                href={app.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={portalCardClassName}
+                data-portal-card
+            >
+                {content}
+            </a>
+        )
+    }
+
+    return (
+        <Link href={app.href} className={portalCardClassName} data-portal-card>
+            {content}
+        </Link>
+    )
+}
+
 export default function PortalPage() {
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 relative overflow-hidden font-sans selection:bg-blue-100 selection:text-blue-900">
-            {/* Background decorations */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-0 left-0 w-full h-[600px] bg-gradient-to-b from-blue-50/80 to-transparent dark:from-blue-950/30" />
-                <div className="absolute top-[-120px] right-[-120px] w-[500px] h-[500px] bg-blue-200/25 dark:bg-blue-900/15 rounded-full blur-3xl" />
-                <div className="absolute top-[180px] left-[-80px] w-[350px] h-[350px] bg-indigo-200/20 dark:bg-indigo-900/10 rounded-full blur-3xl" />
-                <div className="absolute bottom-[-100px] right-[20%] w-[400px] h-[400px] bg-emerald-200/15 dark:bg-emerald-900/10 rounded-full blur-3xl" />
-            </div>
-
-            {/* Content */}
-            <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 py-12">
-                {/* Header */}
-                <div className="text-center mb-10 opacity-0 animate-fade-in-up">
-                    <div className="flex justify-center mb-5">
-                        <div className="relative">
-                            <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full blur-xl opacity-20 scale-150" />
-                            <Image
-                                src="/cdc-logo-400x400.png"
-                                alt="CDC Logo"
-                                width={88}
-                                height={88}
-                                className="relative w-22 h-22 object-contain drop-shadow-md"
-                                priority
-                            />
+        <main className="flex min-h-dvh flex-col bg-[#F7F9F8] font-sans text-[#17201D] selection:bg-[#D2E9E3] selection:text-[#17483D]">
+            <header className="border-b border-[#DDE4E1] bg-white">
+                <div className="mx-auto flex w-full max-w-[1360px] items-center justify-between gap-6 px-5 py-5 sm:px-8 lg:px-12">
+                    <div className="flex min-w-0 items-center gap-4">
+                        <Image
+                            src="/cdc-logo-400x400.png"
+                            alt="Biểu trưng Trung tâm Kiểm soát bệnh tật"
+                            width={64}
+                            height={64}
+                            className="size-14 shrink-0 object-contain sm:size-16"
+                            priority
+                        />
+                        <div className="min-w-0">
+                            <h1 className="min-w-0 text-2xl font-bold leading-8 text-[#17201D] sm:text-3xl [overflow-wrap:anywhere]">
+                                Cổng thông tin CDC
+                            </h1>
+                            <p className="mt-1 text-sm leading-5 text-[#65716D] sm:text-base">
+                                Trung tâm Kiểm soát bệnh tật thành phố Cần Thơ
+                            </p>
                         </div>
                     </div>
-                    <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white tracking-tight mb-3">
-                        Cổng thông tin{' '}
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
-                            CDC
-                        </span>
-                    </h1>
-                    <p className="text-slate-500 dark:text-slate-400 text-base md:text-lg max-w-md mx-auto leading-relaxed">
-                        Trung tâm Kiểm soát bệnh tật thành phố Cần Thơ
+                    <p className="hidden shrink-0 text-sm font-medium text-[#65716D] md:block">
+                        Hệ thống thông tin trực tuyến
+                    </p>
+                </div>
+            </header>
+
+            <section className="mx-auto flex w-full max-w-[1360px] flex-1 flex-col px-5 py-8 sm:px-8 sm:py-10 lg:px-12 lg:py-12">
+                <div className="mb-6 sm:mb-8">
+                    <h2 className="text-xl font-semibold leading-7 text-[#17201D] sm:text-2xl">
+                        Chọn hệ thống cần truy cập
+                    </h2>
+                    <p className="mt-2 text-sm leading-6 text-[#65716D] sm:text-base">
+                        Ba cổng thông tin chính thức phục vụ công tác chuyên môn và tra cứu kết quả.
                     </p>
                 </div>
 
-                {/* App Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl">
-                    {apps.map((app, index) => {
-                        const CardWrapper = app.external ? 'a' : Link
-                        const externalProps = app.external
-                            ? { target: '_blank' as const, rel: 'noopener noreferrer' }
-                            : {}
-
-                        return (
-                            <CardWrapper
-                                key={app.href}
-                                href={app.href}
-                                {...externalProps}
-                                className={`group relative cursor-pointer opacity-0 animate-fade-in-up animate-delay-${(index + 1) * 100}`}
-                            >
-                                <div className={`h-full bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-slate-800/50 rounded-2xl p-5 transition-all duration-300 hover:shadow-xl ${app.glowColor} hover:border-slate-300/80 dark:hover:border-slate-700/80 hover:-translate-y-1 overflow-hidden`}>
-                                    {/* Hover gradient overlay */}
-                                    <div className={`absolute inset-0 bg-gradient-to-br ${app.color} opacity-0 group-hover:opacity-[0.04] transition-opacity duration-500 rounded-2xl`} />
-
-                                    <div className="relative z-10 flex flex-col h-full">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div className={`p-2.5 rounded-xl bg-gradient-to-br ${app.color} shadow-sm group-hover:scale-110 transition-transform duration-300`}>
-                                                <app.icon className={`h-5 w-5 ${app.iconColor}`} strokeWidth={2.5} />
-                                            </div>
-                                            {app.external && (
-                                                <ExternalLink className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                                            )}
-                                        </div>
-
-                                        <div>
-                                            <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-1.5 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200">
-                                                {app.title}
-                                            </h3>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">
-                                                {app.description}
-                                            </p>
-                                        </div>
-
-                                        {/* Arrow indicator on hover */}
-                                        <div className="absolute bottom-4 right-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                                            <ArrowRight className="w-4 h-4 text-blue-500 dark:text-blue-400" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </CardWrapper>
-                        )
-                    })}
+                <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6">
+                    {apps.map((app) => (
+                        <PortalCard key={app.href} app={app} />
+                    ))}
                 </div>
+            </section>
 
-                {/* Footer */}
-                <div className="mt-10 text-center opacity-0 animate-fade-in-up animate-delay-500">
-                    <p className="text-xs text-slate-400 dark:text-slate-500">
-                        &copy; {new Date().getFullYear()} Khoa Xét nghiệm &mdash; Trung tâm Kiểm soát bệnh tật thành phố Cần Thơ
-                    </p>
+            <footer className="border-t border-[#DDE4E1] bg-white">
+                <div className="mx-auto flex w-full max-w-[1360px] flex-col gap-1 px-5 py-5 text-sm text-[#65716D] sm:px-8 lg:flex-row lg:items-center lg:justify-between lg:px-12">
+                    <p>&copy; {new Date().getFullYear()} Trung tâm Kiểm soát bệnh tật thành phố Cần Thơ</p>
+                    <p>Khoa Xét nghiệm</p>
                 </div>
-            </div>
-        </div>
+            </footer>
+        </main>
     )
 }
