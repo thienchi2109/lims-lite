@@ -39,12 +39,14 @@ function mockStaffViewRoute({
     sampleExists = true,
     role = 'analyst',
     sampleStatus = 'completed',
+    coaReady = true,
 }: {
     canAccessConfidential: boolean
     sampleIsConfidential: boolean
     sampleExists?: boolean
     role?: string
     sampleStatus?: string
+    coaReady?: boolean
 }) {
     mockDownload.mockResolvedValue({
         data: {
@@ -90,12 +92,14 @@ function mockStaffViewRoute({
 
             if (table === 'coa_reports') {
                 return createThenableQuery({
-                    data: {
-                        id: 'coa-1',
-                        file_path: 'sample-1/report.html',
-                        version: 1,
-                    },
-                    error: null,
+                    data: coaReady
+                        ? {
+                              id: 'coa-1',
+                              file_path: 'sample-1/report.html',
+                              version: 1,
+                          }
+                        : null,
+                    error: coaReady ? null : { message: 'Not found' },
                 })
             }
 
@@ -129,7 +133,7 @@ function mockStaffViewRoute({
     })
 }
 
-describe('staff CoA view confidentiality', () => {
+describe('staff CoA view access contract', () => {
     beforeEach(() => {
         vi.clearAllMocks()
     })
@@ -201,9 +205,28 @@ describe('staff CoA view confidentiality', () => {
         expect(mockDownload).not.toHaveBeenCalled()
     })
 
-    it('allows doctors to preview ready CoA for completed samples', async () => {
+    it.each(['analyst', 'manager', 'doctor'])(
+        'allows %s staff to preview ready CoA for completed samples',
+        async (role) => {
+            mockStaffViewRoute({
+                role,
+                canAccessConfidential: false,
+                sampleIsConfidential: false,
+            })
+
+            const response = await GET(
+                new Request('http://localhost/api/coa/view?sample_id=sample-1') as Request,
+            )
+
+            expect(response.status).toBe(200)
+            await expect(response.text()).resolves.toContain('Confidential CoA')
+            expect(mockDownload).toHaveBeenCalledTimes(1)
+        },
+    )
+
+    it('denies roles outside the staff CoA allowlist', async () => {
         mockStaffViewRoute({
-            role: 'doctor',
+            role: 'client',
             canAccessConfidential: false,
             sampleIsConfidential: false,
         })
@@ -212,9 +235,11 @@ describe('staff CoA view confidentiality', () => {
             new Request('http://localhost/api/coa/view?sample_id=sample-1') as Request,
         )
 
-        expect(response.status).toBe(200)
-        await expect(response.text()).resolves.toContain('Confidential CoA')
-        expect(mockDownload).toHaveBeenCalledTimes(1)
+        expect(response.status).toBe(403)
+        await expect(response.json()).resolves.toEqual({
+            error: 'Bạn không có quyền xem phiếu kết quả',
+        })
+        expect(mockDownload).not.toHaveBeenCalled()
     })
 
     it('denies doctors when the sample is not completed', async () => {
@@ -232,6 +257,24 @@ describe('staff CoA view confidentiality', () => {
         expect(response.status).toBe(400)
         await expect(response.json()).resolves.toEqual({
             error: 'Mẫu chưa hoàn thành xét nghiệm',
+        })
+        expect(mockDownload).not.toHaveBeenCalled()
+    })
+
+    it('does not download storage content when the ready CoA is missing', async () => {
+        mockStaffViewRoute({
+            canAccessConfidential: false,
+            sampleIsConfidential: false,
+            coaReady: false,
+        })
+
+        const response = await GET(
+            new Request('http://localhost/api/coa/view?sample_id=sample-1') as Request,
+        )
+
+        expect(response.status).toBe(404)
+        await expect(response.json()).resolves.toEqual({
+            error: 'Phiếu kết quả chưa được tạo',
         })
         expect(mockDownload).not.toHaveBeenCalled()
     })
