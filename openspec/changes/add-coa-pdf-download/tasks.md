@@ -43,10 +43,10 @@
 
 ### Slice 4C. Khóa application boundary
 
-- [ ] 4.7 Viết static regression tests xác nhận application source không chứa raw Gotenberg host/path, không resolve hoặc kết nối `gotenberg:3000` hay `/forms/chromium/convert/html`, và route/UI không thể cung cấp conversion URL hoặc auth headers cho client.
-- [ ] 4.8 Viết failure-path regression test xác nhận mỗi conversion attempt chỉ tạo tối đa một gateway request; gateway timeout, unavailable, non-PDF hoặc rejected credential không gây retry hay fallback sang endpoint thứ hai.
-- [ ] 4.9 Chạy toàn bộ focused gateway-client tests cùng `tests/pdf-gateway-auth-and-contract.test.ts`, `tests/pdf-gateway-compose-config.test.ts`, `tests/gotenberg-compose-config.test.ts` và `rtk npm run typecheck`; xác nhận mọi file mới dưới 350 dòng.
-- [ ] 4.10 Ghi commit boundary cho Slice 4C và xác nhận Phase 4 chưa thêm staff/client route, UI, database, migration hoặc deployment operation.
+- [x] 4.7 Viết static regression tests xác nhận application source không chứa raw Gotenberg host/path, không resolve hoặc kết nối `gotenberg:3000` hay `/forms/chromium/convert/html`, và route/UI không thể cung cấp conversion URL hoặc auth headers cho client.
+- [x] 4.8 Viết failure-path regression test xác nhận mỗi conversion attempt chỉ tạo tối đa một gateway request; gateway timeout, unavailable, non-PDF hoặc rejected credential không gây retry hay fallback sang endpoint thứ hai.
+- [x] 4.9 Chạy toàn bộ focused gateway-client tests cùng `tests/pdf-gateway-auth-and-contract.test.ts`, `tests/pdf-gateway-compose-config.test.ts`, `tests/gotenberg-compose-config.test.ts` và `rtk npm run typecheck`; xác nhận mọi file mới dưới 350 dòng.
+- [x] 4.10 Ghi commit boundary cho Slice 4C và xác nhận Phase 4 chưa thêm staff/client route, UI, database, migration hoặc deployment operation.
 
 ## Phase 5. Thêm luồng PDF cho staff
 
