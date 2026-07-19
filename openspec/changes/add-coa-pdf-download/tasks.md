@@ -1,9 +1,9 @@
 ## Phase 1. Khóa hợp đồng hiện tại
 
-- [ ] 1.1 Bổ sung characterization tests cho quyền staff tại `src/app/api/coa/view/route.test.ts`, gồm role, sample completed, CoA ready và confidential concealment.
-- [ ] 1.2 Bổ sung characterization tests cho quyền client tại `src/app/api/coa/download/route.test.ts`, gồm token identity, query scope đúng sample/report, ownership, sample completed, CoA ready, confidential concealment và access log.
-- [ ] 1.3 Chạy `rtk npm test -- src/app/api/coa/view/route.test.ts src/app/api/coa/download/route.test.ts tests/coa-token-leak.test.mjs` và xác nhận baseline pass.
-- [ ] 1.4 Ghi commit boundary chỉ chứa test bảo vệ hành vi HTML hiện tại.
+- [x] 1.1 Bổ sung characterization tests cho quyền staff tại `src/app/api/coa/view/route.test.ts`, gồm role, sample completed, CoA ready và confidential concealment.
+- [x] 1.2 Bổ sung characterization tests cho quyền client tại `src/app/api/coa/download/route.test.ts`, gồm token identity, query scope đúng sample/report, ownership, sample completed, CoA ready, confidential concealment và access log.
+- [x] 1.3 Chạy `rtk npm test -- src/app/api/coa/view/route.test.ts src/app/api/coa/download/route.test.ts tests/coa-token-leak.test.mjs` và xác nhận baseline pass.
+- [x] 1.4 Ghi commit boundary chỉ chứa test bảo vệ hành vi HTML hiện tại.
 
 ## Phase 2. Định nghĩa Gotenberg nội bộ
 
