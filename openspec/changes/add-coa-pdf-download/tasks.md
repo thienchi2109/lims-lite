@@ -7,11 +7,11 @@
 
 ## Phase 2. Định nghĩa Gotenberg nội bộ
 
-- [ ] 2.1 Viết test cấu hình thất bại để yêu cầu custom Gotenberg image, không publish host port, có health check, resource limits, `GOTENBERG_URL`, `CHROMIUM_DENY_PRIVATE_IPS=true`, không đặt proxy/host-resolver tùy biến và không có allow-list bypass IP checks.
-- [ ] 2.2 Tạo `ops/gotenberg/Dockerfile` từ Gotenberg 8 pin digest, cài Microsoft Core Fonts bằng EULA non-interactive và trả về user `gotenberg`.
-- [ ] 2.3 Cập nhật `docker-compose.yml` và `.env.example`; giữ Gotenberg trên private Compose network và không thêm dependency bắt buộc vào app health/startup.
-- [ ] 2.4 Chạy test cấu hình và `rtk run "docker compose config --quiet"` trong source workspace; không start container tại workspace này.
-- [ ] 2.5 Ghi commit boundary cho hạ tầng Gotenberg chưa được app sử dụng.
+- [x] 2.1 Viết test cấu hình thất bại để yêu cầu custom Gotenberg image, không publish host port, có health check, resource limits, `GOTENBERG_URL`, `CHROMIUM_DENY_PRIVATE_IPS=true`, không đặt proxy/host-resolver tùy biến và không có allow-list bypass IP checks.
+- [x] 2.2 Tạo `ops/gotenberg/Dockerfile` từ Gotenberg 8 pin digest, cài Microsoft Core Fonts bằng EULA non-interactive và trả về user `gotenberg`.
+- [x] 2.3 Cập nhật `docker-compose.yml` và `.env.example`; giữ Gotenberg trên private Compose network và không thêm dependency bắt buộc vào app health/startup.
+- [x] 2.4 Chạy test cấu hình và `rtk run "docker compose config --quiet"` trong source workspace; không start container tại workspace này.
+- [x] 2.5 Ghi commit boundary cho hạ tầng Gotenberg chưa được app sử dụng.
 
 ## Phase 3. Xây thư viện PDF thuần
 

@@ -212,6 +212,34 @@ services:
     ports:
       - "127.0.0.1:3002:3000"
 
+  gotenberg:
+    build:
+      context: ./ops/gotenberg
+      dockerfile: Dockerfile
+    container_name: lims-gotenberg
+    restart: unless-stopped
+    environment:
+      API_TIMEOUT: 30s
+      CHROMIUM_DENY_PRIVATE_IPS: "true"
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - --fail
+        - --silent
+        - --show-error
+        - http://localhost:3000/health
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    mem_limit: 2g
+    mem_reservation: 1g
+    cpus: 2.0
+    shm_size: 256m
+    stop_grace_period: 30s
+    networks:
+      - default
   app:
     container_name: lims-app
     build:
@@ -226,6 +254,8 @@ services:
     environment:
       # Internal URL for Server Actions/SSR
       SUPABASE_INTERNAL_URL: http://kong:8000
+      # Internal URL for on-demand CoA PDF conversion
+      GOTENBERG_URL: ${GOTENBERG_URL:-http://gotenberg:3000}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${ANON_KEY:?ANON_KEY is required}
       # Service role key for admin operations (session invalidation, etc.)
       SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY:?SERVICE_ROLE_KEY is required}
