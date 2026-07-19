@@ -1,13 +1,14 @@
 /**
  * Validates the private Gotenberg image and Compose contract for CoA PDF infrastructure.
  */
-import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { resolve } from 'node:path'
 import { describe, expect, test } from 'vitest'
-
-const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+import {
+  loadComposeConfig,
+  loadExampleEnvironment,
+  repositoryRoot,
+} from './helpers/compose-config'
 
 type DockerfileInstruction = {
   arguments: string
@@ -58,53 +59,6 @@ function parseDockerfileInstructions(
       arguments: instructionMatch[2].trim(),
     }
   })
-}
-
-function loadComposeConfig() {
-  const environment = { ...process.env }
-  const exampleEnvironment = loadExampleEnvironment()
-
-  for (const variableName of Object.keys(environment)) {
-    if (
-      variableName.startsWith('COMPOSE_') ||
-      Object.hasOwn(exampleEnvironment, variableName)
-    ) {
-      delete environment[variableName]
-    }
-  }
-
-  const output = execFileSync(
-    'docker',
-    [
-      'compose',
-      '--file',
-      'docker-compose.yml',
-      '--env-file',
-      '.env.example',
-      'config',
-      '--format',
-      'json',
-    ],
-    {
-      cwd: repositoryRoot,
-      encoding: 'utf8',
-      env: environment,
-    }
-  )
-
-  return JSON.parse(output)
-}
-
-function loadExampleEnvironment() {
-  return Object.fromEntries(
-    readFileSync(resolve(repositoryRoot, '.env.example'), 'utf8')
-      .split(/\r?\n/)
-      .filter((line) => line && !line.startsWith('#'))
-      .map((line) => {
-        const separatorIndex = line.indexOf('=')
-        return [line.slice(0, separatorIndex), line.slice(separatorIndex + 1)]
-      })
-  )
 }
 
 const composeConfig = loadComposeConfig()
@@ -165,16 +119,20 @@ describe('Gotenberg Compose infrastructure', () => {
     })
   })
 
-  test('keeps Gotenberg private and optional for application startup', () => {
+  test('keeps Gotenberg upstream private and PDF optional for application startup', () => {
     expect(gotenbergService.ports).toBeUndefined()
     expect(gotenbergService.network_mode).not.toBe('host')
-    expect(gotenbergService.networks).toEqual({ default: null })
+    expect(gotenbergService.networks).toEqual({ 'pdf-upstream': null })
     expect(appService.environment.GOTENBERG_URL).toBe(
-      'http://gotenberg:3000'
+      'http://pdf-gateway:8080'
     )
     expect(appService.depends_on).not.toHaveProperty('gotenberg')
+    expect(appService.depends_on).not.toHaveProperty('pdf-gateway')
     expect(composeConfig.services.nginx.depends_on).not.toHaveProperty(
       'gotenberg'
+    )
+    expect(composeConfig.services.nginx.depends_on).not.toHaveProperty(
+      'pdf-gateway'
     )
     expect(JSON.stringify(appService.healthcheck.test)).not.toMatch(
       /gotenberg|GOTENBERG_URL/i
@@ -242,7 +200,7 @@ describe('Gotenberg Compose infrastructure', () => {
 
   test('documents the internal application service URL', () => {
     expect(loadExampleEnvironment().GOTENBERG_URL).toBe(
-      'http://gotenberg:3000'
+      'http://pdf-gateway:8080'
     )
   })
 })

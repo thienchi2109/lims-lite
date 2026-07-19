@@ -219,8 +219,11 @@ services:
     container_name: lims-gotenberg
     restart: unless-stopped
     environment:
+      API_DISABLE_DOWNLOAD_FROM: "true"
       API_TIMEOUT: 30s
       CHROMIUM_DENY_PRIVATE_IPS: "true"
+      CHROMIUM_MAX_CONCURRENCY: "2"
+      CHROMIUM_MAX_QUEUE_SIZE: "4"
     healthcheck:
       test:
         - CMD
@@ -236,10 +239,53 @@ services:
     mem_limit: 2g
     mem_reservation: 1g
     cpus: 2.0
+    pids_limit: 256
     shm_size: 256m
     stop_grace_period: 30s
     networks:
-      - default
+      - pdf-upstream
+
+  pdf-gateway:
+    build:
+      context: ./ops/pdf-gateway
+      dockerfile: Dockerfile
+    container_name: lims-pdf-gateway
+    init: true
+    restart: unless-stopped
+    environment:
+      GOTENBERG_URL: http://gotenberg:3000
+      PDF_GATEWAY_CLIENT_POLICY_FILE: /run/secrets/pdf_gateway_client_policy
+      PORT: "8080"
+    secrets:
+      - source: pdf_gateway_client_policy
+        target: pdf_gateway_client_policy
+    depends_on:
+      gotenberg:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - const net=require('node:net');const socket=net.connect(process.env.PORT||8080,'127.0.0.1');const fail=()=>process.exit(1);socket.setTimeout(5000);socket.on('connect',()=>{socket.end();process.exit(0)});socket.on('timeout',fail);socket.on('error',fail)
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+    mem_reservation: 128m
+    cpus: 0.5
+    pids_limit: 64
+    stop_grace_period: 30s
+    networks:
+      - pdf-client
+      - pdf-upstream
+
   app:
     container_name: lims-app
     build:
@@ -255,7 +301,8 @@ services:
       # Internal URL for Server Actions/SSR
       SUPABASE_INTERNAL_URL: http://kong:8000
       # Internal URL for on-demand CoA PDF conversion
-      GOTENBERG_URL: ${GOTENBERG_URL:-http://gotenberg:3000}
+      GOTENBERG_URL: ${GOTENBERG_URL:-http://pdf-gateway:8080}
+      PDF_GATEWAY_TOKEN_FILE: /run/secrets/pdf_gateway_lims_token
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${ANON_KEY:?ANON_KEY is required}
       # Service role key for admin operations (session invalidation, etc.)
       SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY:?SERVICE_ROLE_KEY is required}
@@ -269,6 +316,9 @@ services:
       RESEND_API_KEY: "${RESEND_API_KEY:-}"
       MANAGER_OTP_EMAIL_FROM: "${MANAGER_OTP_EMAIL_FROM:-}"
       MANAGER_OTP_EMAIL_REPLY_TO: "${MANAGER_OTP_EMAIL_REPLY_TO:-}"
+    secrets:
+      - source: pdf_gateway_lims_token
+        target: pdf_gateway_lims_token
     depends_on:
       kong:
         condition: service_healthy
@@ -288,6 +338,7 @@ services:
     stop_grace_period: 30s
     networks:
       - default
+      - pdf-client
 
   nginx:
     image: nginx@sha256:b0f7830b6bfaa1258f45d94c240ab668ced1b3651c8a222aefe6683447c7bf55
@@ -320,3 +371,16 @@ services:
 volumes:
   postgres-data:
   storage-data:
+
+networks:
+  pdf-client:
+    driver: bridge
+    internal: true
+  pdf-upstream:
+    driver: bridge
+
+secrets:
+  pdf_gateway_client_policy:
+    file: ${PDF_GATEWAY_CLIENT_POLICY_FILE:?PDF_GATEWAY_CLIENT_POLICY_FILE is required}
+  pdf_gateway_lims_token:
+    file: ${PDF_GATEWAY_LIMS_TOKEN_FILE:?PDF_GATEWAY_LIMS_TOKEN_FILE is required}
