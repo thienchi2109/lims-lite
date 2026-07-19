@@ -17,11 +17,11 @@
 
 ## Phase 3. Xây thư viện PDF thuần
 
-- [ ] 3.1 Viết failing unit tests cho hash verification, filename-safe sample ID và ngày `generated_at` dạng `YYYYMMDD` theo `Asia/Ho_Chi_Minh`.
-- [ ] 3.2 Viết failing unit tests cho rate limit `5` lượt trong `10` phút theo identity kết hợp IP, gồm reset window, HTTP `429`, hard cap `10.000` keys, cleanup expired và từ chối key mới khi toàn bộ slots còn active.
-- [ ] 3.3 Tạo các module nhỏ dưới `src/lib/coa/pdf/` cho integrity, filename và rate limit; không phụ thuộc UI hoặc route auth.
-- [ ] 3.4 Chạy focused tests và xác nhận không có file mới vượt giới hạn 350 dòng.
-- [ ] 3.5 Ghi commit boundary cho các primitive thuần, chưa gọi PDF gateway hoặc raw Gotenberg.
+- [x] 3.1 Viết failing unit tests cho hash verification, filename-safe sample ID và ngày `generated_at` dạng `YYYYMMDD` theo `Asia/Ho_Chi_Minh`.
+- [x] 3.2 Viết failing unit tests cho rate limit `5` lượt trong `10` phút theo identity kết hợp IP, gồm reset window, HTTP `429`, hard cap `10.000` keys, cleanup expired và từ chối key mới khi toàn bộ slots còn active.
+- [x] 3.3 Tạo các module nhỏ dưới `src/lib/coa/pdf/` cho integrity, filename và rate limit; không phụ thuộc UI hoặc route auth.
+- [x] 3.4 Chạy focused tests và xác nhận không có file mới vượt giới hạn 350 dòng.
+- [x] 3.5 Ghi commit boundary cho các primitive thuần, chưa gọi PDF gateway hoặc raw Gotenberg.
 
 ## Phase 4. Xây authenticated PDF gateway client
 
