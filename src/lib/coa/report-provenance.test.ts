@@ -55,6 +55,7 @@ describe('fetchSnapshotTestResults', () => {
                 unit: 'mmol/L',
                 method_name: 'Máy sinh hóa tự động AU400',
                 reference_range: '4,1 - 5,9 mmol/L',
+                assessment: 'outside_reference_range',
                 result: {
                     assay_definitions: {
                         lab_specialties: {
@@ -73,6 +74,7 @@ describe('fetchSnapshotTestResults', () => {
         expect(results).toEqual([
             {
                 result_id: '11111111-1111-4111-8111-111111111111',
+                assessment: 'outside_reference_range',
                 assay_name: 'Glucose',
                 value: '5,2',
                 unit: 'mmol/L',
@@ -81,6 +83,33 @@ describe('fetchSnapshotTestResults', () => {
                 lab_specialty_name: 'Sinh hóa',
             },
         ])
+    })
+
+    it('fails closed when a sourced snapshot is missing its assessment', async () => {
+        mockFrom.mockReturnValue(createSnapshotQuery([
+            {
+                result_id: '11111111-1111-4111-8111-111111111111',
+                assay_name: 'Glucose',
+                result_value: '8,2',
+                unit: 'mmol/L',
+                method_name: 'Máy sinh hóa tự động AU400',
+                reference_range: '4,1 - 5,9 mmol/L',
+                result: {
+                    assay_definitions: {
+                        lab_specialties: {
+                            name: 'Sinh hóa',
+                            display_order: 20,
+                        },
+                    },
+                },
+            },
+        ]))
+
+        const results = await fetchSnapshotTestResults(
+            '22222222-2222-4222-8222-222222222222',
+        )
+
+        expect(results).toEqual([])
     })
 })
 

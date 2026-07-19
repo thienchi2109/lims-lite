@@ -8,7 +8,10 @@
 import { z } from 'zod'
 
 import { createAdminClient, createClient } from '@/lib/supabase/server'
-import type { LatestSubmission } from '@/types'
+import {
+    ResultReferenceAssessmentSchema,
+    type LatestSubmission,
+} from '@/types'
 import type { TestResult } from './helpers'
 export {
     completeCoAReportGeneration,
@@ -51,6 +54,7 @@ const JoinedResultSchema = z.object({
 
 const SnapshotRowSchema = z.object({
     result_id: z.string().uuid(),
+    assessment: ResultReferenceAssessmentSchema,
     assay_name: z.string(),
     result_value: z.string(),
     unit: z.string().nullable(),
@@ -274,6 +278,7 @@ export async function fetchSnapshotTestResults(
         .from('result_reference_assessments')
         .select(`
             result_id,
+            assessment,
             assay_name,
             result_value,
             unit,
@@ -309,6 +314,7 @@ export async function fetchSnapshotTestResults(
 
             return {
                 result_id: row.result_id,
+                assessment: row.assessment,
                 assay_name: row.assay_name,
                 value: row.result_value,
                 unit: row.unit,
@@ -324,6 +330,7 @@ export async function fetchSnapshotTestResults(
         ))
         .map((result) => ({
             result_id: result.result_id,
+            assessment: result.assessment,
             assay_name: result.assay_name,
             value: result.value,
             unit: result.unit,

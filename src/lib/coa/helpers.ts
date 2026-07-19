@@ -12,6 +12,7 @@ import {
     type SampleData,
     type LatestSubmission,
     type Gender,
+    type ResultReferenceAssessment,
 } from '@/types'
 import { getActiveSignature, downloadSignature } from '@/app/actions/signatures'
 
@@ -21,6 +22,7 @@ import { getActiveSignature, downloadSignature } from '@/app/actions/signatures'
 
 export interface TestResult {
     result_id?: string
+    assessment?: ResultReferenceAssessment
     assay_name: string
     value: string | null
     unit: string | null
