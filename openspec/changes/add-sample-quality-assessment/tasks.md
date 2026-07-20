@@ -1,10 +1,10 @@
 ## Phase 1: Contract Tests And Baseline
 
-- [ ] 1.1 Add failing focused UI tests for two directly visible Shadcn `Checkbox` choices, placement below `Loại mẫu`, no default selection, mutual exclusion, and required validation on desktop and mobile.
-- [ ] 1.2 Add failing accession-form tests proving both the no-tests and assigned-tests branches include the selected boolean `sample_quality`, preserve it through confirmation, and clear it only when starting a new accession.
-- [ ] 1.3 Add failing Server Action and client-action contract tests for required `sample_quality`, exact RPC arguments, analyst authorization, and rejection of missing values before any database call.
-- [ ] 1.4 Add SQL regression coverage for nullable historical rows, new RPC signatures, role checks, grants, audit JSONB content, and missing-quality rejection.
-- [ ] 1.5 Reconfirm the live home-server baseline through read-only SSH queries, including the next migration number, current RPC definitions/grants, sample triggers, RLS policies, and absence of `sample_quality`; treat every existing migration as immutable.
+- [x] 1.1 Add failing focused UI tests for two directly visible Shadcn `Checkbox` choices, placement below `Loại mẫu`, no default selection, mutual exclusion, and required validation on desktop and mobile.
+- [x] 1.2 Add failing accession-form tests proving both the no-tests and assigned-tests branches include the selected boolean `sample_quality`, preserve it through confirmation, and clear it only when starting a new accession.
+- [x] 1.3 Add failing Server Action and client-action contract tests for required `sample_quality`, exact RPC arguments, analyst authorization, and rejection of missing values before any database call.
+- [x] 1.4 Add SQL regression coverage for nullable historical rows, new RPC signatures, role checks, grants, audit JSONB content, and missing-quality rejection.
+- [x] 1.5 Reconfirm the live home-server baseline through read-only SSH queries, including the next migration number, current RPC definitions/grants, sample triggers, RLS policies, and absence of `sample_quality`; treat every existing migration as immutable.
 
 ## Phase 2: Compatibility Database Contract
 
