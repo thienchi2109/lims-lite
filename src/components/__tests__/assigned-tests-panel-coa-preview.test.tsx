@@ -211,6 +211,7 @@ describe('AssignedTestsPanel CoA preview wiring', () => {
             open: true,
             sampleId: 'sample-1',
             route: 'staff',
+            pdfEndpoint: '/api/coa/view/pdf',
             title: 'Phiếu Kết Quả Phân Tích',
         })
         expect((mockDialogProps.at(-1) as { subtitle?: unknown }).subtitle).toBeUndefined()

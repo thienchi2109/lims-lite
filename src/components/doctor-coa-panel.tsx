@@ -93,6 +93,7 @@ export function DoctorCoAPanel({ sampleId, sampleDisplayId }: DoctorCoAPanelProp
                 sampleId={sampleId}
                 title="Phiếu Kết Quả Phân Tích"
                 route="staff"
+                pdfEndpoint="/api/coa/view/pdf"
             />
         </div>
     )

@@ -25,6 +25,7 @@ describe('CoAPreviewDialog', () => {
         sampleId="sample-1"
         title="Phiếu kết quả"
         route="staff"
+        pdfEndpoint="/api/coa/view/pdf"
       />,
     )
 
@@ -55,6 +56,7 @@ describe('CoAPreviewDialog', () => {
         sampleId="sample-1"
         title="Phiếu kết quả"
         route="client"
+        pdfEndpoint="/api/coa/download/pdf"
         onUnauthorized={onUnauthorized}
       />,
     )
@@ -90,6 +92,7 @@ describe('CoAPreviewDialog', () => {
         sampleId="sample-1"
         title="Phiếu kết quả"
         route="client"
+        pdfEndpoint="/api/coa/download/pdf"
         onUnauthorized={vi.fn()}
       />,
     )
@@ -103,6 +106,7 @@ describe('CoAPreviewDialog', () => {
         sampleId="sample-1"
         title="Phiếu kết quả"
         route="client"
+        pdfEndpoint="/api/coa/download/pdf"
         onUnauthorized={vi.fn()}
       />,
     )
@@ -126,6 +130,7 @@ describe('CoAPreviewDialog', () => {
         sampleId="sample-1"
         title="Phiếu kết quả"
         route="staff"
+        pdfEndpoint="/api/coa/view/pdf"
         onUnauthorized={onUnauthorized}
       />,
     )
@@ -151,6 +156,7 @@ describe('CoAPreviewDialog', () => {
         sampleId="sample-1"
         title="Phiếu kết quả"
         route="staff"
+        pdfEndpoint="/api/coa/view/pdf"
       />,
     )
 
@@ -184,6 +190,7 @@ describe('CoAPreviewDialog', () => {
         sampleId="sample-1"
         title="Phiếu kết quả"
         route="staff"
+        pdfEndpoint="/api/coa/view/pdf"
       />,
     )
 
@@ -218,6 +225,7 @@ describe('CoAPreviewDialog', () => {
         sampleId="sample-1"
         title="Phiếu kết quả"
         route="client"
+        pdfEndpoint="/api/coa/download/pdf"
       />,
     )
 

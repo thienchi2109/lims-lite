@@ -185,6 +185,7 @@ export function CoAAccessForm({ onAuthenticatedChange }: CoAAccessFormProps) {
             previewSample ? `Mã số mẫu: ${previewSample.sampleIdDisplay}` : undefined
           }
           route="client"
+          pdfEndpoint="/api/coa/download/pdf"
           onUnauthorized={handleUnauthorizedPreviewRecovery}
         />
       </>
