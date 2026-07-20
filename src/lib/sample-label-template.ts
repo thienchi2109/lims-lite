@@ -40,7 +40,7 @@ const LABEL_PRESETS: Record<SampleLabelPreset, {
     },
     'thermal-35x23-sheet-2up': {
         pageWidth: '71.1mm',
-        pageHeight: '22.9mm',
+        pageHeight: '89mm',
         labelWidth: '35.5mm',
         labelHeight: '22.9mm',
         barcodeHeight: 9,
@@ -177,7 +177,7 @@ export function generateSampleLabelHtml(
         html,
         body {
             width: ${preset.pageWidth};
-            height: ${preset.pageHeight};
+            height: ${preset.labelHeight};
             margin: 0;
             padding: 0;
             background: #fff;
@@ -187,7 +187,7 @@ export function generateSampleLabelHtml(
 
         .label-sheet {
             width: ${preset.pageWidth};
-            height: ${preset.pageHeight};
+            height: ${preset.labelHeight};
             display: grid;
             grid-template-columns: ${sheetColumns};
             column-gap: ${preset.columnGap};
