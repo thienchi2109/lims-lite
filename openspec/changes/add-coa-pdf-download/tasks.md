@@ -81,9 +81,9 @@
 
 ### Slice 6A. Tách shared client CoA access contract
 
-- [ ] 6.1 Viết failing helper tests cho token cookie/Bearer, token hết hạn, ownership, sample completed, CoA ready, confidential concealment và query scope đúng sample/report; xác nhận service-role client chỉ được tạo sau khi token đã xác lập client identity.
-- [ ] 6.2 Implement shared client CoA access helper không nhận token qua query string, không tạo reusable service-role repository hoặc generic RLS bypass; refactor route HTML dùng helper nhưng giữ nguyên HTTP/audit contract hiện tại.
-- [ ] 6.3 Chạy helper tests, characterization tests của route HTML và `tests/coa-token-leak.test.mjs`; ghi commit boundary cho Slice 6A.
+- [x] 6.1 Viết failing helper tests cho token cookie/Bearer, token hết hạn, ownership, sample completed, CoA ready, confidential concealment và query scope đúng sample/report; xác nhận service-role client chỉ được tạo sau khi token đã xác lập client identity.
+- [x] 6.2 Implement shared client CoA access helper không nhận token qua query string, không tạo reusable service-role repository hoặc generic RLS bypass; refactor route HTML dùng helper nhưng giữ nguyên HTTP/audit contract hiện tại.
+- [x] 6.3 Chạy helper tests, characterization tests của route HTML và `tests/coa-token-leak.test.mjs`; ghi commit boundary cho Slice 6A.
 
 ### Slice 6B. Khóa client PDF success và audit delivery gate
 

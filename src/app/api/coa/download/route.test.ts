@@ -196,6 +196,9 @@ describe('public CoA download access contract', () => {
         expect(mockStorageDownload).toHaveBeenCalledTimes(1)
         expect(mockVerifyCoAToken).toHaveBeenCalledWith('public-token')
         expect(mockVerifyCoAToken.mock.invocationCallOrder[0]).toBeLessThan(
+            mockCreateAdminClient.mock.invocationCallOrder[0],
+        )
+        expect(mockVerifyCoAToken.mock.invocationCallOrder[0]).toBeLessThan(
             adminFrom.mock.invocationCallOrder[0],
         )
         expect(sampleQuery.eq).toHaveBeenCalledWith('id', 'sample-1')
@@ -288,6 +291,7 @@ describe('public CoA download access contract', () => {
             error: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại',
         })
         expect(mockVerifyCoAToken).not.toHaveBeenCalled()
+        expect(mockCreateAdminClient).not.toHaveBeenCalled()
         expect(mockStorageDownload).not.toHaveBeenCalled()
     })
 })
