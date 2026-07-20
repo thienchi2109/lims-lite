@@ -62,10 +62,10 @@
 
 ### Slice 5B. Khóa staff PDF success contract
 
-- [ ] 5.4 Viết failing route tests cho `GET /api/coa/view/pdf`: analyst, manager, doctor và confidential-authorized success; rate-limit key theo staff identity + IP; latest ready report; integrity pass; chỉ sau authorization mới gọi authenticated PDF gateway.
-- [ ] 5.5 Viết failing tests cho response `application/pdf`, `Content-Disposition` attachment, `Cache-Control: private, no-store` và filename `PhieuKetQuaXN-{samples.sample_id}-{YYYYMMDD}.pdf` từ filename-safe `samples.sample_id` cùng `coa_reports.generated_at` theo `Asia/Ho_Chi_Minh`.
-- [ ] 5.6 Implement success path tối thiểu tại `src/app/api/coa/view/pdf/route.ts` bằng shared access loader, bounded rate limiter, storage HTML, hash verification, `convertHtmlToPdf()` và existing filename helper; route không nhận conversion URL, headers hoặc credential từ caller.
-- [ ] 5.7 Chạy focused helper/HTML/PDF route tests về green và ghi commit boundary cho Slice 5B.
+- [x] 5.4 Viết failing route tests cho `GET /api/coa/view/pdf`: analyst, manager, doctor và confidential-authorized success; rate-limit key theo staff identity + IP; latest ready report; integrity pass; chỉ sau authorization mới gọi authenticated PDF gateway.
+- [x] 5.5 Viết failing tests cho response `application/pdf`, `Content-Disposition` attachment, `Cache-Control: private, no-store` và filename `PhieuKetQuaXN-{samples.sample_id}-{YYYYMMDD}.pdf` từ filename-safe `samples.sample_id` cùng `coa_reports.generated_at` theo `Asia/Ho_Chi_Minh`.
+- [x] 5.6 Implement success path tối thiểu tại `src/app/api/coa/view/pdf/route.ts` bằng shared access loader, bounded rate limiter, storage HTML, hash verification, `convertHtmlToPdf()` và existing filename helper; route không nhận conversion URL, headers hoặc credential từ caller.
+- [x] 5.7 Chạy focused helper/HTML/PDF route tests về green và ghi commit boundary cho Slice 5B.
 
 ### Slice 5C. Khóa failure model và application boundary
 
