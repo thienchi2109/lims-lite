@@ -75,11 +75,28 @@
 
 ## Phase 6. Thêm luồng PDF cho client
 
-- [ ] 6.1 Viết failing route tests cho `GET /api/coa/download/pdf`: token cookie/Bearer, ownership, sample completed, CoA ready, expired token, confidential concealment, rate limit và conversion failure.
-- [ ] 6.2 Tách hoặc tái sử dụng client CoA access helper từ route HTML mà không nhận token qua query string; chỉ vào service-role path sau token identity, scope query đúng sample/report, chỉ conversion sau access checks, rồi chạy characterization cùng token-leak tests.
-- [ ] 6.3 Implement client PDF route với cùng report/hash/conversion contract của staff route.
-- [ ] 6.4 Viết test và implement audit sau client identity: chỉ trả PDF sau khi success insert commit; failure dùng reason-code allowlist; audit insert lỗi thì fail closed, trả lỗi dịch vụ tiếng Việt và operational trace không chứa dữ liệu nhạy cảm.
-- [ ] 6.5 Chạy focused client route tests và ghi commit boundary cho client PDF.
+> Giữ Phase 6 trong cùng OpenSpec change và một branch/PR. Thực hiện tuần tự ba
+> TDD slice 6A, 6B và 6C; mỗi slice phải về green và có commit boundary riêng.
+> Không thêm UI trước Phase 7.
+
+### Slice 6A. Tách shared client CoA access contract
+
+- [ ] 6.1 Viết failing helper tests cho token cookie/Bearer, token hết hạn, ownership, sample completed, CoA ready, confidential concealment và query scope đúng sample/report; xác nhận service-role client chỉ được tạo sau khi token đã xác lập client identity.
+- [ ] 6.2 Implement shared client CoA access helper không nhận token qua query string, không tạo reusable service-role repository hoặc generic RLS bypass; refactor route HTML dùng helper nhưng giữ nguyên HTTP/audit contract hiện tại.
+- [ ] 6.3 Chạy helper tests, characterization tests của route HTML và `tests/coa-token-leak.test.mjs`; ghi commit boundary cho Slice 6A.
+
+### Slice 6B. Khóa client PDF success và audit delivery gate
+
+- [ ] 6.4 Viết failing route tests cho success path qua token cookie/Bearer, released report/hash/storage contract, deterministic attachment, một lần gọi authenticated `pdf-gateway`, success audit commit trước PDF delivery và audit insert lỗi phải fail closed.
+- [ ] 6.5 Implement `GET /api/coa/download/pdf` bằng shared access helper và shared PDF primitives; chỉ conversion sau access/integrity checks, chỉ trả PDF sau success audit commit, không lưu PDF vào Storage/DB.
+- [ ] 6.6 Viết failing tests rồi implement failure audit sau client identity bằng reason-code allowlist; audit persistence lỗi trả lỗi dịch vụ tiếng Việt và operational trace chỉ chứa metadata không nhạy cảm.
+- [ ] 6.7 Chạy focused success/audit tests và ghi commit boundary cho Slice 6B.
+
+### Slice 6C. Khóa failure model và application boundary
+
+- [ ] 6.8 Viết failing route tests cho missing/invalid/expired token, ownership, sample chưa completed, CoA chưa ready, confidential concealment, storage failure, hash mismatch, rate limit và mọi typed conversion failure.
+- [ ] 6.9 Implement typed Vietnamese failure mapping; mọi request bị từ chối trước conversion không được gọi PDF gateway, mỗi conversion attempt chỉ gọi gateway một lần và không retry/fallback raw Gotenberg.
+- [ ] 6.10 Chạy toàn bộ focused client helper/HTML/PDF route tests, gateway/application-boundary tests, `tests/coa-token-leak.test.mjs` và `rtk npm run typecheck`; xác nhận file mới dưới 350 dòng và ghi commit boundary cho Slice 6C.
 
 ## Phase 7. Thêm nút tải PDF trong preview
 
