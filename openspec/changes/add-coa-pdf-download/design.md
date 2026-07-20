@@ -90,6 +90,8 @@ Self-hosting or embedding these assets is deferred and should be proposed separa
 
 Create a small custom image derived from a digest-pinned Gotenberg 8 image. During the image build, install Microsoft Core Fonts with non-interactive EULA acceptance, then return to the unprivileged `gotenberg` user. Do not commit font binaries or licensing secrets.
 
+Gotenberg 8.34.0 logs outbound-policy denials as `net::ERR_ACCESS_DENIED` but does not classify that error as a resource-loading failure. The custom image therefore builds a narrowly patched binary from the digest-pinned Go toolchain and the checksum-verified upstream source commit. The patch adds only `net::ERR_ACCESS_DENIED` to the existing loading-failure allowlist, runs the upstream Chromium package tests, and keeps `CHROMIUM_DENY_PRIVATE_IPS`, the pinning proxy, and DNS-rebinding protection unchanged. This is required so the fixed `failOnResourceLoadingFailed=true` contract rejects visually incomplete PDFs when a resource is blocked by the outbound policy.
+
 The build and verification workflow must confirm `fc-match "Times New Roman"` resolves to the installed Microsoft font. Relying on Gotenberg's metric-compatible Liberation fallback was rejected because it can alter glyph metrics, wrapping, and page breaks.
 
 ### 7. Keep the gateway and Gotenberg private and independently degradable

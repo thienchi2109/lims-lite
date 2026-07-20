@@ -1,0 +1,30 @@
+diff --git a/pkg/modules/chromium/events.go b/pkg/modules/chromium/events.go
+--- a/pkg/modules/chromium/events.go
++++ b/pkg/modules/chromium/events.go
+@@ -102,14 +102,10 @@ func listenForEventRequestPaused(ctx context.Context, logger *slog.Logger, optio
+ 
+ 				if !allow {
+ 					// Use AccessDenied so Chromium emits net::ERR_ACCESS_DENIED,
+-					// which is intentionally absent from the EventLoadingFailed
+-					// known-errors list. Routing through BlockedByClient would
+-					// surface the failure, but the Document-type dispatcher in
+-					// listenForEventLoadingFailed cannot distinguish a blocked
+-					// iframe (sub-frame Document) from a main-page Document, and
+-					// would attribute the iframe failure to the main page.
+-					// Filter-block observability is provided by the warn log
+-					// above instead.
++					// while keeping it distinct from extension or ad-blocker
++					// failures. The LIMS image recognizes this error below so
++					// blocked outbound resources must fail closed when
++					// FailOnResourceLoadingFailed is enabled.
+ 					req := fetch.FailRequest(e.RequestID, network.ErrorReasonAccessDenied)
+ 					err = req.Do(executorCtx)
+ 					if err != nil {
+@@ -389,6 +385,7 @@ func listenForEventLoadingFailed(ctx context.Context, logger *slog.Logger, option
+ 				"net::ERR_NAME_NOT_RESOLVED",
+ 				"net::ERR_INTERNET_DISCONNECTED",
+ 				"net::ERR_ADDRESS_UNREACHABLE",
++				"net::ERR_ACCESS_DENIED",
+ 				"net::ERR_BLOCKED_BY_CLIENT",
+ 				"net::ERR_BLOCKED_BY_RESPONSE",
+ 				"net::ERR_FILE_NOT_FOUND",

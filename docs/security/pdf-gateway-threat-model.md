@@ -42,6 +42,9 @@ service nội bộ.
 Biện pháp:
 
 - Giữ `CHROMIUM_DENY_PRIVATE_IPS=true`.
+- Dùng binary Gotenberg 8.34.0 được vá tối thiểu từ source commit và checksum
+  đã pin để `net::ERR_ACCESS_DENIED` làm conversion fail khi
+  `failOnResourceLoadingFailed=true`.
 - Không forward proxy, host-resolver, allow-list hoặc deny-list override.
 - Tắt `downloadFrom` bằng `API_DISABLE_DOWNLOAD_FROM=true`.
 - Chỉ nhận file `index.html`; không nhận URL chuyển đổi.

@@ -124,6 +124,13 @@ settings remain Compose-level prohibitions rather than request fields.
 Gotenberg also keeps `CHROMIUM_DENY_PRIVATE_IPS=true` and disables the
 `downloadFrom` feature.
 
+The dedicated Gotenberg image builds a narrowly patched 8.34.0 binary from a
+checksum-verified upstream commit. The patch classifies Chromium's
+`net::ERR_ACCESS_DENIED` result as a resource-loading failure so an outbound
+policy denial cannot produce a successful but incomplete PDF. It does not
+disable or bypass private-IP checks, the pinning proxy, or DNS-rebinding
+protection.
+
 ### 7. Keep the upstream bridge non-internal until assets are characterized
 
 `pdf-upstream` is not marked `internal: true`. Future HTML may reference public

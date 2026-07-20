@@ -1,7 +1,7 @@
 /**
  * Validates the private Gotenberg image and Compose contract for CoA PDF infrastructure.
  */
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import {
@@ -82,6 +82,41 @@ test('ignores comments while parsing executable Dockerfile instructions', () => 
 })
 
 describe('Gotenberg Compose infrastructure', () => {
+  test('patches outbound policy denials into resource loading failures', () => {
+    const dockerfile = readFileSync(
+      resolve(repositoryRoot, 'ops/gotenberg/Dockerfile'),
+      'utf8'
+    )
+    const patchPath = resolve(
+      repositoryRoot,
+      'ops/gotenberg/fail-closed-resource-policy.patch'
+    )
+    const sourcePatch = existsSync(patchPath)
+      ? readFileSync(patchPath, 'utf8')
+      : ''
+
+    expect(dockerfile).toContain(
+      'golang:1.26.2-bookworm@sha256:47ce5636e9936b2c5cbf708925578ef386b4f8872aec74a67bd13a627d242b19 AS gotenberg-builder'
+    )
+    expect(dockerfile).toContain(
+      'GOTENBERG_SOURCE_COMMIT=98fc40347885ad510a311b990a73397c6d4143db'
+    )
+    expect(dockerfile).toContain(
+      'GOTENBERG_SOURCE_SHA256=7aa20a8062bb170f3f9931eb35be3bf24479b9298f48ebe49e28a8d3ce45d947'
+    )
+    expect(dockerfile).toContain('sha256sum --check')
+    expect(dockerfile).toContain('patch --forward --strip=1')
+    expect(dockerfile).toContain('go test ./pkg/modules/chromium')
+    expect(dockerfile).toContain('cmd/gotenberg/main.go')
+    expect(dockerfile).toContain(
+      'COPY --from=gotenberg-builder /out/gotenberg /usr/bin/gotenberg'
+    )
+    expect(sourcePatch).toContain('net::ERR_ACCESS_DENIED')
+    expect(sourcePatch).toContain(
+      'blocked outbound resources must fail closed'
+    )
+  })
+
   test('builds the custom pinned Gotenberg 8 image with Times New Roman', () => {
     const dockerfile = readFileSync(
       resolve(repositoryRoot, 'ops/gotenberg/Dockerfile'),
@@ -99,6 +134,7 @@ describe('Gotenberg Compose infrastructure', () => {
     )
     expect(gotenbergService.build.dockerfile).toBe('Dockerfile')
     expect(instructionArguments('FROM')).toEqual([
+      'golang:1.26.2-bookworm@sha256:47ce5636e9936b2c5cbf708925578ef386b4f8872aec74a67bd13a627d242b19 AS gotenberg-builder',
       'gotenberg/gotenberg:8.34.0@sha256:67097317623a503ba2a6a7e9ae8db6929a1f7e1bbd88077bacf2d325fbdab923',
     ])
     expect(instructionArguments('USER')).toEqual(['root', 'gotenberg'])
