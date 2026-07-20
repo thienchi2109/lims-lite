@@ -122,10 +122,25 @@
 
 ## Phase 9. Rollout và kiểm chứng trên home server
 
-- [ ] 9.1 Commit và push code trước khi vận hành; trên `khoa-xn-cdc`, cập nhật checkout `/opt/lims-lite` theo quy trình deploy hiện có.
-- [ ] 9.2 Build và start gateway/Gotenberg trên home server; xác nhận gateway health/auth contract, raw Gotenberg không reachable từ app, `fc-match "Times New Roman"`, resource limits và không có host port.
-- [ ] 9.3 Chạy smoke conversion từ một CoA fixture, xác nhận A4, màu, logo, QR, chữ ký, con dấu, watermark, footer và filename.
+- [x] 9.1 Commit và push code trước khi vận hành; trên `khoa-xn-cdc`, cập nhật checkout `/opt/lims-lite` theo quy trình deploy hiện có.
+- [x] 9.2 Build và start gateway/Gotenberg trên home server; xác nhận gateway health/auth contract, raw Gotenberg không reachable từ app, `fc-match "Times New Roman"`, resource limits và không có host port.
+- [x] 9.3 Chạy smoke conversion từ một CoA fixture, xác nhận A4, màu, logo, QR, chữ ký, con dấu, watermark, footer và filename.
 - [ ] 9.4 Deploy app, kiểm tra tải PDF bằng staff session và client CoA token trên desktop cùng mobile browser.
-- [ ] 9.5 Lần lượt dừng gateway và Gotenberg trong cửa sổ kiểm chứng ngắn, xác nhận PDF báo lỗi tiếng Việt, không fallback sang raw Gotenberg, nhưng CoA creation và HTML preview vẫn hoạt động; sau đó khởi động lại và kiểm tra health.
+- [x] 9.5 Lần lượt dừng gateway và Gotenberg trong cửa sổ kiểm chứng ngắn, xác nhận PDF báo lỗi tiếng Việt, không fallback sang raw Gotenberg, nhưng CoA creation và HTML preview vẫn hoạt động; sau đó khởi động lại và kiểm tra health.
 - [ ] 9.6 Kiểm tra rate limit `5/10 phút`, bounded limiter, gateway bearer rejection, client success/failure access log, SSRF deny policy, trace không chứa dữ liệu nhạy cảm và không có PDF được lưu vào Storage/DB.
-- [ ] 9.7 Hoàn tất `git pull --rebase`, `git push`, `git status` và xác nhận branch up to date với remote.
+- [x] 9.7 Hoàn tất `git pull --rebase`, `git push`, `git status` và xác nhận branch up to date với remote.
+
+> Bằng chứng rollout ngày 2026-07-20: production chạy commit `e691203`,
+> Gotenberg báo version `8.34.0-lims.1`; app, gateway và Gotenberg đều healthy;
+> public root và auth health trả `200`; raw Gotenberg không resolve từ app;
+> font, secret permissions, resource limits và network exposure đúng contract.
+> Smoke CoA trực quan, attachment filename và hai outage drill đã đạt. Sau patch,
+> resource private-IP trả `502` không có PDF, trong khi control HTML hợp lệ vẫn
+> trả `%PDF-`; gateway bearer sai trả `401`; Storage có `0` PDF object.
+>
+> Task 9.4 và 9.6 còn pending vì production hiện có `16` ready CoA nhưng cả
+> `16` sample đều soft-delete, không có active completed ready fixture. Không
+> undelete hoặc tạo dữ liệu production ngoài audited workflow chỉ để kiểm thử.
+> Cần một active CoA fixture được tạo qua workflow có audit để xác nhận staff và
+> client success trên desktop/mobile, client success access log và app rate
+> limit `5/10 phút`.
