@@ -100,11 +100,11 @@
 
 ## Phase 7. Thêm nút tải PDF trong preview
 
-- [ ] 7.1 Viết failing component tests cho nút `Tải PDF` ở client preview và staff preview trên desktop/mobile.
-- [ ] 7.2 Viết failing tests cho pending state, chống double click, tải attachment thành công, lỗi tiếng Việt không mở print dialog, và expired client token quay về login/re-auth mà không auto-retry.
-- [ ] 7.3 Cập nhật `src/components/coa-preview-dialog.tsx` và các caller để truyền đúng staff/client PDF endpoint, giữ nguyên HTML preview cùng các action hiện có.
-- [ ] 7.4 Đối chiếu nội dung mới với `docs/vietnamese_dictionary.md` và giữ UI text hoàn toàn bằng tiếng Việt.
-- [ ] 7.5 Chạy focused component tests và ghi commit boundary cho UI.
+- [x] 7.1 Viết failing component tests cho nút `Tải PDF` ở client preview và staff preview trên desktop/mobile.
+- [x] 7.2 Viết failing tests cho pending state, chống double click, tải attachment thành công, lỗi tiếng Việt không mở print dialog, và expired client token quay về login/re-auth mà không auto-retry.
+- [x] 7.3 Cập nhật `src/components/coa-preview-dialog.tsx` và các caller để truyền đúng staff/client PDF endpoint, giữ nguyên HTML preview cùng các action hiện có.
+- [x] 7.4 Đối chiếu nội dung mới với `docs/vietnamese_dictionary.md` và giữ UI text hoàn toàn bằng tiếng Việt.
+- [x] 7.5 Chạy focused component tests và ghi commit boundary cho UI.
 
 ## Phase 8. Quality gates trong source workspace
 

@@ -32,6 +32,8 @@ interface DocumentPreviewDialogProps {
   onRetry: () => void
   errorActionLabel?: string
   onErrorAction?: () => void
+  toolbarAction?: React.ReactNode
+  actionError?: string | null
 }
 
 export function DocumentPreviewDialog({
@@ -45,6 +47,8 @@ export function DocumentPreviewDialog({
   onRetry,
   errorActionLabel,
   onErrorAction,
+  toolbarAction,
+  actionError,
 }: DocumentPreviewDialogProps) {
   const iframeRef = React.useRef<HTMLIFrameElement | null>(null)
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
@@ -182,7 +186,9 @@ export function DocumentPreviewDialog({
               {loading ? 'Đang tải tài liệu' : error ? 'Không thể tải tài liệu' : 'Tài liệu sẵn sàng'}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
+              {toolbarAction}
+
               {hasReadyDocument ? (
                 <Button
                   type="button"
@@ -231,6 +237,17 @@ export function DocumentPreviewDialog({
               ) : null}
             </div>
           </div>
+
+          {actionError ? (
+            <Alert
+              role="alert"
+              className="rounded-none border-x-0 border-t-0 border-rose-200 bg-rose-50 text-rose-950"
+            >
+              <AlertDescription className="text-sm leading-6">
+                {actionError}
+              </AlertDescription>
+            </Alert>
+          ) : null}
 
           <div
             ref={viewportRef}

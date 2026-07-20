@@ -141,6 +141,14 @@ The existing preview remains visible while a PDF request is pending. The action 
 
 There is no automatic retry and no fallback to browser printing. Users may continue viewing HTML and retry manually when allowed.
 
+Phase 7 keeps endpoint selection explicit and constrained at each caller:
+staff previews use `/api/coa/view/pdf`, while client previews use
+`/api/coa/download/pdf`. The browser issues at most one credentialed request at
+a time, downloads the returned attachment using its `Content-Disposition`
+filename, and keeps PDF failures separate from the loaded HTML preview. A `401`
+from the client endpoint invokes the existing re-authentication callback once
+without replaying the PDF request.
+
 ## Risks / Trade-offs
 
 - **[External logo or QR provider is unavailable]** -> Require successful resource loading and fail the PDF request rather than returning an incomplete document.

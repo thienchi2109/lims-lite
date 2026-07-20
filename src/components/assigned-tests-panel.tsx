@@ -302,6 +302,7 @@ export function AssignedTestsPanel({
                 sampleId={previewSampleId ?? ''}
                 title={COA_PREVIEW_TITLE}
                 route="staff"
+                pdfEndpoint="/api/coa/view/pdf"
             />
             <DocumentPreviewDialog
                 open={printPreview.open}
