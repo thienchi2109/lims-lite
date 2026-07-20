@@ -33,6 +33,8 @@ export interface AccessionMobileWizardProps {
     serialController?: ClientQrScannerDialogSerialController
     selectedSampleType: SampleType
     onSampleTypeChange: (type: SampleType) => void
+    sampleQuality: boolean | null
+    onSampleQualityChange: (value: boolean | null) => void
     receivedAtRegister: UseFormRegisterReturn<'received_at'>
     receivedAtValue: string
 
@@ -88,7 +90,7 @@ export function AccessionMobileWizard(props: AccessionMobileWizardProps) {
         setCurrentStep(0)
     }, [onReset])
 
-    const canAdvanceStep1 = !!props.selectedClient
+    const canAdvanceStep1 = !!props.selectedClient && props.sampleQuality !== null
 
     return (
         <div className="relative flex h-full flex-col bg-background">
@@ -115,6 +117,8 @@ export function AccessionMobileWizard(props: AccessionMobileWizardProps) {
                         serialController={props.serialController}
                         selectedSampleType={props.selectedSampleType}
                         onSampleTypeChange={props.onSampleTypeChange}
+                        sampleQuality={props.sampleQuality}
+                        onSampleQualityChange={props.onSampleQualityChange}
                         receivedAtRegister={props.receivedAtRegister}
                         onNext={goNext}
                         canAdvance={canAdvanceStep1}
@@ -145,6 +149,7 @@ export function AccessionMobileWizard(props: AccessionMobileWizardProps) {
                     <AccessionWizardStepReview
                         selectedClient={props.selectedClient}
                         selectedSampleType={props.selectedSampleType}
+                        sampleQuality={props.sampleQuality}
                         receivedAt={props.receivedAtValue}
                         selected={props.selected}
                         submitError={props.submitError}
@@ -152,7 +157,7 @@ export function AccessionMobileWizard(props: AccessionMobileWizardProps) {
                         onGoToStep={goToStep}
                         onConfirm={handleConfirm}
                         isSaving={props.isSaving}
-                        isSaveDisabled={props.isSaveDisabled}
+                        isSaveDisabled={props.isSaveDisabled || props.sampleQuality === null}
                     />
                 )}
 

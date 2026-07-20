@@ -1,6 +1,14 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+class ResizeObserverMock {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+}
+
+vi.stubGlobal('ResizeObserver', ResizeObserverMock)
+
 const accessionFormMocks = vi.hoisted(() => {
     const createSampleClient = vi.fn()
     const accessionAndAssignTestsClient = vi.fn()
@@ -188,6 +196,10 @@ vi.mock('sonner', () => ({
 
 import { SampleAccessionForm } from '../sample-accession-form'
 
+function selectAcceptableQuality() {
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Đạt' }))
+}
+
 describe('SampleAccessionForm', () => {
     beforeEach(() => {
         vi.clearAllMocks()
@@ -230,6 +242,7 @@ describe('SampleAccessionForm', () => {
 
         fireEvent.click(screen.getByRole('button', { name: 'Chọn khách hàng' }))
         fireEvent.click(screen.getByRole('button', { name: 'Chọn Nước tiểu' }))
+        selectAcceptableQuality()
         fireEvent.click(screen.getByRole('button', { name: 'Thêm xét nghiệm' }))
         fireEvent.click(screen.getByRole('button', { name: 'Lưu mẫu' }))
 
@@ -243,6 +256,7 @@ describe('SampleAccessionForm', () => {
 
         fireEvent.click(screen.getByRole('button', { name: 'Chọn khách hàng' }))
         fireEvent.click(screen.getByRole('button', { name: 'Chọn Nước tiểu' }))
+        selectAcceptableQuality()
         fireEvent.click(screen.getByRole('button', { name: 'Thêm xét nghiệm' }))
         fireEvent.click(screen.getByRole('button', { name: 'Lưu mẫu' }))
 
@@ -268,6 +282,7 @@ describe('SampleAccessionForm', () => {
 
         fireEvent.click(screen.getByRole('button', { name: 'Chọn khách hàng' }))
         fireEvent.click(screen.getByRole('button', { name: 'Chọn Nước tiểu' }))
+        selectAcceptableQuality()
         fireEvent.click(screen.getByRole('button', { name: 'Lưu mẫu' }))
 
         await waitFor(() => {
@@ -294,6 +309,7 @@ describe('SampleAccessionForm', () => {
 
         fireEvent.click(screen.getByRole('button', { name: 'Chọn khách hàng' }))
         fireEvent.click(screen.getByRole('button', { name: 'Chọn Nước tiểu' }))
+        selectAcceptableQuality()
         fireEvent.click(screen.getByRole('button', { name: 'Lưu mẫu' }))
 
         await waitFor(() => {
@@ -335,6 +351,7 @@ describe('SampleAccessionForm', () => {
 
         fireEvent.click(screen.getByRole('button', { name: 'Chọn khách hàng' }))
         fireEvent.click(screen.getByRole('button', { name: 'Chọn Nước tiểu' }))
+        selectAcceptableQuality()
         fireEvent.click(screen.getByRole('button', { name: 'Thêm xét nghiệm' }))
 
         const saveButton = screen.getByRole('button', { name: 'Lưu mẫu' })
@@ -352,7 +369,9 @@ describe('SampleAccessionForm', () => {
         expect(screen.getByTestId('selected-client').textContent).toBe('')
         expect(screen.getByTestId('selected-sample-type').textContent).toBe('Máu')
         expect(screen.getByTestId('selected-count').textContent).toBe('0')
-        expect((saveButton as HTMLButtonElement).disabled).toBe(false)
+        expect(screen.getByRole('checkbox', { name: 'Đạt' }).getAttribute('data-state')).toBe('unchecked')
+        expect(screen.getByRole('checkbox', { name: 'Không đạt' }).getAttribute('data-state')).toBe('unchecked')
+        expect((saveButton as HTMLButtonElement).disabled).toBe(true)
     })
 
     it('clears the client draft data when starting a new accession', async () => {
@@ -362,6 +381,7 @@ describe('SampleAccessionForm', () => {
         expect(screen.getByTestId('client-form-draft-name').textContent).toBe('Khách hàng nháp')
 
         fireEvent.click(screen.getByRole('button', { name: 'Chọn khách hàng' }))
+        selectAcceptableQuality()
         fireEvent.click(screen.getByRole('button', { name: 'Thêm xét nghiệm' }))
         fireEvent.click(screen.getByRole('button', { name: 'Lưu mẫu' }))
 

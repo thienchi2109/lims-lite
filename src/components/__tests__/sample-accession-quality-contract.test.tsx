@@ -2,6 +2,14 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+class ResizeObserverMock {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+}
+
+vi.stubGlobal('ResizeObserver', ResizeObserverMock)
+
 const mocks = vi.hoisted(() => ({
     createSampleClient: vi.fn(),
     accessionAndAssignTestsClient: vi.fn(),
@@ -187,15 +195,22 @@ describe('desktop sample quality accession contract', () => {
         expect(unacceptable.getAttribute('data-state')).toBe('checked')
     })
 
-    it('blocks desktop save with Vietnamese validation when quality is missing', () => {
+    it('blocks desktop save with Vietnamese validation when quality is missing', async () => {
         render(<SampleAccessionForm specialties={[]} />)
 
         fireEvent.click(screen.getByRole('button', { name: 'Chọn khách hàng' }))
-        fireEvent.click(screen.getByRole('button', { name: 'Lưu mẫu' }))
+        const saveButton = screen.getByRole('button', { name: 'Lưu mẫu' }) as HTMLButtonElement
+        const form = document.querySelector('form')
 
-        expect(
-            screen.getByText(/chất lượng mẫu.*bắt buộc|vui lòng.*chất lượng mẫu/i),
-        ).toBeDefined()
+        expect(saveButton.disabled).toBe(true)
+        expect(form).not.toBeNull()
+        fireEvent.submit(form!)
+
+        await waitFor(() => {
+            expect(
+                screen.getByText(/chất lượng mẫu.*bắt buộc|vui lòng.*chất lượng mẫu/i),
+            ).toBeDefined()
+        })
         expect(screen.queryByTestId('confirm-dialog')).toBeNull()
         expect(mocks.createSampleClient).not.toHaveBeenCalled()
         expect(mocks.accessionAndAssignTestsClient).not.toHaveBeenCalled()
@@ -208,7 +223,9 @@ describe('desktop sample quality accession contract', () => {
         fireEvent.click(getQualityCheckbox('Không đạt'))
         fireEvent.click(screen.getByRole('button', { name: 'Lưu mẫu' }))
 
-        expect(screen.getByTestId('confirm-dialog')).toBeDefined()
+        await waitFor(() => {
+            expect(screen.getByTestId('confirm-dialog')).toBeDefined()
+        })
         expect(getQualityCheckbox('Không đạt').getAttribute('data-state')).toBe('checked')
 
         fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục tạo mẫu' }))

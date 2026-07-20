@@ -22,6 +22,7 @@ describe('AccessionWizardStepReview', () => {
                     updated_at: '2026-01-01T00:00:00.000Z',
                 }}
                 selectedSampleType="Máu"
+                sampleQuality={true}
                 receivedAt="2026-03-17T08:30"
                 selected={[]}
                 submitError="Không thể lưu mẫu"

@@ -25,13 +25,15 @@ vi.mock('@/components/accession-wizard-step-review', () => ({
     AccessionWizardStepReview: ({
         submitError,
         onConfirm,
+        isSaveDisabled,
     }: {
         submitError?: string | null
         onConfirm: () => void
+        isSaveDisabled?: boolean
     }) => (
         <div>
             <div data-testid="review-submit-error">{submitError ?? ''}</div>
-            <button type="button" onClick={onConfirm}>
+            <button type="button" onClick={onConfirm} disabled={isSaveDisabled}>
                 Xác nhận lưu
             </button>
         </div>
@@ -83,6 +85,8 @@ function createWizardProps(overrides: Partial<AccessionMobileWizardProps> = {}):
         onQRScan: vi.fn(),
         selectedSampleType: 'Máu',
         onSampleTypeChange: vi.fn(),
+        sampleQuality: true,
+        onSampleQualityChange: vi.fn(),
         receivedAtRegister: {
             name: 'received_at',
             onChange: vi.fn(),
@@ -122,6 +126,19 @@ describe('AccessionMobileWizard', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục xét nghiệm' }))
 
         expect(screen.getByTestId('review-submit-error').textContent).toBe('Không thể lưu mẫu')
+    })
+
+    it('disables review confirmation when sample quality is missing', () => {
+        render(
+            <AccessionMobileWizard {...createWizardProps({ sampleQuality: null })} />,
+        )
+
+        fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục khách hàng' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục xét nghiệm' }))
+
+        expect(
+            (screen.getByRole('button', { name: 'Xác nhận lưu' }) as HTMLButtonElement).disabled,
+        ).toBe(true)
     })
 
     it('calls onSave from the review step', () => {

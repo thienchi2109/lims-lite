@@ -22,11 +22,11 @@
 
 ## Phase 4: Desktop And Mobile Accession UI
 
-- [ ] 4.1 Build a focused sample-quality field using two directly visible Shadcn `Checkbox` controls labeled `Đạt` and `Không đạt`; do not use a dropdown/select, and implement an accessible single-selection state with no default.
-- [ ] 4.2 Place the quality field immediately below `Loại mẫu` in the desktop accession form and keep the existing `Thời gian nhận` and test-assignment layout stable.
-- [ ] 4.3 Place the same field immediately below `Loại mẫu` and before `Thời gian nhận` in the mobile customer/sample step, then show the selected value in the mobile review step.
-- [ ] 4.4 Disable save/confirm while no quality is selected, retain submit-time validation as a second guard, preserve the selection across the no-tests confirmation dialog, and reset it for a new accession.
-- [ ] 4.5 Make the Phase 1 UI tests pass and verify the desktop/mobile layouts do not overlap, shift unexpectedly, or expose both checkboxes as selected.
+- [x] 4.1 Build a focused sample-quality field using two directly visible Shadcn `Checkbox` controls labeled `Đạt` and `Không đạt`; do not use a dropdown/select, and implement an accessible single-selection state with no default.
+- [x] 4.2 Place the quality field immediately below `Loại mẫu` in the desktop accession form and keep the existing `Thời gian nhận` and test-assignment layout stable.
+- [x] 4.3 Place the same field immediately below `Loại mẫu` and before `Thời gian nhận` in the mobile customer/sample step, then show the selected value in the mobile review step.
+- [x] 4.4 Disable save/confirm while no quality is selected, retain submit-time validation as a second guard, preserve the selection across the no-tests confirmation dialog, and reset it for a new accession.
+- [x] 4.5 Make the Phase 1 UI tests pass and verify the desktop/mobile layouts do not overlap, shift unexpectedly, or expose both checkboxes as selected.
 
 ## Phase 5: Database Enforcement And Security Closeout
 

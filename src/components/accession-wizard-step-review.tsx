@@ -10,7 +10,6 @@
 import type { Client, SelectedTest, SampleType } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import {
     Card,
     CardContent,
@@ -29,6 +28,7 @@ import {
 interface StepReviewProps {
     selectedClient: Client | null
     selectedSampleType: SampleType
+    sampleQuality: boolean | null
     receivedAt: string
     selected: SelectedTest[]
     submitError?: string | null
@@ -39,9 +39,18 @@ interface StepReviewProps {
     isSaveDisabled?: boolean
 }
 
+function getSampleQualityLabel(sampleQuality: boolean | null): string {
+    if (sampleQuality === null) {
+        return 'Chưa chọn'
+    }
+
+    return sampleQuality ? 'Đạt' : 'Không đạt'
+}
+
 export function AccessionWizardStepReview({
     selectedClient,
     selectedSampleType,
+    sampleQuality,
     receivedAt,
     selected,
     submitError,
@@ -132,6 +141,10 @@ export function AccessionWizardStepReview({
                                 value={
                                     <Badge variant="secondary">{selectedSampleType}</Badge>
                                 }
+                            />
+                            <ReviewRow
+                                label="Chất lượng mẫu"
+                                value={getSampleQualityLabel(sampleQuality)}
                             />
                             <ReviewRow label="Thời gian nhận" value={formatDate(receivedAt)} />
                         </CardContent>

@@ -1,16 +1,22 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { type CreateSampleWithAssignments, type CreateSample, type Client, type CreateClient, type LabSpecialty, type SampleType, type SelectedTest } from '@/types'
+import {
+    type Client,
+    type CreateClient,
+    type CreateSample,
+    type CreateSampleWithAssignments,
+    type LabSpecialty,
+    type SampleType,
+    type SelectedTest,
+} from '@/types'
 import { accessionAndAssignTestsClient, createSampleClient, findClientByIdentityClient } from '@/lib/api-client'
 import { printSampleBarcodeLabel } from '@/lib/sample-label-print-client'
-import { SampleLabelPrintDialog } from '@/components/sample-label-print-dialog'
 import type { SampleLabelPreset } from '@/lib/sample-label-template'
 import { parseClientIdentityQr } from '@/lib/qr/parse-client-identity-qr'
-import { ClientQrScannerDialog } from '@/components/client-qr-scanner-dialog'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -20,20 +26,13 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
+} from '@/components/ui/alert-dialog'
 import { TestAssignmentGrid } from '@/components/test-assignment-grid'
-import { CheckCircle2, AlertCircle, QrCode, Scan, Calendar, Barcode, Eye } from 'lucide-react'
-import Link from 'next/link'
-import { ClientSelector } from '@/components/client-selector'
-import { SampleTypeSelector } from '@/components/sample-type-selector'
+import { SampleAccessionContext } from '@/components/sample-accession-context'
 import { useCccdSerialController } from '@/hooks/use-cccd-serial-controller'
 import { toast } from 'sonner'
 
 const EMPTY_SPECIALTIES: LabSpecialty[] = []
-
 interface SampleAccessionFormProps {
     specialties?: LabSpecialty[]
 }
@@ -44,6 +43,7 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
     const [submitSuccess, setSubmitSuccess] = useState<string | null>(null)
     const [createdSampleId, setCreatedSampleId] = useState<string | null>(null)
     const [selectedTests, setSelectedTests] = useState<SelectedTest[]>([])
+    const [sampleQuality, setSampleQuality] = useState<boolean | null>(null)
     const [showConfirmation, setShowConfirmation] = useState(false)
     const [showLabelPrintDialog, setShowLabelPrintDialog] = useState(false)
 
@@ -74,7 +74,7 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
         handleSubmit,
         reset,
         setValue,
-        watch,
+        control,
     } = useForm<FormData>({
         resolver: zodResolver(FormSchema),
         defaultValues: {
@@ -95,7 +95,10 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
         )
     }, [selectedTests, setValue])
 
-    const receivedAtWatched = watch('received_at')
+    const receivedAtWatched = useWatch({
+        control,
+        name: 'received_at',
+    })
 
     const onSubmit = async (data: FormData) => {
         if (submitSuccess) {
@@ -105,6 +108,11 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
         // Validate Client Selection
         if (!selectedClient) {
             setSubmitError('Vui lòng chọn khách hàng')
+            return
+        }
+
+        if (sampleQuality === null) {
+            setSubmitError('Vui lòng chọn chất lượng mẫu')
             return
         }
 
@@ -126,6 +134,7 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
                 const payload: CreateSample = {
                     client_id: selectedClient.id,
                     type: selectedSampleType,
+                    sample_quality: sampleQuality,
                     client_name: selectedClient.name, // Snapshot
                     received_at: data.received_at ? new Date(data.received_at).toISOString() : undefined,
                 }
@@ -148,6 +157,7 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
                     client_id: selectedClient.id,
                     client_name: selectedClient.name, // Snapshot
                     type: selectedSampleType,
+                    sample_quality: sampleQuality,
                     received_at: data.received_at ? new Date(data.received_at).toISOString() : undefined,
                     tests: selectedTests.map((t) => ({
                         assayId: t.assayId,
@@ -224,6 +234,7 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
         setSelectedTests([])
         setSelectedClient(null)
         setSelectedSampleType('Máu')
+        setSampleQuality(null)
         setClientFormData(undefined)
         setSubmitSuccess(null)
         setSubmitError(null)
@@ -244,150 +255,33 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
         ? `/samples?sampleId=${encodeURIComponent(createdSampleId)}`
         : null
 
-    // Context Content (Card Style)
     const contextContent = (
-        <div className="space-y-6 lg:space-y-6">
-            {/* QR Card (Mobile Only or Highlighted) */}
-            <div id="tour-qr-scanner" className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-5">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm">
-                        <QrCode className="text-blue-500" size={20} />
-                        Quét mã QR
-                    </h2>
-                    <span className="text-xs text-slate-400">Tự động điền</span>
-                </div>
-                <button
-                    type="button"
-                    onClick={() => setShowQRScanner(true)}
-                    className="group w-full rounded-xl border border-sky-200/80 bg-gradient-to-r from-sky-50 via-blue-50 to-indigo-50 px-4 py-3 text-sky-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-sky-300 hover:shadow-md active:translate-y-0 dark:border-sky-800/70 dark:from-sky-950/40 dark:via-blue-950/30 dark:to-indigo-950/30 dark:text-sky-300"
-                >
-                    <span className="flex items-center justify-center gap-3">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-sky-600 shadow-sm dark:bg-slate-900/70 dark:text-sky-300">
-                            <Scan size={18} />
-                        </span>
-                        <span className="font-medium tracking-tight">Quét mã QR trên CCCD</span>
-                    </span>
-                </button>
-            </div>
-
-            {/* Sample Info Card */}
-            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-5 space-y-4">
-                <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-0 text-sm">Thông tin mẫu</h2>
-
-                {/* Client Selector (Styled as Input Group) */}
-                <div id="tour-client-selector" className="space-y-1">
-                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                        Khách hàng *
-                    </Label>
-                    <div className="relative">
-                        <ClientSelector
-                            selectedClient={selectedClient}
-                            onSelect={setSelectedClient}
-                            isOpenForm={showClientForm}
-                            onOpenFormChange={setShowClientForm}
-                            formData={clientFormData}
-                            onFormDataChange={setClientFormData}
-                            hideQRButton={true}
-                        />
-                        {/* Plus button is handled inside ClientSelector via generic "New" action or search, 
-                            but to match design strictly we might want the absolute button. 
-                            However, the modified ClientSelector Trigger already covers the 'Input' look. 
-                            We'll rely on ClientSelector's internal 'Plus' or the popover flow. 
-                        */}
-                    </div>
-                </div>
-
-                {/* Sample Type */}
-                <div id="tour-sample-type" className="space-y-1">
-                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                        Loại mẫu *
-                    </Label>
-                    <SampleTypeSelector
-                        value={selectedSampleType}
-                        onChange={setSelectedSampleType}
-                    />
-                </div>
-
-                {/* Received Time */}
-                <div id="tour-received-time" className="space-y-1">
-                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                        Thời gian nhận
-                    </Label>
-                    <div className="relative min-w-0">
-                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 pointer-events-none">
-                            <Calendar size={18} />
-                        </div>
-                        <Input
-                            type="datetime-local"
-                            {...register('received_at')}
-                            className="mobile-date-input-fix h-11 bg-slate-50 pl-10 text-sm [appearance:textfield] border-slate-200 dark:border-slate-700 dark:bg-slate-800"
-                        />
-                    </div>
-                    <p className="text-[10px] text-slate-400 mt-1">Mặc định là thời gian hiện tại.</p>
-                </div>
-            </div>
-
-            {/* Error/Success Messages */}
-            {submitError && (
-                <div className="bg-destructive/10 text-destructive p-3 rounded-md text-sm flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    {submitError}
-                </div>
-            )}
-            {submitSuccess && (
-                <div className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 p-3 rounded-md text-sm flex flex-col gap-2 border border-emerald-200 dark:border-emerald-800">
-                    <div className="flex items-center gap-2 font-medium">
-                        <CheckCircle2 className="h-4 w-4" />
-                        {submitSuccess}
-                    </div>
-                    <div className="flex flex-col gap-2">
-                        {createdSampleHref && (
-                            <Button
-                                asChild
-                                variant="default"
-                                className="w-full min-w-0 whitespace-normal"
-                            >
-                                <Link href={createdSampleHref}>
-                                    <Eye className="mr-2 h-4 w-4" />
-                                    Xem mẫu vừa tạo
-                                </Link>
-                            </Button>
-                        )}
-                        {createdSampleId && (
-                            <Button
-                                type="button"
-                                variant="outline"
-                                className="w-full min-w-0 whitespace-normal"
-                                onClick={handlePrintBarcodeLabel}
-                            >
-                                <Barcode className="mr-2 h-4 w-4" />
-                                In nhãn barcode
-                            </Button>
-                        )}
-                        <Button
-                            type="button"
-                            variant="outline"
-                            className="w-full min-w-0 whitespace-normal"
-                            onClick={handleResetForm}
-                        >
-                            Tiếp nhận mẫu mới
-                        </Button>
-                    </div>
-                </div>
-            )}
-
-            <ClientQrScannerDialog
-                open={showQRScanner}
-                onOpenChange={setShowQRScanner}
-                onScan={handleQRScan}
-                serialController={serialController}
-            />
-            <SampleLabelPrintDialog
-                open={showLabelPrintDialog}
-                onOpenChange={setShowLabelPrintDialog}
-                onPrint={handleConfirmPrintBarcodeLabel}
-            />
-        </div>
+        <SampleAccessionContext
+            selectedClient={selectedClient}
+            onSelectClient={setSelectedClient}
+            showClientForm={showClientForm}
+            onOpenClientFormChange={setShowClientForm}
+            clientFormData={clientFormData}
+            onClientFormDataChange={setClientFormData}
+            selectedSampleType={selectedSampleType}
+            onSampleTypeChange={setSelectedSampleType}
+            sampleQuality={sampleQuality}
+            onSampleQualityChange={setSampleQuality}
+            receivedAtRegister={register('received_at')}
+            showQRScanner={showQRScanner}
+            onShowQRScannerChange={setShowQRScanner}
+            onQRScan={handleQRScan}
+            serialController={serialController}
+            submitError={submitError}
+            submitSuccess={submitSuccess}
+            createdSampleHref={createdSampleHref}
+            createdSampleId={createdSampleId}
+            onPrintBarcodeLabel={handlePrintBarcodeLabel}
+            onReset={handleResetForm}
+            showLabelPrintDialog={showLabelPrintDialog}
+            onShowLabelPrintDialogChange={setShowLabelPrintDialog}
+            onConfirmPrintBarcodeLabel={handleConfirmPrintBarcodeLabel}
+        />
     )
 
     const wizardProps = useMemo(() => ({
@@ -403,6 +297,8 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
         serialController,
         selectedSampleType,
         onSampleTypeChange: setSelectedSampleType,
+        sampleQuality,
+        onSampleQualityChange: setSampleQuality,
         receivedAtRegister: register('received_at'),
         receivedAtValue: receivedAtWatched || '',
         submitError,
@@ -411,7 +307,7 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
     }), [
         selectedClient, showClientForm, clientFormData,
         showQRScanner, handleQRScan, serialController,
-        selectedSampleType, register, receivedAtWatched,
+        selectedSampleType, sampleQuality, register, receivedAtWatched,
         submitError, submitSuccess, handleResetForm,
     ])
 
@@ -425,7 +321,7 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
                     specialties={specialties}
                     context={contextContent}
                     isSaving={isSubmitting}
-                    isSaveDisabled={!!submitSuccess}
+                    isSaveDisabled={!!submitSuccess || sampleQuality === null}
                     onSave={handleSubmit(onSubmit)}
                     saveLabel={selectedTests.length > 0
                         ? `Lưu & Chỉ định (${selectedTests.length})`

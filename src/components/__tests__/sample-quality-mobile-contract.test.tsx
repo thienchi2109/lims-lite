@@ -64,6 +64,8 @@ function createWizardProps(): AccessionMobileWizardProps {
         onQRScan: vi.fn(),
         selectedSampleType: 'Máu',
         onSampleTypeChange: vi.fn(),
+        sampleQuality: null,
+        onSampleQualityChange: vi.fn(),
         receivedAtRegister: {
             name: 'received_at',
             onChange: vi.fn(),
@@ -100,10 +102,8 @@ function MobileQualityHarness({ initialQuality = null }: {
     return (
         <AccessionMobileWizard
             {...createWizardProps()}
-            {...({
-                sampleQuality,
-                onSampleQualityChange: setSampleQuality,
-            } as object)}
+            sampleQuality={sampleQuality}
+            onSampleQualityChange={setSampleQuality}
         />
     )
 }

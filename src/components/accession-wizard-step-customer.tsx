@@ -16,7 +16,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
-import { QrCode, Scan, Calendar, ArrowRight } from 'lucide-react'
+import { SampleQualityField } from '@/components/sample-quality-field'
+import { Scan, Calendar, ArrowRight } from 'lucide-react'
 import type { ClientQrScannerDialogSerialController } from '@/components/client-qr-scanner-dialog'
 import type { UseFormRegisterReturn } from 'react-hook-form'
 
@@ -36,6 +37,8 @@ interface StepCustomerProps {
     /* Sample info */
     selectedSampleType: SampleType
     onSampleTypeChange: (type: SampleType) => void
+    sampleQuality: boolean | null
+    onSampleQualityChange: (value: boolean | null) => void
     receivedAtRegister: UseFormRegisterReturn<'received_at'>
     /* Navigation */
     onNext: () => void
@@ -55,6 +58,8 @@ export function AccessionWizardStepCustomer({
     serialController,
     selectedSampleType,
     onSampleTypeChange,
+    sampleQuality,
+    onSampleQualityChange,
     receivedAtRegister,
     onNext,
     canAdvance,
@@ -130,6 +135,11 @@ export function AccessionWizardStepCustomer({
                             onChange={onSampleTypeChange}
                         />
                     </div>
+
+                    <SampleQualityField
+                        value={sampleQuality}
+                        onChange={onSampleQualityChange}
+                    />
 
                     {/* Received time */}
                     <div>
