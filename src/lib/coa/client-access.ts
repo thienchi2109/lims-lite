@@ -3,7 +3,6 @@
  * HTTP routes own response mapping, storage access, and audit persistence.
  */
 
-import { isConfidentialAssociatedSample } from '@/lib/data/confidential-samples'
 import { isTokenExpired, verifyCoAToken } from '@/lib/jwt'
 import type { createAdminClient } from '@/lib/supabase/server'
 
@@ -61,6 +60,7 @@ export type ClientCoAAccessResult =
     | {
           ok: false
           clientId: string
+          sampleId: string | null
           reason: ClientCoAAccessFailureReason
       }
 
@@ -105,32 +105,54 @@ export async function loadAuthorizedClientCoA(
         .single()
 
     if (sampleError || !sample) {
-        return accessFailure(clientId, 'sample-not-found')
+        return accessFailure(clientId, null, 'sample-not-found')
     }
 
     if (sample.client_id !== clientId) {
-        return accessFailure(clientId, 'ownership-forbidden')
+        return accessFailure(clientId, sample.id, 'ownership-forbidden')
     }
 
     try {
-        const confidentialSample =
-            await isConfidentialAssociatedSample(sampleId)
+        const confidentialSample = await client
+            .from('results')
+            .select(`
+                sample_id,
+                assay:assay_definitions!results_assay_id_fkey!inner(
+                    is_confidential
+                )
+            `)
+            .eq('sample_id', sample.id)
+            .eq('assay.is_confidential', true)
+            .limit(1)
+            .maybeSingle()
+
+        if (confidentialSample.error) {
+            return accessFailure(
+                clientId,
+                sample.id,
+                'confidential-check-failed',
+            )
+        }
 
         if (confidentialSample.data) {
-            return accessFailure(clientId, 'not-found')
+            return accessFailure(clientId, sample.id, 'not-found')
         }
     } catch {
-        return accessFailure(clientId, 'confidential-check-failed')
+        return accessFailure(
+            clientId,
+            sample.id,
+            'confidential-check-failed',
+        )
     }
 
     if (sample.status !== 'completed') {
-        return accessFailure(clientId, 'sample-not-completed')
+        return accessFailure(clientId, sample.id, 'sample-not-completed')
     }
 
     const { data: report, error: reportError } = await client
         .from('coa_reports')
         .select('id, file_path, file_hash, generated_at, version')
-        .eq('sample_id', sampleId)
+        .eq('sample_id', sample.id)
         .eq('status', 'ready')
         .is('deleted_at', null)
         .order('version', { ascending: false })
@@ -138,7 +160,7 @@ export async function loadAuthorizedClientCoA(
         .single()
 
     if (reportError || !report) {
-        return accessFailure(clientId, 'report-not-ready')
+        return accessFailure(clientId, sample.id, 'report-not-ready')
     }
 
     return {
@@ -169,11 +191,13 @@ function identityFailure(
 
 function accessFailure(
     clientId: string,
+    sampleId: string | null,
     reason: ClientCoAAccessFailureReason,
 ): ClientCoAAccessResult {
     return {
         ok: false,
         clientId,
+        sampleId,
         reason,
     }
 }

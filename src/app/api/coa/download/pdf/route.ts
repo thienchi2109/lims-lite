@@ -3,6 +3,7 @@
  * Delivery remains gated by authenticated access, integrity, and audit commit.
  */
 
+import { randomUUID } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import {
     loadAuthorizedClientCoA,
@@ -33,6 +34,7 @@ const clientPdfRateLimiter = new PdfGenerationRateLimiter()
 
 export async function GET(request: NextRequest): Promise<Response> {
     let auditContext: ClientPdfAuditContext | null = null
+    const traceId = randomUUID()
 
     try {
         const sampleId = new URL(request.url).searchParams.get('sample_id')
@@ -52,9 +54,10 @@ export async function GET(request: NextRequest): Promise<Response> {
         auditContext = {
             client,
             clientId: identity.clientId,
-            sampleId,
+            sampleId: null,
             coaReportId: null,
             ipAddress: getClientIp(request),
+            traceId,
             userAgent: getUserAgent(request),
         }
 
@@ -64,7 +67,11 @@ export async function GET(request: NextRequest): Promise<Response> {
             sampleId,
         )
         if (!access.ok) {
+            auditContext.sampleId = access.sampleId
             const failure = createAccessFailure(access.reason)
+            if (access.reason === 'confidential-check-failed') {
+                logOperationalFailure(failure.reason, null, traceId)
+            }
             return auditFailureAndRespond(
                 auditContext,
                 failure.reason,
@@ -72,6 +79,7 @@ export async function GET(request: NextRequest): Promise<Response> {
             )
         }
 
+        auditContext.sampleId = access.sample.id
         auditContext.coaReportId = access.report.id
         const rateLimitDecision = clientPdfRateLimiter.consume({
             identityType: 'client',
@@ -140,7 +148,7 @@ export async function GET(request: NextRequest): Promise<Response> {
                 failureReason: null,
             })
         } catch {
-            return auditUnavailableResponse()
+            return auditUnavailableResponse(traceId)
         }
 
         return new Response(
@@ -157,7 +165,7 @@ export async function GET(request: NextRequest): Promise<Response> {
         )
     } catch (error) {
         if (!auditContext) {
-            return auditUnavailableResponse()
+            return auditUnavailableResponse(traceId)
         }
 
         if (isPdfGatewayError(error)) {

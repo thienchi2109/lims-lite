@@ -37,6 +37,7 @@ type QueryMock = {
     order: ReturnType<typeof vi.fn>
     limit: ReturnType<typeof vi.fn>
     single: ReturnType<typeof vi.fn>
+    maybeSingle: ReturnType<typeof vi.fn>
 }
 
 function createQuery(result: QueryResult): QueryMock {
@@ -47,6 +48,7 @@ function createQuery(result: QueryResult): QueryMock {
     query.order = vi.fn(() => query)
     query.limit = vi.fn(() => query)
     query.single = vi.fn(async () => result)
+    query.maybeSingle = vi.fn(async () => result)
     return query
 }
 
@@ -71,22 +73,36 @@ function createRequest(options: {
 }
 
 function createAccessClient({
+    sampleFound = true,
     sampleClientId = 'client-1',
     sampleStatus = 'completed',
+    confidential = false,
+    confidentialError = false,
     reportReady = true,
 }: {
+    sampleFound?: boolean
     sampleClientId?: string
     sampleStatus?: string
+    confidential?: boolean
+    confidentialError?: boolean
     reportReady?: boolean
 } = {}) {
     const samplesQuery = createQuery({
-        data: {
-            id: 'sample-uuid',
-            sample_id: 'XN-2026-0001',
-            client_id: sampleClientId,
-            status: sampleStatus,
-        },
-        error: null,
+        data: sampleFound
+            ? {
+                  id: 'sample-uuid',
+                  sample_id: 'XN-2026-0001',
+                  client_id: sampleClientId,
+                  status: sampleStatus,
+              }
+            : null,
+        error: sampleFound ? null : { message: 'Not found' },
+    })
+    const resultsQuery = createQuery({
+        data: confidential ? { sample_id: 'sample-uuid' } : null,
+        error: confidentialError
+            ? { message: 'sensitive database error' }
+            : null,
     })
     const reportsQuery = createQuery({
         data: reportReady
@@ -104,6 +120,9 @@ function createAccessClient({
         if (table === 'samples') {
             return samplesQuery
         }
+        if (table === 'results') {
+            return resultsQuery
+        }
         if (table === 'coa_reports') {
             return reportsQuery
         }
@@ -114,6 +133,7 @@ function createAccessClient({
         client: { from } as unknown as ClientCoAAccessClient,
         from,
         reportsQuery,
+        resultsQuery,
         samplesQuery,
     }
 }
@@ -195,11 +215,14 @@ describe('resolveClientCoAIdentity', () => {
 describe('loadAuthorizedClientCoA', () => {
     beforeEach(() => {
         vi.clearAllMocks()
-        mockIsConfidentialAssociatedSample.mockResolvedValue({ data: false })
+        mockIsConfidentialAssociatedSample.mockImplementation(() => {
+            throw new Error('Legacy confidential helper must not be called')
+        })
     })
 
     it('loads only the requested completed sample and latest ready report', async () => {
-        const { client, reportsQuery, samplesQuery } = createAccessClient()
+        const { client, reportsQuery, resultsQuery, samplesQuery } =
+            createAccessClient()
 
         const result = await loadAuthorizedClientCoA(
             client,
@@ -224,6 +247,15 @@ describe('loadAuthorizedClientCoA', () => {
         })
         expect(samplesQuery.eq).toHaveBeenCalledWith('id', 'sample-uuid')
         expect(samplesQuery.is).toHaveBeenCalledWith('deleted_at', null)
+        expect(resultsQuery.eq).toHaveBeenCalledWith(
+            'sample_id',
+            'sample-uuid',
+        )
+        expect(resultsQuery.eq).toHaveBeenCalledWith(
+            'assay.is_confidential',
+            true,
+        )
+        expect(resultsQuery.limit).toHaveBeenCalledWith(1)
         expect(reportsQuery.eq).toHaveBeenCalledWith(
             'sample_id',
             'sample-uuid',
@@ -236,10 +268,57 @@ describe('loadAuthorizedClientCoA', () => {
         expect(reportsQuery.limit).toHaveBeenCalledWith(1)
     })
 
-    it('rejects a sample owned by another client before confidential lookup', async () => {
-        const { client, from } = createAccessClient({
-            sampleClientId: 'client-2',
+    it('returns no resolved sample id when the requested sample does not exist', async () => {
+        const { client, from } = createAccessClient({ sampleFound: false })
+
+        const result = await loadAuthorizedClientCoA(
+            client,
+            'client-1',
+            'unknown-sample',
+        )
+
+        expect(result).toEqual({
+            ok: false,
+            clientId: 'client-1',
+            sampleId: null,
+            reason: 'sample-not-found',
         })
+        expect(from).toHaveBeenCalledTimes(1)
+    })
+
+    it.each([
+        [
+            'rejects a sample owned by another client',
+            { sampleClientId: 'client-2' },
+            'ownership-forbidden',
+            1,
+        ],
+        [
+            'conceals a confidential-associated sample',
+            { confidential: true },
+            'not-found',
+            2,
+        ],
+        [
+            'fails closed when the confidential lookup fails',
+            { confidentialError: true },
+            'confidential-check-failed',
+            2,
+        ],
+        [
+            'rejects an incomplete sample',
+            { sampleStatus: 'processing' },
+            'sample-not-completed',
+            2,
+        ],
+        [
+            'rejects a missing ready report',
+            { reportReady: false },
+            'report-not-ready',
+            3,
+        ],
+    ] as const)('%s', async (_name, options, reason, queryCount) => {
+        const { client, from } = createAccessClient(options)
 
         const result = await loadAuthorizedClientCoA(
             client,
@@ -250,82 +329,10 @@ describe('loadAuthorizedClientCoA', () => {
         expect(result).toEqual({
             ok: false,
             clientId: 'client-1',
-            reason: 'ownership-forbidden',
+            sampleId: 'sample-uuid',
+            reason,
         })
         expect(mockIsConfidentialAssociatedSample).not.toHaveBeenCalled()
-        expect(from).toHaveBeenCalledTimes(1)
-    })
-
-    it('conceals confidential-associated samples before report lookup', async () => {
-        const { client, from } = createAccessClient()
-        mockIsConfidentialAssociatedSample.mockResolvedValue({ data: true })
-
-        const result = await loadAuthorizedClientCoA(
-            client,
-            'client-1',
-            'sample-uuid',
-        )
-
-        expect(result).toEqual({
-            ok: false,
-            clientId: 'client-1',
-            reason: 'not-found',
-        })
-        expect(from).toHaveBeenCalledTimes(1)
-    })
-
-    it('fails closed when confidential association lookup fails', async () => {
-        const { client, from } = createAccessClient()
-        mockIsConfidentialAssociatedSample.mockRejectedValue(
-            new Error('sensitive database error'),
-        )
-
-        const result = await loadAuthorizedClientCoA(
-            client,
-            'client-1',
-            'sample-uuid',
-        )
-
-        expect(result).toEqual({
-            ok: false,
-            clientId: 'client-1',
-            reason: 'confidential-check-failed',
-        })
-        expect(from).toHaveBeenCalledTimes(1)
-    })
-
-    it('rejects incomplete samples before report lookup', async () => {
-        const { client, from } = createAccessClient({
-            sampleStatus: 'processing',
-        })
-
-        const result = await loadAuthorizedClientCoA(
-            client,
-            'client-1',
-            'sample-uuid',
-        )
-
-        expect(result).toEqual({
-            ok: false,
-            clientId: 'client-1',
-            reason: 'sample-not-completed',
-        })
-        expect(from).toHaveBeenCalledTimes(1)
-    })
-
-    it('rejects when the requested sample has no ready report', async () => {
-        const { client } = createAccessClient({ reportReady: false })
-
-        const result = await loadAuthorizedClientCoA(
-            client,
-            'client-1',
-            'sample-uuid',
-        )
-
-        expect(result).toEqual({
-            ok: false,
-            clientId: 'client-1',
-            reason: 'report-not-ready',
-        })
+        expect(from).toHaveBeenCalledTimes(queryCount)
     })
 })

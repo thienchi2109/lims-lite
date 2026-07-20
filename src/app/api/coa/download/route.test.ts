@@ -113,13 +113,11 @@ function mockPublicDownloadRoute({
         if (table === 'results') {
             return createThenableQuery({
                 data: sampleIsConfidential
-                    ? [
-                          {
-                              sample_id: 'sample-1',
-                              assay: { is_confidential: true },
-                          },
-                      ]
-                    : [],
+                    ? {
+                          sample_id: 'sample-1',
+                          assay: { is_confidential: true },
+                      }
+                    : null,
                 error: null,
             })
         }

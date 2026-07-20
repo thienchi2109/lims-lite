@@ -52,6 +52,7 @@ type QueryMock = {
     order: ReturnType<typeof vi.fn>
     limit: ReturnType<typeof vi.fn>
     single: ReturnType<typeof vi.fn>
+    maybeSingle: ReturnType<typeof vi.fn>
 }
 
 function createQuery(result: QueryResult): QueryMock {
@@ -62,6 +63,7 @@ function createQuery(result: QueryResult): QueryMock {
     query.order = vi.fn(() => query)
     query.limit = vi.fn(() => query)
     query.single = vi.fn(async () => result)
+    query.maybeSingle = vi.fn(async () => result)
     return query
 }
 
@@ -85,9 +87,16 @@ function mockAuthorizedClientPdfRoute() {
         },
         error: null,
     })
+    const resultsQuery = createQuery({
+        data: null,
+        error: null,
+    })
     const from = vi.fn((table: string) => {
         if (table === 'samples') {
             return samplesQuery
+        }
+        if (table === 'results') {
+            return resultsQuery
         }
         if (table === 'coa_reports') {
             return reportsQuery
@@ -115,6 +124,7 @@ function mockAuthorizedClientPdfRoute() {
 
     return {
         reportsQuery,
+        resultsQuery,
         samplesQuery,
     }
 }
@@ -130,7 +140,7 @@ function createPdfRequest(options: {
                 ? { authorization: 'Bearer public-token' }
                 : {}),
             'user-agent': 'Vitest Client',
-            'x-forwarded-for': options.ip,
+            'x-real-ip': options.ip,
         }),
         cookies: {
             get: vi.fn((name: string) =>
@@ -174,7 +184,7 @@ describe('GET /api/coa/download/pdf success contract', () => {
     ] as const)(
         'returns an audited PDF attachment with a valid %s token',
         async (auth, ip) => {
-            const { reportsQuery, samplesQuery } =
+            const { reportsQuery, resultsQuery, samplesQuery } =
                 mockAuthorizedClientPdfRoute()
 
             const response = await GET(createPdfRequest({ auth, ip }))
@@ -210,6 +220,10 @@ describe('GET /api/coa/download/pdf success contract', () => {
             })
             expect(samplesQuery.eq).toHaveBeenCalledWith(
                 'id',
+                'sample-uuid',
+            )
+            expect(resultsQuery.eq).toHaveBeenCalledWith(
+                'sample_id',
                 'sample-uuid',
             )
             expect(reportsQuery.eq).toHaveBeenCalledWith(
@@ -280,7 +294,12 @@ describe('GET /api/coa/download/pdf success contract', () => {
         expect(mockConvertHtmlToPdf).toHaveBeenCalledTimes(1)
         expect(consoleError).toHaveBeenCalledWith(
             'Client CoA PDF operational failure',
-            { reasonCode: 'audit_unavailable' },
+            expect.objectContaining({
+                reasonCode: 'audit_unavailable',
+                traceId: expect.stringMatching(
+                    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+                ),
+            }),
         )
         expect(JSON.stringify(consoleError.mock.calls)).not.toContain(
             'public-token',

@@ -41,9 +41,10 @@ const GATEWAY_AUDIT_REASONS: Record<
 export type ClientPdfAuditContext = {
     client: ClientCoAAccessClient
     clientId: string
-    sampleId: string
+    sampleId: string | null
     coaReportId: string | null
     ipAddress: string
+    traceId: string
     userAgent: string
 }
 
@@ -133,7 +134,7 @@ export async function auditFailureAndRespond(
         })
         return response
     } catch {
-        return auditUnavailableResponse()
+        return auditUnavailableResponse(context.traceId)
     }
 }
 
@@ -178,8 +179,8 @@ export function serviceUnavailableResponse(): NextResponse {
     )
 }
 
-export function auditUnavailableResponse(): NextResponse {
-    logOperationalFailure('audit_unavailable')
+export function auditUnavailableResponse(traceId: string): NextResponse {
+    logOperationalFailure('audit_unavailable', null, traceId)
     return NextResponse.json(
         {
             error:
@@ -209,18 +210,16 @@ export function logOperationalFailure(
         | ClientCoAPdfAuditFailureReason
         | 'audit_unavailable',
     gatewayRequestId?: string | null,
+    traceId?: string,
 ): void {
     console.error('Client CoA PDF operational failure', {
         reasonCode,
         ...(gatewayRequestId ? { gatewayRequestId } : {}),
+        ...(traceId ? { traceId } : {}),
     })
 }
 
 export function getClientIp(request: Request): string {
-    const forwardedFor = request.headers.get('x-forwarded-for')
-    if (forwardedFor) {
-        return forwardedFor.split(',')[0]?.trim() || 'unknown'
-    }
     return request.headers.get('x-real-ip')?.trim() || 'unknown'
 }
 

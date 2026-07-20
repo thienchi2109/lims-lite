@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import test from 'node:test'
+import path from 'node:path'
+import { test } from 'vitest'
 
-async function readWorkspaceFile(relativePath) {
-    return readFile(new URL(`../${relativePath}`, import.meta.url), 'utf8')
+async function readWorkspaceFile(relativePath: string) {
+    return readFile(path.resolve(process.cwd(), relativePath), 'utf8')
 }
 
 test('CoA portal does not embed auth token in URLs', async () => {

@@ -40,7 +40,7 @@ function createPdfRequest(ip: string) {
         headers: new Headers({
             authorization: 'Bearer public-token',
             'user-agent': 'Vitest Client',
-            'x-forwarded-for': ip,
+            'x-real-ip': ip,
         }),
         cookies: {
             get: vi.fn(() => undefined),
@@ -163,7 +163,12 @@ describe('GET /api/coa/download/pdf audit failure contract', () => {
         })
         expect(consoleError).toHaveBeenCalledWith(
             'Client CoA PDF operational failure',
-            { reasonCode: 'audit_unavailable' },
+            expect.objectContaining({
+                reasonCode: 'audit_unavailable',
+                traceId: expect.stringMatching(
+                    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+                ),
+            }),
         )
         expect(JSON.stringify(consoleError.mock.calls)).not.toContain(
             'public-token',

@@ -20,6 +20,7 @@ The system SHALL allow analysts, managers, doctors, and authenticated clients to
 - **WHEN** the client requests the PDF download
 - **THEN** any service-role query SHALL begin only after the token establishes the client identity
 - **AND** the query SHALL be scoped to the requested sample and report and limited to ownership, completed status, ready report status, confidential concealment, and authorized artifact access
+- **AND** confidential-association lookup SHALL use the same scoped service-role client without emitting raw database errors
 - **AND** conversion SHALL begin only after all access checks succeed
 - **AND** the route SHALL NOT expose a general service-role repository or RLS bypass
 - **AND** the system SHALL generate and return the PDF
@@ -102,6 +103,8 @@ The system SHALL return the PDF as `PhieuKetQuaXN-{samples.sample_id}-{YYYYMMDD}
 
 The system SHALL allow no more than five authorized PDF conversion attempts per authenticated identity and client IP address in any ten-minute window.
 
+For the client route, the IP component SHALL come only from the ingress-overwritten `X-Real-IP` header. Client-controlled or preserved `X-Forwarded-For` values SHALL NOT alter the limiter key.
+
 #### Scenario: Request is within the generation limit
 
 - **GIVEN** an authorized identity and IP combination has made fewer than five conversion attempts in the active ten-minute window
@@ -181,6 +184,8 @@ After a short-lived CoA token establishes the client identity, the system SHALL 
 - **GIVEN** a valid CoA token has established the client identity
 - **WHEN** the request fails an ownership, status, confidentiality, storage, integrity, rate-limit, resource, timeout, or conversion check
 - **THEN** the system SHALL record one failed PDF access outcome using an allowlisted non-sensitive reason code
+- **AND** `sample_id` SHALL remain `null` until the requested sample row has been resolved, then use only that resolved sample ID for later failures
+- **AND** a confidentiality lookup failure SHALL emit only an allowlisted reason code and an opaque trace ID
 - **AND** the failure reason SHALL NOT contain sample identifiers, patient data, HTML, URLs, tokens, cookies, authorization headers, or service credentials
 
 #### Scenario: Client audit persistence is unavailable

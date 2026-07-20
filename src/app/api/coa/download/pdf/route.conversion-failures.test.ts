@@ -38,13 +38,14 @@ import { GET } from './route'
 
 let testIdentity = 0
 
-function createPdfRequest(ip: string) {
+function createPdfRequest(ip: string, forwardedFor = ip) {
     return {
         url: 'http://localhost/api/coa/download/pdf?sample_id=sample-uuid',
         headers: new Headers({
             authorization: 'Bearer public-token',
             'user-agent': 'Vitest Client',
-            'x-forwarded-for': ip,
+            'x-forwarded-for': forwardedFor,
+            'x-real-ip': ip,
         }),
         cookies: {
             get: vi.fn(() => undefined),
@@ -177,6 +178,34 @@ describe('GET /api/coa/download/pdf conversion failures', () => {
         expect(mockConvertHtmlToPdf).toHaveBeenCalledTimes(5)
         expect(mockAccessLogInsert).toHaveBeenLastCalledWith(
             expect.objectContaining({
+                success: false,
+                failure_reason: 'rate_limited',
+            }),
+        )
+    })
+
+    it('ignores forged forwarded hops when rate limiting an identified client', async () => {
+        const trustedIp = `203.0.113.${120 + testIdentity}`
+
+        for (let attempt = 0; attempt < 5; attempt += 1) {
+            const response = await GET(
+                createPdfRequest(
+                    trustedIp,
+                    `198.51.100.${attempt}, 192.0.2.10`,
+                ),
+            )
+            expect(response.status).toBe(200)
+        }
+
+        const response = await GET(
+            createPdfRequest(trustedIp, '198.51.100.250, 192.0.2.10'),
+        )
+
+        expect(response.status).toBe(429)
+        expect(mockConvertHtmlToPdf).toHaveBeenCalledTimes(5)
+        expect(mockAccessLogInsert).toHaveBeenLastCalledWith(
+            expect.objectContaining({
+                ip_address: trustedIp,
                 success: false,
                 failure_reason: 'rate_limited',
             }),

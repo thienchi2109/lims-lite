@@ -44,7 +44,7 @@ export class ClientCoAPdfAuditPersistenceError extends Error {
 
 type ClientCoAPdfAuditEntry = {
     clientId: string
-    sampleId: string
+    sampleId: string | null
     coaReportId: string | null
     ipAddress: string
     userAgent: string

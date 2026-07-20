@@ -34,7 +34,7 @@ function createPdfRequest(ip: string) {
         headers: new Headers({
             authorization: 'Bearer public-token',
             'user-agent': 'Vitest Client',
-            'x-forwarded-for': ip,
+            'x-real-ip': ip,
         }),
         cookies: {
             get: vi.fn(() => undefined),
@@ -107,45 +107,64 @@ describe('GET /api/coa/download/pdf access failures', () => {
             404,
             'Không tìm thấy mẫu',
             'sample_not_found',
+            null,
         ],
         [
             'ownership-forbidden',
             403,
             'Bạn không có quyền truy cập mẫu này',
             'ownership_forbidden',
+            'sample-uuid',
         ],
         [
             'not-found',
             404,
             'Không tìm thấy phiếu kết quả',
             'confidential_concealed',
+            'sample-uuid',
         ],
         [
             'confidential-check-failed',
             404,
             'Không tìm thấy phiếu kết quả',
             'confidential_check_failed',
+            'sample-uuid',
         ],
         [
             'sample-not-completed',
             400,
             'Mẫu chưa hoàn thành xét nghiệm',
             'sample_not_completed',
+            'sample-uuid',
         ],
         [
             'report-not-ready',
             404,
             'Giấy chứng nhận chưa sẵn sàng. Vui lòng liên hệ phòng xét nghiệm',
             'report_not_ready',
+            'sample-uuid',
         ],
     ] as const)(
         'maps %s without conversion and audits %s',
-        async (reason, status, message, auditReason) => {
+        async (reason, status, message, auditReason, resolvedSampleId) => {
+            const consoleError = vi
+                .spyOn(console, 'error')
+                .mockImplementation(() => undefined)
             mockLoadAuthorizedClientCoA.mockResolvedValue({
                 ok: false,
                 clientId: 'client-1',
+                sampleId: resolvedSampleId,
                 reason,
             })
+            if (reason === 'sample-not-found') {
+                mockAccessLogInsert.mockImplementation(async (entry) => ({
+                    data: null,
+                    error:
+                        entry.sample_id === null
+                            ? null
+                            : { message: 'sample_id foreign key violation' },
+                }))
+            }
 
             const response = await GET(
                 createPdfRequest(`203.0.113.${60 + status % 10}`),
@@ -159,13 +178,33 @@ describe('GET /api/coa/download/pdf access failures', () => {
             expect(mockConvertHtmlToPdf).not.toHaveBeenCalled()
             expect(mockAccessLogInsert).toHaveBeenCalledWith({
                 client_id: 'client-1',
-                sample_id: 'sample-uuid',
+                sample_id: resolvedSampleId,
                 coa_report_id: null,
                 ip_address: `203.0.113.${60 + status % 10}`,
                 user_agent: 'Vitest Client',
                 success: false,
                 failure_reason: auditReason,
             })
+            if (reason === 'confidential-check-failed') {
+                expect(consoleError).toHaveBeenCalledWith(
+                    'Client CoA PDF operational failure',
+                    expect.objectContaining({
+                        reasonCode: 'confidential_check_failed',
+                        traceId: expect.stringMatching(
+                            /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+                        ),
+                    }),
+                )
+            } else {
+                expect(consoleError).not.toHaveBeenCalled()
+            }
+            expect(JSON.stringify(consoleError.mock.calls)).not.toContain(
+                'public-token',
+            )
+            expect(JSON.stringify(consoleError.mock.calls)).not.toContain(
+                'sample-uuid',
+            )
+            consoleError.mockRestore()
         },
     )
 
@@ -173,6 +212,7 @@ describe('GET /api/coa/download/pdf access failures', () => {
         mockLoadAuthorizedClientCoA.mockResolvedValue({
             ok: false,
             clientId: 'client-1',
+            sampleId: 'sample-uuid',
             reason: 'ownership-forbidden',
         })
         mockAccessLogInsert.mockResolvedValue({
@@ -191,6 +231,15 @@ describe('GET /api/coa/download/pdf access failures', () => {
                 'Không thể hoàn tất tải PDF lúc này. Vui lòng thử lại sau.',
         })
         expect(mockConvertHtmlToPdf).not.toHaveBeenCalled()
+        expect(consoleError).toHaveBeenCalledWith(
+            'Client CoA PDF operational failure',
+            expect.objectContaining({
+                reasonCode: 'audit_unavailable',
+                traceId: expect.stringMatching(
+                    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+                ),
+            }),
+        )
         expect(JSON.stringify(consoleError.mock.calls)).not.toContain(
             'public-token',
         )
