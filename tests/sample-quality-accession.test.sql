@@ -168,7 +168,7 @@ BEGIN
     WHERE table_name = 'samples'
       AND record_id = v_create_sample_id
       AND operation = 'INSERT'
-    ORDER BY created_at DESC
+    ORDER BY changed_at DESC
     LIMIT 1;
 
     SELECT new_values->'sample_quality'
@@ -177,7 +177,7 @@ BEGIN
     WHERE table_name = 'samples'
       AND record_id = v_assigned_sample_id
       AND operation = 'INSERT'
-    ORDER BY created_at DESC
+    ORDER BY changed_at DESC
     LIMIT 1;
 
     INSERT INTO sample_quality_runtime_results
