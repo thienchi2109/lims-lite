@@ -125,7 +125,6 @@ BEGIN
         status,
         received_by,
         type,
-        description,
         sample_quality
     )
     VALUES (
@@ -136,7 +135,6 @@ BEGIN
         'received',
         v_analyst_id,
         'Máu',
-        'Historical row before enforcement',
         NULL
     );
 
@@ -144,14 +142,14 @@ BEGIN
     ENABLE TRIGGER samples_require_quality_on_insert;
 
     UPDATE public.samples
-    SET description = 'Historical row updated after enforcement'
+    SET client_name = 'Historical sample updated after enforcement'
     WHERE id = v_historical_sample_id;
 
     SELECT EXISTS (
         SELECT 1
         FROM public.samples
         WHERE id = v_historical_sample_id
-          AND description = 'Historical row updated after enforcement'
+          AND client_name = 'Historical sample updated after enforcement'
           AND sample_quality IS NULL
     )
     INTO v_historical_update_preserved;
