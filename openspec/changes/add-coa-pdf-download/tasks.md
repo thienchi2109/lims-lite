@@ -50,11 +50,28 @@
 
 ## Phase 5. Thêm luồng PDF cho staff
 
-- [ ] 5.1 Viết failing route tests cho `GET /api/coa/view/pdf`: analyst, manager, doctor, role bị cấm, confidential access, hash mismatch, gateway auth failure và conversion failure.
-- [ ] 5.2 Tách hoặc tái sử dụng staff CoA access helper từ route HTML mà không đổi response hiện tại; chạy characterization tests sau refactor.
-- [ ] 5.3 Implement `src/app/api/coa/view/pdf/route.ts` với rate limit, latest ready report, integrity check và private no-store attachment response.
-- [ ] 5.4 Kiểm tra filename `PhieuKetQuaXN-{samples.sample_id}-{YYYYMMDD}.pdf` từ `samples.sample_id` và `coa_reports.generated_at`; xác nhận request bị từ chối không gọi PDF gateway hoặc raw Gotenberg.
-- [ ] 5.5 Chạy focused staff route tests và ghi commit boundary cho staff PDF.
+> Giữ Phase 5 trong cùng OpenSpec change và một branch/PR. Thực hiện tuần tự ba
+> TDD slice 5A, 5B và 5C; mỗi slice phải về green và có commit boundary riêng.
+> Không thêm client route hoặc UI trước Phase 6 và Phase 7.
+
+### Slice 5A. Tách shared staff CoA access contract
+
+- [ ] 5.1 Viết failing tests cho shared staff CoA access loader: authenticated user, allowlist analyst/manager/doctor, confidential concealment, completed sample và latest ready report; kết quả authorized phải mang đủ `user.id`, `samples.sample_id`, `coa_reports.file_path`, `file_hash` và `generated_at` cho route PDF.
+- [ ] 5.2 Implement helper nhỏ dưới `src/lib/coa/`, tái sử dụng `getUserConfidentialAccess` và `isConfidentialAssociatedSample` mà không sửa hai helper có blast radius rộng; refactor route HTML staff dùng helper mới.
+- [ ] 5.3 Chạy unit tests của helper cùng `src/app/api/coa/view/route.test.ts`; xác nhận status, error body, storage behavior và HTML headers không đổi, rồi ghi commit boundary cho Slice 5A.
+
+### Slice 5B. Khóa staff PDF success contract
+
+- [ ] 5.4 Viết failing route tests cho `GET /api/coa/view/pdf`: analyst, manager, doctor và confidential-authorized success; rate-limit key theo staff identity + IP; latest ready report; integrity pass; chỉ sau authorization mới gọi authenticated PDF gateway.
+- [ ] 5.5 Viết failing tests cho response `application/pdf`, `Content-Disposition` attachment, `Cache-Control: private, no-store` và filename `PhieuKetQuaXN-{samples.sample_id}-{YYYYMMDD}.pdf` từ filename-safe `samples.sample_id` cùng `coa_reports.generated_at` theo `Asia/Ho_Chi_Minh`.
+- [ ] 5.6 Implement success path tối thiểu tại `src/app/api/coa/view/pdf/route.ts` bằng shared access loader, bounded rate limiter, storage HTML, hash verification, `convertHtmlToPdf()` và existing filename helper; route không nhận conversion URL, headers hoặc credential từ caller.
+- [ ] 5.7 Chạy focused helper/HTML/PDF route tests về green và ghi commit boundary cho Slice 5B.
+
+### Slice 5C. Khóa failure model và application boundary
+
+- [ ] 5.8 Viết failing route tests cho unauthenticated, role bị cấm, confidential concealment, sample chưa completed, ready report thiếu, storage failure, hash mismatch, rate limit, gateway auth failure, timeout, service unavailable, gateway error và non-PDF response.
+- [ ] 5.9 Implement typed Vietnamese failure mapping không lộ dữ liệu nhạy cảm; mọi request bị từ chối trước conversion không được gọi PDF gateway, mỗi conversion attempt chỉ gọi gateway một lần và không retry/fallback raw Gotenberg.
+- [ ] 5.10 Chạy focused staff helper/HTML/PDF route tests, toàn bộ gateway-client tests, application-boundary tests và `rtk npm run typecheck`; xác nhận file mới dưới 350 dòng và ghi commit boundary cho Slice 5C.
 
 ## Phase 6. Thêm luồng PDF cho client
 
