@@ -169,6 +169,16 @@ refactor: Optimize database query in practitioners list
 planning, code exploration, or edits:
 
 - Recall repo-scoped durable memory from agentmemory for the current workspace.
+- Query with 3-6 distinctive concepts: repository name plus the change, feature,
+  file, or phase. Example: `lims-lite add-sample-quality-assessment Phase 2`.
+- Avoid long over-constrained queries and generic recency phrases such as
+  `most recent work`; either can return no results even when the memory exists.
+- If recall is empty, retry with fewer concrete concepts before treating memory
+  as unavailable. After `memory_save`, verify immediately using the same short
+  distinctive concepts.
+- Do not rely on session association or relative recency. When the newest record
+  matters, retrieve candidates with short queries and compare their `createdAt`
+  values.
 - Use recalled decisions, constraints, prior issue context, and verified
   workflows to guide discovery.
 - Re-check drift-prone facts against the current repository, GitHub, or runtime
