@@ -108,11 +108,17 @@
 
 ## Phase 8. Quality gates trong source workspace
 
-- [ ] 8.1 Chạy toàn bộ focused CoA PDF, preview, auth parity và token-leak tests.
-- [ ] 8.2 Chạy `rtk npm run lint`, `rtk npm run typecheck` và `rtk npm run build`.
-- [ ] 8.3 Chạy `rtk run "docker compose config --quiet"` và static tests xác nhận app chỉ nối `pdf-client`, chỉ gọi authenticated `pdf-gateway`, không truy cập raw Gotenberg, hai PDF service không có host/Nginx/Tunnel/Tailscale exposure, Gotenberg có deny policy cho non-public IP, và conversion client chỉ gửi dedicated gateway bearer thay vì forward auth material.
-- [ ] 8.4 Xác nhận không có migration/RLS/storage schema thay đổi; không chạy Supabase MCP, Supabase CLI hoặc database migration.
-- [ ] 8.5 Chạy React Doctor cho diff nếu phase UI thay đổi React và xử lý các finding có giá trị.
+- [x] 8.1 Chạy toàn bộ focused CoA PDF, preview, auth parity và token-leak tests.
+- [x] 8.2 Chạy `rtk npm run lint`, `rtk npm run typecheck` và `rtk npm run build`.
+- [x] 8.3 Chạy `rtk run "docker compose config --quiet"` và static tests xác nhận app chỉ nối `pdf-client`, chỉ gọi authenticated `pdf-gateway`, không truy cập raw Gotenberg, hai PDF service không có host/Nginx/Tunnel/Tailscale exposure, Gotenberg có deny policy cho non-public IP, và conversion client chỉ gửi dedicated gateway bearer thay vì forward auth material.
+- [x] 8.4 Xác nhận không có migration/RLS/storage schema thay đổi; không chạy Supabase MCP, Supabase CLI hoặc database migration.
+- [x] 8.5 Chạy React Doctor cho diff nếu phase UI thay đổi React và xử lý các finding có giá trị.
+
+> Verification ngày 2026-07-20: 22 focused test files với 166 tests pass;
+> Compose config hợp lệ và 11 static security test files với 91 tests pass;
+> lint pass với 0 errors (95 warnings tồn đọng ngoài diff), typecheck và production
+> build pass; diff không có migration, SQL hoặc thay đổi dưới `supabase/`; React
+> Doctor trên branch diff so với `main` đạt 100/100 và không có finding.
 
 ## Phase 9. Rollout và kiểm chứng trên home server
 
