@@ -69,9 +69,9 @@
 
 ### Slice 5C. Khóa failure model và application boundary
 
-- [ ] 5.8 Viết failing route tests cho unauthenticated, role bị cấm, confidential concealment, sample chưa completed, ready report thiếu, storage failure, hash mismatch, rate limit, gateway auth failure, timeout, service unavailable, gateway error và non-PDF response.
-- [ ] 5.9 Implement typed Vietnamese failure mapping không lộ dữ liệu nhạy cảm; mọi request bị từ chối trước conversion không được gọi PDF gateway, mỗi conversion attempt chỉ gọi gateway một lần và không retry/fallback raw Gotenberg.
-- [ ] 5.10 Chạy focused staff helper/HTML/PDF route tests, toàn bộ gateway-client tests, application-boundary tests và `rtk npm run typecheck`; xác nhận file mới dưới 350 dòng và ghi commit boundary cho Slice 5C.
+- [x] 5.8 Viết failing route tests cho unauthenticated, role bị cấm, confidential concealment, sample chưa completed, ready report thiếu, storage failure, hash mismatch, rate limit, gateway auth failure, timeout, service unavailable, gateway error và non-PDF response.
+- [x] 5.9 Implement typed Vietnamese failure mapping không lộ dữ liệu nhạy cảm; mọi request bị từ chối trước conversion không được gọi PDF gateway, mỗi conversion attempt chỉ gọi gateway một lần và không retry/fallback raw Gotenberg.
+- [x] 5.10 Chạy focused staff helper/HTML/PDF route tests, toàn bộ gateway-client tests, application-boundary tests và `rtk npm run typecheck`; xác nhận file mới dưới 350 dòng và ghi commit boundary cho Slice 5C.
 
 ## Phase 6. Thêm luồng PDF cho client
 
