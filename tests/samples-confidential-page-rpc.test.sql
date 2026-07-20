@@ -82,8 +82,8 @@ BEGIN
         phone = EXCLUDED.phone,
         address = EXCLUDED.address;
 
-    INSERT INTO public.samples (id, sample_id, client_id, client_name, status, received_by, type)
-    VALUES ('64444444-4444-4444-4444-444444444444', 'BATCH4-HIV-PAGE-RPC', '63333333-3333-3333-3333-333333333333', 'Bệnh nhân HIV Batch 4', 'received', '61111111-1111-1111-1111-111111111111', 'Máu')
+    INSERT INTO public.samples (id, sample_id, client_id, client_name, status, received_by, type, sample_quality)
+    VALUES ('64444444-4444-4444-4444-444444444444', 'BATCH4-HIV-PAGE-RPC', '63333333-3333-3333-3333-333333333333', 'Bệnh nhân HIV Batch 4', 'received', '61111111-1111-1111-1111-111111111111', 'Máu', TRUE)
     ON CONFLICT (id) DO UPDATE
     SET
         sample_id = EXCLUDED.sample_id,

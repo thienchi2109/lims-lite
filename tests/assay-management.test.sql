@@ -79,8 +79,8 @@ DECLARE
     test_sample_id UUID := '88888888-8888-8888-8888-888888888888';
 BEGIN
     -- Create sample
-    INSERT INTO samples (id, sample_id, client_name, received_by)
-    VALUES (test_sample_id, 'TEST-SAMPLE-001', 'Test Client', '22222222-2222-2222-2222-222222222222')
+    INSERT INTO samples (id, sample_id, client_name, received_by, sample_quality)
+    VALUES (test_sample_id, 'TEST-SAMPLE-001', 'Test Client', '22222222-2222-2222-2222-222222222222', TRUE)
     ON CONFLICT (id) DO NOTHING;
 
     -- Create result that references the pH assay

@@ -138,7 +138,8 @@ BEGIN
         client_name,
         status,
         received_by,
-        type
+        type,
+        sample_quality
     )
     VALUES
         (
@@ -148,7 +149,8 @@ BEGIN
             'Result Assessment Client',
             'in_progress',
             v_analyst_id,
-            'Nước'
+            'Nước',
+            TRUE
         ),
         (
             v_sample_invalid_id,
@@ -157,7 +159,8 @@ BEGIN
             'Result Assessment Client',
             'in_progress',
             v_analyst_id,
-            'Nước'
+            'Nước',
+            TRUE
         ),
         (
             v_sample_stale_id,
@@ -166,7 +169,8 @@ BEGIN
             'Result Assessment Client',
             'in_progress',
             v_analyst_id,
-            'Nước'
+            'Nước',
+            TRUE
         ),
         (
             v_sample_foreign_id,
@@ -175,7 +179,8 @@ BEGIN
             'Result Assessment Client',
             'in_progress',
             v_analyst_id,
-            'Nước'
+            'Nước',
+            TRUE
         );
 
     INSERT INTO public.results (

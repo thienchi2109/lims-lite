@@ -30,11 +30,11 @@
 
 ## Phase 5: Database Enforcement And Security Closeout
 
-- [ ] 5.1 Create the next forward-only enforcement migration with baseline assertions that the quality-aware RPC signatures and nullable column from Phase 2 are present.
-- [ ] 5.2 Revoke and drop the legacy RPC signatures so authenticated callers cannot bypass the required quality value, while preserving the quality-aware signatures and their exact least-privilege grants.
-- [ ] 5.3 Add a `public.samples` guard that rejects new INSERTs with `sample_quality IS NULL` without backfilling or blocking unrelated updates to historical rows.
-- [ ] 5.4 Update existing SQL fixtures and tests that insert directly into `public.samples` so post-enforcement coverage supplies an explicit quality value where the row represents a new accession.
-- [ ] 5.5 Register or extend `run_security_tests()` coverage for RPC role checks, grants, insert enforcement, RLS preservation, historical `NULL` rows, and audit behavior; keep the enforcement migration unapplied until Phase 6.
+- [x] 5.1 Create the next forward-only enforcement migration with baseline assertions that the quality-aware RPC signatures and nullable column from Phase 2 are present.
+- [x] 5.2 Revoke and drop the legacy RPC signatures so authenticated callers cannot bypass the required quality value, while preserving the quality-aware signatures and their exact least-privilege grants.
+- [x] 5.3 Add a `public.samples` guard that rejects new INSERTs with `sample_quality IS NULL` without backfilling or blocking unrelated updates to historical rows.
+- [x] 5.4 Update existing SQL fixtures and tests that insert directly into `public.samples` so post-enforcement coverage supplies an explicit quality value where the row represents a new accession.
+- [x] 5.5 Register or extend `run_security_tests()` coverage for RPC role checks, grants, insert enforcement, RLS preservation, historical `NULL` rows, and audit behavior; keep the enforcement migration unapplied until Phase 6.
 
 ## Phase 6: Rollout And Verification
 

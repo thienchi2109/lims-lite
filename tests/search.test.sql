@@ -29,12 +29,12 @@ SET search_path TO public;
 \echo 'Testing that more relevant results rank higher'
 
 -- Insert test samples with different relevance levels
-INSERT INTO samples (sample_id, description, type, status)
+INSERT INTO samples (sample_id, description, type, status, sample_quality)
 VALUES
-    ('RANK-001', 'Máu toàn phần', 'blood', 'received'),
-    ('RANK-002', 'Máu', 'blood', 'received'),
-    ('RANK-003', 'Huyết thanh máu người', 'serum', 'received'),
-    ('RANK-004', 'Nước tiểu người bệnh', 'urine', 'received')
+    ('RANK-001', 'Máu toàn phần', 'blood', 'received', TRUE),
+    ('RANK-002', 'Máu', 'blood', 'received', TRUE),
+    ('RANK-003', 'Huyết thanh máu người', 'serum', 'received', TRUE),
+    ('RANK-004', 'Nước tiểu người bệnh', 'urine', 'received', TRUE)
 ON CONFLICT (sample_id) DO NOTHING;
 
 -- Test: Search for "máu" should rank exact matches higher
@@ -109,8 +109,8 @@ BEGIN
 END $$;
 
 -- Insert test sample
-INSERT INTO samples (sample_id, description, type, status)
-VALUES ('RLS-001', 'Test sample for RLS', 'blood', 'received')
+INSERT INTO samples (sample_id, description, type, status, sample_quality)
+VALUES ('RLS-001', 'Test sample for RLS', 'blood', 'received', TRUE)
 ON CONFLICT (sample_id) DO NOTHING;
 
 -- Test as analyst: Should see sample
@@ -182,11 +182,11 @@ RESET request.jwt.claims;
 \echo 'Testing that diacritics and non-diacritics return same results'
 
 -- Insert Vietnamese test samples
-INSERT INTO samples (sample_id, description, type, status)
+INSERT INTO samples (sample_id, description, type, status, sample_quality)
 VALUES
-    ('VN-001', 'Máu toàn phần người bệnh', 'blood', 'received'),
-    ('VN-002', 'Huyết thanh máu', 'serum', 'received'),
-    ('VN-003', 'Nước tiểu sáng', 'urine', 'received')
+    ('VN-001', 'Máu toàn phần người bệnh', 'blood', 'received', TRUE),
+    ('VN-002', 'Huyết thanh máu', 'serum', 'received', TRUE),
+    ('VN-003', 'Nước tiểu sáng', 'urine', 'received', TRUE)
 ON CONFLICT (sample_id) DO NOTHING;
 
 -- Test: Search with diacritics
@@ -240,8 +240,8 @@ DELETE FROM samples WHERE sample_id LIKE 'VN-%';
 \echo 'Testing that global_search returns results from multiple entities'
 
 -- Insert test data across entities
-INSERT INTO samples (sample_id, description, type, status)
-VALUES ('GLOBAL-S1', 'Test global search sample', 'blood', 'received')
+INSERT INTO samples (sample_id, description, type, status, sample_quality)
+VALUES ('GLOBAL-S1', 'Test global search sample', 'blood', 'received', TRUE)
 ON CONFLICT (sample_id) DO NOTHING;
 
 INSERT INTO clients (name, phone, address)

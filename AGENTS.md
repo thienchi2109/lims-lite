@@ -144,7 +144,10 @@ refactor: Optimize database query in practitioners list
 
 ## File Structure Expectations
 
-- Files: 250-350 lines maximum, single responsibility
+- Application and test files: target 250-350 lines, single responsibility
+- SQL migrations may exceed 350 lines when baseline assertions, security
+  hardening, and verification must remain atomic and auditable. Do not split or
+  compress migration logic when that would reduce correctness or reviewability.
 - Filenames: Descriptive, match content exactly
 - Headers: First 5-10 lines explain purpose (multi-item files only)
 
@@ -160,7 +163,8 @@ refactor: Optimize database query in practitioners list
 - Navigate first: Understand structure before reading code
 - Read purposefully: Only open relevant files
 - Trust the structure: Filename and location tell you what's inside
-- Small focused changes: Maintain 250-350 line limit
+- Small focused changes: Maintain the 250-350 line target outside justified
+  SQL migration exceptions
 - Keep it clean: Don't break existing conventions
 
 ## Session Memory Recall (CRITICAL)
@@ -213,7 +217,8 @@ planning, code exploration, or edits:
 ## Quality Check
 
 Before completing tasks:
-1. Files under 350 lines
+1. Files under 350 lines where practical; longer SQL migrations must remain
+   single-purpose, explicit, and easier to audit than a split or compressed form
 2. Filenames accurately describe content
 3. Code is self-documenting
 4. Directory structure stays logical
