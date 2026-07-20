@@ -69,7 +69,7 @@ export function getStylesheet(): string {
         .info-value { font-weight: 400; }
         .info-value.highlight { text-transform: uppercase; font-weight: bold; font-size: 16px; }
 
-        .res-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 14px; }
+        .res-table { width: 100%; table-layout: fixed; border-collapse: collapse; margin-bottom: 16px; font-size: 14px; }
         .res-table th, .res-table td { border: 1px solid #9ca3af; padding: 8px; vertical-align: middle; }
         .res-table th { background-color: #dbeafe; font-weight: 600; text-align: center; }
         .res-group-header td { background-color: #ffe4e6; font-weight: bold; color: #be123c; text-transform: uppercase; padding-left: 16px; }
@@ -77,8 +77,11 @@ export function getStylesheet(): string {
         .res-value { font-weight: 400; text-align: center; font-size: 15px; }
         .res-value-outside-reference-range { font-weight: 700; }
         .res-unit { text-align: center; }
-        .res-range { text-align: center; font-style: italic; }
+        .res-range { text-align: center; font-style: italic; font-size: 12px; overflow-wrap: anywhere; }
+        .res-range-line { display: block; overflow-wrap: anywhere; }
+        .res-range-measurement { white-space: nowrap; }
         .res-method { text-align: center; font-size: 12px; }
+        .res-name, .res-unit, .res-method { overflow-wrap: anywhere; }
         .res-assessment { text-align: center; font-size: 12px; font-weight: 600; }
 
         .draft-review-footer {
