@@ -10,9 +10,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import {
-    getUserConfidentialAccess,
-    isConfidentialAssociatedSample,
-} from '@/lib/data/confidential-samples'
+    loadAuthorizedStaffCoA,
+    type StaffCoAAccessFailureReason,
+} from '@/lib/coa/staff-access'
 
 const COA_NOT_FOUND_ERROR = 'Không tìm thấy phiếu kết quả'
 
@@ -24,125 +24,18 @@ const COA_NOT_FOUND_ERROR = 'Không tìm thấy phiếu kết quả'
 export async function GET(request: NextRequest) {
     try {
         const supabase = await createClient()
-
-        // Step 1: Verify user is authenticated staff
-        const {
-            data: { user },
-            error: authError,
-        } = await supabase.auth.getUser()
-
-        if (authError || !user) {
-            return NextResponse.json(
-                { error: 'Vui lòng đăng nhập' },
-                { status: 401 }
-            )
-        }
-
-        // Step 2: Verify user role (must be analyst, manager, or doctor)
-        const { data: userData, error: roleError } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', user.id)
-            .single()
-
-        if (roleError || !userData) {
-            return NextResponse.json(
-                { error: 'Không tìm thấy thông tin người dùng' },
-                { status: 403 }
-            )
-        }
-
-        if (!['analyst', 'manager', 'doctor'].includes(userData.role)) {
-            return NextResponse.json(
-                { error: 'Bạn không có quyền xem phiếu kết quả' },
-                { status: 403 }
-            )
-        }
-
-        // Step 3: Validate sample_id parameter
         const { searchParams } = new URL(request.url)
         const sampleId = searchParams.get('sample_id')
+        const access = await loadAuthorizedStaffCoA(supabase, sampleId)
 
-        if (!sampleId) {
-            return NextResponse.json(
-                { error: 'Thiếu mã mẫu' },
-                { status: 400 }
-            )
+        if (!access.ok) {
+            return createAccessFailureResponse(access.reason)
         }
 
-        const access = await getUserConfidentialAccess(user.id, supabase)
-
-        if (access.error) {
-            return NextResponse.json(
-                { error: 'Không thể xác minh quyền truy cập' },
-                { status: 500 }
-            )
-        }
-
-        if (!access.canAccessConfidential) {
-            try {
-                const confidentialSample = await isConfidentialAssociatedSample(sampleId)
-
-                if (confidentialSample.data) {
-                    return NextResponse.json(
-                        { error: COA_NOT_FOUND_ERROR },
-                        { status: 404 }
-                    )
-                }
-            } catch (error) {
-                console.error('Confidential CoA association check failed:', error)
-                return NextResponse.json(
-                    { error: COA_NOT_FOUND_ERROR },
-                    { status: 404 }
-                )
-            }
-        }
-
-        // Step 4: Fetch sample to verify it exists and is completed
-        const { data: sample, error: sampleError } = await supabase
-            .from('samples')
-            .select('id, sample_id, status')
-            .eq('id', sampleId)
-            .is('deleted_at', null)
-            .single()
-
-        if (sampleError || !sample) {
-            return NextResponse.json(
-                { error: COA_NOT_FOUND_ERROR },
-                { status: 404 }
-            )
-        }
-
-        if (sample.status !== 'completed') {
-            return NextResponse.json(
-                { error: 'Mẫu chưa hoàn thành xét nghiệm' },
-                { status: 400 }
-            )
-        }
-
-        // Step 5: Fetch latest ready CoA report
-        const { data: coaReport, error: coaError } = await supabase
-            .from('coa_reports')
-            .select('id, file_path, version')
-            .eq('sample_id', sampleId)
-            .eq('status', 'ready')
-            .is('deleted_at', null)
-            .order('version', { ascending: false })
-            .limit(1)
-            .single()
-
-        if (coaError || !coaReport) {
-            return NextResponse.json(
-                { error: 'Phiếu kết quả chưa được tạo' },
-                { status: 404 }
-            )
-        }
-
-        // Step 6: Download file from storage
         const { data: fileData, error: downloadError } = await supabase
             .storage
             .from('coa-reports')
-            .download(coaReport.file_path)
+            .download(access.report.filePath)
 
         if (downloadError || !fileData) {
             console.error('Download error:', downloadError)
@@ -152,7 +45,6 @@ export async function GET(request: NextRequest) {
             )
         }
 
-        // Step 7: Return HTML content
         const htmlContent = await fileData.text()
 
         return new NextResponse(htmlContent, {
@@ -169,5 +61,52 @@ export async function GET(request: NextRequest) {
             { error: 'Đã xảy ra lỗi hệ thống' },
             { status: 500 }
         )
+    }
+}
+
+function createAccessFailureResponse(
+    reason: StaffCoAAccessFailureReason,
+): NextResponse {
+    switch (reason) {
+        case 'unauthenticated':
+            return NextResponse.json(
+                { error: 'Vui lòng đăng nhập' },
+                { status: 401 },
+            )
+        case 'user-not-found':
+            return NextResponse.json(
+                { error: 'Không tìm thấy thông tin người dùng' },
+                { status: 403 },
+            )
+        case 'role-forbidden':
+            return NextResponse.json(
+                { error: 'Bạn không có quyền xem phiếu kết quả' },
+                { status: 403 },
+            )
+        case 'missing-sample-id':
+            return NextResponse.json(
+                { error: 'Thiếu mã mẫu' },
+                { status: 400 },
+            )
+        case 'confidential-access-error':
+            return NextResponse.json(
+                { error: 'Không thể xác minh quyền truy cập' },
+                { status: 500 },
+            )
+        case 'not-found':
+            return NextResponse.json(
+                { error: COA_NOT_FOUND_ERROR },
+                { status: 404 },
+            )
+        case 'sample-not-completed':
+            return NextResponse.json(
+                { error: 'Mẫu chưa hoàn thành xét nghiệm' },
+                { status: 400 },
+            )
+        case 'report-not-ready':
+            return NextResponse.json(
+                { error: 'Phiếu kết quả chưa được tạo' },
+                { status: 404 },
+            )
     }
 }

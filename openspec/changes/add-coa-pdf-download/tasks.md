@@ -56,9 +56,9 @@
 
 ### Slice 5A. Tách shared staff CoA access contract
 
-- [ ] 5.1 Viết failing tests cho shared staff CoA access loader: authenticated user, allowlist analyst/manager/doctor, confidential concealment, completed sample và latest ready report; kết quả authorized phải mang đủ `user.id`, `samples.sample_id`, `coa_reports.file_path`, `file_hash` và `generated_at` cho route PDF.
-- [ ] 5.2 Implement helper nhỏ dưới `src/lib/coa/`, tái sử dụng `getUserConfidentialAccess` và `isConfidentialAssociatedSample` mà không sửa hai helper có blast radius rộng; refactor route HTML staff dùng helper mới.
-- [ ] 5.3 Chạy unit tests của helper cùng `src/app/api/coa/view/route.test.ts`; xác nhận status, error body, storage behavior và HTML headers không đổi, rồi ghi commit boundary cho Slice 5A.
+- [x] 5.1 Viết failing tests cho shared staff CoA access loader: authenticated user, allowlist analyst/manager/doctor, confidential concealment, completed sample và latest ready report; kết quả authorized phải mang đủ `user.id`, `samples.sample_id`, `coa_reports.file_path`, `file_hash` và `generated_at` cho route PDF.
+- [x] 5.2 Implement helper nhỏ dưới `src/lib/coa/`, tái sử dụng `getUserConfidentialAccess` và `isConfidentialAssociatedSample` mà không sửa hai helper có blast radius rộng; refactor route HTML staff dùng helper mới.
+- [x] 5.3 Chạy unit tests của helper cùng `src/app/api/coa/view/route.test.ts`; xác nhận status, error body, storage behavior và HTML headers không đổi, rồi ghi commit boundary cho Slice 5A.
 
 ### Slice 5B. Khóa staff PDF success contract
 
