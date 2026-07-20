@@ -31,7 +31,7 @@
 
 ### Slice 4A. Khóa multipart contract và success path
 
-- [x] 4.1 Viết failing tests cho `POST /v1/convert/html`, file `index.html`, `emulatedMediaType=print`, `printBackground=true`, `preferCssPageSize=true`, `skipNetworkIdleEvent=false`, `failOnResourceLoadingFailed=true` và `failOnResourceHttpStatusCodes=[400,599]`; để native `FormData` tự tạo multipart `Content-Type` boundary.
+- [x] 4.1 Viết failing tests cho `POST /v1/convert/html`, file `index.html`, `emulatedMediaType=print`, `printBackground=true`, `preferCssPageSize=true`, `skipNetworkIdleEvent=false`, `failOnResourceLoadingFailed=true` và `failOnResourceHttpStatusCodes` liệt kê đủ mọi mã từ `400` đến `599`; để native `FormData` tự tạo multipart `Content-Type` boundary.
 - [x] 4.2 Viết failing tests khóa API server-only chỉ nhận authorized released HTML, không nhận caller-supplied URL, `Request`, `Headers`, cookie hoặc credential; success chỉ được trả sau khi response có `Content-Type: application/pdf`, bắt đầu bằng PDF signature và gateway `x-request-id` được thu thập khi hiện diện.
 - [x] 4.3 Implement success path tối thiểu dưới `src/lib/coa/pdf/` bằng native `fetch`/`FormData`, lấy base URL từ compatibility setting `GOTENBERG_URL`, ghép cố định `/v1/convert/html`, trả PDF bytes cùng sanitized gateway request ID, chạy focused tests về green và ghi commit boundary cho Slice 4A.
 

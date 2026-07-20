@@ -15,6 +15,9 @@ import { createPdfGatewayServer } from '../../ops/pdf-gateway/gateway.mjs'
 export const validGatewayToken = `lims.${Buffer.alloc(32, 7).toString(
   'base64url'
 )}`
+const RESOURCE_HTTP_ERROR_STATUS_CODES = JSON.stringify(
+  Array.from({ length: 200 }, (_, index) => index + 400)
+)
 
 export interface ClientPolicy {
   version: 1
@@ -82,7 +85,10 @@ export function createValidConversionForm(): FormData {
   form.append('preferCssPageSize', 'true')
   form.append('skipNetworkIdleEvent', 'false')
   form.append('failOnResourceLoadingFailed', 'true')
-  form.append('failOnResourceHttpStatusCodes', '[400,599]')
+  form.append(
+    'failOnResourceHttpStatusCodes',
+    RESOURCE_HTTP_ERROR_STATUS_CODES
+  )
   return form
 }
 

@@ -17,6 +17,9 @@ import { repositoryRoot } from './helpers/compose-config'
 import { validateClientPolicy } from '../ops/pdf-gateway/gateway.mjs'
 
 const systems: Array<Awaited<ReturnType<typeof startGatewayTestSystem>>> = []
+const RESOURCE_HTTP_ERROR_STATUS_CODES = JSON.stringify(
+  Array.from({ length: 200 }, (_, index) => index + 400)
+)
 
 afterEach(async () => {
   await Promise.all(systems.splice(0).map((system) => system.close()))
@@ -156,6 +159,20 @@ describe('PDF gateway route and multipart allow-list', () => {
 
     expect(source).toContain('MAX_MULTIPART_DELIMITERS')
     expect(source).not.toContain('.split(delimiter)')
+  })
+
+  test('accepts the complete resource HTTP error status contract', async () => {
+    const system = await start()
+    const form = createValidConversionForm()
+    form.set(
+      'failOnResourceHttpStatusCodes',
+      RESOURCE_HTTP_ERROR_STATUS_CODES
+    )
+
+    const response = await submitValidConversion(system.gatewayUrl, { form })
+
+    expect(response.status).toBe(200)
+    expect(system.upstreamRequests).toHaveLength(1)
   })
 
   test.each([

@@ -5,6 +5,9 @@
 const MAX_MULTIPART_PARTS = 7
 const MAX_MULTIPART_DELIMITERS = MAX_MULTIPART_PARTS + 1
 const MAX_PART_HEADER_BYTES = 2_048
+const RESOURCE_HTTP_ERROR_STATUS_CODES = JSON.stringify(
+  Array.from({ length: 200 }, (_, index) => index + 400)
+)
 
 const EXPECTED_FIELDS = new Map([
   ['emulatedMediaType', 'print'],
@@ -12,7 +15,7 @@ const EXPECTED_FIELDS = new Map([
   ['preferCssPageSize', 'true'],
   ['skipNetworkIdleEvent', 'false'],
   ['failOnResourceLoadingFailed', 'true'],
-  ['failOnResourceHttpStatusCodes', '[400,599]'],
+  ['failOnResourceHttpStatusCodes', RESOURCE_HTTP_ERROR_STATUS_CODES],
 ])
 
 export function validateMultipartContract(body, contentType) {

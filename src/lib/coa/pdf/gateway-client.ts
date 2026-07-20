@@ -6,6 +6,9 @@ const PDF_CONTENT_TYPE_PATTERN = /^application\/pdf(?:\s*;|$)/i
 const PDF_SIGNATURE = '%PDF-'
 const REQUEST_ID_PATTERN =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const RESOURCE_HTTP_ERROR_STATUS_CODES = JSON.stringify(
+    Array.from({ length: 200 }, (_, index) => index + 400)
+)
 
 export type PdfGatewayErrorCode =
     | 'configuration'
@@ -138,7 +141,10 @@ function createConversionForm(html: string): FormData {
     form.append('preferCssPageSize', 'true')
     form.append('skipNetworkIdleEvent', 'false')
     form.append('failOnResourceLoadingFailed', 'true')
-    form.append('failOnResourceHttpStatusCodes', '[400,599]')
+    form.append(
+        'failOnResourceHttpStatusCodes',
+        RESOURCE_HTTP_ERROR_STATUS_CODES
+    )
 
     return form
 }

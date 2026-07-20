@@ -60,7 +60,7 @@ Request phải là `multipart/form-data` với đúng bảy part:
 | `preferCssPageSize` | `true` |
 | `skipNetworkIdleEvent` | `false` |
 | `failOnResourceLoadingFailed` | `true` |
-| `failOnResourceHttpStatusCodes` | `[400,599]` |
+| `failOnResourceHttpStatusCodes` | JSON array chứa mọi mã nguyên từ `400` đến `599` |
 
 Part lạ, thiếu, trùng hoặc khác giá trị bị trả `400`. Không gửi cookie, webhook,
 proxy, host-resolver, extra HTTP header, download instruction hoặc credential
@@ -71,6 +71,9 @@ của hệ thống nguồn.
 ```bash
 export PDF_GATEWAY_URL='http://<tailscale-gateway-ip>:<port>'
 export PDF_GATEWAY_TOKEN_FILE='/run/secrets/pdf_gateway_token'
+export RESOURCE_HTTP_ERROR_STATUS_CODES="$(
+  node -e 'console.log(JSON.stringify(Array.from({ length: 200 }, (_, index) => index + 400)))'
+)"
 
 {
   printf 'header = "Authorization: Bearer '
@@ -85,7 +88,7 @@ export PDF_GATEWAY_TOKEN_FILE='/run/secrets/pdf_gateway_token'
   --form 'preferCssPageSize=true' \
   --form 'skipNetworkIdleEvent=false' \
   --form 'failOnResourceLoadingFailed=true' \
-  --form 'failOnResourceHttpStatusCodes=[400,599]' \
+  --form "failOnResourceHttpStatusCodes=${RESOURCE_HTTP_ERROR_STATUS_CODES}" \
   --dump-header ./pdf-gateway-response.headers \
   --output ./result.pdf \
   "${PDF_GATEWAY_URL}/v1/convert/html"
@@ -103,6 +106,9 @@ const token = (
   await readFile(process.env.PDF_GATEWAY_TOKEN_FILE, 'utf8')
 ).trim()
 const html = await readFile('./index.html')
+const resourceHttpErrorStatusCodes = JSON.stringify(
+  Array.from({ length: 200 }, (_, index) => index + 400)
+)
 
 const form = new FormData()
 form.append('files', new Blob([html], { type: 'text/html' }), 'index.html')
@@ -111,7 +117,7 @@ form.append('printBackground', 'true')
 form.append('preferCssPageSize', 'true')
 form.append('skipNetworkIdleEvent', 'false')
 form.append('failOnResourceLoadingFailed', 'true')
-form.append('failOnResourceHttpStatusCodes', '[400,599]')
+form.append('failOnResourceHttpStatusCodes', resourceHttpErrorStatusCodes)
 
 const response = await fetch(`${gatewayUrl}/v1/convert/html`, {
   method: 'POST',

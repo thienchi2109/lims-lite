@@ -78,7 +78,7 @@ Biện pháp:
 - Chỉ cho phép đúng `POST /v1/convert/html`.
 - Multipart allow-list gồm đúng `index.html` và sáu field/value của contract.
 - Từ chối part lạ, thiếu hoặc trùng.
-- Bật fail-on-resource-loading và fail-on-HTTP-status `[400,599]`.
+- Bật fail-on-resource-loading và fail trên mọi HTTP status từ `400` đến `599`.
 - Không cho client thêm webhook, cookie, extra header hoặc proxy control.
 
 ### Rò rỉ thông tin xác thực

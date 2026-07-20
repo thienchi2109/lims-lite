@@ -12,6 +12,10 @@ import * as gatewayClient from './gateway-client'
 
 const VALID_GATEWAY_REQUEST_ID = '8c3f5a28-9310-4eb2-9ff0-d20a8dcf6556'
 const PDF_BYTES = new TextEncoder().encode('%PDF-1.7\nslice-4a')
+const RESOURCE_HTTP_ERROR_STATUS_CODES = Array.from(
+    { length: 200 },
+    (_, index) => index + 400
+)
 
 let temporaryDirectory = ''
 let tokenFile = ''
@@ -137,14 +141,20 @@ describe('convertHtmlToPdf', () => {
         expect((file as Blob & { name?: string }).name).toBe('index.html')
         expect((file as Blob).type).toBe('text/html')
         expect(await (file as Blob).text()).toBe(html)
-        expect(Object.fromEntries(entries.slice(1))).toEqual({
+        const fields = Object.fromEntries(entries.slice(1))
+        expect(fields).toEqual({
             emulatedMediaType: 'print',
             printBackground: 'true',
             preferCssPageSize: 'true',
             skipNetworkIdleEvent: 'false',
             failOnResourceLoadingFailed: 'true',
-            failOnResourceHttpStatusCodes: '[400,599]',
+            failOnResourceHttpStatusCodes: JSON.stringify(
+                RESOURCE_HTTP_ERROR_STATUS_CODES
+            ),
         })
+        expect(JSON.parse(fields.failOnResourceHttpStatusCodes as string)).toEqual(
+            RESOURCE_HTTP_ERROR_STATUS_CODES
+        )
     })
 
     test('serializes native FormData accepted by the authenticated gateway', async () => {

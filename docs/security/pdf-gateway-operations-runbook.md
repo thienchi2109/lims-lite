@@ -185,6 +185,9 @@ Kiểm tra credential sai bị từ chối:
 
 ```bash
 sudo -n docker exec -i lims-app node --input-type=module - <<'NODE'
+const resourceHttpErrorStatusCodes = JSON.stringify(
+  Array.from({ length: 200 }, (_, index) => index + 400)
+)
 const form = new FormData()
 form.append('files', new Blob(['<html></html>'], { type: 'text/html' }), 'index.html')
 form.append('emulatedMediaType', 'print')
@@ -192,7 +195,7 @@ form.append('printBackground', 'true')
 form.append('preferCssPageSize', 'true')
 form.append('skipNetworkIdleEvent', 'false')
 form.append('failOnResourceLoadingFailed', 'true')
-form.append('failOnResourceHttpStatusCodes', '[400,599]')
+form.append('failOnResourceHttpStatusCodes', resourceHttpErrorStatusCodes)
 const response = await fetch('http://pdf-gateway:8080/v1/convert/html', {
   method: 'POST',
   headers: { authorization: 'Bearer lims.invalid' },

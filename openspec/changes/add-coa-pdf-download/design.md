@@ -61,7 +61,7 @@ The application will send multipart form data to `POST /v1/convert/html` on the 
 
 The gateway owns the fixed upstream call to Gotenberg's `/forms/chromium/convert/html` route. It strips the gateway bearer and rejects download, webhook, proxy, host-resolution, allow-list, deny-list, unknown, missing, or duplicate multipart controls before raw Gotenberg can receive the request. The application cannot resolve or connect to raw Gotenberg.
 
-The conversion request will set `emulatedMediaType=print`, `printBackground=true`, `preferCssPageSize=true`, `skipNetworkIdleEvent=false`, `failOnResourceLoadingFailed=true`, and `failOnResourceHttpStatusCodes=[400,599]`. It will preserve the HTML's current `@page` A4 rules and `@media print` overrides without injecting Chromium headers, footers, or margins.
+The conversion request will set `emulatedMediaType=print`, `printBackground=true`, `preferCssPageSize=true`, `skipNetworkIdleEvent=false`, `failOnResourceLoadingFailed=true`, and `failOnResourceHttpStatusCodes` to a JSON array containing every integer status from `400` through `599`. Gotenberg treats this field as an exact-code list rather than a range, so enumerating all client and server error statuses is required to fail closed for blocked or unavailable resources. It will preserve the HTML's current `@page` A4 rules and `@media print` overrides without injecting Chromium headers, footers, or margins.
 
 URL conversion was rejected because it would require forwarding authentication into Chromium and would make conversion dependent on public routing and browser session state.
 

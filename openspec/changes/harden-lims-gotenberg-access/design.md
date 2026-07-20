@@ -117,7 +117,8 @@ The multipart contract is an allow-list: exactly one `files` part named
 `emulatedMediaType=print`, `printBackground=true`,
 `preferCssPageSize=true`, `skipNetworkIdleEvent=false`,
 `failOnResourceLoadingFailed=true`, and
-`failOnResourceHttpStatusCodes=[400,599]`. Unknown, missing, or duplicate parts
+`failOnResourceHttpStatusCodes` as a JSON array containing every integer from
+`400` through `599`. Unknown, missing, or duplicate parts
 are rejected. Global Chromium proxy, host-resolver, allow-list, and deny-list
 settings remain Compose-level prohibitions rather than request fields.
 Gotenberg also keeps `CHROMIUM_DENY_PRIVATE_IPS=true` and disables the

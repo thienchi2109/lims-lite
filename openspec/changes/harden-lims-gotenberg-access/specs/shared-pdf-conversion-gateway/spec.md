@@ -83,7 +83,7 @@ overrides. It MUST NOT follow upstream redirects.
 #### Scenario: Allowed conversion request
 - **WHEN** the authenticated LIMS client submits a bounded multipart request to the allowed route
 - **THEN** the gateway forwards it to `/forms/chromium/convert/html`
-- **THEN** the request contains exactly `index.html`, `emulatedMediaType=print`, `printBackground=true`, `preferCssPageSize=true`, `skipNetworkIdleEvent=false`, `failOnResourceLoadingFailed=true`, and `failOnResourceHttpStatusCodes=[400,599]`
+- **THEN** the request contains exactly `index.html`, `emulatedMediaType=print`, `printBackground=true`, `preferCssPageSize=true`, `skipNetworkIdleEvent=false`, `failOnResourceLoadingFailed=true`, and `failOnResourceHttpStatusCodes` listing every integer status from `400` through `599`
 - **THEN** inbound credentials and Gotenberg control headers are not forwarded
 
 #### Scenario: Disallowed route or method
