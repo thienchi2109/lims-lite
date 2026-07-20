@@ -12,6 +12,7 @@ describe('CoAAccessPortal', () => {
     render(<CoAAccessPortal />)
 
     expect(screen.getByRole('heading', { name: 'Tra cứu kết quả xét nghiệm' })).toBeDefined()
+    expect(screen.getByText('xét nghiệm').className).toContain('whitespace-nowrap')
 
     const featureGrid = screen.getByTestId('coa-feature-grid')
     expect(featureGrid.children).toHaveLength(4)

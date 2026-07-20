@@ -111,8 +111,8 @@ export function CoAAccessPortal({
                   Dịch vụ trực tuyến của CDC Cần Thơ
                 </div>
 
-                <h1 className="mt-5 max-w-[18ch] text-3xl font-bold leading-10 text-[#17201D] sm:text-4xl sm:leading-[3rem]">
-                  Tra cứu kết quả xét nghiệm
+                <h1 className="mt-5 max-w-[24ch] text-3xl font-bold leading-10 text-[#17201D] sm:text-4xl sm:leading-[3rem]">
+                  Tra cứu kết quả <span className="whitespace-nowrap">xét nghiệm</span>
                 </h1>
                 <p className="mt-4 max-w-[42ch] text-lg font-medium leading-7 text-[#35413D]">
                   Tra cứu an toàn, nhận kết quả chính thức
