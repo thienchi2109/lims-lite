@@ -8,10 +8,10 @@
 
 ## Phase 2: Compatibility Database Contract
 
-- [ ] 2.1 Create the next forward-only compatibility migration that adds `public.samples.sample_quality BOOLEAN NULL` with no default and no backfill, including explicit security and historical-data impact comments.
-- [ ] 2.2 Add quality-aware overloads of `create_sample_atomic` and `accession_and_assign_tests` that require `p_sample_quality BOOLEAN`, reject `NULL`, write the value in the same transaction, and return it in the sample payload where applicable.
-- [ ] 2.3 Preserve the live `SECURITY DEFINER`, fixed `search_path`, analyst-only checks, `REVOKE EXECUTE FROM PUBLIC`, and authenticated execute grants while temporarily retaining the legacy signatures for deployment compatibility.
-- [ ] 2.4 Add source-level migration tests that verify no default/backfill SQL is present, both new overloads preserve security hardening, and legacy signatures remain available until the enforcement migration.
+- [x] 2.1 Create the next forward-only compatibility migration that adds `public.samples.sample_quality BOOLEAN NULL` with no default and no backfill, including explicit security and historical-data impact comments.
+- [x] 2.2 Add quality-aware overloads of `create_sample_atomic` and `accession_and_assign_tests` that require `p_sample_quality BOOLEAN`, reject `NULL`, write the value in the same transaction, and return it in the sample payload where applicable.
+- [x] 2.3 Preserve the live `SECURITY DEFINER`, fixed `search_path`, analyst-only checks, `REVOKE EXECUTE FROM PUBLIC`, and authenticated execute grants while temporarily retaining the legacy signatures for deployment compatibility.
+- [x] 2.4 Add source-level migration tests that verify no default/backfill SQL is present, both new overloads preserve security hardening, and legacy signatures remain available until the enforcement migration.
 
 ## Phase 3: Application Data Flow
 
