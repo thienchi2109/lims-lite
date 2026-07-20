@@ -87,10 +87,10 @@
 
 ### Slice 6B. Khóa client PDF success và audit delivery gate
 
-- [ ] 6.4 Viết failing route tests cho success path qua token cookie/Bearer, released report/hash/storage contract, deterministic attachment, một lần gọi authenticated `pdf-gateway`, success audit commit trước PDF delivery và audit insert lỗi phải fail closed.
-- [ ] 6.5 Implement `GET /api/coa/download/pdf` bằng shared access helper và shared PDF primitives; chỉ conversion sau access/integrity checks, chỉ trả PDF sau success audit commit, không lưu PDF vào Storage/DB.
-- [ ] 6.6 Viết failing tests rồi implement failure audit sau client identity bằng reason-code allowlist; audit persistence lỗi trả lỗi dịch vụ tiếng Việt và operational trace chỉ chứa metadata không nhạy cảm.
-- [ ] 6.7 Chạy focused success/audit tests và ghi commit boundary cho Slice 6B.
+- [x] 6.4 Viết failing route tests cho success path qua token cookie/Bearer, released report/hash/storage contract, deterministic attachment, một lần gọi authenticated `pdf-gateway`, success audit commit trước PDF delivery và audit insert lỗi phải fail closed.
+- [x] 6.5 Implement `GET /api/coa/download/pdf` bằng shared access helper và shared PDF primitives; chỉ conversion sau access/integrity checks, chỉ trả PDF sau success audit commit, không lưu PDF vào Storage/DB.
+- [x] 6.6 Viết failing tests rồi implement failure audit sau client identity bằng reason-code allowlist; audit persistence lỗi trả lỗi dịch vụ tiếng Việt và operational trace chỉ chứa metadata không nhạy cảm.
+- [x] 6.7 Chạy focused success/audit tests và ghi commit boundary cho Slice 6B.
 
 ### Slice 6C. Khóa failure model và application boundary
 
