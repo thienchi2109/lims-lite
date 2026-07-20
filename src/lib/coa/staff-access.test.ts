@@ -114,6 +114,7 @@ function createStaffAccessClient({
         client,
         from,
         reportsQuery,
+        samplesQuery,
     }
 }
 
@@ -132,7 +133,8 @@ describe('loadAuthorizedStaffCoA', () => {
     it.each(['analyst', 'manager', 'doctor'])(
         'returns the latest ready report metadata for authorized %s staff',
         async (role) => {
-            const { client, reportsQuery } = createStaffAccessClient({ role })
+            const { client, reportsQuery, samplesQuery } =
+                createStaffAccessClient({ role })
 
             const result = await loadAuthorizedStaffCoA(
                 client,
@@ -155,7 +157,23 @@ describe('loadAuthorizedStaffCoA', () => {
                     version: 3,
                 },
             })
+            expect(samplesQuery.eq).toHaveBeenCalledWith(
+                'id',
+                'sample-uuid',
+            )
+            expect(samplesQuery.is).toHaveBeenCalledWith(
+                'deleted_at',
+                null,
+            )
+            expect(reportsQuery.eq).toHaveBeenCalledWith(
+                'sample_id',
+                'sample-uuid',
+            )
             expect(reportsQuery.eq).toHaveBeenCalledWith('status', 'ready')
+            expect(reportsQuery.is).toHaveBeenCalledWith(
+                'deleted_at',
+                null,
+            )
             expect(reportsQuery.order).toHaveBeenCalledWith('version', {
                 ascending: false,
             })

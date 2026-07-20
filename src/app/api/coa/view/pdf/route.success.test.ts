@@ -16,6 +16,7 @@ const mockCreateClient = vi.fn()
 const mockCreateAdminClient = vi.fn()
 const mockConvertHtmlToPdf = vi.fn()
 const mockDownload = vi.fn()
+const mockUpload = vi.fn()
 
 vi.mock('@/lib/supabase/server', () => ({
     createClient: (...args: unknown[]) => mockCreateClient(...args),
@@ -41,6 +42,9 @@ type QueryMock = {
     order: ReturnType<typeof vi.fn>
     limit: ReturnType<typeof vi.fn>
     single: ReturnType<typeof vi.fn>
+    insert: ReturnType<typeof vi.fn>
+    update: ReturnType<typeof vi.fn>
+    upsert: ReturnType<typeof vi.fn>
     then: (
         onFulfilled: (value: QueryResult) => unknown,
         onRejected?: (reason: unknown) => unknown,
@@ -56,6 +60,9 @@ function createQuery(result: QueryResult): QueryMock {
     query.order = vi.fn(() => query)
     query.limit = vi.fn(() => query)
     query.single = vi.fn(async () => result)
+    query.insert = vi.fn(() => query)
+    query.update = vi.fn(() => query)
+    query.upsert = vi.fn(() => query)
     query.then = (onFulfilled, onRejected) =>
         Promise.resolve(result).then(onFulfilled, onRejected)
     return query
@@ -128,6 +135,7 @@ function mockAuthorizedStaffPdfRoute({
         storage: {
             from: vi.fn(() => ({
                 download: mockDownload,
+                upload: mockUpload,
             })),
         },
     })
@@ -202,7 +210,11 @@ describe('GET /api/coa/view/pdf success contract', () => {
         expect(mockDownload).toHaveBeenCalledWith(
             'sample-uuid/report.html',
         )
+        expect(mockUpload).not.toHaveBeenCalled()
         expect(mockConvertHtmlToPdf).toHaveBeenCalledWith(RELEASED_HTML)
+        expect(reportsQuery.insert).not.toHaveBeenCalled()
+        expect(reportsQuery.update).not.toHaveBeenCalled()
+        expect(reportsQuery.upsert).not.toHaveBeenCalled()
         expect(reportsQuery.eq).toHaveBeenCalledWith('status', 'ready')
         expect(reportsQuery.order).toHaveBeenCalledWith('version', {
             ascending: false,
@@ -242,5 +254,29 @@ describe('GET /api/coa/view/pdf success contract', () => {
             error: 'Bạn đã yêu cầu tải PDF quá nhiều lần. Vui lòng thử lại sau.',
         })
         expect(mockConvertHtmlToPdf).toHaveBeenCalledTimes(5)
+    })
+
+    it('keeps separate limits when either identity or IP differs', async () => {
+        mockAuthorizedStaffPdfRoute({
+            userId: 'staff-composite-rate-limit',
+        })
+        const saturatedRequest = createPdfRequest('203.0.113.16')
+
+        for (let attempt = 1; attempt <= 5; attempt += 1) {
+            const response = await GET(saturatedRequest)
+            expect(response.status).toBe(200)
+        }
+
+        const sameIdentityNewIp = await GET(
+            createPdfRequest('203.0.113.17'),
+        )
+        mockAuthorizedStaffPdfRoute({
+            userId: 'staff-composite-rate-limit-peer',
+        })
+        const differentIdentitySameIp = await GET(saturatedRequest)
+
+        expect(sameIdentityNewIp.status).toBe(200)
+        expect(differentIdentitySameIp.status).toBe(200)
+        expect(mockConvertHtmlToPdf).toHaveBeenCalledTimes(7)
     })
 })
