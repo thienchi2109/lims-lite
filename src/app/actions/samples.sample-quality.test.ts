@@ -95,6 +95,35 @@ describe('sample quality Server Action contract', () => {
         })
     })
 
+    it('preserves an unacceptable quality sample response without changing workflow state', async () => {
+        const sample = {
+            id: 'sample-1',
+            sample_quality: false,
+            status: 'received',
+        }
+        mockRpc.mockResolvedValueOnce({ data: sample, error: null })
+
+        const result = await createSample(createSamplePayload(false))
+
+        expect(result).toEqual({ data: sample })
+    })
+
+    it('preserves an unacceptable quality accession response and its results', async () => {
+        const rpcResult = {
+            sample: {
+                id: 'sample-1',
+                sample_quality: false,
+                status: 'assigned',
+            },
+            results: [{ id: 'result-1', status: 'pending' }],
+        }
+        mockRpc.mockResolvedValueOnce({ data: rpcResult, error: null })
+
+        const result = await accessionAndAssignTests(createAssignedPayload(false))
+
+        expect(result).toEqual({ data: rpcResult })
+    })
+
     it.each([
         ['createSample', createSample, createSamplePayload()],
         ['accessionAndAssignTests', accessionAndAssignTests, createAssignedPayload()],

@@ -15,10 +15,10 @@
 
 ## Phase 3: Application Data Flow
 
-- [ ] 3.1 Add the read/write domain contract for sample quality: nullable on persisted `Sample` data, required on both create schemas, and excluded from the generic sample update contract; extract touched sample schemas if needed to keep files within repository size limits.
-- [ ] 3.2 Update `createSample` and `accessionAndAssignTests` plus their client-action wrappers/types to pass `sample_quality` to the new RPC signatures without changing existing role guards or error handling.
-- [ ] 3.3 Ensure both success payload paths preserve current sample/result behavior and do not map `sample_quality = FALSE` to rejection, discard, status changes, or a required reason.
-- [ ] 3.4 Make the Phase 1 application contract tests pass and run the focused auth/client-action regression tests for the immediate blast radius.
+- [x] 3.1 Add the read/write domain contract for sample quality: nullable on persisted `Sample` data, required on both create schemas, and excluded from the generic sample update contract; extract touched sample schemas if needed to keep files within repository size limits.
+- [x] 3.2 Update `createSample` and `accessionAndAssignTests` plus their client-action wrappers/types to pass `sample_quality` to the new RPC signatures without changing existing role guards or error handling.
+- [x] 3.3 Ensure both success payload paths preserve current sample/result behavior and do not map `sample_quality = FALSE` to rejection, discard, status changes, or a required reason.
+- [x] 3.4 Make the Phase 1 application contract tests pass and run the focused auth/client-action regression tests for the immediate blast radius.
 
 ## Phase 4: Desktop And Mobile Accession UI
 

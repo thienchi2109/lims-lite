@@ -57,6 +57,7 @@ export async function createSample(data: CreateSample) {
             p_type: validatedData.type,
             p_received_at: validatedData.received_at || null,
             p_received_by: auth.id,
+            p_sample_quality: validatedData.sample_quality,
         })
 
         if (error) {
@@ -93,6 +94,7 @@ export async function accessionAndAssignTests(data: CreateSampleWithAssignments)
             p_type: validatedData.type,
             p_received_at: validatedData.received_at || null,
             p_tests: validatedData.tests,
+            p_sample_quality: validatedData.sample_quality,
         })
 
         if (error) {
