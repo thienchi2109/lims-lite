@@ -169,6 +169,14 @@ describe('sample quality enforcement migration', () => {
     }
   })
 
+  it('matches the nested analyst-role literal emitted by pg_get_functiondef', () => {
+    const normalized = normalizeSql(readMigration())
+
+    expect(normalized).toContain(
+      "v_analyst_role_checker_definition NOT ILIKE '%v_user_role <> ''''analyst''''%'",
+    )
+  })
+
   it('revokes and drops only the legacy accession signatures', () => {
     const statements = sqlStatements(readMigration())
 

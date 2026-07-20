@@ -181,7 +181,7 @@ BEGIN
        OR v_analyst_role_checker_definition NOT ILIKE
            '%pg_get_functiondef(%accession_and_assign_tests(uuid,text,timestamp with time zone,jsonb,text)%'
        OR v_analyst_role_checker_definition NOT ILIKE
-           '%v_user_role <> ''analyst''%'
+           '%v_user_role <> ''''analyst''''%'
     THEN
         RAISE EXCEPTION
             'Migration 190 analyst-role checker baseline is invalid';
