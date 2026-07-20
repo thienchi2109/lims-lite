@@ -94,9 +94,9 @@
 
 ### Slice 6C. Khóa failure model và application boundary
 
-- [ ] 6.8 Viết failing route tests cho missing/invalid/expired token, ownership, sample chưa completed, CoA chưa ready, confidential concealment, storage failure, hash mismatch, rate limit và mọi typed conversion failure.
-- [ ] 6.9 Implement typed Vietnamese failure mapping; mọi request bị từ chối trước conversion không được gọi PDF gateway, mỗi conversion attempt chỉ gọi gateway một lần và không retry/fallback raw Gotenberg.
-- [ ] 6.10 Chạy toàn bộ focused client helper/HTML/PDF route tests, gateway/application-boundary tests, `tests/coa-token-leak.test.mjs` và `rtk npm run typecheck`; xác nhận file mới dưới 350 dòng và ghi commit boundary cho Slice 6C.
+- [x] 6.8 Viết failing route tests cho missing/invalid/expired token, ownership, sample chưa completed, CoA chưa ready, confidential concealment, storage failure, hash mismatch, rate limit và mọi typed conversion failure.
+- [x] 6.9 Implement typed Vietnamese failure mapping; mọi request bị từ chối trước conversion không được gọi PDF gateway, mỗi conversion attempt chỉ gọi gateway một lần và không retry/fallback raw Gotenberg.
+- [x] 6.10 Chạy toàn bộ focused client helper/HTML/PDF route tests, gateway/application-boundary tests, `tests/coa-token-leak.test.mjs` và `rtk npm run typecheck`; xác nhận file mới dưới 350 dòng và ghi commit boundary cho Slice 6C.
 
 ## Phase 7. Thêm nút tải PDF trong preview
 

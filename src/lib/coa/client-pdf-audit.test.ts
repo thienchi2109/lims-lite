@@ -136,4 +136,31 @@ describe('persistClientCoAPdfAudit', () => {
         )
         await expect(result).rejects.not.toThrow('sensitive database error')
     })
+
+    it('normalizes a rejected audit insert without exposing its error', async () => {
+        const insert = vi
+            .fn()
+            .mockRejectedValue(
+                new Error('sensitive transport error public-token'),
+            )
+        const client = {
+            from: vi.fn(() => ({ insert })),
+        } as unknown as ClientCoAPdfAuditClient
+
+        const result = persistClientCoAPdfAudit(client, {
+            clientId: 'client-1',
+            sampleId: 'sample-1',
+            coaReportId: 'report-1',
+            ipAddress: '203.0.113.10',
+            userAgent: 'Vitest',
+            success: true,
+            failureReason: null,
+        })
+
+        await expect(result).rejects.toBeInstanceOf(
+            ClientCoAPdfAuditPersistenceError,
+        )
+        await expect(result).rejects.not.toThrow('public-token')
+        await expect(result).rejects.not.toThrow('sensitive transport error')
+    })
 })

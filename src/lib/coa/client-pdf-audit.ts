@@ -62,17 +62,24 @@ export async function persistClientCoAPdfAudit(
 ): Promise<void> {
     validateAuditOutcome(entry.success, entry.failureReason)
 
-    const { error } = await client.from('coa_access_log').insert({
-        client_id: entry.clientId,
-        sample_id: entry.sampleId,
-        coa_report_id: entry.coaReportId,
-        ip_address: entry.ipAddress,
-        user_agent: entry.userAgent,
-        success: entry.success,
-        failure_reason: entry.failureReason,
-    })
+    try {
+        const { error } = await client.from('coa_access_log').insert({
+            client_id: entry.clientId,
+            sample_id: entry.sampleId,
+            coa_report_id: entry.coaReportId,
+            ip_address: entry.ipAddress,
+            user_agent: entry.userAgent,
+            success: entry.success,
+            failure_reason: entry.failureReason,
+        })
 
-    if (error) {
+        if (error) {
+            throw new ClientCoAPdfAuditPersistenceError()
+        }
+    } catch (error) {
+        if (error instanceof ClientCoAPdfAuditPersistenceError) {
+            throw error
+        }
         throw new ClientCoAPdfAuditPersistenceError()
     }
 }
