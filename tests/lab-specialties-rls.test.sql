@@ -1,45 +1,163 @@
 -- ============================================================================
 -- LAB SPECIALTIES RLS REGRESSION TEST SUITE
 -- ============================================================================
--- Verifies that manager-only management policy includes an explicit WITH CHECK
--- so INSERT/UPDATE are restricted to managers.
---
+-- Verifies the current manager-only INSERT, UPDATE, and DELETE policy contract:
+-- INSERT/UPDATE require manager WITH CHECK; UPDATE/DELETE require manager USING.
 -- Usage:
---   psql -h localhost -p 54322 -U postgres -d postgres -f lab-specialties-rls.test.sql
--- Or via docker:
---   docker compose exec db psql -U postgres -d postgres -f /path/to/this/file.sql
+--   docker exec -i lims-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres < tests/lab-specialties-rls.test.sql
 -- ============================================================================
 
 \set ON_ERROR_STOP on
 SET client_encoding = 'UTF8';
+SET search_path TO public;
 \timing on
+
 \echo '============================================================================'
 \echo 'LAB SPECIALTIES RLS TEST SUITE'
 \echo '============================================================================'
 \echo ''
 
--- TEST 1: Manager management policy must include WITH CHECK
+BEGIN;
+
 DO $$
 DECLARE
-    v_with_check TEXT;
+    v_rls_enabled BOOLEAN;
+    v_mutation_policy_count INTEGER;
+    v_mutation_policy_commands TEXT[];
+    v_expected_manager_expression CONSTANT TEXT :=
+        '(get_user_role()=''manager''::user_role)';
+    v_insert_using TEXT;
+    v_insert_check TEXT;
+    v_update_using TEXT;
+    v_update_check TEXT;
+    v_delete_using TEXT;
+    v_delete_check TEXT;
 BEGIN
-    SELECT pg_get_expr(polwithcheck, polrelid) INTO v_with_check
+    SELECT relrowsecurity
+    INTO v_rls_enabled
+    FROM pg_class
+    WHERE oid = 'public.lab_specialties'::regclass;
+
+    IF v_rls_enabled IS DISTINCT FROM TRUE THEN
+        RAISE EXCEPTION
+            'LAB SPECIALTIES RLS FAILED: row-level security is not enabled';
+    END IF;
+
+    SELECT
+        COUNT(*),
+        array_agg(polcmd::TEXT ORDER BY polcmd::TEXT)
+    INTO v_mutation_policy_count, v_mutation_policy_commands
     FROM pg_policy
     WHERE polrelid = 'public.lab_specialties'::regclass
-      AND polname = 'Managers can manage lab specialties'
-    LIMIT 1;
+      AND polcmd IN ('*', 'a', 'w', 'd');
 
-    IF v_with_check IS NULL THEN
-        RAISE EXCEPTION '✗ TEST 1 FAILED: "Managers can manage lab specialties" policy is missing WITH CHECK';
+    IF v_mutation_policy_count IS DISTINCT FROM 3
+       OR v_mutation_policy_commands IS DISTINCT FROM
+          ARRAY['a', 'd', 'w']::TEXT[] THEN
+        RAISE EXCEPTION
+            'LAB SPECIALTIES RLS FAILED: expected mutation commands {a,d,w}, found count=% commands=%',
+            v_mutation_policy_count,
+            v_mutation_policy_commands;
     END IF;
 
-    IF v_with_check NOT LIKE '%get_user_role%' THEN
-        RAISE EXCEPTION '✗ TEST 1 FAILED: WITH CHECK missing role guard. Found: %', v_with_check;
+    SELECT
+        regexp_replace(
+            lower(COALESCE(pg_get_expr(polqual, polrelid), '')),
+            '[[:space:]]+',
+            '',
+            'g'
+        ),
+        regexp_replace(
+            lower(COALESCE(pg_get_expr(polwithcheck, polrelid), '')),
+            '[[:space:]]+',
+            '',
+            'g'
+        )
+    INTO v_insert_using, v_insert_check
+    FROM pg_policy
+    WHERE polrelid = 'public.lab_specialties'::regclass
+      AND polname = 'Managers can insert lab specialties'
+      AND polcmd = 'a';
+
+    IF v_insert_check IS DISTINCT FROM v_expected_manager_expression THEN
+        RAISE EXCEPTION
+            'LAB SPECIALTIES RLS FAILED: INSERT WITH CHECK expected %, found %',
+            v_expected_manager_expression,
+            nullif(v_insert_check, '');
     END IF;
 
-    RAISE NOTICE '✓ TEST 1 PASSED: WITH CHECK present with role guard: %', v_with_check;
+    IF v_insert_using IS DISTINCT FROM '' THEN
+        RAISE EXCEPTION
+            'LAB SPECIALTIES RLS FAILED: INSERT policy unexpectedly has USING: %',
+            v_insert_using;
+    END IF;
+
+    SELECT
+        regexp_replace(
+            lower(COALESCE(pg_get_expr(polqual, polrelid), '')),
+            '[[:space:]]+',
+            '',
+            'g'
+        ),
+        regexp_replace(
+            lower(COALESCE(pg_get_expr(polwithcheck, polrelid), '')),
+            '[[:space:]]+',
+            '',
+            'g'
+        )
+    INTO v_update_using, v_update_check
+    FROM pg_policy
+    WHERE polrelid = 'public.lab_specialties'::regclass
+      AND polname = 'Managers can update lab specialties'
+      AND polcmd = 'w';
+
+    IF v_update_using IS DISTINCT FROM v_expected_manager_expression THEN
+        RAISE EXCEPTION
+            'LAB SPECIALTIES RLS FAILED: UPDATE USING expected %, found %',
+            v_expected_manager_expression,
+            nullif(v_update_using, '');
+    END IF;
+
+    IF v_update_check IS DISTINCT FROM v_expected_manager_expression THEN
+        RAISE EXCEPTION
+            'LAB SPECIALTIES RLS FAILED: UPDATE WITH CHECK expected %, found %',
+            v_expected_manager_expression,
+            nullif(v_update_check, '');
+    END IF;
+
+    SELECT
+        regexp_replace(
+            lower(COALESCE(pg_get_expr(polqual, polrelid), '')),
+            '[[:space:]]+',
+            '',
+            'g'
+        ),
+        regexp_replace(
+            lower(COALESCE(pg_get_expr(polwithcheck, polrelid), '')),
+            '[[:space:]]+',
+            '',
+            'g'
+        )
+    INTO v_delete_using, v_delete_check
+    FROM pg_policy
+    WHERE polrelid = 'public.lab_specialties'::regclass
+      AND polname = 'Managers can delete lab specialties'
+      AND polcmd = 'd';
+
+    IF v_delete_using IS DISTINCT FROM v_expected_manager_expression THEN
+        RAISE EXCEPTION
+            'LAB SPECIALTIES RLS FAILED: DELETE USING expected %, found %',
+            v_expected_manager_expression,
+            nullif(v_delete_using, '');
+    END IF;
+
+    IF v_delete_check IS DISTINCT FROM '' THEN
+        RAISE EXCEPTION
+            'LAB SPECIALTIES RLS FAILED: DELETE policy unexpectedly has WITH CHECK: %',
+            v_delete_check;
+    END IF;
 END $$;
 
-\echo ''
-\echo 'Expected: Test 1 passes with explicit WITH CHECK containing get_user_role()'
-\echo ''
+ROLLBACK;
+
+SELECT 'lab-specialties-rls: ok' AS result;

@@ -11,11 +11,13 @@ BEGIN;
 
 DO $$
 DECLARE
-    v_sample_id UUID;
-    v_submission_id UUID;
-    v_result_id UUID;
-    v_manager_id UUID;
-    v_signature_id UUID;
+    v_analyst_id UUID := '68000000-0000-0000-0000-000000000001';
+    v_manager_id UUID := '68000000-0000-0000-0000-000000000002';
+    v_analyst_signature_id UUID := '68000000-0000-0000-0000-000000000011';
+    v_signature_id UUID := '68000000-0000-0000-0000-000000000012';
+    v_sample_id UUID := '68000000-0000-0000-0000-000000000040';
+    v_submission_id UUID := '68000000-0000-0000-0000-000000000060';
+    v_result_id UUID := '68000000-0000-0000-0000-000000000051';
     v_report JSONB;
     v_report_id UUID;
     v_claim_id UUID;
@@ -24,72 +26,175 @@ DECLARE
         'hex'
     );
 BEGIN
-    SELECT sample.id, submission.id
-    INTO v_sample_id, v_submission_id
-    FROM public.samples AS sample
-    JOIN public.sample_submissions AS submission
-      ON submission.sample_id = sample.id
-     AND submission.superseded_by IS NULL
-    WHERE sample.deleted_at IS NULL
-      AND sample.status = 'completed'
-      AND (
-          SELECT COUNT(*)
-          FROM public.results AS result
-          WHERE result.sample_id = sample.id
-      ) >= 2
-      AND NOT EXISTS (
-          SELECT 1
-          FROM public.results AS result
-          WHERE result.sample_id = sample.id
-            AND result.status <> 'approved'
-      )
-      AND NOT EXISTS (
-          SELECT 1
-          FROM public.results AS result
-          JOIN public.assay_definitions AS assay
-            ON assay.id = result.assay_id
-          WHERE result.sample_id = sample.id
-            AND assay.is_confidential = TRUE
-      )
-    ORDER BY sample.created_at
-    LIMIT 1;
+    INSERT INTO auth.users (id, email)
+    VALUES
+        (v_analyst_id, 'issue-90-completion-analyst@lims.local'),
+        (v_manager_id, 'issue-90-completion-manager@lims.local');
 
-    SELECT manager.id, signature.id
-    INTO v_manager_id, v_signature_id
-    FROM public.users AS manager
-    JOIN public.user_signatures AS signature
-      ON signature.user_id = manager.id
-     AND signature.is_active
-     AND signature.deleted_at IS NULL
-    WHERE manager.role = 'manager'
-      AND manager.deleted_at IS NULL
-    ORDER BY manager.created_at
-    LIMIT 1;
+    INSERT INTO public.users (id, username, full_name, role)
+    VALUES
+        (
+            v_analyst_id,
+            'issue90_completion_analyst',
+            'Issue 90 Completion Analyst',
+            'analyst'
+        ),
+        (
+            v_manager_id,
+            'issue90_completion_manager',
+            'Issue 90 Completion Manager',
+            'manager'
+        );
 
-    SELECT id
-    INTO v_result_id
-    FROM public.results
-    WHERE sample_id = v_sample_id
-    ORDER BY id
-    LIMIT 1;
+    INSERT INTO public.user_signatures (
+        id,
+        user_id,
+        signature_path,
+        signature_hash,
+        file_size,
+        mime_type,
+        is_active
+    )
+    VALUES
+        (
+            v_analyst_signature_id,
+            v_analyst_id,
+            'issue-90/completion-analyst.png',
+            encode(digest('issue-90-completion-analyst', 'sha256'), 'hex'),
+            1,
+            'image/png',
+            TRUE
+        ),
+        (
+            v_signature_id,
+            v_manager_id,
+            'issue-90/completion-manager.png',
+            encode(digest('issue-90-completion-manager', 'sha256'), 'hex'),
+            1,
+            'image/png',
+            TRUE
+        );
 
-    IF v_sample_id IS NULL
-       OR v_submission_id IS NULL
-       OR v_result_id IS NULL
-       OR v_manager_id IS NULL
-       OR v_signature_id IS NULL THEN
-        RAISE EXCEPTION
-            'Issue 68 regression requires a completed non-confidential sample and active manager signature';
-    END IF;
+    INSERT INTO public.clients (
+        id,
+        id_card_num,
+        name,
+        date_of_birth,
+        gender,
+        phone
+    )
+    VALUES (
+        '68000000-0000-0000-0000-000000000020',
+        '090680000001',
+        'Issue 90 Completion Client',
+        DATE '1990-06-08',
+        'Nam',
+        '0906800001'
+    );
 
-    UPDATE public.results
-    SET status = 'approved',
-        approved_by = v_manager_id,
-        approved_at = COALESCE(
-            approved_at,
-            TIMESTAMPTZ '2026-07-11 00:00:00+00'
-        )
-    WHERE sample_id = v_sample_id;
+    INSERT INTO public.assay_definitions (
+        id,
+        name,
+        units,
+        is_confidential,
+        normal_range,
+        method_name
+    )
+    VALUES
+        (
+            '68000000-0000-0000-0000-000000000031',
+            'Issue 90 Completion Assay A',
+            'mg/L',
+            FALSE,
+            '1-10',
+            'Completion Method A'
+        ),
+        (
+            '68000000-0000-0000-0000-000000000032',
+            'Issue 90 Completion Assay B',
+            'mg/L',
+            FALSE,
+            '2-20',
+            'Completion Method B'
+        );
+
+    INSERT INTO public.samples (
+        id,
+        sample_id,
+        client_id,
+        client_name,
+        status,
+        received_at,
+        received_by,
+        type,
+        completed_at,
+        sample_quality
+    )
+    VALUES (
+        v_sample_id,
+        'ISSUE90-COA-COMPLETION',
+        '68000000-0000-0000-0000-000000000020',
+        'Issue 90 Completion Client',
+        'in_progress',
+        TIMESTAMPTZ '2026-07-21 00:00:00+00',
+        v_analyst_id,
+        'Máu',
+        NULL,
+        TRUE
+    );
+
+    INSERT INTO public.results (
+        id,
+        sample_id,
+        assay_id,
+        value,
+        status,
+        entered_by,
+        entered_at
+    )
+    VALUES
+        (
+            v_result_id,
+            v_sample_id,
+            '68000000-0000-0000-0000-000000000031',
+            '5',
+            'entered',
+            v_analyst_id,
+            TIMESTAMPTZ '2026-07-21 00:05:00+00'
+        ),
+        (
+            '68000000-0000-0000-0000-000000000052',
+            v_sample_id,
+            '68000000-0000-0000-0000-000000000032',
+            '10',
+            'entered',
+            v_analyst_id,
+            TIMESTAMPTZ '2026-07-21 00:06:00+00'
+        );
+
+    UPDATE public.samples
+    SET status = 'review',
+        review_started_at = TIMESTAMPTZ '2026-07-21 00:09:00+00'
+    WHERE id = v_sample_id;
+
+    INSERT INTO public.sample_submissions (
+        id,
+        sample_id,
+        user_id,
+        signature_id,
+        submitted_at,
+        submission_number,
+        signature_meaning
+    )
+    VALUES (
+        v_submission_id,
+        v_sample_id,
+        v_analyst_id,
+        v_analyst_signature_id,
+        TIMESTAMPTZ '2026-07-21 00:10:00+00',
+        1,
+        'I certify I performed these tests and entered these results accurately'
+    );
 
     INSERT INTO public.result_reference_assessments (
         submission_id,
@@ -119,6 +224,20 @@ BEGIN
       ON submission.id = v_submission_id
     WHERE result.sample_id = v_sample_id
     ON CONFLICT (submission_id, result_id) DO NOTHING;
+
+    UPDATE public.results
+    SET status = 'approved',
+        approved_by = v_manager_id,
+        approved_at = CASE id
+            WHEN v_result_id THEN TIMESTAMPTZ '2026-07-21 00:15:00+00'
+            ELSE TIMESTAMPTZ '2026-07-21 00:16:00+00'
+        END
+    WHERE sample_id = v_sample_id;
+
+    UPDATE public.samples
+    SET status = 'completed',
+        completed_at = TIMESTAMPTZ '2026-07-21 00:20:00+00'
+    WHERE id = v_sample_id;
 
     PERFORM set_config(
         'request.jwt.claims',
@@ -151,7 +270,8 @@ BEGIN
     END IF;
 
     UPDATE public.samples
-    SET status = 'in_progress'
+    SET status = 'in_progress',
+        completed_at = NULL
     WHERE id = v_sample_id;
 
     EXECUTE 'SET LOCAL ROLE authenticated';
@@ -188,11 +308,12 @@ BEGIN
     UPDATE public.results
     SET status = 'approved',
         approved_by = v_manager_id,
-        approved_at = TIMESTAMPTZ '2026-07-11 00:00:00+00'
+        approved_at = TIMESTAMPTZ '2026-07-21 00:25:00+00'
     WHERE id = v_result_id;
 
     UPDATE public.samples
-    SET status = 'completed'
+    SET status = 'completed',
+        completed_at = TIMESTAMPTZ '2026-07-21 00:30:00+00'
     WHERE id = v_sample_id;
 
     EXECUTE 'SET LOCAL ROLE authenticated';

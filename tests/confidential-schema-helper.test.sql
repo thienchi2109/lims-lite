@@ -20,26 +20,42 @@ SET search_path TO public;
 \echo '============================================================================'
 \echo ''
 
+BEGIN;
+
 DO $$
 BEGIN
     INSERT INTO auth.users (id, email)
     VALUES
-        ('33333333-3333-3333-3333-333333333333', 'confidential-analyst@lims.local'),
-        ('44444444-4444-4444-4444-444444444444', 'confidential-manager@lims.local')
-    ON CONFLICT (id) DO NOTHING;
+        (
+            '90000090-0005-4000-8000-000000000001',
+            'issue-90-confidential-analyst@lims.local'
+        ),
+        (
+            '90000090-0005-4000-8000-000000000002',
+            'issue-90-confidential-manager@lims.local'
+        );
 
     INSERT INTO public.users (id, username, full_name, role)
     VALUES
-        ('33333333-3333-3333-3333-333333333333', 'confidential_analyst', 'Confidential Analyst', 'analyst'),
-        ('44444444-4444-4444-4444-444444444444', 'confidential_manager', 'Confidential Manager', 'manager')
-    ON CONFLICT (id) DO NOTHING;
+        (
+            '90000090-0005-4000-8000-000000000001',
+            'issue_90_confidential_analyst',
+            'Issue 90 Confidential Analyst',
+            'analyst'
+        ),
+        (
+            '90000090-0005-4000-8000-000000000002',
+            'issue_90_confidential_manager',
+            'Issue 90 Confidential Manager',
+            'manager'
+        );
 END $$;
 
 CREATE TEMP TABLE confidential_batch1_test_results (
     test_name TEXT PRIMARY KEY,
     passed BOOLEAN NOT NULL,
     detail TEXT NOT NULL
-);
+) ON COMMIT DROP;
 
 DO $$
 DECLARE
@@ -186,6 +202,10 @@ DECLARE
     v_provolatile "char";
     v_prosecdef BOOLEAN;
     v_return_type TEXT;
+    v_proconfig TEXT[];
+    v_public_can_execute BOOLEAN;
+    v_authenticated_can_execute BOOLEAN;
+    v_anon_can_execute BOOLEAN;
     v_unauthorized_result BOOLEAN;
     v_authorized_result BOOLEAN;
 BEGIN
@@ -205,11 +225,26 @@ BEGIN
     SELECT
         p.provolatile,
         p.prosecdef,
-        pg_get_function_result(p.oid)
+        pg_get_function_result(p.oid),
+        p.proconfig,
+        EXISTS (
+            SELECT 1
+            FROM aclexplode(
+                COALESCE(p.proacl, acldefault('f', p.proowner))
+            ) AS privilege
+            WHERE privilege.grantee = 0
+              AND privilege.privilege_type = 'EXECUTE'
+        ),
+        has_function_privilege('authenticated', p.oid, 'EXECUTE'),
+        has_function_privilege('anon', p.oid, 'EXECUTE')
     INTO
         v_provolatile,
         v_prosecdef,
-        v_return_type
+        v_return_type,
+        v_proconfig,
+        v_public_can_execute,
+        v_authenticated_can_execute,
+        v_anon_can_execute
     FROM pg_proc p
     INNER JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'public'
@@ -247,29 +282,73 @@ BEGIN
         RETURN;
     END IF;
 
+    IF v_proconfig IS DISTINCT FROM
+       ARRAY['search_path=public, pg_temp']::TEXT[] THEN
+        INSERT INTO confidential_batch1_test_results
+        VALUES (
+            'user_can_access_confidential()',
+            FALSE,
+            format(
+                'expected proconfig search_path=public, pg_temp, found %s',
+                coalesce(v_proconfig::TEXT, 'NULL')
+            )
+        );
+        RETURN;
+    END IF;
+
+    IF v_public_can_execute IS DISTINCT FROM FALSE THEN
+        INSERT INTO confidential_batch1_test_results
+        VALUES (
+            'user_can_access_confidential()',
+            FALSE,
+            'expected PUBLIC EXECUTE to be revoked'
+        );
+        RETURN;
+    END IF;
+
+    IF v_authenticated_can_execute IS DISTINCT FROM TRUE THEN
+        INSERT INTO confidential_batch1_test_results
+        VALUES (
+            'user_can_access_confidential()',
+            FALSE,
+            'expected authenticated to have EXECUTE'
+        );
+        RETURN;
+    END IF;
+
+    IF v_anon_can_execute IS DISTINCT FROM TRUE THEN
+        INSERT INTO confidential_batch1_test_results
+        VALUES (
+            'user_can_access_confidential()',
+            FALSE,
+            'expected anon to have EXECUTE'
+        );
+        RETURN;
+    END IF;
+
     EXECUTE $sql$
         UPDATE public.users
         SET can_access_confidential = CASE
-            WHEN id = '33333333-3333-3333-3333-333333333333' THEN FALSE
-            WHEN id = '44444444-4444-4444-4444-444444444444' THEN TRUE
+            WHEN id = '90000090-0005-4000-8000-000000000001' THEN FALSE
+            WHEN id = '90000090-0005-4000-8000-000000000002' THEN TRUE
             ELSE can_access_confidential
         END
         WHERE id IN (
-            '33333333-3333-3333-3333-333333333333',
-            '44444444-4444-4444-4444-444444444444'
+            '90000090-0005-4000-8000-000000000001',
+            '90000090-0005-4000-8000-000000000002'
         )
     $sql$;
 
     PERFORM set_config(
         'request.jwt.claims',
-        '{"sub":"33333333-3333-3333-3333-333333333333","role":"authenticated"}',
+        '{"sub":"90000090-0005-4000-8000-000000000001","role":"authenticated"}',
         TRUE
     );
     SELECT public.user_can_access_confidential() INTO v_unauthorized_result;
 
     PERFORM set_config(
         'request.jwt.claims',
-        '{"sub":"44444444-4444-4444-4444-444444444444","role":"authenticated"}',
+        '{"sub":"90000090-0005-4000-8000-000000000002","role":"authenticated"}',
         TRUE
     );
     SELECT public.user_can_access_confidential() INTO v_authorized_result;
@@ -298,7 +377,7 @@ BEGIN
     VALUES (
         'user_can_access_confidential()',
         TRUE,
-        'boolean STABLE SECURITY DEFINER helper returns per-user confidential access'
+        'boolean STABLE SECURITY DEFINER helper pins search_path and grants both API roles'
     );
 END $$;
 
@@ -319,3 +398,7 @@ BEGIN
 
     RAISE NOTICE '✓ All confidential schema/helper checks passed';
 END $$;
+
+ROLLBACK;
+
+SELECT 'confidential-schema-helper: ok' AS result;

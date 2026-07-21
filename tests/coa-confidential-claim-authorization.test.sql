@@ -11,11 +11,12 @@ BEGIN;
 
 DO $$
 DECLARE
-    v_sample_id UUID;
-    v_submission_id UUID;
-    v_analyst_id UUID;
-    v_manager_id UUID;
-    v_confidential_assay_id UUID;
+    v_analyst_id UUID := '69000000-0000-0000-0000-000000000001';
+    v_manager_id UUID := '69000000-0000-0000-0000-000000000002';
+    v_analyst_signature_id UUID := '69000000-0000-0000-0000-000000000011';
+    v_sample_id UUID := '69000000-0000-0000-0000-000000000040';
+    v_submission_id UUID := '69000000-0000-0000-0000-000000000060';
+    v_confidential_assay_id UUID := '69000000-0000-0000-0000-000000000031';
     v_report JSONB;
     v_report_id UUID;
     v_error_message TEXT;
@@ -27,74 +28,173 @@ DECLARE
     v_retry_denied BOOLEAN := FALSE;
     v_regeneration_denied BOOLEAN := FALSE;
 BEGIN
-    SELECT sample.id, submission.id
-    INTO v_sample_id, v_submission_id
-    FROM public.samples AS sample
-    JOIN public.sample_submissions AS submission
-      ON submission.sample_id = sample.id
-     AND submission.superseded_by IS NULL
-    WHERE sample.deleted_at IS NULL
-      AND sample.status = 'completed'
-      AND (
-          SELECT COUNT(*)
-          FROM public.results AS result
-          WHERE result.sample_id = sample.id
-      ) >= 2
-      AND NOT EXISTS (
-          SELECT 1
-          FROM public.results AS result
-          WHERE result.sample_id = sample.id
-            AND result.status <> 'approved'
-      )
-      AND NOT EXISTS (
-          SELECT 1
-          FROM public.coa_reports AS report
-          WHERE report.sample_id = sample.id
-            AND report.version IN (690001, 690002)
-      )
-    ORDER BY sample.created_at
-    LIMIT 1;
+    INSERT INTO auth.users (id, email)
+    VALUES
+        (v_analyst_id, 'issue-90-confidential-analyst@lims.local'),
+        (v_manager_id, 'issue-90-confidential-manager@lims.local');
 
-    SELECT id
-    INTO v_analyst_id
-    FROM public.users
-    WHERE role = 'analyst'
-      AND deleted_at IS NULL
-    ORDER BY created_at
-    LIMIT 1;
-
-    SELECT id
-    INTO v_manager_id
-    FROM public.users
-    WHERE role = 'manager'
-      AND deleted_at IS NULL
-    ORDER BY created_at
-    LIMIT 1;
-
-    SELECT result.assay_id
-    INTO v_confidential_assay_id
-    FROM public.results AS result
-    WHERE result.sample_id = v_sample_id
-    ORDER BY result.id
-    LIMIT 1;
-
-    IF v_sample_id IS NULL
-       OR v_submission_id IS NULL
-       OR v_analyst_id IS NULL
-       OR v_manager_id IS NULL
-       OR v_confidential_assay_id IS NULL THEN
-        RAISE EXCEPTION
-            'Confidential CoA claim test requires a completed reviewed sample, analyst, and manager';
-    END IF;
-
-    UPDATE public.results
-    SET status = 'approved',
-        approved_at = COALESCE(
-            approved_at,
-            TIMESTAMPTZ '2026-07-11 00:00:00+00'
+    INSERT INTO public.users (
+        id,
+        username,
+        full_name,
+        role,
+        can_access_confidential
+    )
+    VALUES
+        (
+            v_analyst_id,
+            'issue90_confidential_analyst',
+            'Issue 90 Confidential Analyst',
+            'analyst',
+            FALSE
         ),
-        approved_by = COALESCE(approved_by, v_manager_id)
-    WHERE sample_id = v_sample_id;
+        (
+            v_manager_id,
+            'issue90_confidential_manager',
+            'Issue 90 Confidential Manager',
+            'manager',
+            FALSE
+        );
+
+    INSERT INTO public.user_signatures (
+        id,
+        user_id,
+        signature_path,
+        signature_hash,
+        file_size,
+        mime_type,
+        is_active
+    )
+    VALUES (
+        v_analyst_signature_id,
+        v_analyst_id,
+        'issue-90/confidential-analyst.png',
+        encode(digest('issue-90-confidential-analyst', 'sha256'), 'hex'),
+        1,
+        'image/png',
+        TRUE
+    );
+
+    INSERT INTO public.clients (
+        id,
+        id_card_num,
+        name,
+        date_of_birth,
+        gender,
+        phone
+    )
+    VALUES (
+        '69000000-0000-0000-0000-000000000020',
+        '090690000001',
+        'Issue 90 Confidential Client',
+        DATE '1991-06-09',
+        'Nữ',
+        '0906900001'
+    );
+
+    INSERT INTO public.assay_definitions (
+        id,
+        name,
+        units,
+        is_confidential,
+        normal_range,
+        method_name
+    )
+    VALUES
+        (
+            v_confidential_assay_id,
+            'Issue 90 Confidential CoA Assay',
+            'index',
+            TRUE,
+            'Non-reactive',
+            'Confidential Method'
+        ),
+        (
+            '69000000-0000-0000-0000-000000000032',
+            'Issue 90 Standard CoA Assay',
+            'mg/L',
+            FALSE,
+            '1-10',
+            'Standard Method'
+        );
+
+    INSERT INTO public.samples (
+        id,
+        sample_id,
+        client_id,
+        client_name,
+        status,
+        received_at,
+        received_by,
+        type,
+        completed_at,
+        sample_quality
+    )
+    VALUES (
+        v_sample_id,
+        'ISSUE90-COA-CONFIDENTIAL',
+        '69000000-0000-0000-0000-000000000020',
+        'Issue 90 Confidential Client',
+        'in_progress',
+        TIMESTAMPTZ '2026-07-21 01:00:00+00',
+        v_analyst_id,
+        'Máu',
+        NULL,
+        TRUE
+    );
+
+    INSERT INTO public.results (
+        id,
+        sample_id,
+        assay_id,
+        value,
+        status,
+        entered_by,
+        entered_at
+    )
+    VALUES
+        (
+            '69000000-0000-0000-0000-000000000051',
+            v_sample_id,
+            v_confidential_assay_id,
+            'Non-reactive',
+            'entered',
+            v_analyst_id,
+            TIMESTAMPTZ '2026-07-21 01:05:00+00'
+        ),
+        (
+            '69000000-0000-0000-0000-000000000052',
+            v_sample_id,
+            '69000000-0000-0000-0000-000000000032',
+            '5',
+            'entered',
+            v_analyst_id,
+            TIMESTAMPTZ '2026-07-21 01:06:00+00'
+        );
+
+    UPDATE public.samples
+    SET status = 'review',
+        review_started_at = TIMESTAMPTZ '2026-07-21 01:09:00+00'
+    WHERE id = v_sample_id;
+
+    INSERT INTO public.sample_submissions (
+        id,
+        sample_id,
+        user_id,
+        signature_id,
+        submitted_at,
+        submission_number,
+        signature_meaning
+    )
+    VALUES (
+        v_submission_id,
+        v_sample_id,
+        v_analyst_id,
+        v_analyst_signature_id,
+        TIMESTAMPTZ '2026-07-21 01:10:00+00',
+        1,
+        'I certify I performed these tests and entered these results accurately'
+    );
 
     INSERT INTO public.result_reference_assessments (
         submission_id,
@@ -123,9 +223,20 @@ BEGIN
     WHERE result.sample_id = v_sample_id
     ON CONFLICT (submission_id, result_id) DO NOTHING;
 
-    UPDATE public.assay_definitions
-    SET is_confidential = TRUE
-    WHERE id = v_confidential_assay_id;
+    UPDATE public.results
+    SET status = 'approved',
+        approved_by = v_manager_id,
+        approved_at = CASE id
+            WHEN '69000000-0000-0000-0000-000000000051'::UUID
+                THEN TIMESTAMPTZ '2026-07-21 01:15:00+00'
+            ELSE TIMESTAMPTZ '2026-07-21 01:16:00+00'
+        END
+    WHERE sample_id = v_sample_id;
+
+    UPDATE public.samples
+    SET status = 'completed',
+        completed_at = TIMESTAMPTZ '2026-07-21 01:20:00+00'
+    WHERE id = v_sample_id;
 
     UPDATE public.users
     SET can_access_confidential = FALSE

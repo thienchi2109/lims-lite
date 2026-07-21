@@ -21,7 +21,7 @@ CREATE TEMP TABLE search_rpc_execute_privilege_test_results (
 
 WITH protected_functions(function_name, signature) AS (
     VALUES
-        ('get_samples_page', 'public.get_samples_page(text, text, sample_status, boolean, timestamp with time zone, timestamp with time zone, uuid, uuid[], text, text, integer, integer)'),
+        ('get_samples_page', 'public.get_samples_page(text, text, sample_status, boolean, boolean, timestamp with time zone, timestamp with time zone, uuid, uuid[], text, text, integer, integer)'),
         ('global_search', 'public.global_search(text, integer)'),
         ('search_assays', 'public.search_assays(text, integer)'),
         ('search_clients', 'public.search_clients(text, integer)'),
@@ -47,7 +47,7 @@ FROM privilege_checks;
 
 WITH protected_functions(function_name, signature) AS (
     VALUES
-        ('get_samples_page', 'public.get_samples_page(text, text, sample_status, boolean, timestamp with time zone, timestamp with time zone, uuid, uuid[], text, text, integer, integer)'),
+        ('get_samples_page', 'public.get_samples_page(text, text, sample_status, boolean, boolean, timestamp with time zone, timestamp with time zone, uuid, uuid[], text, text, integer, integer)'),
         ('global_search', 'public.global_search(text, integer)'),
         ('search_assays', 'public.search_assays(text, integer)'),
         ('search_clients', 'public.search_clients(text, integer)'),

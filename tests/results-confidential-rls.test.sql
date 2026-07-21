@@ -23,7 +23,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON confidential_results_batch2_test_results
 
 DO $$
 DECLARE
-    v_hiv_assay_id UUID;
+    v_confidential_assay_id UUID := '58888888-8888-8888-8888-888888888888';
 BEGIN
     INSERT INTO auth.users (id, email)
     VALUES
@@ -55,20 +55,22 @@ BEGIN
         can_access_confidential = EXCLUDED.can_access_confidential,
         deleted_at = NULL;
 
-    SELECT id
-    INTO v_hiv_assay_id
-    FROM public.assay_definitions
-    WHERE name = 'HIV Ag/Ab định tính'
-      AND deleted_at IS NULL
-    LIMIT 1;
-
-    IF v_hiv_assay_id IS NULL THEN
-        RAISE EXCEPTION 'Missing seeded HIV assay definition: HIV Ag/Ab định tính';
-    END IF;
-
-    UPDATE public.assay_definitions
-    SET is_confidential = TRUE
-    WHERE id = v_hiv_assay_id;
+    INSERT INTO public.assay_definitions (
+        id,
+        name,
+        units,
+        is_confidential,
+        normal_range,
+        method_name
+    )
+    VALUES (
+        v_confidential_assay_id,
+        'Issue 90 HIV Ag/Ab Confidential Assay',
+        'index',
+        TRUE,
+        'Non-reactive',
+        'Issue 90 HIV Ag/Ab Method'
+    );
 
     INSERT INTO public.clients (id, id_card_num, name, date_of_birth, gender, phone, address)
     VALUES ('53333333-3333-3333-3333-333333333333', '079203009999', 'Bệnh nhân HIV Batch 2', DATE '1994-02-14', 'Nam', '0901234999', 'TP.HCM')
@@ -91,10 +93,11 @@ BEGIN
         status = EXCLUDED.status,
         received_by = EXCLUDED.received_by,
         type = EXCLUDED.type,
+        sample_quality = TRUE,
         deleted_at = NULL;
 
     INSERT INTO public.results (id, sample_id, assay_id, value, status, entered_by)
-    VALUES ('55555555-5555-5555-5555-555555555555', '54444444-4444-4444-4444-444444444444', v_hiv_assay_id, 'Âm tính', 'pending', '52222222-2222-2222-2222-222222222222')
+    VALUES ('55555555-5555-5555-5555-555555555555', '54444444-4444-4444-4444-444444444444', v_confidential_assay_id, 'Âm tính', 'pending', '52222222-2222-2222-2222-222222222222')
     ON CONFLICT (id) DO UPDATE
     SET
         sample_id = EXCLUDED.sample_id,
@@ -121,7 +124,7 @@ BEGIN
     FROM public.results r
     INNER JOIN public.assay_definitions ad ON ad.id = r.assay_id
     WHERE r.id = '55555555-5555-5555-5555-555555555555'
-      AND ad.name = 'HIV Ag/Ab định tính';
+      AND ad.id = '58888888-8888-8888-8888-888888888888';
 
     SELECT r.value
     INTO v_visible_value
@@ -163,7 +166,7 @@ BEGIN
             'pending',
             '51111111-1111-1111-1111-111111111111'
         FROM public.assay_definitions ad
-        WHERE ad.name = 'HIV Ag/Ab định tính'
+        WHERE ad.id = '58888888-8888-8888-8888-888888888888'
           AND ad.deleted_at IS NULL;
 
         INSERT INTO confidential_results_batch2_test_results
@@ -247,7 +250,7 @@ BEGIN
         'pending',
         '52222222-2222-2222-2222-222222222222'
     FROM public.assay_definitions ad
-    WHERE ad.name = 'HIV Ag/Ab định tính'
+    WHERE ad.id = '58888888-8888-8888-8888-888888888888'
       AND ad.deleted_at IS NULL;
 
     GET DIAGNOSTICS v_inserted_rows = ROW_COUNT;
