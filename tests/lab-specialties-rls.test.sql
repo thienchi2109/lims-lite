@@ -22,6 +22,8 @@ BEGIN;
 DO $$
 DECLARE
     v_mutation_policy_count INTEGER;
+    v_expected_manager_expression CONSTANT TEXT :=
+        '(get_user_role()=''manager''::user_role)';
     v_insert_using TEXT;
     v_insert_check TEXT;
     v_update_using TEXT;
@@ -42,71 +44,97 @@ BEGIN
     END IF;
 
     SELECT
-        pg_get_expr(polqual, polrelid),
-        pg_get_expr(polwithcheck, polrelid)
+        regexp_replace(
+            lower(COALESCE(pg_get_expr(polqual, polrelid), '')),
+            '[[:space:]]+',
+            '',
+            'g'
+        ),
+        regexp_replace(
+            lower(COALESCE(pg_get_expr(polwithcheck, polrelid), '')),
+            '[[:space:]]+',
+            '',
+            'g'
+        )
     INTO v_insert_using, v_insert_check
     FROM pg_policy
     WHERE polrelid = 'public.lab_specialties'::regclass
       AND polname = 'Managers can insert lab specialties'
       AND polcmd = 'a';
 
-    IF v_insert_check IS NULL
-       OR v_insert_check NOT LIKE '%get_user_role%'
-       OR v_insert_check NOT LIKE '%manager%' THEN
+    IF v_insert_check IS DISTINCT FROM v_expected_manager_expression THEN
         RAISE EXCEPTION
-            'LAB SPECIALTIES RLS FAILED: INSERT manager WITH CHECK mismatch: %',
-            v_insert_check;
+            'LAB SPECIALTIES RLS FAILED: INSERT WITH CHECK expected %, found %',
+            v_expected_manager_expression,
+            nullif(v_insert_check, '');
     END IF;
 
-    IF v_insert_using IS NOT NULL THEN
+    IF v_insert_using IS DISTINCT FROM '' THEN
         RAISE EXCEPTION
             'LAB SPECIALTIES RLS FAILED: INSERT policy unexpectedly has USING: %',
             v_insert_using;
     END IF;
 
     SELECT
-        pg_get_expr(polqual, polrelid),
-        pg_get_expr(polwithcheck, polrelid)
+        regexp_replace(
+            lower(COALESCE(pg_get_expr(polqual, polrelid), '')),
+            '[[:space:]]+',
+            '',
+            'g'
+        ),
+        regexp_replace(
+            lower(COALESCE(pg_get_expr(polwithcheck, polrelid), '')),
+            '[[:space:]]+',
+            '',
+            'g'
+        )
     INTO v_update_using, v_update_check
     FROM pg_policy
     WHERE polrelid = 'public.lab_specialties'::regclass
       AND polname = 'Managers can update lab specialties'
       AND polcmd = 'w';
 
-    IF v_update_using IS NULL
-       OR v_update_using NOT LIKE '%get_user_role%'
-       OR v_update_using NOT LIKE '%manager%' THEN
+    IF v_update_using IS DISTINCT FROM v_expected_manager_expression THEN
         RAISE EXCEPTION
-            'LAB SPECIALTIES RLS FAILED: UPDATE manager USING mismatch: %',
-            v_update_using;
+            'LAB SPECIALTIES RLS FAILED: UPDATE USING expected %, found %',
+            v_expected_manager_expression,
+            nullif(v_update_using, '');
     END IF;
 
-    IF v_update_check IS NULL
-       OR v_update_check NOT LIKE '%get_user_role%'
-       OR v_update_check NOT LIKE '%manager%' THEN
+    IF v_update_check IS DISTINCT FROM v_expected_manager_expression THEN
         RAISE EXCEPTION
-            'LAB SPECIALTIES RLS FAILED: UPDATE manager WITH CHECK mismatch: %',
-            v_update_check;
+            'LAB SPECIALTIES RLS FAILED: UPDATE WITH CHECK expected %, found %',
+            v_expected_manager_expression,
+            nullif(v_update_check, '');
     END IF;
 
     SELECT
-        pg_get_expr(polqual, polrelid),
-        pg_get_expr(polwithcheck, polrelid)
+        regexp_replace(
+            lower(COALESCE(pg_get_expr(polqual, polrelid), '')),
+            '[[:space:]]+',
+            '',
+            'g'
+        ),
+        regexp_replace(
+            lower(COALESCE(pg_get_expr(polwithcheck, polrelid), '')),
+            '[[:space:]]+',
+            '',
+            'g'
+        )
     INTO v_delete_using, v_delete_check
     FROM pg_policy
     WHERE polrelid = 'public.lab_specialties'::regclass
       AND polname = 'Managers can delete lab specialties'
       AND polcmd = 'd';
 
-    IF v_delete_using IS NULL
-       OR v_delete_using NOT LIKE '%get_user_role%'
-       OR v_delete_using NOT LIKE '%manager%' THEN
+    IF v_delete_using IS DISTINCT FROM v_expected_manager_expression THEN
         RAISE EXCEPTION
-            'LAB SPECIALTIES RLS FAILED: DELETE manager USING mismatch: %',
-            v_delete_using;
+            'LAB SPECIALTIES RLS FAILED: DELETE USING expected %, found %',
+            v_expected_manager_expression,
+            nullif(v_delete_using, '');
     END IF;
 
-    IF v_delete_check IS NOT NULL THEN
+    IF v_delete_check IS DISTINCT FROM '' THEN
         RAISE EXCEPTION
             'LAB SPECIALTIES RLS FAILED: DELETE policy unexpectedly has WITH CHECK: %',
             v_delete_check;

@@ -202,6 +202,9 @@ DECLARE
     v_provolatile "char";
     v_prosecdef BOOLEAN;
     v_return_type TEXT;
+    v_proconfig TEXT[];
+    v_authenticated_can_execute BOOLEAN;
+    v_anon_can_execute BOOLEAN;
     v_unauthorized_result BOOLEAN;
     v_authorized_result BOOLEAN;
 BEGIN
@@ -221,11 +224,17 @@ BEGIN
     SELECT
         p.provolatile,
         p.prosecdef,
-        pg_get_function_result(p.oid)
+        pg_get_function_result(p.oid),
+        p.proconfig,
+        has_function_privilege('authenticated', p.oid, 'EXECUTE'),
+        has_function_privilege('anon', p.oid, 'EXECUTE')
     INTO
         v_provolatile,
         v_prosecdef,
-        v_return_type
+        v_return_type,
+        v_proconfig,
+        v_authenticated_can_execute,
+        v_anon_can_execute
     FROM pg_proc p
     INNER JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'public'
@@ -259,6 +268,40 @@ BEGIN
             'user_can_access_confidential()',
             FALSE,
             'expected SECURITY DEFINER helper'
+        );
+        RETURN;
+    END IF;
+
+    IF v_proconfig IS DISTINCT FROM
+       ARRAY['search_path=public, pg_temp']::TEXT[] THEN
+        INSERT INTO confidential_batch1_test_results
+        VALUES (
+            'user_can_access_confidential()',
+            FALSE,
+            format(
+                'expected proconfig search_path=public, pg_temp, found %s',
+                coalesce(v_proconfig::TEXT, 'NULL')
+            )
+        );
+        RETURN;
+    END IF;
+
+    IF v_authenticated_can_execute IS DISTINCT FROM TRUE THEN
+        INSERT INTO confidential_batch1_test_results
+        VALUES (
+            'user_can_access_confidential()',
+            FALSE,
+            'expected authenticated to have EXECUTE'
+        );
+        RETURN;
+    END IF;
+
+    IF v_anon_can_execute IS DISTINCT FROM TRUE THEN
+        INSERT INTO confidential_batch1_test_results
+        VALUES (
+            'user_can_access_confidential()',
+            FALSE,
+            'expected anon to have EXECUTE'
         );
         RETURN;
     END IF;
@@ -314,7 +357,7 @@ BEGIN
     VALUES (
         'user_can_access_confidential()',
         TRUE,
-        'boolean STABLE SECURITY DEFINER helper returns per-user confidential access'
+        'boolean STABLE SECURITY DEFINER helper pins search_path and grants both API roles'
     );
 END $$;
 
