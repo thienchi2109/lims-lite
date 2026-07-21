@@ -24,6 +24,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON doctor_rbac_test_results TO authenticate
 DO $$
 DECLARE
     v_confidential_assay_id UUID := '91111111-1111-1111-1111-111111111111';
+    v_receiver_signature_id UUID := '90000000-0000-0000-0000-000000000004';
 BEGIN
     INSERT INTO auth.users (id, email)
     VALUES
@@ -45,6 +46,25 @@ BEGIN
         can_access_confidential = EXCLUDED.can_access_confidential,
         deleted_at = NULL;
 
+    INSERT INTO public.user_signatures (
+        id,
+        user_id,
+        signature_path,
+        signature_hash,
+        file_size,
+        mime_type,
+        is_active
+    )
+    VALUES (
+        v_receiver_signature_id,
+        '90000000-0000-0000-0000-000000000003',
+        'issue-90/doctor-receiver.png',
+        encode(digest('issue-90-doctor-receiver', 'sha256'), 'hex'),
+        1,
+        'image/png',
+        TRUE
+    );
+
     INSERT INTO public.assay_definitions (id, name, units, is_confidential)
     VALUES (v_confidential_assay_id, 'Doctor Confidential Assay', 'copies/mL', TRUE)
     ON CONFLICT (id) DO UPDATE
@@ -64,11 +84,51 @@ BEGIN
         gender = EXCLUDED.gender,
         phone = EXCLUDED.phone;
 
-    INSERT INTO public.samples (id, sample_id, client_id, client_name, status, received_by, type, sample_quality)
+    INSERT INTO public.samples (
+        id,
+        sample_id,
+        client_id,
+        client_name,
+        status,
+        received_by,
+        type,
+        completed_at,
+        sample_quality
+    )
     VALUES
-        ('90000000-0000-0000-0000-000000000101', 'DR-COMPLETE-VISIBLE', '90000000-0000-0000-0000-000000000010', 'Doctor RBAC Patient', 'completed', '90000000-0000-0000-0000-000000000003', 'Máu', TRUE),
-        ('90000000-0000-0000-0000-000000000102', 'DR-ASSIGNED-HIDDEN', '90000000-0000-0000-0000-000000000010', 'Doctor RBAC Patient', 'assigned', '90000000-0000-0000-0000-000000000003', 'Máu', TRUE),
-        ('90000000-0000-0000-0000-000000000103', 'DR-COMPLETE-CONFIDENTIAL', '90000000-0000-0000-0000-000000000010', 'Doctor RBAC Patient', 'completed', '90000000-0000-0000-0000-000000000003', 'Máu', TRUE)
+        (
+            '90000000-0000-0000-0000-000000000101',
+            'DR-COMPLETE-VISIBLE',
+            '90000000-0000-0000-0000-000000000010',
+            'Doctor RBAC Patient',
+            'completed',
+            '90000000-0000-0000-0000-000000000003',
+            'Máu',
+            TIMESTAMPTZ '2026-07-21 04:00:00+00',
+            TRUE
+        ),
+        (
+            '90000000-0000-0000-0000-000000000102',
+            'DR-ASSIGNED-HIDDEN',
+            '90000000-0000-0000-0000-000000000010',
+            'Doctor RBAC Patient',
+            'assigned',
+            '90000000-0000-0000-0000-000000000003',
+            'Máu',
+            NULL,
+            TRUE
+        ),
+        (
+            '90000000-0000-0000-0000-000000000103',
+            'DR-COMPLETE-CONFIDENTIAL',
+            '90000000-0000-0000-0000-000000000010',
+            'Doctor RBAC Patient',
+            'completed',
+            '90000000-0000-0000-0000-000000000003',
+            'Máu',
+            TIMESTAMPTZ '2026-07-21 04:05:00+00',
+            TRUE
+        )
     ON CONFLICT (id) DO UPDATE
     SET
         sample_id = EXCLUDED.sample_id,
@@ -77,6 +137,8 @@ BEGIN
         status = EXCLUDED.status,
         received_by = EXCLUDED.received_by,
         type = EXCLUDED.type,
+        completed_at = EXCLUDED.completed_at,
+        sample_quality = TRUE,
         deleted_at = NULL;
 
     INSERT INTO public.results (id, sample_id, assay_id, value, status, entered_by)
@@ -89,41 +151,77 @@ BEGIN
         status = EXCLUDED.status,
         entered_by = EXCLUDED.entered_by;
 
-    WITH desired_coa(id, sample_id, version, file_path, file_hash, status) AS (
-        VALUES
-            ('90000000-0000-0000-0000-000000000301'::UUID, '90000000-0000-0000-0000-000000000101'::UUID, 1, 'doctor-visible/report.html', 'hash-ready', 'ready'),
-            ('90000000-0000-0000-0000-000000000302'::UUID, '90000000-0000-0000-0000-000000000102'::UUID, 1, 'doctor-hidden/report.html', 'hash-hidden', 'ready'),
-            ('90000000-0000-0000-0000-000000000303'::UUID, '90000000-0000-0000-0000-000000000103'::UUID, 1, 'doctor-confidential/report.html', 'hash-confidential', 'ready')
-    ),
-    updated_coa AS (
-        UPDATE public.coa_reports AS existing_coa
-        SET
-            file_path = desired_coa.file_path,
-            file_hash = desired_coa.file_hash,
-            status = desired_coa.status,
-            deleted_at = NULL
-        FROM desired_coa
-        WHERE existing_coa.sample_id = desired_coa.sample_id
-          AND existing_coa.version = desired_coa.version
-          AND existing_coa.deleted_at IS NULL
-        RETURNING desired_coa.sample_id
+    INSERT INTO public.sample_submissions (
+        id,
+        sample_id,
+        user_id,
+        signature_id,
+        submission_number,
+        signature_meaning
     )
-    INSERT INTO public.coa_reports (id, sample_id, version, file_path, file_hash, status)
-    SELECT desired_coa.id, desired_coa.sample_id, desired_coa.version, desired_coa.file_path, desired_coa.file_hash, desired_coa.status
-    FROM desired_coa
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM updated_coa
-        WHERE updated_coa.sample_id = desired_coa.sample_id
+    VALUES
+        (
+            '90000000-0000-0000-0000-000000000401',
+            '90000000-0000-0000-0000-000000000101',
+            '90000000-0000-0000-0000-000000000003',
+            v_receiver_signature_id,
+            1,
+            'I certify I performed these tests and entered these results accurately'
+        ),
+        (
+            '90000000-0000-0000-0000-000000000402',
+            '90000000-0000-0000-0000-000000000102',
+            '90000000-0000-0000-0000-000000000003',
+            v_receiver_signature_id,
+            1,
+            'I certify I performed these tests and entered these results accurately'
+        ),
+        (
+            '90000000-0000-0000-0000-000000000403',
+            '90000000-0000-0000-0000-000000000103',
+            '90000000-0000-0000-0000-000000000003',
+            v_receiver_signature_id,
+            1,
+            'I certify I performed these tests and entered these results accurately'
+        );
+
+    INSERT INTO public.coa_reports (
+        id,
+        sample_id,
+        source_submission_id,
+        version,
+        file_path,
+        file_hash,
+        status
     )
-    ON CONFLICT (id) DO UPDATE
-    SET
-        sample_id = EXCLUDED.sample_id,
-        version = EXCLUDED.version,
-        file_path = EXCLUDED.file_path,
-        file_hash = EXCLUDED.file_hash,
-        status = EXCLUDED.status,
-        deleted_at = NULL;
+    VALUES
+        (
+            '90000000-0000-0000-0000-000000000301',
+            '90000000-0000-0000-0000-000000000101',
+            '90000000-0000-0000-0000-000000000401',
+            1,
+            'doctor-visible/report.html',
+            'hash-ready',
+            'ready'
+        ),
+        (
+            '90000000-0000-0000-0000-000000000302',
+            '90000000-0000-0000-0000-000000000102',
+            '90000000-0000-0000-0000-000000000402',
+            1,
+            'doctor-hidden/report.html',
+            'hash-hidden',
+            'ready'
+        ),
+        (
+            '90000000-0000-0000-0000-000000000303',
+            '90000000-0000-0000-0000-000000000103',
+            '90000000-0000-0000-0000-000000000403',
+            1,
+            'doctor-confidential/report.html',
+            'hash-confidential',
+            'ready'
+        );
 END $$;
 
 \echo 'Test 1: Standard doctor sees only non-confidential completed samples'

@@ -11,20 +11,21 @@ BEGIN;
 
 DO $$
 DECLARE
-    v_sample_id UUID;
-    v_submission_id UUID;
-    v_manager_id UUID;
-    v_other_manager_id UUID;
-    v_analyst_id UUID;
-    v_other_sample_id UUID;
+    v_analyst_id UUID := '92000000-0000-0000-0000-000000000001';
+    v_manager_id UUID := '92000000-0000-0000-0000-000000000002';
+    v_other_manager_id UUID := '92000000-0000-0000-0000-000000000003';
+    v_analyst_signature_id UUID := '92000000-0000-0000-0000-000000000011';
+    v_signature_id UUID := '92000000-0000-0000-0000-000000000012';
+    v_other_manager_signature_id UUID := '92000000-0000-0000-0000-000000000013';
+    v_sample_id UUID := '92000000-0000-0000-0000-000000000040';
+    v_other_sample_id UUID := '92000000-0000-0000-0000-000000000041';
+    v_submission_id UUID := '92000000-0000-0000-0000-000000000060';
     v_tied_result_ids UUID[];
     v_report JSONB;
     v_second_claim JSONB;
     v_report_id UUID;
     v_claim_id UUID;
     v_reclaimed_claim_id UUID;
-    v_signature_id UUID;
-    v_other_manager_signature_id UUID := gen_random_uuid();
     v_missing_profile_denied BOOLEAN := FALSE;
     v_analyst_regeneration_denied BOOLEAN := FALSE;
     v_direct_update_denied BOOLEAN := FALSE;
@@ -34,74 +35,188 @@ DECLARE
     v_deleted_signature_denied BOOLEAN := FALSE;
     v_null_restore_denied BOOLEAN := FALSE;
 BEGIN
-    SELECT sample.id, submission.id
-    INTO v_sample_id, v_submission_id
-    FROM public.samples AS sample
-    JOIN public.sample_submissions AS submission
-      ON submission.sample_id = sample.id
-     AND submission.superseded_by IS NULL
-    WHERE sample.deleted_at IS NULL
-      AND sample.status = 'completed'
-      AND (
-          SELECT COUNT(*)
-          FROM public.results AS result
-          WHERE result.sample_id = sample.id
-      ) >= 2
-      AND NOT EXISTS (
-          SELECT 1
-          FROM public.results AS result
-          WHERE result.sample_id = sample.id
-            AND result.status <> 'approved'
-      )
-    ORDER BY sample.created_at
-    LIMIT 1;
+    INSERT INTO auth.users (id, email)
+    VALUES
+        (v_analyst_id, 'issue-90-claims-analyst@lims.local'),
+        (v_manager_id, 'issue-90-claims-manager@lims.local'),
+        (v_other_manager_id, 'issue-90-claims-secondary-manager@lims.local');
 
-    SELECT manager.id, signature.id
-    INTO v_manager_id, v_signature_id
-    FROM public.users AS manager
-    JOIN public.user_signatures AS signature
-      ON signature.user_id = manager.id
-     AND signature.is_active
-     AND signature.deleted_at IS NULL
-    WHERE manager.role = 'manager'
-      AND manager.deleted_at IS NULL
-    ORDER BY manager.created_at
-    LIMIT 1;
+    INSERT INTO public.users (id, username, full_name, role)
+    VALUES
+        (
+            v_analyst_id,
+            'issue90_claims_analyst',
+            'Issue 90 Claims Analyst',
+            'analyst'
+        ),
+        (
+            v_manager_id,
+            'issue90_claims_manager',
+            'Issue 90 Claims Manager',
+            'manager'
+        ),
+        (
+            v_other_manager_id,
+            'issue90_claims_secondary_manager',
+            'Issue 90 Claims Secondary Manager',
+            'manager'
+        );
 
-    SELECT id
-    INTO v_other_manager_id
-    FROM public.users
-    WHERE role = 'manager'
-      AND id <> v_manager_id
-      AND deleted_at IS NULL
-    ORDER BY created_at
-    LIMIT 1;
+    INSERT INTO public.user_signatures (
+        id,
+        user_id,
+        signature_path,
+        signature_hash,
+        file_size,
+        mime_type,
+        is_active
+    )
+    VALUES
+        (
+            v_analyst_signature_id,
+            v_analyst_id,
+            'issue-90/claims-analyst.png',
+            encode(digest('issue-90-claims-analyst', 'sha256'), 'hex'),
+            1,
+            'image/png',
+            TRUE
+        ),
+        (
+            v_signature_id,
+            v_manager_id,
+            'issue-90/claims-manager.png',
+            encode(digest('issue-90-claims-manager', 'sha256'), 'hex'),
+            1,
+            'image/png',
+            TRUE
+        );
 
-    SELECT id
-    INTO v_analyst_id
-    FROM public.users
-    WHERE role = 'analyst'
-      AND deleted_at IS NULL
-    ORDER BY created_at
-    LIMIT 1;
+    INSERT INTO public.clients (
+        id,
+        id_card_num,
+        name,
+        date_of_birth,
+        gender,
+        phone
+    )
+    VALUES (
+        '92000000-0000-0000-0000-000000000020',
+        '090920000001',
+        'Issue 90 Generation Claims Client',
+        DATE '1992-09-20',
+        'Nam',
+        '0909200001'
+    );
 
-    SELECT id
-    INTO v_other_sample_id
-    FROM public.samples
-    WHERE id <> v_sample_id
-      AND deleted_at IS NULL
-    ORDER BY created_at
-    LIMIT 1;
+    INSERT INTO public.assay_definitions (
+        id,
+        name,
+        units,
+        is_confidential,
+        normal_range,
+        method_name
+    )
+    VALUES
+        (
+            '92000000-0000-0000-0000-000000000031',
+            'Issue 90 Generation Claims Assay A',
+            'mg/L',
+            FALSE,
+            '1-10',
+            'Claims Method A'
+        ),
+        (
+            '92000000-0000-0000-0000-000000000032',
+            'Issue 90 Generation Claims Assay B',
+            'mg/L',
+            FALSE,
+            '2-20',
+            'Claims Method B'
+        );
 
-    IF v_sample_id IS NULL
-       OR v_manager_id IS NULL
-       OR v_other_manager_id IS NULL
-       OR v_analyst_id IS NULL
-       OR v_signature_id IS NULL
-       OR v_other_sample_id IS NULL THEN
-        RAISE EXCEPTION
-            'CoA claim test requires completed sample, active approver signature, analyst, and another sample';
-    END IF;
+    INSERT INTO public.samples (
+        id,
+        sample_id,
+        client_id,
+        client_name,
+        status,
+        received_by,
+        type,
+        completed_at,
+        sample_quality
+    )
+    VALUES
+        (
+            v_sample_id,
+            'ISSUE90-COA-GENERATION-CLAIMS',
+            '92000000-0000-0000-0000-000000000020',
+            'Issue 90 Generation Claims Client',
+            'completed',
+            v_analyst_id,
+            'Máu',
+            TIMESTAMPTZ '2026-07-21 02:00:00+00',
+            TRUE
+        ),
+        (
+            v_other_sample_id,
+            'ISSUE90-COA-GENERATION-UNRELATED',
+            '92000000-0000-0000-0000-000000000020',
+            'Issue 90 Generation Claims Client',
+            'received',
+            v_analyst_id,
+            'Máu',
+            NULL,
+            TRUE
+        );
+
+    INSERT INTO public.results (
+        id,
+        sample_id,
+        assay_id,
+        value,
+        status,
+        entered_by,
+        approved_by,
+        approved_at
+    )
+    VALUES
+        (
+            '92000000-0000-0000-0000-000000000051',
+            v_sample_id,
+            '92000000-0000-0000-0000-000000000031',
+            '5',
+            'approved',
+            v_analyst_id,
+            v_manager_id,
+            TIMESTAMPTZ '2026-07-21 02:05:00+00'
+        ),
+        (
+            '92000000-0000-0000-0000-000000000052',
+            v_sample_id,
+            '92000000-0000-0000-0000-000000000032',
+            '10',
+            'approved',
+            v_analyst_id,
+            v_manager_id,
+            TIMESTAMPTZ '2026-07-21 02:06:00+00'
+        );
+
+    INSERT INTO public.sample_submissions (
+        id,
+        sample_id,
+        user_id,
+        signature_id,
+        submission_number,
+        signature_meaning
+    )
+    VALUES (
+        v_submission_id,
+        v_sample_id,
+        v_analyst_id,
+        v_analyst_signature_id,
+        1,
+        'I certify I performed these tests and entered these results accurately'
+    );
 
     UPDATE public.user_signatures
     SET is_active = FALSE
