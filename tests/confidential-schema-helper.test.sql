@@ -203,6 +203,7 @@ DECLARE
     v_prosecdef BOOLEAN;
     v_return_type TEXT;
     v_proconfig TEXT[];
+    v_public_can_execute BOOLEAN;
     v_authenticated_can_execute BOOLEAN;
     v_anon_can_execute BOOLEAN;
     v_unauthorized_result BOOLEAN;
@@ -226,6 +227,14 @@ BEGIN
         p.prosecdef,
         pg_get_function_result(p.oid),
         p.proconfig,
+        EXISTS (
+            SELECT 1
+            FROM aclexplode(
+                COALESCE(p.proacl, acldefault('f', p.proowner))
+            ) AS privilege
+            WHERE privilege.grantee = 0
+              AND privilege.privilege_type = 'EXECUTE'
+        ),
         has_function_privilege('authenticated', p.oid, 'EXECUTE'),
         has_function_privilege('anon', p.oid, 'EXECUTE')
     INTO
@@ -233,6 +242,7 @@ BEGIN
         v_prosecdef,
         v_return_type,
         v_proconfig,
+        v_public_can_execute,
         v_authenticated_can_execute,
         v_anon_can_execute
     FROM pg_proc p
@@ -282,6 +292,16 @@ BEGIN
                 'expected proconfig search_path=public, pg_temp, found %s',
                 coalesce(v_proconfig::TEXT, 'NULL')
             )
+        );
+        RETURN;
+    END IF;
+
+    IF v_public_can_execute IS DISTINCT FROM FALSE THEN
+        INSERT INTO confidential_batch1_test_results
+        VALUES (
+            'user_can_access_confidential()',
+            FALSE,
+            'expected PUBLIC EXECUTE to be revoked'
         );
         RETURN;
     END IF;

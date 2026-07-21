@@ -21,7 +21,9 @@ BEGIN;
 
 DO $$
 DECLARE
+    v_rls_enabled BOOLEAN;
     v_mutation_policy_count INTEGER;
+    v_mutation_policy_commands TEXT[];
     v_expected_manager_expression CONSTANT TEXT :=
         '(get_user_role()=''manager''::user_role)';
     v_insert_using TEXT;
@@ -31,16 +33,31 @@ DECLARE
     v_delete_using TEXT;
     v_delete_check TEXT;
 BEGIN
-    SELECT COUNT(*)
-    INTO v_mutation_policy_count
+    SELECT relrowsecurity
+    INTO v_rls_enabled
+    FROM pg_class
+    WHERE oid = 'public.lab_specialties'::regclass;
+
+    IF v_rls_enabled IS DISTINCT FROM TRUE THEN
+        RAISE EXCEPTION
+            'LAB SPECIALTIES RLS FAILED: row-level security is not enabled';
+    END IF;
+
+    SELECT
+        COUNT(*),
+        array_agg(polcmd::TEXT ORDER BY polcmd::TEXT)
+    INTO v_mutation_policy_count, v_mutation_policy_commands
     FROM pg_policy
     WHERE polrelid = 'public.lab_specialties'::regclass
-      AND polcmd IN ('a', 'w', 'd');
+      AND polcmd IN ('*', 'a', 'w', 'd');
 
-    IF v_mutation_policy_count IS DISTINCT FROM 3 THEN
+    IF v_mutation_policy_count IS DISTINCT FROM 3
+       OR v_mutation_policy_commands IS DISTINCT FROM
+          ARRAY['a', 'd', 'w']::TEXT[] THEN
         RAISE EXCEPTION
-            'LAB SPECIALTIES RLS FAILED: expected 3 mutation policies, found %',
-            v_mutation_policy_count;
+            'LAB SPECIALTIES RLS FAILED: expected mutation commands {a,d,w}, found count=% commands=%',
+            v_mutation_policy_count,
+            v_mutation_policy_commands;
     END IF;
 
     SELECT

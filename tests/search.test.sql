@@ -369,10 +369,45 @@ END $$;
 \echo 'TEST 7: samples search vector and GIN index cover current search fields'
 DO $$
 DECLARE
+    v_has_expected_index BOOLEAN;
     v_search_vector TSVECTOR;
 BEGIN
-    IF to_regclass('public.samples_search_idx') IS NULL THEN
-        RAISE EXCEPTION 'TEST 7 FAILED: samples_search_idx is missing';
+    SELECT EXISTS (
+        SELECT 1
+        FROM pg_index index_metadata
+        INNER JOIN pg_class index_relation
+            ON index_relation.oid = index_metadata.indexrelid
+        INNER JOIN pg_class table_relation
+            ON table_relation.oid = index_metadata.indrelid
+        INNER JOIN pg_namespace table_namespace
+            ON table_namespace.oid = table_relation.relnamespace
+        INNER JOIN pg_am access_method
+            ON access_method.oid = index_relation.relam
+        INNER JOIN LATERAL unnest(
+            index_metadata.indkey::SMALLINT[]
+        ) WITH ORDINALITY AS indexed_column(attnum, position)
+            ON TRUE
+        INNER JOIN pg_attribute table_attribute
+            ON table_attribute.attrelid = table_relation.oid
+           AND table_attribute.attnum = indexed_column.attnum
+        WHERE table_namespace.nspname = 'public'
+          AND table_relation.relname = 'samples'
+          AND index_relation.relname = 'samples_search_idx'
+          AND access_method.amname = 'gin'
+          AND index_metadata.indisvalid
+          AND index_metadata.indisready
+          AND index_metadata.indnkeyatts = 1
+          AND index_metadata.indnatts = 1
+          AND index_metadata.indexprs IS NULL
+          AND index_metadata.indpred IS NULL
+          AND indexed_column.position = 1
+          AND table_attribute.attname = 'search_vector'
+    )
+    INTO v_has_expected_index;
+
+    IF v_has_expected_index IS DISTINCT FROM TRUE THEN
+        RAISE EXCEPTION
+            'TEST 7 FAILED: samples_search_idx is not a valid GIN index over samples.search_vector';
     END IF;
 
     SELECT search_vector

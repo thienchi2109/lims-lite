@@ -414,7 +414,7 @@ END $$;
 \echo 'TEST 11: Assay mutations are auditable'
 DO $$
 DECLARE
-    v_audit_count INTEGER;
+    v_audit_operations TEXT[];
 BEGIN
     INSERT INTO public.assay_definitions (id, name, units)
     VALUES (
@@ -427,16 +427,20 @@ BEGIN
     SET units = 'updated'
     WHERE id = '90000090-0001-4000-8000-00000000010a';
 
-    SELECT COUNT(*)
-    INTO v_audit_count
+    SELECT array_agg(
+        DISTINCT operation::TEXT
+        ORDER BY operation::TEXT
+    )
+    INTO v_audit_operations
     FROM public.audit_logs
     WHERE table_name = 'assay_definitions'
       AND record_id = '90000090-0001-4000-8000-00000000010a';
 
-    IF v_audit_count < 2 THEN
+    IF v_audit_operations IS DISTINCT FROM
+       ARRAY['INSERT', 'UPDATE']::TEXT[] THEN
         RAISE EXCEPTION
-            'TEST 11 FAILED: expected insert/update audit rows, found %',
-            v_audit_count;
+            'TEST 11 FAILED: expected distinct INSERT/UPDATE audit operations, found %',
+            v_audit_operations;
     END IF;
 END $$;
 
