@@ -13,6 +13,7 @@ function createMaliciousCoAData(): CoAData {
       client_name: '<script>alert("client")</script>',
       sample_type: '" onclick="alert(2)',
       received_date: '2026-03-20T00:00:00.000Z',
+      sample_quality: null,
       client_dob: '2000-01-01',
       client_gender: 'Nam',
       client_address: '<img src=x onerror=alert("address")>',

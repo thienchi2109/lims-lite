@@ -96,6 +96,7 @@ interface SampleWithClientQueryResult {
     type: string
     received_at: string
     status: string
+    sample_quality: boolean | null
     clients: ClientQueryData | ClientQueryData[] | null
 }
 
@@ -258,6 +259,7 @@ export async function fetchSampleWithApprover(sampleId: string): Promise<SampleD
             type,
             received_at,
             status,
+            sample_quality,
             clients!inner (
                 name,
                 date_of_birth,
@@ -306,6 +308,7 @@ export async function fetchSampleWithApprover(sampleId: string): Promise<SampleD
         client_name: client?.name ?? undefined,
         sample_type: typedSample.type,
         received_date: typedSample.received_at,
+        sample_quality: typedSample.sample_quality,
         // Client demographic fields for CoA template
         client_dob: client?.date_of_birth ?? undefined,
         client_gender: client?.gender ?? undefined,

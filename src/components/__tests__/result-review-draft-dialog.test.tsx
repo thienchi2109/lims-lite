@@ -73,6 +73,7 @@ function createResult(id: string, assayName: string): ResultWithAssay {
         sample_status: 'in_progress',
         sample_type: 'Máu',
         received_date: '2026-07-11T07:00:00.000Z',
+        sample_quality: false,
         client_name: 'Nguyễn Văn A',
         client_dob: '1990-01-01',
         client_gender: 'Nam',
@@ -113,6 +114,7 @@ describe('ResultReviewDraftDialog', () => {
                 .disabled,
         ).toBe(true)
         expect(screen.getByTitle('Bản nháp kết quả xét nghiệm').getAttribute('srcdoc')).toContain('4.1 - 5.9')
+        expect(screen.getByTitle('Bản nháp kết quả xét nghiệm').getAttribute('srcdoc')).toContain('Không đạt')
     })
 
     it('cancels without attempting a mutation', () => {

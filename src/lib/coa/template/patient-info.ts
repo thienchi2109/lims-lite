@@ -5,12 +5,14 @@
  */
 
 import type { CoAData } from '@/types'
+import { formatSampleQuality } from '@/lib/sample-quality-display'
 import { escapeHtml } from './escape'
 
 /**
  * Render patient and sample information - Grid layout
  */
 export function renderPatientInfo(coaData: CoAData): string {
+    const sampleQuality = formatSampleQuality(coaData.sample.sample_quality)
     const receivedDate = coaData.sample.received_date
         ? new Date(coaData.sample.received_date).toLocaleDateString('vi-VN')
         : 'N/A'
@@ -55,7 +57,7 @@ export function renderPatientInfo(coaData: CoAData): string {
                 </div>
                 <div class="info-row">
                     <span class="info-label">Chất lượng mẫu:</span>
-                    <span class="info-value">${escapeHtml(coaData.manualInputs?.sampleQuality || 'N/A')}</span>
+                    <span class="info-value">${escapeHtml(sampleQuality)}</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">Ngày nhận mẫu:</span>

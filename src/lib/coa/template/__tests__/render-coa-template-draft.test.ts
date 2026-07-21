@@ -15,6 +15,7 @@ function createDraftCoAData(): CoAData {
             client_name: 'Nguyễn Văn A',
             sample_type: 'Máu',
             received_date: '2026-07-11T07:00:00.000Z',
+            sample_quality: null,
             client_dob: '1990-01-01',
             client_gender: 'Nam',
             client_address: 'Cần Thơ',

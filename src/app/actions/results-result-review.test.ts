@@ -61,6 +61,7 @@ describe('getResultsBySample result review fields', () => {
                         status: 'in_progress',
                         type: 'Máu',
                         received_at: '2026-07-11T07:00:00.000Z',
+                        sample_quality: false,
                         clients: {
                             name: 'Nguyễn Văn A',
                             date_of_birth: '1990-01-01',
@@ -81,6 +82,7 @@ describe('getResultsBySample result review fields', () => {
 
         expect(mockSelect).toHaveBeenCalledWith(expect.stringContaining('normal_range'))
         expect(mockSelect).toHaveBeenCalledWith(expect.stringContaining('updated_at'))
+        expect(mockSelect).toHaveBeenCalledWith(expect.stringContaining('sample_quality'))
         expect(result).toEqual({
             data: [
                 expect.objectContaining({
@@ -89,6 +91,7 @@ describe('getResultsBySample result review fields', () => {
                     sample_id_display: 'LIMS-001',
                     sample_type: 'Máu',
                     received_date: '2026-07-11T07:00:00.000Z',
+                    sample_quality: false,
                     client_name: 'Nguyễn Văn A',
                     client_dob: '1990-01-01',
                     client_gender: 'Nam',

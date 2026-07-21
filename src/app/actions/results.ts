@@ -37,6 +37,7 @@ type ResultSampleRelation = {
     status: ResultWithAssay['sample_status']
     type: string | null
     received_at: string | null
+    sample_quality: boolean | null
     clients: RelationValue<{
         name: string | null
         date_of_birth: string | null
@@ -93,6 +94,7 @@ export async function getResultsBySample(sampleId: string) {
                     status,
                     type,
                     received_at,
+                    sample_quality,
                     clients (
                         name,
                         date_of_birth,
@@ -133,6 +135,7 @@ export async function getResultsBySample(sampleId: string) {
                 sample_status: sample?.status || null,
                 sample_type: sample?.type || null,
                 received_date: sample?.received_at || null,
+                sample_quality: sample?.sample_quality ?? null,
                 client_name: client?.name || null,
                 client_dob: client?.date_of_birth || null,
                 client_gender: client?.gender || null,

@@ -38,6 +38,7 @@ const sample = {
         updated_at: '2026-01-01T00:00:00.000Z',
     },
     status: 'review',
+    sample_quality: true,
     received_at: '2026-01-01T00:00:00.000Z',
     updated_at: '2026-01-01T00:00:00.000Z',
     received_by_name: 'User A',
@@ -66,5 +67,23 @@ describe('SampleDetailPanel enrichment isolation', () => {
         expect(screen.getByText('079123456789')).toBeDefined()
         expect(screen.getByText('Thời điểm nhận')).toBeDefined()
         expect(screen.getByText('Không thể tải thông tin khách hàng')).toBeDefined()
+    })
+
+    it.each([
+        [true, 'Đạt'],
+        [false, 'Không đạt'],
+        [null, 'Chưa đánh giá'],
+    ] as const)('renders persisted sample quality %s as %s', (sampleQuality, expectedLabel) => {
+        render(
+            <SampleDetailPanel
+                sample={{
+                    ...sample,
+                    sample_quality: sampleQuality,
+                }}
+            />,
+        )
+
+        expect(screen.getByText('Chất lượng mẫu')).toBeDefined()
+        expect(screen.getByText(expectedLabel)).toBeDefined()
     })
 })

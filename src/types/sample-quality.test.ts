@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
     CreateSampleSchema,
     CreateSampleWithAssignmentsSchema,
+    ResultWithAssaySchema,
+    SampleDataSchema,
     SampleSchema,
     UpdateSampleSchema,
 } from './lab'
@@ -59,5 +61,17 @@ describe('sample quality domain contract', () => {
 
     it('keeps quality outside the generic sample update contract', () => {
         expect(UpdateSampleSchema.shape).not.toHaveProperty('sample_quality')
+    })
+
+    it.each([
+        ['ResultWithAssaySchema', ResultWithAssaySchema],
+        ['SampleDataSchema', SampleDataSchema],
+    ])('%s requires nullable persisted quality', (_name, schema) => {
+        const sampleQualitySchema = schema.shape.sample_quality
+
+        expect(sampleQualitySchema.safeParse(true).success).toBe(true)
+        expect(sampleQualitySchema.safeParse(false).success).toBe(true)
+        expect(sampleQualitySchema.safeParse(null).success).toBe(true)
+        expect(sampleQualitySchema.safeParse(undefined).success).toBe(false)
     })
 })

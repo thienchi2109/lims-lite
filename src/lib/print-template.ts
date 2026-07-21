@@ -1,5 +1,6 @@
 import type { Client, ResultWithAssay, SampleWithUser } from '@/types'
 import { renderSampleBarcodeSvg } from '@/lib/sample-label-template'
+import { formatSampleQuality } from '@/lib/sample-quality-display'
 
 type SampleForPrint = SampleWithUser & {
   client?: Pick<
@@ -29,6 +30,7 @@ export function generatePrintTemplate(
   const address = client?.address || ''
   const healthInsuranceNum = client?.health_insurance_num || ''
   const sampleType = sample.type || ''
+  const sampleQuality = formatSampleQuality(sample.sample_quality)
 
   // Group results by category (Lab Specialty)
   const testsByCategory: { [key: string]: ResultWithAssay[] } = {};
@@ -355,10 +357,12 @@ export function generatePrintTemplate(
                         <td class="info-value">................</td>
                     </tr>
                     <tr>
-                         <td class="info-label">Thời gian nhận:</td>
+                        <td class="info-label">Thời gian nhận:</td>
                         <td class="info-value">${sample.received_at ? new Date(sample.received_at).toLocaleDateString('vi-VN') + ' ' + new Date(sample.received_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '..../..../....... ...:'}</td>
                         <td class="info-label">Người nhận:</td>
-                        <td class="info-value" colspan="3">${sample.received_by_name || '...................................................'}</td>
+                        <td class="info-value">${sample.received_by_name || '...................................................'}</td>
+                        <td class="info-label">Chất lượng mẫu:</td>
+                        <td class="info-value">${sampleQuality}</td>
                     </tr>
                 </tbody>
             </table>

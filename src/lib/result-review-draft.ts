@@ -15,6 +15,7 @@ export function buildResultReviewDraftData(
             client_name: firstResult?.client_name || undefined,
             sample_type: firstResult?.sample_type || undefined,
             received_date: firstResult?.received_date || undefined,
+            sample_quality: firstResult?.sample_quality ?? null,
             client_dob: firstResult?.client_dob,
             client_gender: firstResult?.client_gender,
             client_address: firstResult?.client_address,

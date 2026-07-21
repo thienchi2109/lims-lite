@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils'
 import { printSampleBarcodeLabel } from '@/lib/sample-label-print-client'
 import { SampleLabelPrintDialog } from '@/components/sample-label-print-dialog'
 import type { SampleLabelPreset } from '@/lib/sample-label-template'
+import { formatSampleQuality } from '@/lib/sample-quality-display'
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -289,6 +290,10 @@ export function SampleDetailPanel({ sample }: SampleDetailPanelProps) {
                             <div className="flex flex-col gap-2 bg-slate-100/50 dark:bg-slate-800/30 p-3 rounded-lg">
                                 <MetaRow label="Thời điểm nhận" value={formatDate(sample.received_at)} />
                                 <MetaRow label="Người nhận mẫu" value={sample.received_by_name || 'N/A'} />
+                                <MetaRow
+                                    label="Chất lượng mẫu"
+                                    value={formatSampleQuality(sample.sample_quality)}
+                                />
                                 <MetaRow label="Cập nhật cuối" value={formatDate(sample.updated_at)} />
                             </div>
                         </section>

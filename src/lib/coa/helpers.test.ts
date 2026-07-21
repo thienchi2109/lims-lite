@@ -70,7 +70,7 @@ function createValidationResultsQuery(data: unknown[]) {
     return query
 }
 
-function createSampleWithClientQuery() {
+function createSampleWithClientQuery(sampleQuality: boolean | null = true) {
     const query = {
         select: vi.fn(() => query),
         eq: vi.fn(() => query),
@@ -82,6 +82,7 @@ function createSampleWithClientQuery() {
                 type: 'Máu',
                 received_at: '2026-07-11T00:00:00.000Z',
                 status: 'completed',
+                sample_quality: sampleQuality,
                 clients: { name: 'Nguyễn Văn A' },
             },
             error: null,
@@ -214,6 +215,10 @@ describe('validateSampleForCoAGeneration', () => {
 })
 
 describe('fetchSampleWithApprover', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+    })
+
     it('breaks approval timestamp ties by result id', async () => {
         const approverQuery = createApproverQuery()
         mockFrom
@@ -233,6 +238,23 @@ describe('fetchSampleWithApprover', () => {
             { ascending: false },
         )
     })
+
+    it.each([true, false, null] as const)(
+        'preserves persisted sample quality %s for final CoA rendering',
+        async (sampleQuality) => {
+            const sampleQuery = createSampleWithClientQuery(sampleQuality)
+            mockFrom
+                .mockReturnValueOnce(sampleQuery)
+                .mockReturnValueOnce(createApproverQuery())
+
+            const sample = await fetchSampleWithApprover('sample-1')
+
+            expect(sampleQuery.select).toHaveBeenCalledWith(
+                expect.stringContaining('sample_quality'),
+            )
+            expect(sample?.sample_quality).toBe(sampleQuality)
+        },
+    )
 })
 
 describe('fetchStoredSignatureDataUri', () => {
