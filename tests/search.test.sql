@@ -1,311 +1,398 @@
--- =====================================================
--- PostgreSQL Full-Text Search Tests
--- =====================================================
--- Test suite for search functionality in CDC-LIMS
---
--- Tests:
--- 1. ts_rank ranking (relevant results ranked higher)
--- 2. Empty query handling
--- 3. RLS enforcement (analyst vs manager)
--- 4. Manager-only audit search
--- 5. Vietnamese diacritic handling (unaccent)
---
--- Run with:
--- docker exec -i lims-postgres psql -U postgres -d postgres -f /path/to/search.test.sql
--- =====================================================
+-- ============================================================================
+-- POSTGRESQL FULL-TEXT SEARCH REGRESSION TEST SUITE
+-- ============================================================================
+-- Verifies indexed sample fields, empty-query behavior, RLS, manager-only audit
+-- search, Vietnamese unaccent behavior, global search, and search-vector setup.
+-- Usage:
+--   docker exec -i lims-postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres < tests/search.test.sql
+-- ============================================================================
 
-\echo '========================================='
-\echo 'PostgreSQL Full-Text Search Test Suite'
-\echo '========================================='
-
--- Set search_path
+\set ON_ERROR_STOP on
+SET client_encoding = 'UTF8';
 SET search_path TO public;
-
--- =====================================================
--- Test 1: ts_rank Ranking (relevant results first)
--- =====================================================
-\echo ''
-\echo '=== Test 1: ts_rank Ranking ==='
-\echo 'Testing that more relevant results rank higher'
-
--- Insert test samples with different relevance levels
-INSERT INTO samples (sample_id, description, type, status, sample_quality)
-VALUES
-    ('RANK-001', 'Máu toàn phần', 'blood', 'received', TRUE),
-    ('RANK-002', 'Máu', 'blood', 'received', TRUE),
-    ('RANK-003', 'Huyết thanh máu người', 'serum', 'received', TRUE),
-    ('RANK-004', 'Nước tiểu người bệnh', 'urine', 'received', TRUE)
-ON CONFLICT (sample_id) DO NOTHING;
-
--- Test: Search for "máu" should rank exact matches higher
-\echo 'Query: "máu"'
-SELECT
-    sample_id,
-    description,
-    ROUND(rank::numeric, 4) as rank_score
-FROM search_samples('máu', 10)
-ORDER BY rank DESC;
-
-\echo 'Expected: RANK-002 (exact match "Máu") should rank highest'
-
--- Cleanup
-DELETE FROM samples WHERE sample_id LIKE 'RANK-%';
-
--- =====================================================
--- Test 2: Empty Query Handling
--- =====================================================
-\echo ''
-\echo '=== Test 2: Empty Query Handling ==='
-\echo 'Testing that empty queries return no results'
-
--- Test: Empty string
-\echo 'Query: "" (empty string)'
-SELECT COUNT(*) as result_count FROM search_samples('', 10);
-\echo 'Expected: 0 results'
-
--- Test: Single space
-\echo 'Query: " " (single space)'
-SELECT COUNT(*) as result_count FROM search_samples(' ', 10);
-\echo 'Expected: 0 results'
-
--- Test: Whitespace only
-\echo 'Query: "   " (multiple spaces)'
-SELECT COUNT(*) as result_count FROM search_samples('   ', 10);
-\echo 'Expected: 0 results'
-
--- =====================================================
--- Test 3: RLS Enforcement
--- =====================================================
-\echo ''
-\echo '=== Test 3: RLS Enforcement ==='
-\echo 'Testing that RLS policies are enforced in search'
-
--- Create test users (if they don't exist)
-DO $$
-BEGIN
-    -- Create analyst user
-    IF NOT EXISTS (SELECT 1 FROM users WHERE email = 'test-analyst@lims.local') THEN
-        INSERT INTO users (id, email, full_name, role, password_hash)
-        VALUES (
-            'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-            'test-analyst@lims.local',
-            'Test Analyst',
-            'analyst',
-            'dummy-hash'
-        );
-    END IF;
-
-    -- Create manager user
-    IF NOT EXISTS (SELECT 1 FROM users WHERE email = 'test-manager@lims.local') THEN
-        INSERT INTO users (id, email, full_name, role, password_hash)
-        VALUES (
-            'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-            'test-manager@lims.local',
-            'Test Manager',
-            'manager',
-            'dummy-hash'
-        );
-    END IF;
-END $$;
-
--- Insert test sample
-INSERT INTO samples (sample_id, description, type, status, sample_quality)
-VALUES ('RLS-001', 'Test sample for RLS', 'blood', 'received', TRUE)
-ON CONFLICT (sample_id) DO NOTHING;
-
--- Test as analyst: Should see sample
-\echo 'Testing as analyst (should see sample):'
-SET ROLE authenticated;
-SET request.jwt.claims TO '{"sub": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "role": "analyst"}';
-SELECT COUNT(*) as result_count FROM search_samples('RLS', 10);
-\echo 'Expected: 1 result'
-
--- Reset role
-RESET ROLE;
-RESET request.jwt.claims;
-
--- Cleanup
-DELETE FROM samples WHERE sample_id = 'RLS-001';
-
--- =====================================================
--- Test 4: Manager-Only Audit Search
--- =====================================================
-\echo ''
-\echo '=== Test 4: Manager-Only Audit Search ==='
-\echo 'Testing that only managers can search audit logs'
-
--- Test as analyst: Should fail or return empty
-\echo 'Testing as analyst (should fail or return empty):'
-SET ROLE authenticated;
-SET request.jwt.claims TO '{"sub": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "role": "analyst"}';
-
-DO $$
-DECLARE
-    result_count INTEGER;
-BEGIN
-    BEGIN
-        SELECT COUNT(*) INTO result_count FROM search_audit_logs('update', 10);
-        RAISE NOTICE 'Analyst audit search returned % results (should be 0)', result_count;
-    EXCEPTION WHEN OTHERS THEN
-        RAISE NOTICE 'Analyst audit search failed as expected: %', SQLERRM;
-    END;
-END $$;
-
-RESET ROLE;
-RESET request.jwt.claims;
-
--- Test as manager: Should succeed
-\echo 'Testing as manager (should succeed):'
-SET ROLE authenticated;
-SET request.jwt.claims TO '{"sub": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", "role": "manager"}';
-
-DO $$
-DECLARE
-    result_count INTEGER;
-BEGIN
-    BEGIN
-        SELECT COUNT(*) INTO result_count FROM search_audit_logs('update', 10);
-        RAISE NOTICE 'Manager audit search returned % results', result_count;
-    EXCEPTION WHEN OTHERS THEN
-        RAISE NOTICE 'Manager audit search failed (unexpected): %', SQLERRM;
-    END;
-END $$;
-
-RESET ROLE;
-RESET request.jwt.claims;
-
--- =====================================================
--- Test 5: Vietnamese Diacritic Handling
--- =====================================================
-\echo ''
-\echo '=== Test 5: Vietnamese Diacritic Handling ==='
-\echo 'Testing that diacritics and non-diacritics return same results'
-
--- Insert Vietnamese test samples
-INSERT INTO samples (sample_id, description, type, status, sample_quality)
-VALUES
-    ('VN-001', 'Máu toàn phần người bệnh', 'blood', 'received', TRUE),
-    ('VN-002', 'Huyết thanh máu', 'serum', 'received', TRUE),
-    ('VN-003', 'Nước tiểu sáng', 'urine', 'received', TRUE)
-ON CONFLICT (sample_id) DO NOTHING;
-
--- Test: Search with diacritics
-\echo 'Query with diacritics: "Máu"'
-SELECT
-    sample_id,
-    description,
-    ROUND(rank::numeric, 4) as rank_score
-FROM search_samples('Máu', 10)
-ORDER BY rank DESC;
-
--- Test: Search without diacritics (should return SAME results)
-\echo 'Query without diacritics: "Mau"'
-SELECT
-    sample_id,
-    description,
-    ROUND(rank::numeric, 4) as rank_score
-FROM search_samples('Mau', 10)
-ORDER BY rank DESC;
-
-\echo 'Expected: Both queries return identical results with identical rank scores'
-
--- Test: Complex Vietnamese query with diacritics
-\echo 'Query: "Huyết thanh"'
-SELECT
-    sample_id,
-    description,
-    ROUND(rank::numeric, 4) as rank_score
-FROM search_samples('Huyết thanh', 10)
-ORDER BY rank DESC;
-
--- Test: Same query without diacritics
-\echo 'Query: "Huyet thanh"'
-SELECT
-    sample_id,
-    description,
-    ROUND(rank::numeric, 4) as rank_score
-FROM search_samples('Huyet thanh', 10)
-ORDER BY rank DESC;
-
-\echo 'Expected: Both queries return identical results'
-
--- Cleanup
-DELETE FROM samples WHERE sample_id LIKE 'VN-%';
-
--- =====================================================
--- Test 6: Global Search Across Entities
--- =====================================================
-\echo ''
-\echo '=== Test 6: Global Search Across Entities ==='
-\echo 'Testing that global_search returns results from multiple entities'
-
--- Insert test data across entities
-INSERT INTO samples (sample_id, description, type, status, sample_quality)
-VALUES ('GLOBAL-S1', 'Test global search sample', 'blood', 'received', TRUE)
-ON CONFLICT (sample_id) DO NOTHING;
-
-INSERT INTO clients (name, phone, address)
-VALUES ('Global Search Client', '0123456789', 'Test Address')
-ON CONFLICT (phone) DO NOTHING;
-
-INSERT INTO assays (name, units, is_active)
-VALUES ('Global Search Assay', 'mg/dL', true)
-ON CONFLICT (name) DO NOTHING;
-
--- Test: Global search
-\echo 'Query: "global"'
-SELECT
-    entity_type,
-    description,
-    ROUND(rank::numeric, 4) as rank_score
-FROM global_search('global', 20)
-ORDER BY rank DESC;
-
-\echo 'Expected: Results from samples, clients, and assays'
-
--- Cleanup
-DELETE FROM samples WHERE sample_id = 'GLOBAL-S1';
-DELETE FROM clients WHERE name = 'Global Search Client';
-DELETE FROM assays WHERE name = 'Global Search Assay';
-
--- =====================================================
--- Test 7: Search Performance
--- =====================================================
-\echo ''
-\echo '=== Test 7: Search Performance ==='
-\echo 'Testing query execution time'
-
--- Enable timing
 \timing on
 
--- Run search query
-SELECT COUNT(*) FROM search_samples('máu', 100);
-
--- Disable timing
-\timing off
-
-\echo 'Expected: Query should complete in < 50ms for typical LIMS workloads'
-
--- =====================================================
--- Cleanup Test Users
--- =====================================================
+\echo '============================================================================'
+\echo 'POSTGRESQL FULL-TEXT SEARCH TEST SUITE'
+\echo '============================================================================'
 \echo ''
-\echo '=== Cleanup Test Users ==='
-DELETE FROM users WHERE email IN ('test-analyst@lims.local', 'test-manager@lims.local');
 
--- =====================================================
--- Test Summary
--- =====================================================
-\echo ''
-\echo '========================================='
-\echo 'Test Suite Completed'
-\echo '========================================='
-\echo 'Review results above to verify:'
-\echo '1. Ranking works correctly (more relevant = higher rank)'
-\echo '2. Empty queries return 0 results'
-\echo '3. RLS policies are enforced'
-\echo '4. Only managers can search audit logs'
-\echo '5. Vietnamese diacritics handled correctly (same results with/without)'
-\echo '6. Global search returns results from multiple entities'
-\echo '7. Performance is acceptable (< 50ms)'
-\echo '========================================='
+BEGIN;
+
+-- Authenticated analyst receiver and manager used by RLS assertions.
+INSERT INTO auth.users (id, email)
+VALUES
+    (
+        '90000090-0002-4000-8000-000000000001',
+        'issue-90-search-analyst@lims.local'
+    ),
+    (
+        '90000090-0002-4000-8000-000000000002',
+        'issue-90-search-manager@lims.local'
+    );
+
+INSERT INTO public.users (id, username, full_name, role, email)
+VALUES
+    (
+        '90000090-0002-4000-8000-000000000001',
+        'issue_90_search_analyst',
+        'Issue 90 Search Analyst',
+        'analyst',
+        'issue-90-search-analyst@lims.local'
+    ),
+    (
+        '90000090-0002-4000-8000-000000000002',
+        'issue_90_search_manager',
+        'Issue 90 Search Manager',
+        'manager',
+        'issue-90-search-manager@lims.local'
+    );
+
+-- Full client prerequisites for every sample fixture.
+INSERT INTO public.clients (
+    id,
+    id_card_num,
+    name,
+    date_of_birth,
+    gender,
+    phone,
+    address
+)
+VALUES
+    (
+        '90000090-0002-4000-8000-000000000101',
+        'I90-SEARCH-CLIENT-001',
+        'Issue 90 Sample Identifier Client',
+        DATE '1991-01-01',
+        'Khác',
+        '0900009011',
+        'Issue 90 search fixture address 1'
+    ),
+    (
+        '90000090-0002-4000-8000-000000000102',
+        'I90-SEARCH-CLIENT-002',
+        'IssueNinetyClientToken',
+        DATE '1992-02-02',
+        'Nữ',
+        '0900009012',
+        'Issue 90 search fixture address 2'
+    ),
+    (
+        '90000090-0002-4000-8000-000000000103',
+        'I90-SEARCH-CLIENT-003',
+        'IssueNinetyTypeToken Client',
+        DATE '1993-03-03',
+        'Nam',
+        '0900009013',
+        'Issue 90 search fixture address 3'
+    ),
+    (
+        '90000090-0002-4000-8000-000000000104',
+        'I90-SEARCH-CLIENT-004',
+        'IssueNinetyGlobal Client',
+        DATE '1994-04-04',
+        'Khác',
+        '0900009014',
+        'Issue 90 search fixture address 4'
+    ),
+    (
+        '90000090-0002-4000-8000-000000000105',
+        'I90-SEARCH-CLIENT-005',
+        'Mẫu Máu IssueNinetyDiacritic',
+        DATE '1995-05-05',
+        'Nữ',
+        '0900009015',
+        'Issue 90 search fixture address 5'
+    );
+
+INSERT INTO public.samples (
+    id,
+    sample_id,
+    client_id,
+    client_name,
+    type,
+    status,
+    received_by,
+    sample_quality
+)
+VALUES
+    (
+        '90000090-0002-4000-8000-000000000201',
+        'I90SAMPLEID-UNIQUE',
+        '90000090-0002-4000-8000-000000000101',
+        'Issue 90 Sample Identifier Client',
+        'Máu',
+        'received',
+        '90000090-0002-4000-8000-000000000001',
+        TRUE
+    ),
+    (
+        '90000090-0002-4000-8000-000000000202',
+        'I90-CLIENT-FIELD',
+        '90000090-0002-4000-8000-000000000102',
+        'IssueNinetyClientToken',
+        'Nước tiểu',
+        'received',
+        '90000090-0002-4000-8000-000000000001',
+        FALSE
+    ),
+    (
+        '90000090-0002-4000-8000-000000000203',
+        'I90-TYPE-FIELD',
+        '90000090-0002-4000-8000-000000000103',
+        'IssueNinetyTypeToken Client',
+        'Dịch niệu đạo/âm đạo',
+        'received',
+        '90000090-0002-4000-8000-000000000001',
+        TRUE
+    ),
+    (
+        '90000090-0002-4000-8000-000000000204',
+        'I90GLOBAL-SAMPLE',
+        '90000090-0002-4000-8000-000000000104',
+        'IssueNinetyGlobal Client',
+        'Máu',
+        'received',
+        '90000090-0002-4000-8000-000000000001',
+        TRUE
+    ),
+    (
+        '90000090-0002-4000-8000-000000000205',
+        'I90-DIACRITIC-SAMPLE',
+        '90000090-0002-4000-8000-000000000105',
+        'Mẫu Máu IssueNinetyDiacritic',
+        'Máu',
+        'received',
+        '90000090-0002-4000-8000-000000000001',
+        TRUE
+    );
+
+INSERT INTO public.assay_definitions (
+    id,
+    name,
+    method_name,
+    units,
+    is_confidential
+)
+VALUES (
+    '90000090-0002-4000-8000-000000000301',
+    'IssueNinetyGlobal Assay',
+    'Issue 90 global search method',
+    'mg/dL',
+    FALSE
+);
+
+\echo 'TEST 1: sample_id, client_name, and type are searchable indexed fields'
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM public.search_samples('I90SAMPLEID', 50)
+        WHERE id = '90000090-0002-4000-8000-000000000201'
+          AND rank > 0
+    ) THEN
+        RAISE EXCEPTION 'TEST 1 FAILED: sample_id search did not return its fixture';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM public.search_samples('IssueNinetyClientToken', 50)
+        WHERE id = '90000090-0002-4000-8000-000000000202'
+          AND rank > 0
+    ) THEN
+        RAISE EXCEPTION 'TEST 1 FAILED: client_name search did not return its fixture';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM public.search_samples(
+            'IssueNinetyTypeToken Dịch niệu đạo/âm đạo',
+            50
+        )
+        WHERE id = '90000090-0002-4000-8000-000000000203'
+          AND rank > 0
+    ) THEN
+        RAISE EXCEPTION 'TEST 1 FAILED: type search did not return its fixture';
+    END IF;
+END $$;
+
+\echo 'TEST 2: empty and whitespace-only queries return no samples'
+DO $$
+DECLARE
+    v_empty_count INTEGER;
+    v_space_count INTEGER;
+    v_whitespace_count INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO v_empty_count FROM public.search_samples('', 10);
+    SELECT COUNT(*) INTO v_space_count FROM public.search_samples(' ', 10);
+    SELECT COUNT(*) INTO v_whitespace_count FROM public.search_samples('   ', 10);
+
+    IF v_empty_count IS DISTINCT FROM 0
+       OR v_space_count IS DISTINCT FROM 0
+       OR v_whitespace_count IS DISTINCT FROM 0 THEN
+        RAISE EXCEPTION
+            'TEST 2 FAILED: expected 0/0/0 rows, found %/%/%',
+            v_empty_count,
+            v_space_count,
+            v_whitespace_count;
+    END IF;
+END $$;
+
+\echo 'TEST 3: authenticated analyst can search visible samples through RLS'
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims TO
+    '{"sub":"90000090-0002-4000-8000-000000000001","role":"authenticated"}';
+
+DO $$
+DECLARE
+    v_result_count INTEGER;
+BEGIN
+    SELECT COUNT(*)
+    INTO v_result_count
+    FROM public.search_samples('I90SAMPLEID', 50)
+    WHERE id = '90000090-0002-4000-8000-000000000201';
+
+    IF v_result_count IS DISTINCT FROM 1 THEN
+        RAISE EXCEPTION
+            'TEST 3 FAILED: analyst expected one visible sample, found %',
+            v_result_count;
+    END IF;
+END $$;
+
+RESET ROLE;
+RESET request.jwt.claims;
+
+\echo 'TEST 4: audit search rejects analysts and allows managers'
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims TO
+    '{"sub":"90000090-0002-4000-8000-000000000001","role":"authenticated"}';
+
+DO $$
+DECLARE
+    v_denied BOOLEAN := FALSE;
+BEGIN
+    BEGIN
+        PERFORM 1 FROM public.search_audit_logs('samples', 10);
+    EXCEPTION
+        WHEN insufficient_privilege THEN
+            v_denied := TRUE;
+    END;
+
+    IF NOT v_denied THEN
+        RAISE EXCEPTION 'TEST 4 FAILED: analyst audit search was not denied';
+    END IF;
+END $$;
+
+RESET ROLE;
+RESET request.jwt.claims;
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims TO
+    '{"sub":"90000090-0002-4000-8000-000000000002","role":"authenticated"}';
+
+DO $$
+BEGIN
+    PERFORM COUNT(*) FROM public.search_audit_logs('samples', 10);
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION
+            'TEST 4 FAILED: manager audit search raised %: %',
+            SQLSTATE,
+            SQLERRM;
+END $$;
+
+RESET ROLE;
+RESET request.jwt.claims;
+
+\echo 'TEST 5: Vietnamese diacritics and unaccent return identical fixture rows'
+DO $$
+DECLARE
+    v_with_diacritics UUID[];
+    v_without_diacritics UUID[];
+    v_expected UUID[] := ARRAY[
+        '90000090-0002-4000-8000-000000000205'::UUID
+    ];
+BEGIN
+    SELECT array_agg(id ORDER BY id)
+    INTO v_with_diacritics
+    FROM public.search_samples('IssueNinetyDiacritic Máu', 50)
+    WHERE id = '90000090-0002-4000-8000-000000000205';
+
+    SELECT array_agg(id ORDER BY id)
+    INTO v_without_diacritics
+    FROM public.search_samples('IssueNinetyDiacritic Mau', 50)
+    WHERE id = '90000090-0002-4000-8000-000000000205';
+
+    IF v_with_diacritics IS DISTINCT FROM v_expected
+       OR v_without_diacritics IS DISTINCT FROM v_expected THEN
+        RAISE EXCEPTION
+            'TEST 5 FAILED: diacritic rows=% and unaccent rows=%',
+            v_with_diacritics,
+            v_without_diacritics;
+    END IF;
+END $$;
+
+\echo 'TEST 6: global search returns sample, client, and assay fixtures'
+DO $$
+DECLARE
+    v_has_sample BOOLEAN;
+    v_has_client BOOLEAN;
+    v_has_assay BOOLEAN;
+BEGIN
+    SELECT
+        BOOL_OR(
+            entity_type = 'sample'
+            AND entity_id = '90000090-0002-4000-8000-000000000204'
+        ),
+        BOOL_OR(
+            entity_type = 'client'
+            AND entity_id = '90000090-0002-4000-8000-000000000104'
+        ),
+        BOOL_OR(
+            entity_type = 'assay'
+            AND entity_id = '90000090-0002-4000-8000-000000000301'
+        )
+    INTO v_has_sample, v_has_client, v_has_assay
+    FROM public.global_search('IssueNinetyGlobal', 50);
+
+    IF v_has_sample IS DISTINCT FROM TRUE
+       OR v_has_client IS DISTINCT FROM TRUE
+       OR v_has_assay IS DISTINCT FROM TRUE THEN
+        RAISE EXCEPTION
+            'TEST 6 FAILED: global results sample=%, client=%, assay=%',
+            v_has_sample,
+            v_has_client,
+            v_has_assay;
+    END IF;
+END $$;
+
+\echo 'TEST 7: samples search vector and GIN index cover current search fields'
+DO $$
+DECLARE
+    v_search_vector TSVECTOR;
+BEGIN
+    IF to_regclass('public.samples_search_idx') IS NULL THEN
+        RAISE EXCEPTION 'TEST 7 FAILED: samples_search_idx is missing';
+    END IF;
+
+    SELECT search_vector
+    INTO v_search_vector
+    FROM public.samples
+    WHERE id = '90000090-0002-4000-8000-000000000201';
+
+    IF v_search_vector IS NULL
+       OR NOT v_search_vector @@ plainto_tsquery('simple', unaccent('I90SAMPLEID'))
+       OR NOT v_search_vector @@ plainto_tsquery(
+           'simple',
+           unaccent('Issue 90 Sample Identifier Client')
+       )
+       OR NOT v_search_vector @@ plainto_tsquery('simple', unaccent('Máu')) THEN
+        RAISE EXCEPTION
+            'TEST 7 FAILED: search_vector does not include sample_id/client_name/type: %',
+            v_search_vector;
+    END IF;
+END $$;
+
+ROLLBACK;
+
+SELECT 'search: ok' AS result;

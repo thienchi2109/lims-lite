@@ -20,26 +20,42 @@ SET search_path TO public;
 \echo '============================================================================'
 \echo ''
 
+BEGIN;
+
 DO $$
 BEGIN
     INSERT INTO auth.users (id, email)
     VALUES
-        ('33333333-3333-3333-3333-333333333333', 'confidential-analyst@lims.local'),
-        ('44444444-4444-4444-4444-444444444444', 'confidential-manager@lims.local')
-    ON CONFLICT (id) DO NOTHING;
+        (
+            '90000090-0005-4000-8000-000000000001',
+            'issue-90-confidential-analyst@lims.local'
+        ),
+        (
+            '90000090-0005-4000-8000-000000000002',
+            'issue-90-confidential-manager@lims.local'
+        );
 
     INSERT INTO public.users (id, username, full_name, role)
     VALUES
-        ('33333333-3333-3333-3333-333333333333', 'confidential_analyst', 'Confidential Analyst', 'analyst'),
-        ('44444444-4444-4444-4444-444444444444', 'confidential_manager', 'Confidential Manager', 'manager')
-    ON CONFLICT (id) DO NOTHING;
+        (
+            '90000090-0005-4000-8000-000000000001',
+            'issue_90_confidential_analyst',
+            'Issue 90 Confidential Analyst',
+            'analyst'
+        ),
+        (
+            '90000090-0005-4000-8000-000000000002',
+            'issue_90_confidential_manager',
+            'Issue 90 Confidential Manager',
+            'manager'
+        );
 END $$;
 
 CREATE TEMP TABLE confidential_batch1_test_results (
     test_name TEXT PRIMARY KEY,
     passed BOOLEAN NOT NULL,
     detail TEXT NOT NULL
-);
+) ON COMMIT DROP;
 
 DO $$
 DECLARE
@@ -250,26 +266,26 @@ BEGIN
     EXECUTE $sql$
         UPDATE public.users
         SET can_access_confidential = CASE
-            WHEN id = '33333333-3333-3333-3333-333333333333' THEN FALSE
-            WHEN id = '44444444-4444-4444-4444-444444444444' THEN TRUE
+            WHEN id = '90000090-0005-4000-8000-000000000001' THEN FALSE
+            WHEN id = '90000090-0005-4000-8000-000000000002' THEN TRUE
             ELSE can_access_confidential
         END
         WHERE id IN (
-            '33333333-3333-3333-3333-333333333333',
-            '44444444-4444-4444-4444-444444444444'
+            '90000090-0005-4000-8000-000000000001',
+            '90000090-0005-4000-8000-000000000002'
         )
     $sql$;
 
     PERFORM set_config(
         'request.jwt.claims',
-        '{"sub":"33333333-3333-3333-3333-333333333333","role":"authenticated"}',
+        '{"sub":"90000090-0005-4000-8000-000000000001","role":"authenticated"}',
         TRUE
     );
     SELECT public.user_can_access_confidential() INTO v_unauthorized_result;
 
     PERFORM set_config(
         'request.jwt.claims',
-        '{"sub":"44444444-4444-4444-4444-444444444444","role":"authenticated"}',
+        '{"sub":"90000090-0005-4000-8000-000000000002","role":"authenticated"}',
         TRUE
     );
     SELECT public.user_can_access_confidential() INTO v_authorized_result;
@@ -319,3 +335,7 @@ BEGIN
 
     RAISE NOTICE '✓ All confidential schema/helper checks passed';
 END $$;
+
+ROLLBACK;
+
+SELECT 'confidential-schema-helper: ok' AS result;
