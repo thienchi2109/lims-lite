@@ -129,6 +129,13 @@ BEGIN
     DELETE FROM public.manager_otp_settings
     WHERE user_id = v_analyst_id;
 
+    SET LOCAL ROLE authenticated;
+    PERFORM set_config(
+        'request.jwt.claims',
+        format('{"sub":"%s","role":"authenticated"}', v_manager_id),
+        true
+    );
+
     SELECT count(*)
     INTO v_missing_count
     FROM public.get_confidential_analysts_missing_otp_email()
@@ -137,6 +144,8 @@ BEGIN
     IF v_missing_count <> 1 THEN
         RAISE EXCEPTION 'preflight RPC did not report confidential analyst missing OTP email';
     END IF;
+
+    RESET ROLE;
 END $$;
 
 ROLLBACK;
