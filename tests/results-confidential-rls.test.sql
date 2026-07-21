@@ -65,20 +65,12 @@ BEGIN
     )
     VALUES (
         v_confidential_assay_id,
-        'Issue 90 Confidential Result Assay',
+        'Issue 90 HIV Ag/Ab Confidential Assay',
         'index',
         TRUE,
         'Non-reactive',
-        'Issue 90 Confidential Method'
-    )
-    ON CONFLICT (id) DO UPDATE
-    SET
-        name = EXCLUDED.name,
-        units = EXCLUDED.units,
-        is_confidential = TRUE,
-        normal_range = EXCLUDED.normal_range,
-        method_name = EXCLUDED.method_name,
-        deleted_at = NULL;
+        'Issue 90 HIV Ag/Ab Method'
+    );
 
     INSERT INTO public.clients (id, id_card_num, name, date_of_birth, gender, phone, address)
     VALUES ('53333333-3333-3333-3333-333333333333', '079203009999', 'Bệnh nhân HIV Batch 2', DATE '1994-02-14', 'Nam', '0901234999', 'TP.HCM')

@@ -140,6 +140,7 @@ BEGIN
         client_id,
         client_name,
         status,
+        received_at,
         received_by,
         type,
         completed_at,
@@ -151,10 +152,11 @@ BEGIN
             'ISSUE90-COA-GENERATION-CLAIMS',
             '92000000-0000-0000-0000-000000000020',
             'Issue 90 Generation Claims Client',
-            'completed',
+            'in_progress',
+            TIMESTAMPTZ '2026-07-21 02:00:00+00',
             v_analyst_id,
             'Máu',
-            TIMESTAMPTZ '2026-07-21 02:00:00+00',
+            NULL,
             TRUE
         ),
         (
@@ -163,6 +165,7 @@ BEGIN
             '92000000-0000-0000-0000-000000000020',
             'Issue 90 Generation Claims Client',
             'received',
+            TIMESTAMPTZ '2026-07-21 02:01:00+00',
             v_analyst_id,
             'Máu',
             NULL,
@@ -176,8 +179,7 @@ BEGIN
         value,
         status,
         entered_by,
-        approved_by,
-        approved_at
+        entered_at
     )
     VALUES
         (
@@ -185,9 +187,8 @@ BEGIN
             v_sample_id,
             '92000000-0000-0000-0000-000000000031',
             '5',
-            'approved',
+            'entered',
             v_analyst_id,
-            v_manager_id,
             TIMESTAMPTZ '2026-07-21 02:05:00+00'
         ),
         (
@@ -195,17 +196,22 @@ BEGIN
             v_sample_id,
             '92000000-0000-0000-0000-000000000032',
             '10',
-            'approved',
+            'entered',
             v_analyst_id,
-            v_manager_id,
             TIMESTAMPTZ '2026-07-21 02:06:00+00'
         );
+
+    UPDATE public.samples
+    SET status = 'review',
+        review_started_at = TIMESTAMPTZ '2026-07-21 02:09:00+00'
+    WHERE id = v_sample_id;
 
     INSERT INTO public.sample_submissions (
         id,
         sample_id,
         user_id,
         signature_id,
+        submitted_at,
         submission_number,
         signature_meaning
     )
@@ -214,6 +220,7 @@ BEGIN
         v_sample_id,
         v_analyst_id,
         v_analyst_signature_id,
+        TIMESTAMPTZ '2026-07-21 02:10:00+00',
         1,
         'I certify I performed these tests and entered these results accurately'
     );
@@ -252,14 +259,6 @@ BEGIN
         LIMIT 2
     ) AS result;
 
-    UPDATE public.results
-    SET approved_at = TIMESTAMPTZ '2026-07-11 00:00:00+00',
-        approved_by = CASE
-            WHEN id = v_tied_result_ids[1] THEN v_manager_id
-            ELSE v_other_manager_id
-        END
-    WHERE id = ANY(v_tied_result_ids);
-
     INSERT INTO public.result_reference_assessments (
         submission_id,
         result_id,
@@ -288,6 +287,21 @@ BEGIN
       ON submission.id = v_submission_id
     WHERE result.sample_id = v_sample_id
     ON CONFLICT (submission_id, result_id) DO NOTHING;
+
+    UPDATE public.results
+    SET status = 'approved',
+        approved_at = CASE
+            WHEN id = v_tied_result_ids[1]
+                THEN TIMESTAMPTZ '2026-07-21 02:15:00+00'
+            ELSE TIMESTAMPTZ '2026-07-21 02:16:00+00'
+        END,
+        approved_by = v_manager_id
+    WHERE id = ANY(v_tied_result_ids);
+
+    UPDATE public.samples
+    SET status = 'completed',
+        completed_at = TIMESTAMPTZ '2026-07-21 02:20:00+00'
+    WHERE id = v_sample_id;
 
     PERFORM set_config(
         'request.jwt.claims',

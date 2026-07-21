@@ -130,6 +130,7 @@ BEGIN
         client_id,
         client_name,
         status,
+        received_at,
         received_by,
         type,
         completed_at,
@@ -141,10 +142,11 @@ BEGIN
             'ISSUE90-COA-PROVENANCE',
             '91000000-0000-0000-0000-000000000020',
             'Issue 90 Provenance Client',
-            'completed',
+            'in_progress',
+            TIMESTAMPTZ '2026-07-21 03:00:00+00',
             v_analyst_id,
             'Máu',
-            TIMESTAMPTZ '2026-07-21 03:00:00+00',
+            NULL,
             TRUE
         ),
         (
@@ -153,6 +155,7 @@ BEGIN
             '91000000-0000-0000-0000-000000000020',
             'Issue 90 Provenance Client',
             'received',
+            TIMESTAMPTZ '2026-07-21 03:01:00+00',
             v_analyst_id,
             'Máu',
             NULL,
@@ -166,30 +169,32 @@ BEGIN
         value,
         status,
         entered_by,
-        approved_by,
-        approved_at
+        entered_at
     )
     VALUES
         (
             '91000000-0000-0000-0000-000000000051',
             v_sample_id,
             '91000000-0000-0000-0000-000000000031',
-            '5',
-            'approved',
+            '4',
+            'entered',
             v_analyst_id,
-            v_manager_id,
             TIMESTAMPTZ '2026-07-21 03:05:00+00'
         ),
         (
             '91000000-0000-0000-0000-000000000052',
             v_sample_id,
             '91000000-0000-0000-0000-000000000032',
-            '10',
-            'approved',
+            '8',
+            'entered',
             v_analyst_id,
-            v_manager_id,
             TIMESTAMPTZ '2026-07-21 03:06:00+00'
         );
+
+    UPDATE public.samples
+    SET status = 'review',
+        review_started_at = TIMESTAMPTZ '2026-07-21 03:09:00+00'
+    WHERE id = v_sample_id;
 
     INSERT INTO public.sample_submissions (
         id,
@@ -209,6 +214,43 @@ BEGIN
         1,
         'I certify I performed these tests and entered these results accurately'
     );
+
+    INSERT INTO public.result_reference_assessments (
+        submission_id,
+        result_id,
+        assessment,
+        assay_name,
+        result_value,
+        unit,
+        method_name,
+        reference_range,
+        analyst_id
+    )
+    SELECT
+        v_rejected_submission_id,
+        result.id,
+        'within_reference_range',
+        assay.name,
+        COALESCE(result.value, ''),
+        assay.units,
+        assay.method_name,
+        assay.normal_range,
+        v_analyst_id
+    FROM public.results AS result
+    JOIN public.assay_definitions AS assay
+      ON assay.id = result.assay_id
+    WHERE result.sample_id = v_sample_id;
+
+    UPDATE public.results
+    SET value = CASE id
+        WHEN '91000000-0000-0000-0000-000000000051'::UUID THEN '5'
+        ELSE '10'
+    END
+    WHERE sample_id = v_sample_id;
+
+    UPDATE public.assay_definitions
+    SET normal_range = '1-12'
+    WHERE id = '91000000-0000-0000-0000-000000000031';
 
     INSERT INTO public.sample_submissions (
         id,
@@ -273,6 +315,21 @@ BEGIN
     ) THEN
         RAISE EXCEPTION 'Test setup failed to create exact source snapshots';
     END IF;
+
+    UPDATE public.results
+    SET status = 'approved',
+        approved_by = v_manager_id,
+        approved_at = CASE id
+            WHEN '91000000-0000-0000-0000-000000000051'::UUID
+                THEN TIMESTAMPTZ '2026-07-21 03:25:00+00'
+            ELSE TIMESTAMPTZ '2026-07-21 03:26:00+00'
+        END
+    WHERE sample_id = v_sample_id;
+
+    UPDATE public.samples
+    SET status = 'completed',
+        completed_at = TIMESTAMPTZ '2026-07-21 03:30:00+00'
+    WHERE id = v_sample_id;
 
     EXECUTE
         'ALTER TABLE public.coa_reports DISABLE TRIGGER prevent_coa_report_identity_change';
@@ -492,6 +549,41 @@ BEGIN
     IF NOT v_historic_bind_rejected THEN
         RAISE EXCEPTION
             'Historic NULL source must remain permanently unbound';
+    END IF;
+
+    IF (
+        SELECT COUNT(*)
+        FROM public.result_reference_assessments
+        WHERE submission_id = v_rejected_submission_id
+    ) <> 2
+       OR NOT EXISTS (
+           SELECT 1
+           FROM public.result_reference_assessments
+           WHERE submission_id = v_rejected_submission_id
+             AND result_id = '91000000-0000-0000-0000-000000000051'
+             AND assessment = 'within_reference_range'
+             AND assay_name = 'Issue 90 Provenance Assay A'
+             AND result_value = '4'
+             AND unit = 'mg/L'
+             AND method_name = 'Provenance Method A'
+             AND reference_range = '1-10'
+             AND analyst_id = v_analyst_id
+       )
+       OR NOT EXISTS (
+           SELECT 1
+           FROM public.result_reference_assessments
+           WHERE submission_id = v_rejected_submission_id
+             AND result_id = '91000000-0000-0000-0000-000000000052'
+             AND assessment = 'within_reference_range'
+             AND assay_name = 'Issue 90 Provenance Assay B'
+             AND result_value = '8'
+             AND unit = 'mg/L'
+             AND method_name = 'Provenance Method B'
+             AND reference_range = '2-20'
+             AND analyst_id = v_analyst_id
+       ) THEN
+        RAISE EXCEPTION
+            'Replaced submission snapshots changed after provenance operations';
     END IF;
 
     BEGIN
