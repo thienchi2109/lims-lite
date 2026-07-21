@@ -67,11 +67,39 @@ describe('generateSampleLabelHtml', () => {
         expect(html).not.toContain('size: 71.1mm 22.9mm')
     })
 
+    it('packs only the vertical content inside each 35.5x22.9mm label', () => {
+        const html = generateSampleLabelHtml(sensitiveSample, { preset: 'thermal-35x23-sheet-2up' })
+
+        expect(html).toContain('grid-template-columns: 35.5mm 35.5mm')
+        expect(html).toContain('column-gap: 0mm')
+        expect(html).toContain('width: 35.5mm')
+        expect(html).toContain('height: 22.9mm')
+        expect(html.match(/<section class="sample-label" data-compact-vertical="true"/g)).toHaveLength(2)
+        expect(html).toMatch(
+            /\.sample-label\[data-compact-vertical="true"\] \{\s+grid-template-rows: auto auto auto;\s+align-content: center;\s+row-gap: 0.3mm;/,
+        )
+        expect(html).toMatch(
+            /\.sample-label\[data-compact-vertical="true"\] \.barcode svg \{\s+height: auto;/,
+        )
+    })
+
     it('keeps 35x22mm thermal label content inside a printer-safe inset', () => {
         const html = generateSampleLabelHtml(sensitiveSample, { preset: 'thermal-35x22-2up' })
 
         expect(html).toContain('padding: 2mm 2mm 1mm 3mm')
     })
+
+    it.each(['thermal-35x22-2up', 'small-tube', 'container'] as const)(
+        'keeps the existing vertical layout for %s',
+        (preset) => {
+            const html = generateSampleLabelHtml(sensitiveSample, { preset })
+
+            expect(html).toContain('grid-template-rows: auto 1fr auto')
+            expect(html).toContain('gap: 0.6mm')
+            expect(html).toMatch(/\.barcode svg \{\s+width: 100%;\s+height: 100%;/)
+            expect(html).not.toContain('<section class="sample-label" data-compact-vertical="true"')
+        },
+    )
 
     it('renders patient identity metadata without sample type, collection time, or receiver on labels', () => {
         const html = generateSampleLabelHtml(sensitiveSample, { preset: 'small-tube' })

@@ -148,10 +148,13 @@ export function generateSampleLabelHtml(
     const metaItems = [clientName, birthYear].filter(Boolean)
     const isCompactMeta = isTwoColumnThermalPreset(presetName) && metaItems.join(' ').length > 24
     const metaClass = isCompactMeta ? 'meta compact' : 'meta'
+    const compactVerticalAttribute = presetName === 'thermal-35x23-sheet-2up'
+        ? ' data-compact-vertical="true"'
+        : ''
     const barcodeSvg = renderSampleBarcodeSvg(sampleId, preset.barcodeHeight)
     const sheetColumns = Array.from({ length: preset.columns }, () => preset.labelWidth).join(' ')
     const labelCopies = Array.from({ length: preset.columns }, () => `
-        <section class="sample-label" aria-label="Nhãn barcode mẫu ${escapeHtml(sampleId)}">
+        <section class="sample-label"${compactVerticalAttribute} aria-label="Nhãn barcode mẫu ${escapeHtml(sampleId)}">
             <div class="sample-id">${escapeHtml(sampleId)}</div>
             <div class="barcode">${barcodeSvg}</div>
             <div class="${metaClass}">
@@ -225,6 +228,16 @@ export function generateSampleLabelHtml(
             width: 100%;
             height: 100%;
             display: block;
+        }
+
+        .sample-label[data-compact-vertical="true"] {
+            grid-template-rows: auto auto auto;
+            align-content: center;
+            row-gap: 0.3mm;
+        }
+
+        .sample-label[data-compact-vertical="true"] .barcode svg {
+            height: auto;
         }
 
         .meta {
