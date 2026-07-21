@@ -38,10 +38,15 @@
 
 ## Phase 6: Rollout And Verification
 
-- [ ] 6.1 Run focused Vitest and SQL source-level suites for accession UI, mobile wizard/review, Server Actions, client-action routing, migrations, and affected direct-insert fixtures, followed by `npm run typecheck`, relevant lint checks, React Doctor, and browser verification at desktop/mobile viewports.
-- [ ] 6.2 Confirm no unrelated sample list/report/filter behavior changed, document intentionally deferred display/reporting work as follow-up issues, then commit and push the implementation from the source workspace.
+- [x] 6.1 Run focused Vitest and SQL source-level suites for accession UI, mobile wizard/review, Server Actions, client-action routing, migrations, and affected direct-insert fixtures, followed by `npm run typecheck`, relevant lint checks, React Doctor, and browser verification at desktop/mobile viewports.
+- [x] 6.2 Confirm no unrelated sample list/report/filter behavior changed, document intentionally deferred display/reporting work as follow-up issues, then commit and push the implementation from the source workspace.
 - [ ] 6.3 Pull the exact pushed commit on the home server and prepare the application build before changing database contracts.
 - [ ] 6.4 Apply the compatibility migration through `sudo -n docker exec ... psql`, refresh/restart PostgREST so the new overloads are visible, run all SQL regression tests plus `SELECT * FROM run_security_tests();`, and verify existing rows remain `NULL`.
 - [ ] 6.5 Deploy the application using the quality-aware RPC signatures and smoke-test all four combinations: `Đạt`/`Không đạt` with and without assigned tests, plus missing-selection rejection on desktop and mobile.
 - [ ] 6.6 Apply the enforcement migration only after the new application is verified, refresh/restart PostgREST again, rerun all SQL/security tests, and confirm legacy RPC signatures are no longer executable.
 - [ ] 6.7 Verify live schema, RPC signatures, grants, RLS policies, sample triggers, audit logs, application health, and final git synchronization; use a new forward-only migration for any rollback correction.
+
+Browser verification in task 6.1 was explicitly waived by the user on
+2026-07-21. Desktop and mobile behavior remains covered by focused component
+tests. Deferred display and reporting work is tracked in GitHub Issues #89 and
+#88 respectively.
