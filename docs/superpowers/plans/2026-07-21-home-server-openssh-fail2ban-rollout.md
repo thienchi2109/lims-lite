@@ -190,12 +190,10 @@ sudo -n test -x "$ROLLBACK_SCRIPT"
 sudo -n sh -n "$ROLLBACK_SCRIPT"
 sudo -n test ! -e /run/lims-ssh-policy-rollback-fired
 sudo -n test ! -e "$BACKUP_DIR/rollback-unit"
-existing_units="$(
-  sudo -n systemctl list-units --all \
-    'lims-ssh-policy-rollback-*' --no-legend
-  sudo -n systemctl list-timers --all \
-    'lims-ssh-policy-rollback-*' --no-legend
-)"
+existing_units="$(sudo -n systemctl list-units --all \
+  --no-legend --plain \
+  'lims-ssh-policy-rollback-*.service' \
+  'lims-ssh-policy-rollback-*.timer')"
 test -z "$existing_units"
 ROLLBACK_UNIT="lims-ssh-policy-rollback-$(date +%s%N)"
 printf '%s\n' "$ROLLBACK_UNIT" | \
@@ -276,6 +274,15 @@ sudo -n apt-get install -y fail2ban
 sudo -n fail2ban-client -t
 sudo -n systemctl enable fail2ban
 sudo -n systemctl restart fail2ban
+for attempt in $(seq 1 30)
+do
+  if sudo -n fail2ban-client ping >/dev/null 2>&1
+  then
+    break
+  fi
+  sleep 1
+done
+sudo -n fail2ban-client ping
 sudo -n fail2ban-client status
 sudo -n fail2ban-client status sshd
 ```
@@ -297,40 +304,64 @@ TEST_KEY="$TEST_DIR/id_ed25519"
 ssh-keygen -q -t ed25519 -N '' -f "$TEST_KEY"
 ```
 
-3. Tạo đúng một authentication failure:
+3. Ghi nhận `Total failed` hiện tại, sau đó tạo đúng một authentication
+   failure bằng username probe không tồn tại. Filter `sshd` mặc định không tính
+   khóa public sai cho username hợp lệ, nhằm tránh ban nhầm client thử nhiều
+   khóa trước khi chọn đúng khóa:
 
 ```bash
+failed_before="$(
+  ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42 \
+    "sudo -n fail2ban-client status sshd" |
+    sed -n 's/.*Total failed:[[:space:]]*//p'
+)"
 set +e
 ssh -F /dev/null \
   -o BatchMode=yes \
   -o IdentitiesOnly=yes \
   -o IdentityAgent=none \
+  -o StrictHostKeyChecking=yes \
   -o PasswordAuthentication=no \
   -o KbdInteractiveAuthentication=no \
   -o PreferredAuthentications=publickey \
   -o ControlMaster=no \
   -o ControlPath=none \
+  -o NumberOfPasswordPrompts=0 \
+  -o ConnectTimeout=5 \
   -i "$TEST_KEY" \
-  khoa-xn-cdc@100.93.19.42 true
+  lims-f2b-probe@100.93.19.42 true
 ssh_rc=$?
 set -e
 ```
 
-4. Xác nhận command thất bại với exit code `255`:
+4. Xác nhận command thất bại với exit code `255`, bộ đếm tăng và chưa có IP
+   nào bị ban:
 
 ```bash
 test "$ssh_rc" -eq 255
+sleep 2
+status_after="$(
+  ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42 \
+    "sudo -n fail2ban-client status sshd"
+)"
+failed_after="$(
+  printf '%s\n' "$status_after" |
+    sed -n 's/.*Total failed:[[:space:]]*//p'
+)"
+test "$failed_after" -gt "$failed_before"
+printf '%s\n' "$status_after" |
+  grep -Eq 'Currently banned:[[:space:]]*0$'
 rm -rf "$TEST_DIR"
 ```
 
-6. Xác nhận SSH journal và jail ghi đúng một failure từ `100.99.227.53`.
-7. Manual ban:
+5. Xác nhận SSH journal và jail ghi failure từ `100.99.227.53`.
+6. Manual ban:
 
 ```bash
 sudo -n fail2ban-client set sshd banip 100.86.19.103
 ```
 
-8. Xác nhận:
+7. Xác nhận:
 
 - IP nằm trong jail;
 - `f2b-table` tồn tại;
@@ -338,7 +369,7 @@ sudo -n fail2ban-client set sshd banip 100.86.19.103
 - fresh SSH từ `SYT-TC-CHI` bị chặn;
 - `mystartup` và iPhone vẫn SSH được.
 
-9. Nếu ban không chặn `SYT-TC-CHI`:
+8. Nếu ban không chặn `SYT-TC-CHI`:
 
 - immediate unban nếu IP còn trong jail;
 - chuyển `10-lims-sshd.local` khỏi `jail.d` vào `$BACKUP_DIR/failed`;
@@ -347,13 +378,13 @@ sudo -n fail2ban-client set sshd banip 100.86.19.103
 - xác nhận `f2b-table` đã bị xóa;
 - dừng rollout.
 
-10. Immediate unban:
+9. Immediate unban:
 
 ```bash
 sudo -n fail2ban-client set sshd unbanip 100.86.19.103
 ```
 
-11. Xác nhận fresh SSH từ `SYT-TC-CHI` hoạt động lại.
+10. Xác nhận fresh SSH từ `SYT-TC-CHI` hoạt động lại.
 
 Không tạo đủ sáu lỗi xác thực trên production.
 

@@ -193,6 +193,15 @@ Các gate cấu hình:
 sudo -n fail2ban-client -t
 sudo -n systemctl enable fail2ban
 sudo -n systemctl restart fail2ban
+for attempt in $(seq 1 30)
+do
+  if sudo -n fail2ban-client ping >/dev/null 2>&1
+  then
+    break
+  fi
+  sleep 1
+done
+sudo -n fail2ban-client ping
 sudo -n fail2ban-client status
 sudo -n fail2ban-client status sshd
 ```
@@ -215,8 +224,11 @@ Phải giữ ít nhất hai đường SSH quản trị khác hoạt động tron
 Trình tự:
 
 1. Ghi nhận baseline SSH thành công từ cả ba node.
-2. Từ `mystartup`, dùng một key tạm và `IdentitiesOnly=yes` để tạo đúng một
-   lỗi xác thực có kiểm soát.
+2. Từ `mystartup`, dùng username không tồn tại `lims-f2b-probe`, một key tạm,
+   `IdentitiesOnly=yes` và `IdentityAgent=none` để tạo đúng một lỗi xác thực có
+   kiểm soát. Không dùng username hợp lệ `khoa-xn-cdc`: filter `sshd` mặc định
+   cố ý không tính khóa public sai cho username hợp lệ để tránh ban nhầm client
+   thử nhiều khóa.
 3. Xác nhận SSH journal ghi nguồn `100.99.227.53`.
 4. Xác nhận bộ đếm failed của jail `sshd` tăng.
 5. Chạy manual ban:
