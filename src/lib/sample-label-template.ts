@@ -233,7 +233,7 @@ export function generateSampleLabelHtml(
         .sample-label[data-compact-vertical="true"] {
             grid-template-rows: auto auto auto;
             align-content: center;
-            row-gap: 0.3mm;
+            row-gap: 0.45mm;
         }
 
         .sample-label[data-compact-vertical="true"] .barcode svg {

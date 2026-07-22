@@ -67,7 +67,7 @@ describe('generateSampleLabelHtml', () => {
         expect(html).not.toContain('size: 71.1mm 22.9mm')
     })
 
-    it('packs only the vertical content inside each 35.5x22.9mm label', () => {
+    it('keeps compact content separated inside each 35.5x22.9mm label', () => {
         const html = generateSampleLabelHtml(sensitiveSample, { preset: 'thermal-35x23-sheet-2up' })
 
         expect(html).toContain('grid-template-columns: 35.5mm 35.5mm')
@@ -76,7 +76,7 @@ describe('generateSampleLabelHtml', () => {
         expect(html).toContain('height: 22.9mm')
         expect(html.match(/<section class="sample-label" data-compact-vertical="true"/g)).toHaveLength(2)
         expect(html).toMatch(
-            /\.sample-label\[data-compact-vertical="true"\] \{\s+grid-template-rows: auto auto auto;\s+align-content: center;\s+row-gap: 0.3mm;/,
+            /\.sample-label\[data-compact-vertical="true"\] \{\s+grid-template-rows: auto auto auto;\s+align-content: center;\s+row-gap: 0.45mm;/,
         )
         expect(html).toMatch(
             /\.sample-label\[data-compact-vertical="true"\] \.barcode svg \{\s+height: auto;/,
