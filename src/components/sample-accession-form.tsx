@@ -16,7 +16,10 @@ import {
 import { accessionAndAssignTestsClient, createSampleClient, findClientByIdentityClient } from '@/lib/api-client'
 import { printSampleBarcodeLabel } from '@/lib/sample-label-print-client'
 import type { SampleLabelPreset } from '@/lib/sample-label-template'
-import { parseClientIdentityQr } from '@/lib/qr/parse-client-identity-qr'
+import {
+    parseClientIdentityQr,
+    type ParsedClientIdentityQr,
+} from '@/lib/qr/parse-client-identity-qr'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -29,7 +32,6 @@ import {
 } from '@/components/ui/alert-dialog'
 import { TestAssignmentGrid } from '@/components/test-assignment-grid'
 import { SampleAccessionContext } from '@/components/sample-accession-context'
-import { useCccdSerialController } from '@/hooks/use-cccd-serial-controller'
 import { toast } from 'sonner'
 
 const EMPTY_SPECIALTIES: LabSpecialty[] = []
@@ -187,15 +189,13 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
         setIsSubmitting(false)
     }
 
-    const handleQRScan = useCallback(async (decodedText: string) => {
+    const handleInvalidQRScan = useCallback(() => {
         setShowQRScanner(false)
+        toast.error('Mã QR không hợp lệ. Vui lòng thử lại hoặc nhập thủ công.')
+    }, [])
 
-        const parsed = parseClientIdentityQr(decodedText)
-        if (!parsed) {
-            toast.error('Mã QR không hợp lệ. Vui lòng thử lại hoặc nhập thủ công.')
-            return
-        }
-
+    const handleParsedIdentityScan = useCallback(async (parsed: ParsedClientIdentityQr) => {
+        setShowQRScanner(false)
         const { idCardNum, name, dateOfBirth, gender } = parsed
         const address = parsed.address
 
@@ -224,10 +224,15 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
         setShowClientForm(true)
     }, [])
 
-    const serialController = useCccdSerialController({
-        active: showQRScanner,
-        onPayload: handleQRScan,
-    })
+    const handleQRScan = useCallback(async (decodedText: string) => {
+        const parsed = parseClientIdentityQr(decodedText)
+        if (!parsed) {
+            handleInvalidQRScan()
+            return
+        }
+
+        await handleParsedIdentityScan(parsed)
+    }, [handleInvalidQRScan, handleParsedIdentityScan])
 
     const handleResetForm = useCallback(() => {
         reset()
@@ -271,7 +276,8 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
             showQRScanner={showQRScanner}
             onShowQRScannerChange={setShowQRScanner}
             onQRScan={handleQRScan}
-            serialController={serialController}
+            onIdentityScan={handleParsedIdentityScan}
+            onInvalidScan={handleInvalidQRScan}
             submitError={submitError}
             submitSuccess={submitSuccess}
             createdSampleHref={createdSampleHref}
@@ -294,7 +300,8 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
         showQRScanner,
         onShowQRScanner: setShowQRScanner,
         onQRScan: handleQRScan,
-        serialController,
+        onIdentityScan: handleParsedIdentityScan,
+        onInvalidScan: handleInvalidQRScan,
         selectedSampleType,
         onSampleTypeChange: setSelectedSampleType,
         sampleQuality,
@@ -306,7 +313,7 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
         onReset: handleResetForm,
     }), [
         selectedClient, showClientForm, clientFormData,
-        showQRScanner, handleQRScan, serialController,
+        showQRScanner, handleQRScan, handleParsedIdentityScan, handleInvalidQRScan,
         selectedSampleType, sampleQuality, register, receivedAtWatched,
         submitError, submitSuccess, handleResetForm,
     ])

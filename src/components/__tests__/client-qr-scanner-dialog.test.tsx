@@ -1,6 +1,21 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+const scannerMocks = vi.hoisted(() => ({
+    connection: {
+        state: 'permission_required',
+        error: null as string | null,
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+    },
+    useScannerConsumer: vi.fn(),
+}))
+
+vi.mock('@/components/scanner/use-scanner', () => ({
+    useScanner: () => scannerMocks.connection,
+    useScannerConsumer: scannerMocks.useScannerConsumer,
+}))
+
 vi.mock('@/components/qr-scanner', () => ({
     QRScanner: ({ onScan }: { onScan: (decodedText: string) => void }) => (
         <button
@@ -18,6 +33,8 @@ import { ClientQrScannerDialog } from '../client-qr-scanner-dialog'
 describe('ClientQrScannerDialog continuity', () => {
     beforeEach(() => {
         vi.useFakeTimers()
+        scannerMocks.connection.state = 'permission_required'
+        scannerMocks.connection.error = null
     })
 
     afterEach(() => {
@@ -31,12 +48,8 @@ describe('ClientQrScannerDialog continuity', () => {
                 open={true}
                 onOpenChange={vi.fn()}
                 onScan={vi.fn()}
-                serialController={{
-                    state: 'permission_required',
-                    error: null,
-                    connect: vi.fn(),
-                    disconnect: vi.fn(),
-                }}
+                onIdentityScan={vi.fn()}
+                onInvalidScan={vi.fn()}
             />,
         )
 
@@ -54,12 +67,8 @@ describe('ClientQrScannerDialog continuity', () => {
                 open={true}
                 onOpenChange={vi.fn()}
                 onScan={onScan}
-                serialController={{
-                    state: 'unsupported',
-                    error: null,
-                    connect: vi.fn(),
-                    disconnect: vi.fn(),
-                }}
+                onIdentityScan={vi.fn()}
+                onInvalidScan={vi.fn()}
             />,
         )
 
@@ -82,40 +91,30 @@ describe('ClientQrScannerDialog continuity', () => {
     })
 
     it('requests serial connection from an explicit user click', () => {
-        const connect = vi.fn()
-
         render(
             <ClientQrScannerDialog
                 open={true}
                 onOpenChange={vi.fn()}
                 onScan={vi.fn()}
-                serialController={{
-                    state: 'permission_required',
-                    error: null,
-                    connect,
-                    disconnect: vi.fn(),
-                }}
+                onIdentityScan={vi.fn()}
+                onInvalidScan={vi.fn()}
             />,
         )
 
         fireEvent.click(screen.getByRole('button', { name: 'Kết nối scanner CCCD' }))
-        expect(connect).toHaveBeenCalledTimes(1)
+        expect(scannerMocks.connection.connect).toHaveBeenCalledTimes(1)
     })
 
     it('shows connected status, hides camera, and allows disconnecting', () => {
-        const disconnect = vi.fn()
+        scannerMocks.connection.state = 'connected'
 
         render(
             <ClientQrScannerDialog
                 open={true}
                 onOpenChange={vi.fn()}
                 onScan={vi.fn()}
-                serialController={{
-                    state: 'connected',
-                    error: null,
-                    connect: vi.fn(),
-                    disconnect,
-                }}
+                onIdentityScan={vi.fn()}
+                onInvalidScan={vi.fn()}
             />,
         )
 
@@ -124,21 +123,19 @@ describe('ClientQrScannerDialog continuity', () => {
         expect(screen.queryByTestId('camera-scan-trigger')).toBeNull()
 
         fireEvent.click(screen.getByText('Ngắt'))
-        expect(disconnect).toHaveBeenCalledTimes(1)
+        expect(scannerMocks.connection.disconnect).toHaveBeenCalledTimes(1)
     })
 
     it('hides COM section when serial is unsupported but preserves keyboard and camera', () => {
+        scannerMocks.connection.state = 'unsupported'
+
         render(
             <ClientQrScannerDialog
                 open={true}
                 onOpenChange={vi.fn()}
                 onScan={vi.fn()}
-                serialController={{
-                    state: 'unsupported',
-                    error: null,
-                    connect: vi.fn(),
-                    disconnect: vi.fn(),
-                }}
+                onIdentityScan={vi.fn()}
+                onInvalidScan={vi.fn()}
             />,
         )
 
@@ -156,6 +153,8 @@ describe('ClientQrScannerDialog continuity', () => {
                 open={true}
                 onOpenChange={onOpenChange}
                 onScan={vi.fn()}
+                onIdentityScan={vi.fn()}
+                onInvalidScan={vi.fn()}
             />,
         )
 
@@ -169,6 +168,8 @@ describe('ClientQrScannerDialog continuity', () => {
                 open={true}
                 onOpenChange={vi.fn()}
                 onScan={vi.fn()}
+                onIdentityScan={vi.fn()}
+                onInvalidScan={vi.fn()}
             />,
         )
 
@@ -178,5 +179,73 @@ describe('ClientQrScannerDialog continuity', () => {
         expect(dialogClassName).toContain('overflow-y-auto')
         expect(dialogClassName).toContain('p-4')
         expect(dialogClassName).toContain('sm:p-6')
+    })
+
+    it('registers the CCCD consumer only while open with identity priority 300', () => {
+        const props = {
+            onOpenChange: vi.fn(),
+            onScan: vi.fn(),
+            onIdentityScan: vi.fn(),
+            onInvalidScan: vi.fn(),
+        }
+        const { rerender } = render(<ClientQrScannerDialog open={false} {...props} />)
+
+        expect(scannerMocks.useScannerConsumer).toHaveBeenLastCalledWith(
+            expect.objectContaining({
+                enabled: false,
+                kinds: ['identity-qr', 'unknown'],
+                priority: 300,
+                onEvent: expect.any(Function),
+            }),
+        )
+
+        rerender(<ClientQrScannerDialog open={true} {...props} />)
+
+        expect(scannerMocks.useScannerConsumer).toHaveBeenLastCalledWith(
+            expect.objectContaining({
+                enabled: true,
+                kinds: ['identity-qr', 'unknown'],
+                priority: 300,
+                onEvent: expect.any(Function),
+            }),
+        )
+    })
+
+    it('routes parsed identity and unknown serial events without reparsing raw text', async () => {
+        const onScan = vi.fn()
+        const onIdentityScan = vi.fn()
+        const onInvalidScan = vi.fn()
+
+        render(
+            <ClientQrScannerDialog
+                open={true}
+                onOpenChange={vi.fn()}
+                onScan={onScan}
+                onIdentityScan={onIdentityScan}
+                onInvalidScan={onInvalidScan}
+            />,
+        )
+
+        const consumer = scannerMocks.useScannerConsumer.mock.calls.at(-1)?.[0]
+        expect(consumer).toBeDefined()
+        if (!consumer) return
+
+        const identity = {
+            idCardNum: '086094006827',
+            name: 'Nguyen Van A',
+            dateOfBirth: '1994-09-21',
+            gender: 'Nam' as const,
+            address: 'Ha Noi',
+        }
+
+        await act(async () => {
+            await consumer.onEvent({ kind: 'identity-qr', identity })
+            await consumer.onEvent({ kind: 'unknown' })
+        })
+
+        expect(onIdentityScan).toHaveBeenCalledTimes(1)
+        expect(onIdentityScan).toHaveBeenCalledWith(identity)
+        expect(onInvalidScan).toHaveBeenCalledTimes(1)
+        expect(onScan).not.toHaveBeenCalled()
     })
 })

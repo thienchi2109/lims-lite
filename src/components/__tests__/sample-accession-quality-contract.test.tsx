@@ -36,12 +36,6 @@ const mocks = vi.hoisted(() => ({
         methodName: 'Máy tự động',
         units: 'U/L',
     },
-    serialController: {
-        state: 'idle',
-        error: null,
-        connect: vi.fn(),
-        disconnect: vi.fn(),
-    },
 }))
 
 vi.mock('@/lib/api-client', () => ({
@@ -127,10 +121,6 @@ vi.mock('@/components/ui/alert-dialog', () => ({
     AlertDialogFooter: ({ children }: { children: ReactNode }) => <div>{children}</div>,
     AlertDialogHeader: ({ children }: { children: ReactNode }) => <div>{children}</div>,
     AlertDialogTitle: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-}))
-
-vi.mock('@/hooks/use-cccd-serial-controller', () => ({
-    useCccdSerialController: () => mocks.serialController,
 }))
 
 vi.mock('@/lib/qr/parse-client-identity-qr', () => ({

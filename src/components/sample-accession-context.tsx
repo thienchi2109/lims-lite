@@ -3,7 +3,7 @@
 import type { UseFormRegisterReturn } from 'react-hook-form'
 import type { Client, CreateClient, SampleType } from '@/types'
 import type { SampleLabelPreset } from '@/lib/sample-label-template'
-import type { ClientQrScannerDialogSerialController } from '@/components/client-qr-scanner-dialog'
+import type { ParsedClientIdentityQr } from '@/lib/qr/parse-client-identity-qr'
 import { AlertCircle, Barcode, Calendar, CheckCircle2, Eye, QrCode, Scan } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -29,8 +29,9 @@ interface SampleAccessionContextProps {
     receivedAtRegister: UseFormRegisterReturn<'received_at'>
     showQRScanner: boolean
     onShowQRScannerChange: (open: boolean) => void
-    onQRScan: (decodedText: string) => void
-    serialController?: ClientQrScannerDialogSerialController
+    onQRScan: (decodedText: string) => void | Promise<void>
+    onIdentityScan: (identity: ParsedClientIdentityQr) => void | Promise<void>
+    onInvalidScan: () => void
     submitError: string | null
     submitSuccess: string | null
     createdSampleHref: string | null
@@ -57,7 +58,8 @@ export function SampleAccessionContext({
     showQRScanner,
     onShowQRScannerChange,
     onQRScan,
-    serialController,
+    onIdentityScan,
+    onInvalidScan,
     submitError,
     submitSuccess,
     createdSampleHref,
@@ -198,7 +200,8 @@ export function SampleAccessionContext({
                 open={showQRScanner}
                 onOpenChange={onShowQRScannerChange}
                 onScan={onQRScan}
-                serialController={serialController}
+                onIdentityScan={onIdentityScan}
+                onInvalidScan={onInvalidScan}
             />
             <SampleLabelPrintDialog
                 open={showLabelPrintDialog}

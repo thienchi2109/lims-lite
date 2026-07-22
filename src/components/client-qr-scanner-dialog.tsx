@@ -5,32 +5,27 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { QRScanner } from '@/components/qr-scanner'
+import {
+    useScanner,
+    useScannerConsumer,
+    type ScannerConnection,
+} from '@/components/scanner/use-scanner'
+import type { ParsedClientIdentityQr } from '@/lib/qr/parse-client-identity-qr'
 import { Unplug, Plug, Keyboard, Camera } from 'lucide-react'
 
-export type SerialConnectionState =
-    | 'unsupported'
-    | 'permission_required'
-    | 'connecting'
-    | 'connected'
-    | 'error'
-
-export interface ClientQrScannerDialogSerialController {
-    state: SerialConnectionState
-    error: string | null
-    connect: () => void | Promise<void>
-    disconnect: () => void | Promise<void>
-}
+const CLIENT_IDENTITY_SCANNER_KINDS = ['identity-qr', 'unknown'] as const
 
 interface ClientQrScannerDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     onScan: (decodedText: string) => void | Promise<void>
-    serialController?: ClientQrScannerDialogSerialController
+    onIdentityScan: (identity: ParsedClientIdentityQr) => void | Promise<void>
+    onInvalidScan: () => void
 }
 
 type ClientQrScannerDialogBodyProps = {
     onScan: (decodedText: string) => void | Promise<void>
-    serialController?: ClientQrScannerDialogSerialController
+    serialConnection: ScannerConnection
 }
 
 /**
@@ -91,13 +86,13 @@ function KeyboardScannerInput({ onScan }: { onScan: (text: string) => void | Pro
 
 function ClientQrScannerDialogBody({
     onScan,
-    serialController,
+    serialConnection,
 }: ClientQrScannerDialogBodyProps) {
-    const isSerialConnected = serialController?.state === 'connected'
-    const isSerialConnecting = serialController?.state === 'connecting'
+    const isSerialConnected = serialConnection.state === 'connected'
+    const isSerialConnecting = serialConnection.state === 'connecting'
     const showSerialConnect =
-        serialController?.state === 'permission_required' || serialController?.state === 'error'
-    const isSerialUnsupported = serialController?.state === 'unsupported'
+        serialConnection.state === 'permission_required' || serialConnection.state === 'error'
+    const isSerialUnsupported = serialConnection.state === 'unsupported'
 
     // When COM scanner is connected → no need for camera
     const showCamera = !isSerialConnected
@@ -105,7 +100,7 @@ function ClientQrScannerDialogBody({
     return (
         <div className="space-y-4 pt-2">
             {/* ── COM Scanner Section ── */}
-            {serialController && !isSerialUnsupported ? (
+            {!isSerialUnsupported ? (
                 <div className="rounded-lg border border-slate-700/60 bg-slate-900/60 p-3.5 space-y-3">
                     <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
                         <Plug className="h-3.5 w-3.5" />
@@ -126,7 +121,7 @@ function ClientQrScannerDialogBody({
                                 variant="ghost"
                                 size="sm"
                                 className="h-7 text-xs text-slate-400 hover:text-slate-200"
-                                onClick={() => void serialController.disconnect()}
+                                onClick={() => void serialConnection.disconnect()}
                             >
                                 <Unplug className="h-3 w-3 mr-1" />
                                 Ngắt
@@ -142,14 +137,14 @@ function ClientQrScannerDialogBody({
 
                     {showSerialConnect ? (
                         <>
-                            {serialController.state === 'error' && serialController.error ? (
-                                <div className="text-xs text-amber-300/80">{serialController.error}</div>
+                            {serialConnection.state === 'error' && serialConnection.error ? (
+                                <div className="text-xs text-amber-300/80">{serialConnection.error}</div>
                             ) : null}
                             <Button
                                 type="button"
                                 size="sm"
                                 className="w-full bg-sky-600 text-white hover:bg-sky-500"
-                                onClick={() => void serialController.connect()}
+                                onClick={() => void serialConnection.connect()}
                             >
                                 <Plug className="h-3.5 w-3.5 mr-1.5" />
                                 Kết nối scanner CCCD
@@ -163,7 +158,7 @@ function ClientQrScannerDialogBody({
             <div className="rounded-lg border border-slate-700/60 bg-slate-900/60 p-3.5 space-y-2">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
                     <Keyboard className="h-3.5 w-3.5" />
-                    {serialController && !isSerialUnsupported
+                    {!isSerialUnsupported
                         ? 'Quét bằng bàn phím (dự phòng)'
                         : 'Máy quét QR (USB / Bluetooth)'}
                 </div>
@@ -188,20 +183,41 @@ export function ClientQrScannerDialog({
     open,
     onOpenChange,
     onScan,
-    serialController,
+    onIdentityScan,
+    onInvalidScan,
 }: ClientQrScannerDialogProps) {
+    const scanner = useScanner()
+
+    useScannerConsumer({
+        enabled: open,
+        kinds: CLIENT_IDENTITY_SCANNER_KINDS,
+        priority: 300,
+        onEvent: (event) => {
+            if (event.kind === 'identity-qr') {
+                return onIdentityScan(event.identity)
+            }
+
+            if (event.kind === 'unknown') {
+                onInvalidScan()
+            }
+        },
+    })
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-h-[90vh] overflow-y-auto p-4 sm:max-w-md sm:p-6 bg-slate-950 border-slate-800 text-slate-100">
                 <DialogHeader>
                     <DialogTitle>Quét mã QR CCCD</DialogTitle>
                     <DialogDescription className="text-slate-400">
-                        {serialController
-                            ? 'Ưu tiên dùng scanner qua cổng COM, hoặc quét bằng bàn phím / camera.'
-                            : 'Dùng camera hoặc máy quét QR để tự động điền thông tin.'}
+                        Ưu tiên dùng scanner qua cổng COM, hoặc quét bằng bàn phím / camera.
                     </DialogDescription>
                 </DialogHeader>
-                {open ? <ClientQrScannerDialogBody onScan={onScan} serialController={serialController} /> : null}
+                {open ? (
+                    <ClientQrScannerDialogBody
+                        onScan={onScan}
+                        serialConnection={scanner}
+                    />
+                ) : null}
             </DialogContent>
         </Dialog>
     )

@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react'
-import { Check, ChevronsUpDown, Search, Scan, Plus, User, Phone, Calendar, CreditCard, Edit, X } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Search, Scan, Plus, Phone, Calendar, CreditCard, Edit, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -13,7 +13,10 @@ import { Input } from '@/components/ui/input'
 import { ClientQrScannerDialog } from '@/components/client-qr-scanner-dialog'
 import { ClientForm } from '@/components/client-form'
 import { fetchClientsClient, findClientByIdentityClient } from '@/lib/api-client'
-import { parseClientIdentityQr } from '@/lib/qr/parse-client-identity-qr'
+import {
+    parseClientIdentityQr,
+    type ParsedClientIdentityQr,
+} from '@/lib/qr/parse-client-identity-qr'
 import { Client, CreateClient } from '@/types'
 import { toast } from 'sonner'
 
@@ -91,15 +94,13 @@ export function ClientSelector({
         }
     }
 
-    const handleQRScan = async (decodedText: string) => {
+    const handleInvalidQRScan = () => {
         setShowQRScanner(false)
+        toast.error('Mã QR không hợp lệ. Vui lòng thử lại hoặc nhập thủ công.')
+    }
 
-        const parsed = parseClientIdentityQr(decodedText)
-        if (!parsed) {
-            toast.error('Mã QR không hợp lệ. Vui lòng thử lại hoặc nhập thủ công.')
-            return
-        }
-
+    const handleParsedIdentityScan = async (parsed: ParsedClientIdentityQr) => {
+        setShowQRScanner(false)
         const { idCardNum, name, dateOfBirth, gender } = parsed
         const address = parsed.address
 
@@ -124,6 +125,16 @@ export function ClientSelector({
             address: address || '',
         })
         setShowClientForm(true)
+    }
+
+    const handleQRScan = async (decodedText: string) => {
+        const parsed = parseClientIdentityQr(decodedText)
+        if (!parsed) {
+            handleInvalidQRScan()
+            return
+        }
+
+        await handleParsedIdentityScan(parsed)
     }
 
     // Memoize formatted date to prevent forced reflows
@@ -336,7 +347,13 @@ export function ClientSelector({
                 </div>
             )}
 
-            <ClientQrScannerDialog open={showQRScanner} onOpenChange={setShowQRScanner} onScan={handleQRScan} />
+            <ClientQrScannerDialog
+                open={showQRScanner}
+                onOpenChange={setShowQRScanner}
+                onScan={handleQRScan}
+                onIdentityScan={handleParsedIdentityScan}
+                onInvalidScan={handleInvalidQRScan}
+            />
         </div>
     )
 }

@@ -33,10 +33,6 @@ type ScannerSerialProviderProps = {
 type ReleaseConnectionOptions = {
     resetState: boolean
 }
-type LegacyPayloadConsumer = {
-    activationOrder: number
-    onPayload: (payload: string) => void | Promise<void>
-}
 function getErrorMessage(error: unknown): string {
     if (error instanceof Error && error.message) return error.message
     return 'Không thể kết nối scanner.'
@@ -62,51 +58,9 @@ export function ScannerSerialProvider({
     const readerRef = useRef<BrowserSerialReaderLike | null>(null)
     const decoderRef = useRef<ScannerSerialFrameDecoder | null>(null)
     const releasePromiseRef = useRef<Promise<void>>(Promise.resolve())
-    const legacyConsumersRef = useRef(new Map<number, LegacyPayloadConsumer>())
-    const legacyActivationOrderRef = useRef(0)
-    const registerLegacyCccdPayloadConsumer = useCallback(
-        (onPayload: LegacyPayloadConsumer['onPayload']) => {
-            legacyActivationOrderRef.current += 1
-            const registrationId = legacyActivationOrderRef.current
-            legacyConsumersRef.current.set(registrationId, {
-                activationOrder: registrationId,
-                onPayload,
-            })
-
-            return () => {
-                legacyConsumersRef.current.delete(registrationId)
-            }
-        },
-        [],
-    )
     const dispatchPayload = useCallback(
         (payload: string) => {
             const event = classifyScannerPayload(payload)
-
-            if (event.kind !== 'sample-code' && legacyConsumersRef.current.size > 0) {
-                let selectedConsumer: LegacyPayloadConsumer | undefined
-
-                for (const consumer of legacyConsumersRef.current.values()) {
-                    if (
-                        !selectedConsumer ||
-                        consumer.activationOrder > selectedConsumer.activationOrder
-                    ) {
-                        selectedConsumer = consumer
-                    }
-                }
-
-                if (selectedConsumer) {
-                    try {
-                        void Promise.resolve(selectedConsumer.onPayload(payload)).catch(
-                            () => undefined,
-                        )
-                    } catch {
-                        // Keep the reader alive while the legacy CCCD caller is retired.
-                    }
-                    return
-                }
-            }
-
             dispatcher.dispatch(event)
         },
         [dispatcher],
@@ -330,14 +284,12 @@ export function ScannerSerialProvider({
             connect,
             disconnect,
             registerConsumer: dispatcher.registerConsumer,
-            registerLegacyCccdPayloadConsumer,
         }),
         [
             connect,
             disconnect,
             dispatcher,
             error,
-            registerLegacyCccdPayloadConsumer,
             state,
         ],
     )

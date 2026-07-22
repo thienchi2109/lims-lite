@@ -30,9 +30,6 @@ export type ScannerConnection = {
 
 type ScannerContextValue = ScannerConnection & {
     registerConsumer: ScannerDispatcher['registerConsumer']
-    registerLegacyCccdPayloadConsumer: (
-        onPayload: (payload: string) => void | Promise<void>,
-    ) => () => void
 }
 
 export type UseScannerConsumerOptions = {
@@ -87,29 +84,4 @@ export function useScannerConsumer({
             onEvent: (event) => onEventRef.current(event),
         })
     }, [enabled, priority, registerConsumer, stableKinds])
-}
-
-export function useLegacyCccdPayloadConsumer({
-    enabled,
-    onPayload,
-}: {
-    enabled: boolean
-    onPayload: (payload: string) => void
-}) {
-    const scanner = useContext(ScannerContext)
-    const registerLegacyCccdPayloadConsumer =
-        scanner?.registerLegacyCccdPayloadConsumer
-    const onPayloadRef = useRef(onPayload)
-
-    useEffect(() => {
-        onPayloadRef.current = onPayload
-    }, [onPayload])
-
-    useEffect(() => {
-        if (!enabled || !registerLegacyCccdPayloadConsumer) return
-
-        return registerLegacyCccdPayloadConsumer((payload) =>
-            onPayloadRef.current(payload),
-        )
-    }, [enabled, registerLegacyCccdPayloadConsumer])
 }

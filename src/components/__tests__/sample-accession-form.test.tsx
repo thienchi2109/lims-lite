@@ -42,12 +42,6 @@ const accessionFormMocks = vi.hoisted(() => {
             methodName: 'Máy tự động',
             units: 'U/L',
         },
-        serialController: {
-            state: 'idle',
-            error: null,
-            connect: vi.fn(),
-            disconnect: vi.fn(),
-        },
     }
 })
 
@@ -177,10 +171,6 @@ vi.mock('@/components/ui/alert-dialog', () => ({
     AlertDialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
     AlertDialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
     AlertDialogTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}))
-
-vi.mock('@/hooks/use-cccd-serial-controller', () => ({
-    useCccdSerialController: () => accessionFormMocks.serialController,
 }))
 
 vi.mock('@/lib/qr/parse-client-identity-qr', () => ({

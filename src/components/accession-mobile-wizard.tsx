@@ -11,7 +11,7 @@
 import { useState, useCallback } from 'react'
 import type { Client, SampleType, SelectedTest, CreateClient, AssayDefinitionWithMethods } from '@/types'
 import type { GridRow } from '@/types/test-assignment'
-import type { ClientQrScannerDialogSerialController } from '@/components/client-qr-scanner-dialog'
+import type { ParsedClientIdentityQr } from '@/lib/qr/parse-client-identity-qr'
 import type { UseFormRegisterReturn } from 'react-hook-form'
 import { AccessionWizardStepper } from '@/components/accession-wizard-stepper'
 import { AccessionWizardStepCustomer } from '@/components/accession-wizard-step-customer'
@@ -29,8 +29,9 @@ export interface AccessionMobileWizardProps {
     onFormDataChange: (data: Partial<CreateClient> | undefined) => void
     showQRScanner: boolean
     onShowQRScanner: (show: boolean) => void
-    onQRScan: (decodedText: string) => void
-    serialController?: ClientQrScannerDialogSerialController
+    onQRScan: (decodedText: string) => void | Promise<void>
+    onIdentityScan: (identity: ParsedClientIdentityQr) => void | Promise<void>
+    onInvalidScan: () => void
     selectedSampleType: SampleType
     onSampleTypeChange: (type: SampleType) => void
     sampleQuality: boolean | null
@@ -114,7 +115,8 @@ export function AccessionMobileWizard(props: AccessionMobileWizardProps) {
                         showQRScanner={props.showQRScanner}
                         onShowQRScanner={props.onShowQRScanner}
                         onQRScan={props.onQRScan}
-                        serialController={props.serialController}
+                        onIdentityScan={props.onIdentityScan}
+                        onInvalidScan={props.onInvalidScan}
                         selectedSampleType={props.selectedSampleType}
                         onSampleTypeChange={props.onSampleTypeChange}
                         sampleQuality={props.sampleQuality}

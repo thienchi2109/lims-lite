@@ -18,7 +18,7 @@ import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import { SampleQualityField } from '@/components/sample-quality-field'
 import { Scan, Calendar, ArrowRight } from 'lucide-react'
-import type { ClientQrScannerDialogSerialController } from '@/components/client-qr-scanner-dialog'
+import type { ParsedClientIdentityQr } from '@/lib/qr/parse-client-identity-qr'
 import type { UseFormRegisterReturn } from 'react-hook-form'
 
 interface StepCustomerProps {
@@ -32,8 +32,9 @@ interface StepCustomerProps {
     /* QR state */
     showQRScanner: boolean
     onShowQRScanner: (show: boolean) => void
-    onQRScan: (decodedText: string) => void
-    serialController?: ClientQrScannerDialogSerialController
+    onQRScan: (decodedText: string) => void | Promise<void>
+    onIdentityScan: (identity: ParsedClientIdentityQr) => void | Promise<void>
+    onInvalidScan: () => void
     /* Sample info */
     selectedSampleType: SampleType
     onSampleTypeChange: (type: SampleType) => void
@@ -55,7 +56,8 @@ export function AccessionWizardStepCustomer({
     showQRScanner,
     onShowQRScanner,
     onQRScan,
-    serialController,
+    onIdentityScan,
+    onInvalidScan,
     selectedSampleType,
     onSampleTypeChange,
     sampleQuality,
@@ -189,7 +191,8 @@ export function AccessionWizardStepCustomer({
                 open={showQRScanner}
                 onOpenChange={onShowQRScanner}
                 onScan={onQRScan}
-                serialController={serialController}
+                onIdentityScan={onIdentityScan}
+                onInvalidScan={onInvalidScan}
             />
         </div>
     )
