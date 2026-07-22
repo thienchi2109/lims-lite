@@ -3,10 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
+    useLegacyCccdPayloadConsumer,
+    useOptionalScanner,
+} from '@/components/scanner/use-scanner'
+import { getBrowserScannerSerialApi } from '@/lib/scanner/browser-serial-api'
+import {
     DEFAULT_CCCD_SERIAL_BAUD_RATE,
     createCccdSerialFrameDecoder,
     getGrantedSerialPorts,
-    getWebSerialApi,
     type BrowserSerialPortLike,
     type BrowserSerialReaderLike,
 } from '@/lib/qr/web-serial-cccd'
@@ -39,18 +43,6 @@ function getErrorMessage(error: unknown): string {
     return 'Không thể kết nối scanner CCCD.'
 }
 
-function getBrowserSerialApi() {
-    if (typeof window === 'undefined') return null
-    return getWebSerialApi(
-        window.navigator as Navigator & {
-            serial?: {
-                requestPort?: unknown
-                getPorts?: unknown
-            }
-        },
-    )
-}
-
 function isPortSelectionCanceled(error: unknown): boolean {
     if (!(error instanceof Error)) return false
 
@@ -61,8 +53,9 @@ export function useCccdSerialController({
     active,
     onPayload,
 }: UseCccdSerialControllerOptions): UseCccdSerialControllerResult {
+    const sharedScanner = useOptionalScanner()
     const [state, setState] = useState<SerialConnectionState>(() =>
-        getBrowserSerialApi() ? 'permission_required' : 'unsupported',
+        getBrowserScannerSerialApi() ? 'permission_required' : 'unsupported',
     )
     const [error, setError] = useState<string | null>(null)
 
@@ -76,6 +69,11 @@ export function useCccdSerialController({
     useEffect(() => {
         onPayloadRef.current = onPayload
     }, [onPayload])
+
+    useLegacyCccdPayloadConsumer({
+        enabled: Boolean(sharedScanner && active),
+        onPayload,
+    })
 
     const isSessionActive = useCallback((token?: number) => {
         if (!isMountedRef.current) return false
@@ -112,7 +110,7 @@ export function useCccdSerialController({
         }
 
         if (resetState) {
-            if (getBrowserSerialApi()) {
+            if (getBrowserScannerSerialApi()) {
                 setState('permission_required')
                 setError(null)
             } else {
@@ -122,8 +120,13 @@ export function useCccdSerialController({
     }, [])
 
     const disconnect = useCallback(async () => {
+        if (sharedScanner) {
+            await sharedScanner.disconnect()
+            return
+        }
+
         await releaseConnection({ resetState: true })
-    }, [releaseConnection])
+    }, [releaseConnection, sharedScanner])
 
     const connectToPort = useCallback(
         async (port: BrowserSerialPortLike) => {
@@ -234,7 +237,12 @@ export function useCccdSerialController({
     )
 
     const connect = useCallback(async () => {
-        const serialApi = getBrowserSerialApi()
+        if (sharedScanner) {
+            await sharedScanner.connect()
+            return
+        }
+
+        const serialApi = getBrowserScannerSerialApi()
         if (!serialApi) {
             setState('unsupported')
             return
@@ -254,10 +262,12 @@ export function useCccdSerialController({
             setError(getErrorMessage(connectError))
             setState('error')
         }
-    }, [connectToPort, isSessionActive])
+    }, [connectToPort, isSessionActive, sharedScanner])
 
     useEffect(() => {
-        const serialApi = getBrowserSerialApi()
+        if (sharedScanner) return
+
+        const serialApi = getBrowserScannerSerialApi()
 
         if (!serialApi) {
             setState('unsupported')
@@ -293,7 +303,7 @@ export function useCccdSerialController({
         return () => {
             cancelled = true
         }
-    }, [active, connectToPort, disconnect])
+    }, [active, connectToPort, disconnect, sharedScanner])
 
     useEffect(() => {
         isMountedRef.current = true
@@ -303,6 +313,15 @@ export function useCccdSerialController({
             void releaseConnection({ resetState: false })
         }
     }, [releaseConnection])
+
+    if (sharedScanner) {
+        return {
+            state: sharedScanner.state,
+            error: sharedScanner.error,
+            connect,
+            disconnect,
+        }
+    }
 
     return {
         state,

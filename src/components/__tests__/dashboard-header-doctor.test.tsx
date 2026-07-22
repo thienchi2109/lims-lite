@@ -21,6 +21,10 @@ vi.mock('@/components/user-profile-dropdown', () => ({
     ),
 }))
 
+vi.mock('@/components/scanner/scanner-connection-button', () => ({
+    ScannerConnectionButton: () => <button data-testid="scanner-connection-button" />,
+}))
+
 import { DashboardHeader } from '../dashboard-header'
 
 describe('DashboardHeader doctor restrictions', () => {
@@ -37,6 +41,7 @@ describe('DashboardHeader doctor restrictions', () => {
 
         expect(screen.queryByTestId('global-search-full')).toBeNull()
         expect(screen.queryByTestId('global-search-compact')).toBeNull()
+        expect(screen.getAllByTestId('scanner-connection-button')).toHaveLength(2)
         expect(screen.getAllByTestId('user-profile-dropdown')).toHaveLength(2)
         expect(screen.getAllByTestId('user-profile-dropdown')[0].textContent).toBe('doctor')
     })
@@ -61,5 +66,6 @@ describe('DashboardHeader doctor restrictions', () => {
         expect(desktopSearchSlot.contains(desktopSearch)).toBe(true)
         expect(desktopSearchSlot.className).toContain('min-w-0')
         expect(desktopSearchSlot.className).toContain('max-w-md')
+        expect(screen.getAllByTestId('scanner-connection-button')).toHaveLength(2)
     })
 })

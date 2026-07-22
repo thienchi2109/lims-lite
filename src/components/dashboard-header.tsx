@@ -3,6 +3,7 @@
 import { UserProfileDropdown } from '@/components/user-profile-dropdown'
 import { DashboardNav } from '@/components/dashboard-nav'
 import { GlobalSearch } from '@/components/global-search'
+import { ScannerConnectionButton } from '@/components/scanner/scanner-connection-button'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
 import type { UserRole } from '@/types'
@@ -69,6 +70,7 @@ export function DashboardHeader({
                     {/* Right: Nav & User */}
                     <div className="ml-auto flex min-w-0 items-center gap-4 2xl:gap-6">
                         <DashboardNav user={user} className="flex" />
+                        <ScannerConnectionButton />
                         {user && (
                             <>
                                 <div className="h-8 w-px bg-slate-200 dark:bg-slate-800" />
@@ -104,6 +106,7 @@ export function DashboardHeader({
 
                 <div className="flex items-center gap-2 sm:gap-4 shrink-0">
                     {canUseGlobalSearch && <GlobalSearch variant="compact" />}
+                    <ScannerConnectionButton />
                     {user && (
                         <>
                             <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 hidden sm:block" />
