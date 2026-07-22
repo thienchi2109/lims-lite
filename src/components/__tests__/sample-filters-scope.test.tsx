@@ -8,6 +8,10 @@ vi.mock('@/components/sample-filters/use-filter-params', () => ({
     useFilterParams: () => mockUseFilterParams(),
 }))
 
+vi.mock('@/components/scanner/use-scanner', () => ({
+    useScannerConsumer: vi.fn(),
+}))
+
 vi.mock('@/components/qr-scanner', () => ({
     QRScanner: () => null,
 }))
@@ -59,6 +63,7 @@ vi.mock('@/components/sample-filters/FilterPopover', () => ({
 import { SampleFilters } from '../sample-filters'
 
 const defaultHandlers = {
+    commitSearch: vi.fn(),
     setSearch: vi.fn(),
     setStatus: vi.fn(),
     setScope: vi.fn(),

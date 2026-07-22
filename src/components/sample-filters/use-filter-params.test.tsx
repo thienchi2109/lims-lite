@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 let mockSearchParams = new URLSearchParams()
 const mockReplace = vi.fn((url: string) => {
@@ -15,6 +15,7 @@ vi.mock('next/navigation', () => ({
 }))
 
 import { useFilterParams } from './use-filter-params'
+import { usePendingQueryNavigation } from '@/components/sample-grid/hooks/usePendingQueryNavigation'
 
 describe('useFilterParams scope state', () => {
     beforeEach(() => {
@@ -254,5 +255,85 @@ describe('useFilterParams scope state', () => {
         )
         expect(mockReplace).not.toHaveBeenCalled()
         expect(result.current.filters.search).toBe('')
+    })
+})
+
+describe('useFilterParams committed search', () => {
+    beforeEach(() => {
+        vi.useFakeTimers()
+        mockReplace.mockClear()
+        mockSearchParams = new URLSearchParams(
+            'scope=all&status=completed&sortBy=received_at&sortOrder=asc&pageSize=50&page=4',
+        )
+        window.history.replaceState(
+            null,
+            '',
+            `/manager/samples?${mockSearchParams.toString()}`,
+        )
+    })
+
+    afterEach(() => {
+        vi.runOnlyPendingTimers()
+        vi.useRealTimers()
+        window.history.replaceState(null, '', '/')
+    })
+
+    it('commits once immediately while preserving filters, sort, and page size', () => {
+        const replace = vi.fn()
+        const currentQuery = mockSearchParams.toString()
+        const { result } = renderHook(() => {
+            const queryNavigation = usePendingQueryNavigation({
+                currentQuery,
+                pathname: '/manager/samples',
+                replace,
+                isFetching: false,
+            })
+            return useFilterParams({ updateQuery: queryNavigation.updateQuery })
+        })
+
+        act(() => {
+            result.current.handlers.commitSearch('CDC-XN-22072026-0001')
+        })
+
+        expect(result.current.filters.search).toBe('CDC-XN-22072026-0001')
+        expect(replace).toHaveBeenCalledTimes(1)
+
+        const committedUrl = new URL(replace.mock.calls[0][0], 'http://localhost')
+        expect(Object.fromEntries(committedUrl.searchParams)).toMatchObject({
+            search: 'CDC-XN-22072026-0001',
+            page: '1',
+            scope: 'all',
+            status: 'completed',
+            sortBy: 'received_at',
+            sortOrder: 'asc',
+            pageSize: '50',
+        })
+
+        act(() => {
+            vi.advanceTimersByTime(250)
+        })
+        expect(replace).toHaveBeenCalledTimes(1)
+    })
+
+    it('keeps manually entered search debounced at 250 ms', () => {
+        const { result } = renderHook(() => useFilterParams())
+        mockReplace.mockClear()
+
+        act(() => {
+            result.current.handlers.setSearch('manual search')
+        })
+
+        expect(result.current.filters.search).toBe('manual search')
+        expect(mockReplace).not.toHaveBeenCalled()
+
+        act(() => {
+            vi.advanceTimersByTime(249)
+        })
+        expect(mockReplace).not.toHaveBeenCalled()
+
+        act(() => {
+            vi.advanceTimersByTime(1)
+        })
+        expect(mockReplace).toHaveBeenCalledTimes(1)
     })
 })

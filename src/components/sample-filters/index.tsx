@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dialog'
 import { QRScanner } from '@/components/qr-scanner'
 import { PendingStatePill } from '@/components/pending-state-pill'
+import { useScannerConsumer } from '@/components/scanner/use-scanner'
 import { useFilterParams } from './use-filter-params'
 import { FilterPopover } from './FilterPopover'
 import { ActiveFilterBadges } from './ActiveFilterBadges'
@@ -62,8 +63,18 @@ export function SampleFilters({
         isPending: isRefreshing,
     } = useFilterParams({ updateQuery, isPending })
 
+    useScannerConsumer({
+        enabled: true,
+        kinds: ['sample-code'],
+        priority: 100,
+        onEvent: (event) => {
+            if (event.kind !== 'sample-code') return
+            handlers.commitSearch(event.code)
+        },
+    })
+
     const handleQRScan = (decodedText: string) => {
-        handlers.setSearch(decodedText)
+        handlers.commitSearch(decodedText)
         setIsScannerOpen(false)
         setTimeout(() => searchInputRef.current?.focus(), 100)
     }

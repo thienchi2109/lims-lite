@@ -13,7 +13,7 @@
  * - Real-time search across all entities
  */
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, FileText, Users, Beaker, ClipboardList } from 'lucide-react'
 import {
@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/command'
 import { Button } from '@/components/ui/button'
 import { SearchResultItem } from '@/components/search-result-item'
+import { useScannerConsumer } from '@/components/scanner/use-scanner'
 import { useGlobalSearch } from '@/hooks/use-search'
 import { cn } from '@/lib/utils'
 import type { GlobalSearchResult } from '@/types'
@@ -47,13 +48,40 @@ export function GlobalSearch({
     const [open, setOpen] = useState(false)
     const [query, setQuery] = useState('')
     const [debouncedQuery, setDebouncedQuery] = useState('')
+    const committedQueryRef = useRef<string | null>(null)
     const router = useRouter()
 
     const isFull = variant === 'full'
     const isCompact = variant === 'compact'
 
+    const commitQuery = useCallback((value: string) => {
+        committedQueryRef.current = value
+        setQuery(value)
+        setDebouncedQuery(value)
+    }, [])
+
+    const handleQueryChange = useCallback((value: string) => {
+        committedQueryRef.current = null
+        setQuery(value)
+    }, [])
+
+    useScannerConsumer({
+        enabled: open,
+        kinds: ['sample-code'],
+        priority: 200,
+        onEvent: (event) => {
+            if (event.kind !== 'sample-code') return
+            commitQuery(event.code)
+        },
+    })
+
     // Debounce search query (300ms)
     useEffect(() => {
+        if (committedQueryRef.current === query) {
+            committedQueryRef.current = null
+            return
+        }
+
         const timer = setTimeout(() => {
             setDebouncedQuery(query)
         }, 300)
@@ -85,6 +113,7 @@ export function GlobalSearch({
 
     // Handle result selection
     const handleSelect = useCallback((result: GlobalSearchResult) => {
+        committedQueryRef.current = null
         setOpen(false)
         setQuery('')
         setDebouncedQuery('')
@@ -162,7 +191,7 @@ export function GlobalSearch({
                 <CommandInput
                     placeholder="Tìm kiếm mẫu, khách hàng, chỉ tiêu..."
                     value={query}
-                    onValueChange={setQuery}
+                    onValueChange={handleQueryChange}
                 />
                 <CommandList>
                     {/* Distinct Loading State */}

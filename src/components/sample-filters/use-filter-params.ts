@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useEffect, useCallback } from 'react'
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { type SampleStatus } from '@/types'
 import { parseBooleanSearchParam } from '@/lib/utils-lims'
@@ -21,6 +21,7 @@ export type FilterState = {
 
 export type FilterHandlers = {
     setSearch: (value: string) => void
+    commitSearch: (value: string) => void
     setScope: (value: 'active' | 'all') => void
     setStatus: (value: SampleStatus | 'all') => void
     setRejectedOnly: (value: boolean) => void
@@ -91,6 +92,7 @@ export function useFilterParams({
 
     // Search needs local state for debouncing while still deriving external URL updates.
     const [searchDraft, setSearchDraft] = useState<SearchDraft | null>(null)
+    const suppressedDebounceSearchRef = useRef<string | null>(null)
     const isSearchInputFocused =
         typeof document !== 'undefined' &&
         document.activeElement instanceof HTMLElement &&
@@ -130,6 +132,11 @@ export function useFilterParams({
     // Isolated debounce effect - fixes Bug #3 (Search Debounce Interference)
     useEffect(() => {
         const timer = setTimeout(() => {
+            if (suppressedDebounceSearchRef.current === searchValue) {
+                suppressedDebounceSearchRef.current = null
+                return
+            }
+
             const params = new URLSearchParams(window.location.search)
             const currentSearch = params.get('search') || ''
 
@@ -144,10 +151,20 @@ export function useFilterParams({
     // Handler implementations
     const handlers: FilterHandlers = useMemo(() => ({
         setSearch: (value: string) => {
+            suppressedDebounceSearchRef.current = null
             setSearchDraft({
                 baseSearch: filters.search,
                 value,
             })
+        },
+
+        commitSearch: (value: string) => {
+            suppressedDebounceSearchRef.current = value
+            setSearchDraft({
+                baseSearch: filters.search,
+                value,
+            })
+            applyQueryUpdate({ search: value || null }, 'filter')
         },
 
         setScope: (value: 'active' | 'all') => {
