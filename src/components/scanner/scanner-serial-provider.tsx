@@ -33,10 +33,10 @@ type ScannerSerialProviderProps = {
 type ReleaseConnectionOptions = {
     resetState: boolean
 }
-function getErrorMessage(error: unknown): string {
-    if (error instanceof Error && error.message) return error.message
-    return 'Không thể kết nối scanner.'
-}
+const SCANNER_CONNECTION_ERROR_MESSAGE = 'Không thể kết nối scanner.'
+const SCANNER_STREAM_ERROR_MESSAGE =
+    'Mất kết nối scanner. Vui lòng kết nối lại.'
+
 function isPortSelectionCanceled(error: unknown): boolean {
     if (!(error instanceof Error)) return false
     return error.name === 'AbortError' || error.name === 'NotFoundError'
@@ -179,19 +179,19 @@ export function ScannerSerialProvider({
                         if (sessionTokenRef.current !== token || !isMountedRef.current) return
 
                         if (readError) {
-                            setError(getErrorMessage(readError))
+                            setError(SCANNER_STREAM_ERROR_MESSAGE)
                             setState('error')
                         } else {
                             setState('permission_required')
                         }
                     }
                 })()
-            } catch (connectError) {
+            } catch {
                 isConnectingRef.current = false
                 if (portOpened) await port.close().catch(() => undefined)
                 if (!isMountedRef.current || sessionTokenRef.current !== token) return
 
-                setError(getErrorMessage(connectError))
+                setError(SCANNER_CONNECTION_ERROR_MESSAGE)
                 setState('error')
             }
         },
@@ -224,7 +224,7 @@ export function ScannerSerialProvider({
                 return
             }
 
-            setError(getErrorMessage(connectError))
+            setError(SCANNER_CONNECTION_ERROR_MESSAGE)
             setState('error')
         }
     }, [connectToPort])
@@ -260,10 +260,10 @@ export function ScannerSerialProvider({
                         return
                     }
                     await connectToPort(grantedPort)
-                } catch (resumeError) {
+                } catch {
                     if (cancelled || !isMountedRef.current) return
                     isConnectingRef.current = false
-                    setError(getErrorMessage(resumeError))
+                    setError(SCANNER_CONNECTION_ERROR_MESSAGE)
                     setState('error')
                 }
             })()

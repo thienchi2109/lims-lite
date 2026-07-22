@@ -240,7 +240,9 @@ describe('ScannerSerialProvider', () => {
         await waitFor(() => {
             expect(screen.getByTestId('scanner-state').textContent).toBe('error')
         })
-        expect(screen.getByTestId('scanner-error').textContent).toBe('Port busy')
+        expect(screen.getByTestId('scanner-error').textContent).toBe(
+            'Không thể kết nối scanner.',
+        )
         expect(serialApi.getPorts).toHaveBeenCalledTimes(1)
         expect(busyPort.open).toHaveBeenCalledTimes(1)
 
