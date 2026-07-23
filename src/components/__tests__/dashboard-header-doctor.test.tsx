@@ -6,18 +6,38 @@ vi.mock('next/image', () => ({
 }))
 
 vi.mock('@/components/global-search', () => ({
-    GlobalSearch: ({ variant, className }: { variant?: string; className?: string }) => (
-        <div data-testid={`global-search-${variant ?? 'auto'}`} className={className} />
+    GlobalSearch: ({
+        variant,
+        className,
+        skipShortcut,
+    }: {
+        variant?: string
+        className?: string
+        skipShortcut?: boolean
+    }) => (
+        <div
+            data-testid={`global-search-${variant ?? 'auto'}`}
+            data-skip-shortcut={String(Boolean(skipShortcut))}
+            className={className}
+        />
     ),
 }))
 
 vi.mock('@/components/dashboard-nav', () => ({
-    DashboardNav: () => <div data-testid="dashboard-nav" />,
+    DashboardNav: ({ variant }: { variant: string }) => (
+        <div data-testid={`dashboard-nav-${variant}`} />
+    ),
 }))
 
 vi.mock('@/components/user-profile-dropdown', () => ({
-    UserProfileDropdown: ({ user }: { user: { role: string | null } }) => (
-        <div data-testid="user-profile-dropdown">{user.role}</div>
+    UserProfileDropdown: ({
+        user,
+        variant,
+    }: {
+        user: { role: string | null }
+        variant: string
+    }) => (
+        <div data-testid={`user-profile-${variant}`}>{user.role}</div>
     ),
 }))
 
@@ -39,14 +59,16 @@ describe('DashboardHeader doctor restrictions', () => {
             />,
         )
 
-        expect(screen.queryByTestId('global-search-full')).toBeNull()
-        expect(screen.queryByTestId('global-search-compact')).toBeNull()
-        expect(screen.getAllByTestId('scanner-connection-button')).toHaveLength(2)
-        expect(screen.getAllByTestId('user-profile-dropdown')).toHaveLength(2)
-        expect(screen.getAllByTestId('user-profile-dropdown')[0].textContent).toBe('doctor')
+        expect(screen.queryAllByTestId(/global-search-/)).toHaveLength(0)
+        expect(screen.getAllByTestId(/dashboard-nav-/)).toHaveLength(3)
+        expect(screen.getAllByTestId('scanner-connection-button')).toHaveLength(3)
+        expect(screen.getAllByTestId(/user-profile-/)).toHaveLength(3)
+        expect(screen.getByTestId('user-profile-responsive').textContent).toBe('doctor')
+        expect(screen.getByTestId('user-profile-compact').textContent).toBe('doctor')
+        expect(screen.getByTestId('user-profile-full').textContent).toBe('doctor')
     })
 
-    it('keeps desktop global search inside the main header row', () => {
+    it('keeps full global search inside the full header row', () => {
         render(
             <DashboardHeader
                 subtitle="Quản lý mẫu"
@@ -57,15 +79,16 @@ describe('DashboardHeader doctor restrictions', () => {
             />,
         )
 
-        const desktopRow = screen.getByTestId('dashboard-header-desktop-row')
-        const desktopSearchSlot = screen.getByTestId('dashboard-header-desktop-search')
-        const desktopSearch = screen.getByTestId('global-search-full')
+        const fullRow = screen.getByTestId('dashboard-header-full-row')
+        const fullSearchSlot = screen.getByTestId('dashboard-header-full-search')
+        const fullSearch = screen.getByTestId('global-search-full')
 
         expect(screen.queryByTestId('dashboard-header-search-row')).toBeNull()
-        expect(desktopRow.contains(desktopSearch)).toBe(true)
-        expect(desktopSearchSlot.contains(desktopSearch)).toBe(true)
-        expect(desktopSearchSlot.className).toContain('min-w-0')
-        expect(desktopSearchSlot.className).toContain('max-w-md')
-        expect(screen.getAllByTestId('scanner-connection-button')).toHaveLength(2)
+        expect(fullRow.contains(fullSearch)).toBe(true)
+        expect(fullSearchSlot.contains(fullSearch)).toBe(true)
+        expect(fullSearchSlot.id).toBe('dashboard-header-full-search')
+        expect(fullSearchSlot.className).toContain('min-w-[18rem]')
+        expect(fullSearchSlot.className).toContain('max-w-md')
+        expect(screen.getAllByTestId('scanner-connection-button')).toHaveLength(3)
     })
 })

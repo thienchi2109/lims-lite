@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
     Menu,
     LayoutDashboard,
@@ -17,26 +18,30 @@ import {
     List,
     QrCode,
     BarChart3,
-    ShieldCheck
+    ShieldCheck,
 } from 'lucide-react'
 import type { UserRole } from '@/types'
+
+type DashboardNavVariant = 'mobile' | 'compact' | 'full'
 
 interface DashboardNavProps {
     user?: {
         role: UserRole | null
     } | null
+    variant: DashboardNavVariant
     className?: string
 }
 
-export function DashboardNav({ user, className }: DashboardNavProps) {
+export function DashboardNav({ user, variant, className }: DashboardNavProps) {
     const pathname = usePathname()
     const [open, setOpen] = React.useState(false)
     const [isMounted, setIsMounted] = React.useState(false)
 
-    // Only render Sheet after hydration to avoid SSR mismatch
     React.useEffect(() => {
-        setIsMounted(true)
-    }, [])
+        if (variant === 'mobile') {
+            setIsMounted(true)
+        }
+    }, [variant])
 
     if (!user || !user.role) return null
 
@@ -65,67 +70,130 @@ export function DashboardNav({ user, className }: DashboardNavProps) {
 
     if (links.length === 0) return null
 
-    return (
-        <div className={cn("flex items-center", className)}>
-            {/* Desktop Navigation */}
-            <nav className="hidden xl:flex items-center gap-1 mx-6">
-                {links.map((link) => {
-                    const isActive = pathname === link.href || (pathname?.startsWith(link.href) && link.href !== `/` + role)
+    const navigationItems = links.map((link) => ({
+        ...link,
+        isActive: pathname === link.href
+            || (pathname?.startsWith(link.href) && link.href !== `/${role}`),
+    }))
 
-                    return (
+    if (variant === 'full') {
+        return (
+            <div className={cn('flex items-center', className)}>
+                <nav
+                    aria-label="Điều hướng chính"
+                    className="mx-6 flex shrink-0 items-center gap-1 whitespace-nowrap"
+                >
+                    {navigationItems.map((link) => (
                         <Link
                             key={link.href}
                             href={link.href}
+                            aria-current={link.isActive ? 'page' : undefined}
                             className={cn(
-                                "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200",
-                                isActive
-                                    ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
-                                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800/50"
+                                'flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-all duration-200',
+                                link.isActive
+                                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
+                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-200',
                             )}
                         >
-                            <link.icon className={cn("h-4 w-4", isActive ? "text-blue-600 dark:text-blue-400" : "text-slate-500")} />
+                            <link.icon
+                                aria-hidden="true"
+                                className={cn(
+                                    'h-4 w-4',
+                                    link.isActive
+                                        ? 'text-blue-600 dark:text-blue-400'
+                                        : 'text-slate-500',
+                                )}
+                            />
                             {link.label}
                         </Link>
-                    )
-                })}
-            </nav>
+                    ))}
+                </nav>
+            </div>
+        )
+    }
 
-            {/* Mobile Navigation - Only render after hydration */}
+    if (variant === 'compact') {
+        return (
+            <div className={cn('flex items-center', className)}>
+                <nav
+                    aria-label="Điều hướng chính"
+                    className="flex shrink-0 items-center gap-1"
+                >
+                    {navigationItems.map((link) => (
+                        <Tooltip key={link.href}>
+                            <TooltipTrigger asChild>
+                                <Link
+                                    href={link.href}
+                                    aria-label={link.label}
+                                    aria-current={link.isActive ? 'page' : undefined}
+                                    className={cn(
+                                        'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md transition-colors',
+                                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white',
+                                        'dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950',
+                                        link.isActive
+                                            ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
+                                            : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100',
+                                    )}
+                                >
+                                    <link.icon aria-hidden="true" className="h-4 w-4" />
+                                </Link>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" sideOffset={6}>
+                                {link.label}
+                            </TooltipContent>
+                        </Tooltip>
+                    ))}
+                </nav>
+            </div>
+        )
+    }
+
+    return (
+        <div className={cn('flex items-center', className)}>
             {isMounted && (
                 <Sheet open={open} onOpenChange={setOpen}>
                     <SheetTrigger asChild>
-                        <Button variant="ghost" size="icon" className="xl:hidden text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                            <Menu className="h-6 w-6" />
-                            <span className="sr-only">Toggle menu</span>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800"
+                        >
+                            <Menu aria-hidden="true" className="h-6 w-6" />
+                            <span className="sr-only">Mở menu điều hướng</span>
                         </Button>
                     </SheetTrigger>
-                    <SheetContent side="left" className="w-[300px] sm:w-[400px] p-0">
-                        <SheetHeader className="p-6 border-b border-slate-100 dark:border-slate-800">
-                            <SheetTitle className="text-left bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 dark:from-blue-400 dark:via-indigo-400 dark:to-violet-400 bg-clip-text text-transparent font-bold text-2xl">
+                    <SheetContent side="left" className="w-[300px] p-0 sm:w-[400px]">
+                        <SheetHeader className="border-b border-slate-100 p-6 dark:border-slate-800">
+                            <SheetTitle className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 bg-clip-text text-left text-2xl font-bold text-transparent dark:from-blue-400 dark:via-indigo-400 dark:to-violet-400">
                                 CDC-LIMS Pro
                             </SheetTitle>
                         </SheetHeader>
                         <nav className="flex flex-col gap-2 p-4">
-                            {links.map((link) => {
-                                const isActive = pathname === link.href || (pathname?.startsWith(link.href) && link.href !== `/` + role)
-
-                                return (
-                                    <Link
-                                        key={link.href}
-                                        href={link.href}
-                                        onClick={() => setOpen(false)}
+                            {navigationItems.map((link) => (
+                                <Link
+                                    key={link.href}
+                                    href={link.href}
+                                    aria-current={link.isActive ? 'page' : undefined}
+                                    onClick={() => setOpen(false)}
+                                    className={cn(
+                                        'flex items-center gap-4 rounded-xl px-4 py-4 text-base font-medium transition-all duration-200',
+                                        link.isActive
+                                            ? 'bg-blue-50 text-blue-700 shadow-sm dark:bg-blue-900/20 dark:text-blue-400'
+                                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-200',
+                                    )}
+                                >
+                                    <link.icon
+                                        aria-hidden="true"
                                         className={cn(
-                                            "flex items-center gap-4 px-4 py-4 text-base font-medium rounded-xl transition-all duration-200",
-                                            isActive
-                                                ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 shadow-sm"
-                                                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800/50"
+                                            'h-6 w-6',
+                                            link.isActive
+                                                ? 'text-blue-600 dark:text-blue-400'
+                                                : 'text-slate-500',
                                         )}
-                                    >
-                                        <link.icon className={cn("h-6 w-6", isActive ? "text-blue-600 dark:text-blue-400" : "text-slate-500")} />
-                                        {link.label}
-                                    </Link>
-                                )
-                            })}
+                                    />
+                                    {link.label}
+                                </Link>
+                            ))}
                         </nav>
                     </SheetContent>
                 </Sheet>
