@@ -40,7 +40,7 @@ The system SHALL emit one new versioned completion event for every committed `re
 
 #### Scenario: Completion after reopening emits another event
 - **WHEN** a completed sample returns to `review` and later transitions to `completed` again
-- **THEN** the system emits a new event with a new `event_id`
+- **THEN** the system emits a new event with a new `source_event_id`
 
 #### Scenario: Repeated completed update emits no event
 - **WHEN** a sample update leaves its status as `completed`
@@ -51,7 +51,7 @@ The system SHALL constrain `sample.completed.v1` to the minimum fields required 
 
 #### Scenario: Event payload is privacy limited
 - **WHEN** the system creates `sample.completed.v1`
-- **THEN** it records canonical-string UUIDs for `event_id`, `sample_id`, and `recipient_user_id`
+- **THEN** it records canonical-string UUIDs for `source_event_id`, `sample_id`, and `recipient_user_id`
 - **AND** records server-derived `app_id`, non-empty `sample_code`, and UTC RFC 3339 `occurred_at`
 - **AND** it records no customer, patient, result, assay, confidential-association, or deep-link data
 
@@ -61,8 +61,19 @@ The system SHALL constrain `sample.completed.v1` to the minimum fields required 
 
 #### Scenario: Dedicated consumer claims an event
 - **WHEN** the Notification Service claims a bounded batch
-- **THEN** each event includes a fresh `claim_token` and `lease_expires_at`
+- **THEN** rows are returned in ascending database-generated `outbox_sequence`
+- **AND** an optional inclusive high-water ceiling excludes rows above that sequence
+- **AND** each event includes `outbox_sequence`, a fresh `claim_token`, and `lease_expires_at`
 - **AND** immutable event payload fields remain separate from mutable claim metadata
+
+#### Scenario: Deployment operator captures rollout boundary
+- **WHEN** R0 opens one administrator transaction before ingestion starts
+- **THEN** it locks `integration_outbox` in `SHARE` mode and waits for in-flight writes
+- **AND** new outbox writes remain blocked until the transaction commits
+- **AND** it reads `delivery_cutoff_at` from `clock_timestamp()` and `high_water_outbox_sequence` as `COALESCE(MAX(outbox_sequence), 0)` after acquiring the lock
+- **AND** no lower sequence can commit after the captured boundary
+- **AND** a drain claim capped at that value includes only rows with `outbox_sequence <= high_water_outbox_sequence`
+- **AND** application and browser-facing roles cannot perform the boundary transaction
 
 #### Scenario: Dedicated consumer completes a claim
 - **WHEN** the Notification Service acknowledges, releases, or reports failure for an event

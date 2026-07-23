@@ -11,7 +11,7 @@ FCM delivery needs an independently deployable capability that protects Firebase
 - Consume `sample.completed.v1` outbox events through a fenced least-privilege PostgreSQL contract and create one idempotent notification job per event.
 - Fan out each job to every enabled installation matching the event's `app_id` and `recipient_user_id`, snapshotting installation ownership generation in each delivery.
 - Send a data-only FCM message whose exact visible presentation is `Mẫu đã hoàn thành` / `Mẫu {sample_code} đã được phê duyệt`, without customer information, patient information, result data, sample UUID, application namespace, URL, or deep link.
-- Treat every distinct `review -> completed` event as sendable, including completion after reopening, while deduplicating retries of the same `event_id`.
+- Treat every distinct `review -> completed` event as sendable, including completion after reopening, while deduplicating retries of the same `source_event_id`.
 - Record durable job terminal outcomes and `queued`, `processing`, `accepted_by_fcm`, `failed`, and `expired` delivery states without claiming device delivery confirmation.
 - Retry transient failures with bounded exponential backoff, compare-and-disable invalid FIDs, expose worker-aware health/readiness checks, and provide backup/restore and operational runbooks.
 - Deliver the service through small dependency-ordered phases where each phase is intended to fit one focused PR.

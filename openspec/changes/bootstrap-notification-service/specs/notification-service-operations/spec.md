@@ -50,16 +50,31 @@ The Notification Service SHALL expose private liveness and readiness checks that
 - **THEN** readiness or dependency status reports degraded ingestion
 - **AND** installation state remains available
 
+#### Scenario: Enabled worker reports its own heartbeat
+- **WHEN** an enabled worker starts, polls with no work, or waits in cancellable backoff
+- **THEN** that worker loop emits its own monotonic heartbeat after initialization and at least every `worker_heartbeat_interval`
+- **AND** the supervisor does not synthesize progress on the worker's behalf
+
+#### Scenario: Enabled worker misses startup grace
+- **WHEN** an enabled worker does not emit its first heartbeat within `worker_startup_grace`
+- **THEN** the root context is cancelled
+- **AND** readiness fails while the process exits nonzero for Docker restart
+
 #### Scenario: A critical worker exits or stalls
-- **WHEN** an enabled ingestion or delivery goroutine exits unexpectedly or fails to advance within `worker_stall_timeout`
+- **WHEN** an enabled ingestion or delivery goroutine exits unexpectedly or has no heartbeat or claimed-work progress for `worker_stall_timeout`
 - **THEN** the root context is cancelled
 - **AND** readiness fails while the process shuts down
 - **AND** the process exits nonzero for Docker restart
-- **AND** disabled workers are excluded from heartbeat enforcement
 
-#### Scenario: Worker stall timeout is unsafe
-- **WHEN** `worker_stall_timeout` is not greater than the worker's maximum operation deadline plus poll interval
+#### Scenario: Worker timing configuration is unsafe
+- **WHEN** `worker_startup_grace` is less than two `worker_heartbeat_interval` values
+- **OR** `worker_stall_timeout` is not greater than the longest uninterruptible worker operation deadline plus one `worker_heartbeat_interval`
 - **THEN** production startup fails closed
+
+#### Scenario: Worker is disabled by rollout configuration
+- **WHEN** ingestion or delivery is disabled
+- **THEN** that worker is not started
+- **AND** startup-grace and heartbeat enforcement exclude it
 
 ### Requirement: SQLite backup and restore are operationally verified
 The Notification Service SHALL use an online-safe, encrypted, access-restricted backup procedure to a destination outside the service host's failure domain and SHALL periodically verify that backups can be restored.
@@ -89,19 +104,25 @@ The Notification Service SHALL provide enough telemetry to diagnose backlog and 
 
 #### Scenario: Delivery attempt is logged
 - **WHEN** a delivery succeeds or fails
-- **THEN** logs may include event ID, job ID, internal installation ID, status, attempt count, latency, and normalized error code
+- **THEN** logs may include `source_event_id`, job ID, internal installation ID, status, attempt count, latency, and normalized error code
 - **AND** exclude full FIDs, credentials, patient data, customer data, and result values
 
 #### Scenario: Outbox backlog grows
 - **WHEN** pending event age or count exceeds the configured threshold
 - **THEN** operations receives an alert
 
+#### Scenario: Shutdown timing configuration is unsafe
+- **WHEN** `provider_request_timeout` exceeds `shutdown_drain_timeout`
+- **OR** `shutdown_drain_timeout + shutdown_cleanup_reserve` exceeds Docker `stop_grace_period`
+- **THEN** production startup or deployment verification fails closed
+
 #### Scenario: Container shuts down
 - **WHEN** Docker sends the configured termination signal
 - **THEN** the service stops claiming new work
 - **AND** cancels the HTTP server and workers through the root context
 - **AND** safely releases work that has not been submitted externally
-- **AND** waits up to the provider deadline for definitive results from dispatched FCM requests
+- **AND** waits no longer than `shutdown_drain_timeout` for definitive results from dispatched FCM requests
 - **AND** never marks an unknown provider outcome complete
+- **AND** durably records unresolved dispatched attempts as `outcome_unknown`
 - **AND** leaves an unresolved processing lease to expire for fenced at-least-once recovery
-- **AND** closes SQLite cleanly before exit
+- **AND** uses `shutdown_cleanup_reserve` to close HTTP and SQLite cleanly before Docker `stop_grace_period` expires

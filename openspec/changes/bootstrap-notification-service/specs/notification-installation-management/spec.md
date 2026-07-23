@@ -54,13 +54,14 @@ The Notification Service SHALL compare-and-disable installations on logout, expl
 - **AND** does not disable another browser with the same owner version
 
 #### Scenario: FCM reports permanent invalidation
-- **WHEN** FCM reports that a delivery's opaque installation handle and ownership generation are no longer registered
-- **THEN** the service disables that installation with an operational reason
+- **WHEN** FCM reports that a delivery's snapshotted installation is permanently unregistered
+- **THEN** the service atomically disables it only when current `app_id`, owner, opaque installation handle, and `owner_version` all match the delivery snapshot
+- **AND** otherwise performs an idempotent no-op
 - **AND** preserves its historical delivery records
 
 #### Scenario: Old delivery reports permanent invalidation
-- **WHEN** an unregistered response belongs to an older snapshotted ownership generation
-- **THEN** the service does not disable the current generation
+- **WHEN** an unregistered response belongs to a different application, owner, handle, or ownership generation
+- **THEN** the service does not disable the current installation
 
 #### Scenario: Installation is later registered again
 - **WHEN** LIMS upserts a previously disabled valid FID

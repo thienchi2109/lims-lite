@@ -1,11 +1,12 @@
 ## ADDED Requirements
 
 ### Requirement: Outbox ingestion is durable and idempotent
-The Notification Service SHALL convert each supported LIMS outbox event into one durable SQLite job before acknowledging the source event.
+The Notification Service SHALL convert each supported LIMS outbox event into one durable SQLite job before acknowledging the source event and SHALL compare every immutable field for an existing `source_event_id` before applying cutoff or other terminal classification.
 
 #### Scenario: New completion event is ingested
 - **WHEN** the service claims a valid `sample.completed.v1` event
-- **THEN** it commits one job keyed by `event_id`
+- **THEN** it commits one job keyed by `source_event_id`
+- **AND** stores the immutable source `outbox_sequence` as origin metadata
 - **AND** preserves the event's `app_id`, recipient, sample ID, sample code, and occurrence time using the versioned field encodings
 - **AND** acknowledges the source event only after the SQLite commit
 
@@ -15,12 +16,12 @@ The Notification Service SHALL convert each supported LIMS outbox event into one
 - **AND** creates no duplicate job
 
 #### Scenario: Identical event is claimed again
-- **WHEN** an existing `event_id` is claimed with the same immutable event type, `app_id`, recipient, sample ID, sample code, and occurrence time
+- **WHEN** an existing `source_event_id` is claimed with the same immutable source `outbox_sequence`, event type, `app_id`, recipient, sample ID, sample code, and occurrence time
 - **THEN** the service reuses the existing job
 - **AND** may acknowledge the retry after confirming equality
 
-#### Scenario: Existing event ID has conflicting payload
-- **WHEN** an existing `event_id` is claimed with any different immutable field
+#### Scenario: Existing source event ID has conflicting payload
+- **WHEN** an existing `source_event_id` is claimed with any different immutable field
 - **THEN** the service records and alerts a terminal ingestion integrity conflict
 - **AND** reports failure using the current LIMS claim token
 - **AND** does not acknowledge or deliver the conflicting event
@@ -36,10 +37,27 @@ The Notification Service SHALL convert each supported LIMS outbox event into one
 - **THEN** LIMS rejects the stale operation
 - **AND** the service does not overwrite the newer claim state
 
+#### Scenario: Production cutoff is captured
+- **WHEN** operations prepares R0 before starting ingestion
+- **THEN** one short administrator transaction locks `integration_outbox` in `SHARE` mode and waits for in-flight writes
+- **AND** blocks new writes while reading UTC `delivery_cutoff_at` from `clock_timestamp()` and `high_water_outbox_sequence` as `COALESCE(MAX(outbox_sequence), 0)`
+- **AND** commits only after recording a boundary after which no lower sequence can appear
+- **AND** the service treats that recorded pair as immutable deployment configuration
+
 #### Scenario: Historical event predates production delivery
 - **WHEN** an event's `occurred_at` is earlier than the configured production `delivery_cutoff_at`
 - **THEN** the service creates or reuses a terminal `suppressed_pre_rollout` job
 - **AND** acknowledges the source event without fan-out or FCM submission
+
+#### Scenario: Event occurs exactly at the production cutoff
+- **WHEN** an event's `occurred_at` equals `delivery_cutoff_at`
+- **THEN** the service does not classify it as `suppressed_pre_rollout`
+- **AND** it remains eligible for normal delivery after rollout enables delivery
+
+#### Scenario: Pre-cutoff event is inserted during or after drain
+- **WHEN** an outbox row above the captured high-water mark is later claimed with `occurred_at < delivery_cutoff_at`
+- **THEN** the service still creates or reuses a terminal `suppressed_pre_rollout` job
+- **AND** insertion time, claim time, and drain completion do not make it deliverable
 
 ### Requirement: Completion jobs target one application and analyst
 The Notification Service SHALL fan out a completion job only to enabled installations matching the event's `app_id` and snapshotted `recipient_user_id`.
@@ -76,11 +94,11 @@ The Notification Service SHALL deliver every distinct completion event while ded
 - **THEN** it creates and processes its job
 
 #### Scenario: Sample is reopened and completed again
-- **WHEN** the service ingests a later completion event with a new `event_id` for the same sample
+- **WHEN** the service ingests a later completion event with a new `source_event_id` for the same sample
 - **THEN** it creates and processes another job
 
 #### Scenario: Same event is ingested repeatedly
-- **WHEN** the same `event_id` is claimed more than once
+- **WHEN** the same `source_event_id` is claimed more than once
 - **THEN** the service reuses the existing job and deliveries
 
 ### Requirement: Job completion has explicit terminal semantics
@@ -102,17 +120,19 @@ The Notification Service SHALL record a durable terminal job outcome after fan-o
 - **AND** creates no duplicate delivery row
 
 ### Requirement: FCM payload is fixed and privacy limited
-The Notification Service SHALL send a data-only FCM message containing only the approved visible sample-code presentation and provider metadata required for FCM delivery.
+The Notification Service SHALL send a data-only FCM message containing only an opaque presentation-deduplication identifier, the approved visible sample-code presentation, and provider metadata required for FCM delivery.
 
 #### Scenario: Service builds a completion message
 - **WHEN** the worker sends a completion delivery
 - **THEN** the data envelope identifies the versioned completion presentation
+- **AND** includes an opaque `presentation_id` that remains stable across retries of that delivery
 - **AND** the title is `Mẫu đã hoàn thành`
 - **AND** the body is `Mẫu {sample_code} đã được phê duyệt`
 
 #### Scenario: Payload is inspected
 - **WHEN** a completion payload is created
 - **THEN** it contains no customer, patient, result, assay, confidential flag, sample UUID, `app_id`, URL, or deep link
+- **AND** `presentation_id` encodes no sample, user, or application identity
 
 ### Requirement: Delivery status reflects provider acceptance rather than device delivery
 The Notification Service SHALL record provider handoff truthfully and SHALL NOT infer that an accepted FCM message was displayed.
@@ -132,14 +152,21 @@ The Notification Service SHALL use leases and fencing to prevent duplicate inter
 #### Scenario: Process crashes after FCM accepts a message
 - **WHEN** FCM accepts a message but the process stops before committing `accepted_by_fcm`
 - **THEN** the expired delivery lease is recoverable
+- **AND** recovery changes the stale committed `dispatching` attempt to `outcome_unknown` before creating a new attempt
 - **AND** a later attempt may submit the message again
 - **AND** operations can distinguish attempts without creating a duplicate delivery row
+
+#### Scenario: Worker prepares a provider attempt
+- **WHEN** a claimed delivery passes the immediate installation identity re-check
+- **THEN** the worker commits one unique `(delivery_id, attempt_number)` row with its current lease token and `dispatching` outcome before invoking Firebase Admin
+- **AND** a definitive provider response updates that same attempt row
 
 #### Scenario: Shutdown interrupts an in-flight provider request
 - **WHEN** shutdown reaches its timeout after an FCM request was dispatched but before a definitive response was persisted
 - **THEN** the service does not mark the delivery accepted, failed, expired, or completed
 - **AND** leaves the processing lease to expire for fenced recovery
-- **AND** records or logs the attempt as `outcome_unknown`
+- **AND** commits a durable `notification_delivery_attempts` row with outcome `outcome_unknown` before closing SQLite
+- **AND** treats logs as supplementary rather than the authoritative attempt record
 - **AND** a later retry follows the documented at-least-once semantics
 
 ### Requirement: Retry policy distinguishes transient and permanent failures
@@ -152,7 +179,7 @@ The Notification Service SHALL retry transient failures with bounded backoff and
 #### Scenario: FCM reports an unregistered installation
 - **WHEN** a delivery receives a permanent unregistered response
 - **THEN** the service marks the delivery failed
-- **AND** disables the installation only when its current owner and `owner_version` match the delivery snapshot
+- **AND** atomically disables the installation only when its current `app_id`, owner, opaque installation handle, and `owner_version` all match the delivery snapshot
 - **AND** does not retry that installation
 
 #### Scenario: Message payload is invalid

@@ -49,7 +49,9 @@ The MVP uses one compiled Go process that runs:
 - A periodic outbox-ingestion goroutine.
 - A delivery-worker goroutine.
 
-One process avoids cross-container SQLite locking and reduces home-server operational overhead. A root cancellation context owns the HTTP server and worker goroutines. An unexpected exit from an enabled critical worker, or failure to advance its heartbeat/progress within the configured `worker_stall_timeout`, cancels the root context and terminates the process nonzero so Docker restarts it. Disabled workers are excluded from this rule. Startup fails unless the timeout exceeds the worker's maximum operation deadline plus poll interval.
+One process avoids cross-container SQLite locking and reduces home-server operational overhead. A root cancellation context owns the HTTP server and worker goroutines. Each enabled worker loop emits its own monotonic heartbeat after initialization and at least every `worker_heartbeat_interval`, including while idle or sleeping in cancellable backoff. The supervisor does not synthesize heartbeats on a worker's behalf. Claimed-work transitions also advance progress, while every blocking database or provider operation has a bounded deadline.
+
+An enabled worker that exits unexpectedly, does not emit its first heartbeat within `worker_startup_grace`, or has no heartbeat/progress for `worker_stall_timeout` cancels the root context and terminates the process nonzero so Docker restarts it. Disabled workers are not started and are excluded from startup and heartbeat enforcement. Production configuration fails closed unless startup grace is at least two heartbeat intervals and stall timeout is greater than the longest uninterruptible worker operation deadline plus one heartbeat interval.
 
 Internal Go packages still separate configuration, API, SQLite, ingestion, jobs, delivery, and operations so they can become separate processes later. S0 selects the Go version, HTTP stack, SQLite driver, migration tool, and CGO policy after consulting current primary documentation. S3 uses the official `firebase.google.com/go/v4` Admin SDK. Library choices MUST preserve the specified language-neutral wire contracts.
 
@@ -90,6 +92,7 @@ installations
 notification_jobs
 - id
 - source_event_id
+- source_outbox_sequence
 - event_type
 - app_id
 - recipient_user_id
@@ -108,6 +111,7 @@ notification_deliveries
 - id
 - job_id
 - installation_id
+- presentation_id
 - app_id
 - owner_user_id
 - owner_version
@@ -121,6 +125,19 @@ notification_deliveries
 - accepted_at
 - created_at
 - updated_at
+
+notification_delivery_attempts
+- id
+- delivery_id
+- attempt_number
+- lease_token
+- outcome
+- dispatch_started_at
+- finished_at
+- fcm_message_id
+- error_code
+- created_at
+- updated_at
 ```
 
 Required uniqueness:
@@ -128,6 +145,8 @@ Required uniqueness:
 - `(app_id, fid)` for installation ownership and rebind.
 - `source_event_id` for job ingestion idempotency.
 - `(job_id, installation_id)` for fan-out idempotency.
+- `presentation_id` for cross-context browser presentation deduplication.
+- `(delivery_id, attempt_number)` for durable provider-attempt identity.
 
 Rebind or reactivation increments `owner_version`. Delivery rows snapshot `app_id`, `owner_user_id`, and `owner_version` so later installation mutation cannot rewrite delivery history.
 
@@ -137,17 +156,20 @@ Job states distinguish `queued`, `suppressed_pre_rollout`, `fanout_processing`, 
 
 The ingestion loop:
 
-1. Claims a bounded batch through the LIMS outbox function.
-2. Receives a fresh claim token and lease expiry, then validates the event version and required fields.
-3. Inserts the SQLite job or finds it by `source_event_id` and compares every immutable field: event type, `app_id`, recipient user, sample ID, sample code, and occurrence time.
-4. Commits the SQLite transaction.
-5. Acknowledges the LIMS event using the current claim token.
+1. Claims a bounded batch through the LIMS outbox function in ascending `outbox_sequence`, using the captured high-water mark as an inclusive ceiling during drain.
+2. Receives `outbox_sequence`, a fresh claim token, and lease expiry as source metadata, then validates the event version and required fields.
+3. Inserts the SQLite job or finds it by `source_event_id` and compares every immutable field: source outbox sequence, event type, `app_id`, recipient user, sample ID, sample code, and occurrence time.
+4. Only after equality is established, classifies a newly inserted job against the immutable rollout cutoff.
+5. Commits the SQLite transaction.
+6. Acknowledges the LIMS event using the current claim token.
 
-If the process crashes after step 4 and before step 5, the event is claimed again. An identical immutable payload reuses the unique job and is acknowledged without creating a duplicate. A mismatched payload for the same `source_event_id` is an integrity conflict: the service records a terminal ingestion conflict, reports it through the current LIMS failure claim, alerts operations, and does not acknowledge or deliver it.
+If the process crashes after step 5 and before step 6, the event is claimed again. An identical immutable payload reuses the unique job and is acknowledged without creating a duplicate. A mismatched payload for the same `source_event_id` is an integrity conflict: the service records a terminal ingestion conflict, reports it through the current LIMS failure claim, alerts operations, and does not acknowledge or deliver it.
 
 Retryable ingestion failures release the event with bounded backoff. Unsupported or malformed events are reported with the current claim token into the LIMS terminal quarantine state and are not silently acknowledged, delivered, or reclaimed forever. Expired claims receive a new token; operations using an older token are rejected as stale.
 
-Production activation also supplies a UTC `delivery_cutoff_at`. Events older than the cutoff are ingested into terminal `suppressed_pre_rollout` jobs and acknowledged without fan-out or FCM submission. R0 drains this historical backlog before registration or normal delivery is enabled.
+Production activation supplies an immutable rollout pair captured from authoritative LIMS PostgreSQL state before ingestion starts. One short administrator transaction locks `integration_outbox` in `SHARE` mode, waits for in-flight writes, blocks new writes, then reads UTC `delivery_cutoff_at` from `clock_timestamp()` and `high_water_outbox_sequence` from `COALESCE(MAX(outbox_sequence), 0)` before commit. This prevents a lower sequence from committing after boundary capture. Classification uses event `occurred_at`, never claim time or insertion order. Events with `occurred_at < delivery_cutoff_at` become terminal `suppressed_pre_rollout`; equality and later timestamps remain eligible for normal delivery.
+
+R0 drains rows through the captured high-water mark in monotonic order before registration or delivery is enabled. The cutoff rule still applies to every later claim, including events inserted during or after drain, so a late-arriving event with a pre-cutoff `occurred_at` is always suppressed. Duplicate immutable comparison occurs before suppression is applied, preventing a conflicting payload from hiding behind the cutoff path.
 
 ### Decision 5: Authenticate every non-health API request as service-to-service
 
@@ -188,11 +210,17 @@ expired
 skipped_stale_installation
 ```
 
-Delivery claims use a lease token and expiry so crashed `processing` work becomes recoverable and stale workers cannot commit over a newer attempt. An FCM message ID sets `accepted_by_fcm`; it does not set `delivered`. Transient errors are retried with bounded exponential backoff and jitter. Permanent invalid-installation errors compare-and-disable only the snapshotted ownership generation. Payload errors fail the delivery and alert operations rather than deleting a valid FID.
+Delivery claims use a lease token and expiry so crashed `processing` work becomes recoverable and stale workers cannot commit over a newer attempt. An FCM message ID sets `accepted_by_fcm`; it does not set `delivered`. Transient errors are retried with bounded exponential backoff and jitter. Permanent invalid-installation errors atomically compare-and-disable only when current `app_id`, owner, opaque installation handle, and `owner_version` all match the delivery snapshot. Payload errors fail the delivery and alert operations rather than deleting a valid FID.
 
 FCM submission is at-least-once. If FCM accepts a message and the process crashes before SQLite records that response, the recovered delivery may be submitted again. Unique rows and fencing prevent duplicate internal state, but cannot promise exactly-once browser display.
 
-Graceful shutdown stops new delivery claims first. An attempt not yet submitted to FCM is released safely. Once the provider request has been dispatched, the worker waits up to the configured provider deadline for a definitive response and persists that response before releasing the lease. If shutdown reaches its timeout without a definitive provider outcome, the service never marks the delivery complete; it leaves the processing lease to expire and records or logs an `outcome_unknown` attempt for idempotent recovery. A later retry may duplicate provider submission under the documented at-least-once contract.
+Graceful shutdown stops new delivery claims first. An attempt not yet submitted to FCM is released safely. Once the provider request has been dispatched, the worker waits up to the configured provider deadline for a definitive response and persists that response before releasing the lease. If shutdown reaches its timeout without a definitive provider outcome, the service never marks the delivery complete; it leaves the processing lease to expire and durably records an `outcome_unknown` attempt for idempotent recovery. A later retry may duplicate provider submission under the documented at-least-once contract.
+
+Every provider attempt has a durable `notification_delivery_attempts` row separate from the delivery aggregate. Before invoking Firebase Admin, the worker allocates the next attempt number and commits a unique `(delivery_id, attempt_number)` row with the current lease token, `dispatching` outcome, and `dispatch_started_at`. Only then may it call FCM. A definitive response updates that same row with completion time, normalized outcome, and provider message ID or error metadata.
+
+If the process restarts with a stale `dispatching` attempt, recovery first fences the expired delivery lease and changes that attempt to `outcome_unknown` before creating another attempt. If graceful shutdown reaches its provider wait deadline without a definitive outcome, the service commits `outcome_unknown` to the existing attempt row before closing SQLite. Logs are supplementary only.
+
+Shutdown timing is validated as one budget: `provider_request_timeout` MUST fit inside `shutdown_drain_timeout`, and `shutdown_drain_timeout + shutdown_cleanup_reserve` MUST be less than or equal to Docker `stop_grace_period`. The cleanup reserve covers durable attempt recording, safe release of work not submitted externally, HTTP shutdown, and SQLite close. Exceeding the drain budget cancels outstanding requests, persists unresolved dispatched attempts as `outcome_unknown`, and begins cleanup before Docker can send `SIGKILL`.
 
 ### Decision 9: Fix the visible payload and omit navigation data
 
@@ -203,7 +231,7 @@ Title: Mẫu đã hoàn thành
 Body: Mẫu {sample_code} đã được phê duyệt
 ```
 
-The versioned data envelope contains only the presentation type, title, and body needed by LIMS. No customer, patient, assay, result, confidential flag, sample UUID, `app_id`, URL, or deep link is sent to FCM. The LIMS foreground handler and service worker own presentation; the service worker owns root/focus click behavior. Using data-only messages avoids Firebase auto-display competing with LIMS presentation.
+The versioned data envelope contains only an opaque `presentation_id`, the presentation type, title, and body needed by LIMS. The identifier is stable across retries of one delivery and contains no sample, user, or application identity. No customer, patient, assay, result, confidential flag, sample UUID, `app_id`, URL, or deep link is sent to FCM. The LIMS visible-page handler and service worker atomically deduplicate presentation by that identifier; the service worker owns root/focus click behavior. Using data-only messages avoids Firebase auto-display competing with LIMS presentation.
 
 ### Decision 10: Keep the runtime private and secret-safe
 

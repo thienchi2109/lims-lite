@@ -26,14 +26,14 @@ Every persistent PostgreSQL apply/query/verification task in this roadmap MUST c
 **PR boundary:** Database event contract only. Events may accumulate; no Notification Service or browser integration is required.
 
 - [ ] 2.1 Add failing SQL tests for one event on `review -> completed` with a valid recipient, no event on partial approval or same-status updates, and a second event after reopen/recompletion.
-- [ ] 2.2 Add failing SQL tests for server-derived `app_id`, recipient snapshotting from `samples.received_by`, canonical field encodings, and the approved privacy-limited event fields.
-- [ ] 2.3 Add failing security tests proving `anon` and general `authenticated` roles cannot read or mutate the outbox.
-- [ ] 2.4 Add the next forward-only migration for provider-neutral `integration_outbox` and `integration_anomalies` tables, immutable event identity/payload, operational claim state, indexes, and retention-ready timestamps.
+- [ ] 2.2 Add failing SQL tests for server-derived `app_id`, recipient snapshotting from `samples.received_by`, canonical field encodings, monotonic `outbox_sequence` claim metadata, and the approved privacy-limited event fields.
+- [ ] 2.3 Add failing security tests proving `anon`, general `authenticated`, and the application runtime role cannot directly read, lock, or mutate the outbox.
+- [ ] 2.4 Add the next forward-only migration for provider-neutral `integration_outbox` and `integration_anomalies` tables, immutable event identity/payload, `outbox_sequence BIGINT GENERATED ALWAYS AS IDENTITY`, operational claim state, indexes, and retention-ready timestamps.
 - [ ] 2.5 Add the guarded transition trigger that inserts `sample.completed.v1` in the sample-completion transaction without changing existing CoA trigger behavior.
-- [ ] 2.6 Add least-privilege bounded claim, fenced acknowledge, retryable release, and terminal failure-reporting functions with claim tokens and lease expiry for a dedicated NOLOGIN consumer role; do not place credentials in the migration.
+- [ ] 2.6 Add least-privilege bounded claim ordered by `outbox_sequence` with optional `max_outbox_sequence BIGINT` and inclusive `<=` filtering, plus fenced acknowledge, retryable release, and terminal failure-reporting functions with claim tokens and lease expiry for a dedicated NOLOGIN consumer role; document the R0 administrator transaction that locks the outbox in `SHARE` mode before reading `clock_timestamp()` and `MAX(outbox_sequence)`; do not place credentials in the migration.
 - [ ] 2.7 Verify `received_by` is a non-deleted analyst before event insertion; if not, complete approval without an event and atomically record the structured durable anomaly.
 - [ ] 2.8 Run migration SQL tests, `run_security_tests()`, focused approval/CoA regressions, and `npm run typecheck`.
-- [ ] 2.9 Apply and verify the migration through the Database Verification Rule above, including trigger source, grants, policy exposure, event creation, and safe pending-event accumulation.
+- [ ] 2.9 Apply and verify the migration through the Database Verification Rule above, including trigger source, grants, policy exposure, monotonic sequence ordering/high-water claims, concurrent insert blocking during the R0 boundary transaction, event creation, and safe pending-event accumulation.
 
 **Exit gate:** LIMS durably emits the approved event contract and remains fully functional with no consumer.
 
@@ -43,12 +43,12 @@ Every persistent PostgreSQL apply/query/verification task in this roadmap MUST c
 
 **PR boundary:** Authenticated backend integration only. Do not add the Firebase Web SDK, service worker, banner, or profile UI.
 
-- [ ] 3.1 Add shared Zod schemas and TypeScript types for installation upsert, rebind, handle-targeted compare-and-disable, opaque installation handles, ownership generations, and normalized service responses.
+- [ ] 3.1 Add shared Zod schemas and TypeScript types for installation upsert, rebind, handle-targeted compare-and-disable with expected `app_id`, current user, and owner generation, opaque installation handles, and normalized service responses.
 - [ ] 3.2 Add a server-only Notification Service client with timeout, replay-resistant service authentication, redacted errors, and no Firebase Admin dependency.
 - [ ] 3.3 Add a focused same-origin API or client-action boundary that derives `user_id`, `app_id`, rollout mode, and controlled-cohort membership from trusted server state; reject `off` and non-allowlisted `registration_only` callers before contacting the service.
-- [ ] 3.4 Add current-installation compare-and-disable handling using the opaque installation handle and expected owner generation before logout session destruction; stale requests are no-ops and service unavailability does not block logout.
+- [ ] 3.4 Add current-installation compare-and-disable handling using the opaque installation handle plus expected `app_id`, current user, and owner generation before logout session destruction; stale requests are no-ops, while timeout or service failure keeps the session intact and returns a retryable Vietnamese logout error.
 - [ ] 3.5 Add rebind and reconciliation behavior for the same FID after another analyst signs in on the browser.
-- [ ] 3.6 Add contract tests for authentication, caller-selected identity rejection, `off`, non-allowlisted `registration_only`, payload validation, service timeout, service denial, handle-targeted stale logout, FID redaction, and unsupported operations.
+- [ ] 3.6 Add contract tests for authentication, caller-selected identity rejection, `off`, non-allowlisted `registration_only`, payload validation, service denial, full-identity stale logout, timeout preventing session destruction, retry success, FID redaction, and unsupported operations.
 - [ ] 3.7 Add configuration validation for the private service URL and credential without enabling any browser-visible feature.
 - [ ] 3.8 Run focused API/action tests, security-sensitive auth tests, `npm run typecheck`, and relevant lint checks.
 
@@ -62,11 +62,11 @@ Every persistent PostgreSQL apply/query/verification task in this roadmap MUST c
 
 - [ ] 4.1 Re-check current Firebase Web SDK primary documentation and lock the supported `register()` / `onRegistered()` / FID contract before adding dependencies.
 - [ ] 4.2 Add validated public Firebase and VAPID configuration with no Firebase Admin or private credentials.
-- [ ] 4.3 Add a focused client messaging module for capability detection, permission state, FID registration, ownership-generation persistence, foreground data messages, and current-browser compare-and-disable.
-- [ ] 4.4 Add a shared envelope formatter plus the same-origin `firebase-messaging-sw.js`; the foreground page handler alone presents foreground messages, while the service worker alone presents background messages and owns root/focus click behavior.
+- [ ] 4.3 Add a focused client messaging module for capability detection, permission state, FID registration, ownership-generation persistence, foreground data messages, shared `presentation_id` claiming, and current-browser compare-and-disable.
+- [ ] 4.4 Add a shared envelope formatter, same-origin presentation ledger, and `firebase-messaging-sw.js`; only a visible page with an active handler owns foreground presentation, while hidden or handler-less controlled tabs hand off without presenting and the service worker owns background presentation plus root/focus click behavior.
 - [ ] 4.5 Add the one-time Vietnamese post-login banner that opens the permission prompt only after `Bật thông báo` is pressed.
 - [ ] 4.6 Add profile controls showing and changing notification state for the current browser without affecting other installations.
-- [ ] 4.7 Add tests for `off`, backend-enforced `registration_only`, and `banner_enabled`; unsupported browsers; permission decisions; multiple browsers; stale logout after rebind; exactly one foreground presentation; exactly one background presentation; exact copy; and prohibited payload fields.
+- [ ] 4.7 Add tests for `off`, backend-enforced `registration_only`, and `banner_enabled`; the `Bật thông báo` gesture before every permission prompt; unsupported browsers; permission decisions; multiple browsers; stale logout after rebind; visible and multiple foreground tabs; hidden controlled tabs; foreground-to-service-worker handoff; duplicate `presentation_id` suppression; exact title/body; and prohibited payload fields.
 - [ ] 4.8 Run focused React tests, React Doctor, `npm run typecheck`, relevant lint checks, and the production build.
 - [ ] 4.9 Verify supported desktop and mobile browser behavior through screenshots and real service-worker/notification interaction while the production rollout mode remains `off`.
 
@@ -96,9 +96,9 @@ Every persistent PostgreSQL apply/query/verification task in this roadmap MUST c
 
 - [ ] 6.1 Create or verify the external private Docker network, attach only the LIMS app, Notification Service, and narrowly required PostgreSQL outbox endpoint, and confirm no new host or Internet ports.
 - [ ] 6.2 Create and rotate the dedicated PostgreSQL LOGIN credential that inherits only the L1 NOLOGIN consumer role; mount all service and Firebase credentials from protected runtime paths.
-- [ ] 6.3 Record a UTC `delivery_cutoff_at`, deploy the Go service dark with ingestion, installation API, delivery, and LIMS rollout mode `off`, then verify liveness, readiness, worker heartbeats, SQLite integrity, and backup/restore evidence.
-- [ ] 6.4 Enable pre-rollout drain mode, ingest all events older than `delivery_cutoff_at` into terminal `suppressed_pre_rollout` jobs without FCM calls, and verify no pre-cutoff event remains deliverable.
-- [ ] 6.5 Enable normal delivery for events at or after the cutoff and the private installation API, set LIMS to `registration_only` with a server-side controlled-user allowlist, register two browsers for one controlled analyst, and execute completion, reopen, and recompletion tests.
+- [ ] 6.3 Before ingestion starts, use the approved administrator path to open one short transaction, `LOCK TABLE integration_outbox IN SHARE MODE`, capture authoritative UTC `delivery_cutoff_at` from `clock_timestamp()` plus `high_water_outbox_sequence` from `COALESCE(MAX(outbox_sequence), 0)`, commit, persist the pair in protected deployment configuration, deploy the Go service dark with ingestion, installation API, delivery, and LIMS rollout mode `off`, then verify liveness, readiness, worker heartbeats, SQLite integrity, and backup/restore evidence.
+- [ ] 6.4 Enable pre-rollout drain mode, process rows through the captured high-water mark in monotonic order, classify every event with `occurred_at < delivery_cutoff_at` as terminal `suppressed_pre_rollout`, and verify boundary equality, a pre-cutoff event inserted during drain, and no FCM submission for any pre-cutoff event.
+- [ ] 6.5 After every row through the captured high-water mark is terminal, enable normal delivery for events with `occurred_at >= delivery_cutoff_at` and the private installation API, set LIMS to `registration_only` with a server-side controlled-user allowlist, register two browsers for one controlled analyst, and execute completion, reopen, and recompletion tests.
 - [ ] 6.6 Verify no doctor, manager, unrelated analyst, stale ownership generation, disabled installation, cross-`app_id` installation, or prohibited field participates in delivery.
 - [ ] 6.7 Set LIMS to `banner_enabled` only after the controlled gate passes, then observe outbox age, service jobs, worker health, FCM failures, and application logs.
 - [ ] 6.8 Record rollback evidence proving the rollout can return to `off` and stop ingestion or delivery without editing applied migrations.

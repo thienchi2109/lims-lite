@@ -44,7 +44,7 @@ The shared contract is versioned and deliberately small:
 
 ```text
 sample.completed.v1
-- event_id: UUID encoded as a canonical string
+- source_event_id: UUID encoded as a canonical string
 - app_id: non-empty application namespace derived by trusted LIMS configuration
 - sample_id: UUID encoded as a canonical string
 - sample_code: non-empty string copied exactly from the sample
@@ -85,15 +85,18 @@ Required characteristics:
 
 - Immutable event identity and payload after insertion.
 - No hard deletion during normal processing.
-- A bounded claim batch returning a fresh `claim_token` and `lease_expires_at`.
+- A database-generated `BIGINT GENERATED ALWAYS AS IDENTITY` `outbox_sequence` that is strictly increasing but potentially non-contiguous and is used only for deterministic claim and rollout-drain ordering.
+- A bounded claim batch ordered by `outbox_sequence`, optionally capped by an inclusive high-water mark, returning `outbox_sequence`, a fresh `claim_token`, and `lease_expires_at` as claim metadata.
 - Fenced, idempotent acknowledgement, retryable release, and terminal failure operations that accept only the current claim token.
 - Automatic reclaim after lease expiry with a new token so stale consumers cannot mutate the event.
 - Retry scheduling and a terminal quarantined state for malformed or unsupported events.
-- A unique event ID used by the service for idempotency.
+- A unique `source_event_id` used by the service for idempotency.
 - No grants to `anon` or the general `authenticated` role.
 - Access only through narrowly scoped claim, acknowledge, release, and failure-reporting functions granted to a dedicated NOLOGIN consumer role.
 
 The service acknowledges the LIMS outbox after the event has been committed to its SQLite job store, not after FCM delivery. FCM retries then remain entirely service-owned.
+
+R0 captures the rollout boundary in one short administrator transaction before ingestion starts. It first executes `LOCK TABLE integration_outbox IN SHARE MODE`, which waits for in-flight outbox writes and blocks new writes, then reads `delivery_cutoff_at` from `clock_timestamp()` and `high_water_outbox_sequence` from `COALESCE(MAX(outbox_sequence), 0)` before commit. Because authorized event insertion occurs only through the guarded database path, no lower sequence can commit after this locked boundary is captured. The claim function accepts optional `max_outbox_sequence BIGINT` and, when supplied, returns only rows with `outbox_sequence <= max_outbox_sequence`. Direct boundary capture and outbox access are unavailable to `anon`, general `authenticated`, and the application runtime role.
 
 ### Decision 4: Snapshot the recipient at transition time
 
@@ -109,7 +112,8 @@ Supported operations:
 
 - Upsert or refresh the current FID after permission is granted.
 - Rebind the same FID when another user authenticates in the same browser and return a new opaque installation handle plus ownership generation.
-- Disable the current installation before logout using its opaque installation handle plus the expected user and ownership generation; a stale request is an idempotent no-op.
+- Disable the current installation before logout using its opaque installation handle plus the expected `app_id`, current user, and ownership generation; a stale request is an idempotent no-op.
+- Destroy the authenticated session only after that fenced disable is confirmed. A timeout or service error keeps the session intact and returns a retryable Vietnamese logout error rather than leaving an enabled installation owned by a signed-out analyst.
 - Reconcile permission revocation or FID changes during later authenticated sessions.
 
 LIMS derives `app_id` from server configuration and never accepts it or `user_id` from the browser. The LIMS backend never stores the Firebase service-account credential. Full FIDs MUST NOT appear in application logs or audit payloads.
@@ -119,7 +123,7 @@ LIMS derives `app_id` from server configuration and never accepts it or `user_id
 When browser permission is undecided, LIMS presents a one-time post-login banner. The browser permission prompt opens only after the user presses `Bật thông báo`.
 
 - `off` rejects all registration/rebind requests and exposes no browser control.
-- `registration_only` permits registration only for authenticated user IDs in a validated server-side rollout allowlist. The backend enforces the allowlist even when callers bypass the UI.
+- `registration_only` permits registration only for authenticated user IDs in a validated server-side rollout allowlist. The backend enforces the allowlist even when callers bypass the UI. The profile action remains `Bật thông báo`, and the browser permission prompt opens only after that explicit gesture.
 - `banner_enabled` permits active analysts to register and enables the one-time banner.
 - Granting permission registers the current FID.
 - Denial or dismissal does not repeatedly prompt.
@@ -136,7 +140,9 @@ Title: Mẫu đã hoàn thành
 Body: Mẫu {sample_code} đã được phê duyệt
 ```
 
-FCM uses a data-only message carrying only the versioned presentation type plus the fixed title and body. This prevents provider auto-display from racing the LIMS presentation path. A shared formatter validates the envelope and builds notification options but never displays them. When a controlled page is active, only the foreground page handler presents the message. When no controlled page handles it, only the service worker calls `showNotification`; the service worker also owns click behavior. One received message therefore has one presentation owner.
+FCM uses a data-only message carrying only an opaque `presentation_id`, the versioned presentation type, and the fixed title and body. The identifier is stable across provider retries for one delivery, contains no sample or user identity, and exists only to deduplicate presentation. This prevents provider auto-display from racing the LIMS presentation path. A shared formatter validates the envelope and builds notification options but never displays them.
+
+The foreground owner is a controlled page whose handler is running and whose `document.visibilityState` is `visible`; merely being controlled by the service worker is insufficient. A hidden, frozen, or handler-less tab is background. The page and service worker atomically claim the same `presentation_id` in a shared same-origin presentation ledger before displaying anything. A visible page that claims the identifier presents the fixed notification. A page that is no longer visible forwards the envelope to the service worker without presenting it. The service worker claims and presents background messages, owns root/focus click behavior, and performs no display when the identifier was already claimed. Multiple visible tabs, hidden controlled tabs, handoff races, and at-least-once provider retries therefore still produce at most one presentation for one `presentation_id`.
 
 The payload contains no customer name, patient identifier, result value, assay name, confidential flag, sample UUID, `app_id`, sample-detail URL, or deep link. Clicking the notification only focuses an existing LIMS window or opens the application root.
 
@@ -157,14 +163,16 @@ Each phase below is one PR and must be independently testable and deploy-safe.
 | 9 | S4 | `notification-service` | Production secrets, backup, logs, resource limits, runbook | Service stack is production-ready |
 | 10 | L4 | `lims-lite` | Shared private network for app/outbox access, environment wiring, deployment runbook | LIMS and the service can communicate privately |
 
-After all PRs are merged, operational gate R0 applies any pending migrations, records a UTC `delivery_cutoff_at`, creates or verifies the external private network and dedicated runtime credentials, deploys the service dark, and verifies health. Ingestion first runs in pre-rollout drain mode: events older than the cutoff become terminal `suppressed_pre_rollout` jobs and are acknowledged without FCM submission. Only after the pre-cutoff backlog is drained may delivery and `registration_only` be enabled for controlled cross-service tests; `banner_enabled` remains the final step.
+After all PRs are merged, operational gate R0 applies any pending migrations and captures one rollout boundary from authoritative LIMS PostgreSQL state using the locked administrator transaction defined above. UTC `delivery_cutoff_at` and `high_water_outbox_sequence` are recorded in protected deployment configuration before ingestion starts. Event classification uses immutable `occurred_at`, not claim time or insertion order: `occurred_at < delivery_cutoff_at` is terminal `suppressed_pre_rollout`, while equality and later timestamps are eligible for normal delivery.
+
+R0 then creates or verifies the external private network and dedicated runtime credentials, deploys the service dark, and verifies health. Pre-rollout drain processes rows through the captured outbox high-water mark in monotonic order while normal delivery remains disabled. Every event is still classified by `occurred_at`, including rows inserted during or after the drain, so a late-arriving pre-cutoff event can never become deliverable. Only after every row through the captured high-water mark is terminal may delivery and `registration_only` be enabled for controlled cross-service tests; `banner_enabled` remains the final step.
 
 ## Risks / Trade-offs
 
 - **Approval hardening expands the first PR beyond notification UI** -> Keep L0 limited to mutation correctness and regression tests; no FCM dependencies.
 - **Outbox events accumulate before the service is deployed** -> This is intentional; monitor table growth and consume only after S1 is ready.
 - **At-least-once handoff and provider submission can display a duplicate** -> Use unique internal rows plus fenced leases to prevent duplicate state, while documenting that a crash after FCM acceptance can still cause a repeated provider submission.
-- **Logout cleanup can fail on a shared workstation** -> Perform best-effort compare-and-disable before session destruction, use ownership generations during rebind, expire stale installations, and keep visible content limited to the sample code.
+- **Logout cleanup can fail on a shared workstation** -> Require confirmed full-identity compare-and-disable before session destruction; on timeout keep the session intact, return a retryable Vietnamese error, and use ownership generations plus stale-installation expiry as defense in depth.
 - **Browser permission can be denied permanently** -> Never loop prompts; expose instructions and state in the profile.
 - **Notification service downtime delays alerts** -> Approval remains successful, events remain durable, and operations alert on backlog age.
 - **Outbox payload leaks sensitive data** -> Constrain and regression-test the event schema; never include patient, customer, assay, or result fields.
