@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { User } from '@/types'
+import type { User } from '@/types'
 import { Button } from '@/components/ui/button'
-import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight, CheckCircle2, XCircle, KeyRound } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, CheckCircle2, XCircle } from 'lucide-react'
 import {
     Table,
     TableBody,
@@ -13,8 +13,10 @@ import {
     TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { DeleteUserDialog } from '@/components/delete-user-dialog'
 import { UserDialog } from '@/components/user-dialog'
 import { ManagerOtpEmailDialog } from '@/components/manager-otp-email-dialog'
+import { UserRowActions } from '@/components/user-row-actions'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { SearchInput } from '@/components/ui/search-input'
 import {
@@ -24,22 +26,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { deleteUserClient } from '@/lib/api-client'
 import { getUserRoleLabel } from '@/lib/role-labels'
 import {
     canOwnElectronicSignature,
     getSignatureReadinessTitle,
     hasActiveElectronicSignature,
 } from '@/lib/signature-readiness'
-
-function getActionErrorMessage(result: unknown) {
-    if (result && typeof result === 'object' && 'error' in result) {
-        const error = (result as { error?: unknown }).error
-        return typeof error === 'string' ? error : null
-    }
-
-    return null
-}
 
 interface UserListTableProps {
     users: User[]
@@ -62,6 +54,10 @@ export function UserListTable({
 }: UserListTableProps) {
     const [editingUser, setEditingUser] = useState<User | null>(null)
     const [otpEmailUser, setOtpEmailUser] = useState<User | null>(null)
+    const [deleteRequest, setDeleteRequest] = useState<{
+        user: User
+        returnFocusTarget: HTMLButtonElement | null
+    } | null>(null)
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
     const router = useRouter()
     const pathname = usePathname()
@@ -72,29 +68,6 @@ export function UserListTable({
         params.set('page', String(newPage))
         params.set('pageSize', String(newPageSize))
         router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-    }
-
-    const handleDelete = async (user: User) => {
-        if (!confirm(`Bạn có chắc chắn muốn xóa người dùng ${user.username}?`)) {
-            return
-        }
-
-        const result = await deleteUserClient(user.id).catch((error) => {
-            const message = error instanceof Error ? error.message : 'Không thể xóa người dùng'
-            alert(message)
-            return null
-        })
-        if (!result) {
-            return
-        }
-
-        const errorMessage = getActionErrorMessage(result)
-        if (errorMessage) {
-            alert(errorMessage)
-            return
-        }
-
-        router.refresh()
     }
 
     return (
@@ -122,7 +95,9 @@ export function UserListTable({
                             <TableHead>Phòng Lab</TableHead>
                             <TableHead>Vai trò</TableHead>
                             <TableHead className="w-[80px] text-center">Chữ ký</TableHead>
-                            <TableHead className="w-[180px]">Thao tác</TableHead>
+                            <TableHead className="sticky right-0 z-20 w-[104px] min-w-[104px] max-w-[104px] border-l bg-background text-right">
+                                Thao tác
+                            </TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -144,7 +119,7 @@ export function UserListTable({
                                     (user.role === 'manager' && user.id !== currentUserId)
 
                                 return (
-                                <TableRow key={user.id}>
+                                <TableRow key={user.id} className="group">
                                     <TableCell className="font-medium font-mono">
                                         {user.username}
                                     </TableCell>
@@ -179,50 +154,20 @@ export function UserListTable({
                                             <span className="text-slate-400">-</span>
                                         )}
                                     </TableCell>
-                                    <TableCell>
-                                        <div className="flex flex-col items-start gap-1">
-                                            <div className="flex items-center gap-2">
-                                                {canConfigureOtpEmail && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => setOtpEmailUser(user)}
-                                                        className="h-8 w-8 p-0 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
-                                                        title="Cấu hình email OTP"
-                                                        aria-label={`Cấu hình email OTP cho ${user.username}`}
-                                                    >
-                                                        <KeyRound className="h-4 w-4" />
-                                                    </Button>
-                                                )}
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => setEditingUser(user)}
-                                                    disabled={isRestrictedManagerRow}
-                                                    className="h-8 w-8 p-0"
-                                                    title={isRestrictedManagerRow ? 'Không thể sửa quản lý khác' : 'Sửa người dùng'}
-                                                    aria-label={`Sửa người dùng ${user.username}`}
-                                                >
-                                                    <Pencil className="h-4 w-4 text-slate-500" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleDelete(user)}
-                                                    disabled={isRestrictedManagerRow}
-                                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                    title={isRestrictedManagerRow ? 'Không thể xóa quản lý khác' : 'Xóa người dùng'}
-                                                    aria-label={`Xóa người dùng ${user.username}`}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                            {isRestrictedManagerRow && (
-                                                <p className="max-w-40 text-xs text-muted-foreground">
-                                                    Bạn không thể chỉnh sửa hoặc xóa tài khoản quản lý khác.
-                                                </p>
-                                            )}
-                                        </div>
+                                    <TableCell className="sticky right-0 z-10 w-[104px] min-w-[104px] max-w-[104px] border-l bg-background group-hover:bg-muted/50">
+                                        <UserRowActions
+                                            user={user}
+                                            isRestrictedManagerRow={isRestrictedManagerRow}
+                                            canConfigureOtpEmail={canConfigureOtpEmail}
+                                            onEdit={setEditingUser}
+                                            onConfigureOtpEmail={setOtpEmailUser}
+                                            onRequestDelete={(selectedUser, returnFocusTarget) => {
+                                                setDeleteRequest({
+                                                    user: selectedUser,
+                                                    returnFocusTarget,
+                                                })
+                                            }}
+                                        />
                                     </TableCell>
                                 </TableRow>
                                 )
@@ -305,6 +250,19 @@ export function UserListTable({
                 onOpenChange={(open) => !open && setOtpEmailUser(null)}
                 user={otpEmailUser}
             />
+
+            {deleteRequest && (
+                <DeleteUserDialog
+                    open
+                    user={deleteRequest.user}
+                    returnFocusTarget={deleteRequest.returnFocusTarget}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setDeleteRequest(null)
+                        }
+                    }}
+                />
+            )}
         </div>
     )
 }

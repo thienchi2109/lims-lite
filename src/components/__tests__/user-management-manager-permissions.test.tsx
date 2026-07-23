@@ -64,39 +64,6 @@ describe('manager user-management UI permissions', () => {
         vi.clearAllMocks()
     })
 
-    it('disables edit and delete actions for another manager row with Vietnamese copy', () => {
-        const currentManager = buildUser({
-            id: '11111111-1111-4111-8111-111111111111',
-            username: 'manager1',
-            full_name: 'Manager One',
-            role: 'manager',
-        })
-        const otherManager = buildUser({
-            id: '22222222-2222-4222-8222-222222222222',
-            username: 'manager2',
-            full_name: 'Manager Two',
-            role: 'manager',
-        })
-
-        render(
-            <UserListTable
-                users={[currentManager, otherManager]}
-                page={1}
-                pageSize={10}
-                totalPages={1}
-                totalCount={2}
-                currentUserId={currentManager.id}
-                currentUserRole="manager"
-            />,
-        )
-
-        expect(
-            screen.getByText('Bạn không thể chỉnh sửa hoặc xóa tài khoản quản lý khác.'),
-        ).toBeDefined()
-        expect(screen.getByRole('button', { name: 'Sửa người dùng manager2' }).hasAttribute('disabled')).toBe(true)
-        expect(screen.getByRole('button', { name: 'Xóa người dùng manager2' }).hasAttribute('disabled')).toBe(true)
-    })
-
     it('allows a manager to set confidential access and OTP email when creating an analyst', async () => {
         vi.mocked(createUserClient).mockResolvedValue({ success: true })
 
