@@ -159,10 +159,11 @@ export function GlobalSearch({
             {/* Visual Trigger Button */}
             <Button
                 variant="outline"
+                aria-label={isCompact ? 'Tìm kiếm' : undefined}
                 className={cn(
                     "relative text-muted-foreground",
                     isFull ? "h-10 w-full justify-start px-3 py-2" :
-                        isCompact ? "h-9 w-9 p-0" :
+                        isCompact ? "h-10 w-10 shrink-0 p-0" :
                             "h-9 w-9 p-0 xl:h-10 xl:w-60 xl:justify-start xl:px-3 xl:py-2",
                     className
                 )}

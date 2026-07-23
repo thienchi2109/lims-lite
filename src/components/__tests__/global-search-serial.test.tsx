@@ -106,6 +106,27 @@ describe('GlobalSearch serial search', () => {
         vi.useRealTimers()
     })
 
+    it('renders an accessible fixed-size compact trigger', () => {
+        render(
+            <ScannerContext.Provider
+                value={{
+                    state: 'connected',
+                    error: null,
+                    connect: vi.fn(),
+                    disconnect: vi.fn(),
+                    registerConsumer: vi.fn(() => () => undefined),
+                }}
+            >
+                <GlobalSearch variant="compact" skipShortcut />
+            </ScannerContext.Provider>,
+        )
+
+        const trigger = screen.getByRole('button', { name: 'Tìm kiếm' })
+        expect(trigger.classList.contains('h-10')).toBe(true)
+        expect(trigger.classList.contains('w-10')).toBe(true)
+        expect(trigger.classList.contains('shrink-0')).toBe(true)
+    })
+
     it('wins only while open and updates one dialog immediately without navigation', () => {
         const dispatcher = createScannerDispatcher()
         const registerConsumer = vi.fn(dispatcher.registerConsumer)
