@@ -27,14 +27,17 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { User, LogOut, Settings, ChevronDown } from 'lucide-react'
 import { getUserRoleLabel } from '@/lib/role-labels'
 
+type UserProfileDropdownVariant = 'responsive' | 'compact' | 'full'
+
 interface UserProfileDropdownProps {
     user: {
         full_name: string | null
         role: string | null
     }
+    variant?: UserProfileDropdownVariant
 }
 
-export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
+export function UserProfileDropdown({ user, variant = 'responsive' }: UserProfileDropdownProps) {
     const [showLogoutDialog, setShowLogoutDialog] = useState(false)
     const router = useRouter()
     const queryClient = useQueryClient()
@@ -61,6 +64,8 @@ export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
         : 'U'
     const roleLabel = getUserRoleLabel(user.role)
     const showProfileLinks = user.role !== 'doctor'
+    const isCompact = variant === 'compact'
+    const isResponsive = variant === 'responsive'
 
     return (
         <>
@@ -68,7 +73,12 @@ export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
                 <DropdownMenuTrigger asChild>
                     <Button
                         variant="ghost"
-                        className="relative h-auto py-2 pl-2 pr-3 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        aria-label="Mở menu tài khoản"
+                        className={
+                            isCompact
+                                ? 'relative h-10 w-10 shrink-0 p-0 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors'
+                                : 'relative h-auto py-2 pl-2 pr-3 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors'
+                        }
                     >
                         <div className="flex items-center gap-3">
                             <Avatar className="h-9 w-9 border border-slate-200 dark:border-slate-700">
@@ -77,21 +87,31 @@ export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
                                     {initials}
                                 </AvatarFallback>
                             </Avatar>
-                            <div className="flex flex-col items-start text-left hidden sm:flex">
-                                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-none mb-1">
-                                    {user.full_name}
-                                </p>
-                                <div className="flex items-center gap-1.5">
-                                    <span className="relative flex h-1.5 w-1.5">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-                                    </span>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 capitalize font-medium leading-none">
-                                        {roleLabel}
-                                    </p>
-                                </div>
-                            </div>
-                            <ChevronDown className="w-4 h-4 text-slate-400 ml-1 hidden sm:block" />
+                            {!isCompact && (
+                                <>
+                                    <div
+                                        className={`flex flex-col items-start text-left${isResponsive ? ' hidden sm:flex' : ''}`}
+                                    >
+                                        <p
+                                            className={`text-sm font-semibold text-slate-900 dark:text-slate-100 leading-none mb-1${variant === 'full' ? ' max-w-40 truncate' : ''}`}
+                                        >
+                                            {user.full_name}
+                                        </p>
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="relative flex h-1.5 w-1.5">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                                            </span>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 capitalize font-medium leading-none">
+                                                {roleLabel}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <ChevronDown
+                                        className={`w-4 h-4 text-slate-400 ml-1${isResponsive ? ' hidden sm:block' : ''}`}
+                                    />
+                                </>
+                            )}
                         </div>
                     </Button>
                 </DropdownMenuTrigger>
