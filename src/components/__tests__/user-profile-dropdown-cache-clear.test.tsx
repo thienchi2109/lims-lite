@@ -97,7 +97,7 @@ describe('UserProfileDropdown trigger variants', () => {
         const visibleName = triggerContent.getByText('Manager HIV')
         const chevron = triggerContent.getByTestId('chevron-down')
 
-        expect(visibleName.className).toContain('max-w-')
+        expect(visibleName.className).toContain('max-w-40')
         expect(visibleName.className).toContain('truncate')
         expect(visibleName.parentElement?.className).not.toContain('hidden')
         expect(triggerContent.getByText('Quản lý')).toBeDefined()
@@ -155,6 +155,7 @@ describe('UserProfileDropdown cache isolation', () => {
             expect(mockReplace).toHaveBeenCalledWith('/login')
         })
 
+        expect(mockLogoutClient).toHaveBeenCalledTimes(1)
         expect(mockQueryClient.clear).toHaveBeenCalled()
         expect(mockQueryClient.clear.mock.invocationCallOrder[0]).toBeLessThan(
             mockReplace.mock.invocationCallOrder[0],
