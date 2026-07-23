@@ -29,9 +29,12 @@ hydration mismatch.
 Visibility dùng mobile-first min-width utilities ngay trong các component:
 
 - mobile: `md:hidden`;
-- compact: `hidden md:flex min-[1800px]:hidden`;
+- compact: `hidden md:flex min-[1800px]:hidden!`;
 - full: `hidden min-[1800px]:flex`;
 - hoặc display-equivalent nếu element không dùng flex.
+
+Compact dùng important modifier của Tailwind v4 để rule ẩn tại `1800px` luôn
+thắng `md:flex`, bất kể thứ tự Tailwind sinh các media query.
 
 Không dùng `max-[1799px]`, không thêm breakpoint hoặc global CSS và không sửa
 Tailwind configuration.

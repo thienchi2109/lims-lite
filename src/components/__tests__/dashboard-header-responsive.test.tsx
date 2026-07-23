@@ -78,7 +78,8 @@ describe('DashboardHeader responsive composition', () => {
 
         expect(compactRow.classList.contains('hidden')).toBe(true)
         expect(compactRow.classList.contains('md:flex')).toBe(true)
-        expect(compactRow.classList.contains('min-[1800px]:hidden')).toBe(true)
+        expect(compactRow.classList.contains('min-[1800px]:hidden!')).toBe(true)
+        expect(compactRow.classList.contains('min-[1800px]:hidden')).toBe(false)
         expect(compactRow.classList.contains('h-[64px]')).toBe(true)
 
         expect(fullRow.classList.contains('hidden')).toBe(true)

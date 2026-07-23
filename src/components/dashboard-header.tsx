@@ -78,7 +78,7 @@ export function DashboardHeader({
             <div
                 id="dashboard-header-compact-row"
                 data-testid="dashboard-header-compact-row"
-                className="hidden h-[64px] w-full items-center gap-2 px-3 md:flex min-[1800px]:hidden lg:px-4"
+                className="hidden h-[64px] w-full items-center gap-2 px-3 md:flex min-[1800px]:hidden! lg:px-4"
             >
                 <div className="flex shrink-0 items-center gap-2">
                     <div className="relative h-8 w-8 shrink-0">

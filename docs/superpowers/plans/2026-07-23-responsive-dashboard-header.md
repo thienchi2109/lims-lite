@@ -268,7 +268,7 @@ expect(screen.getByTestId('dashboard-header-compact-row').className)
 expect(screen.getByTestId('dashboard-header-compact-row').className)
     .toContain('md:flex')
 expect(screen.getByTestId('dashboard-header-compact-row').className)
-    .toContain('min-[1800px]:hidden')
+    .toContain('min-[1800px]:hidden!')
 expect(screen.getByTestId('dashboard-header-full-row').className)
     .toContain('hidden')
 expect(screen.getByTestId('dashboard-header-full-row').className)
@@ -324,7 +324,8 @@ Refactor `DashboardHeader` to render:
      controls outside the viewport.
 
 2. Compact row:
-   - `hidden md:flex min-[1800px]:hidden`;
+   - `hidden md:flex min-[1800px]:hidden!` so the Tailwind v4 important
+     modifier guarantees that the 1800px hide rule overrides `md:flex`;
    - stable 64px row;
    - logo and product name, no subtitle;
    - `<DashboardNav variant="compact" />`;
