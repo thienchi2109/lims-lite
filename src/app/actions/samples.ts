@@ -18,7 +18,7 @@ import {
     type UpdateSample,
     type SampleListParams,
 } from '@/types'
-import { fetchSamples } from '@/lib/data/samples'
+import { enrichSampleReceiverNames, fetchSamples } from '@/lib/data/samples'
 import {
     isConfidentialAssociatedSample,
     getUserConfidentialAccess,
@@ -257,13 +257,17 @@ export async function getSample(id: string) {
             }
         }
 
-        return {
-            data: {
-                ...sample,
-                received_by_name: sample.received_by_user?.full_name || null,
-                rejected_by_name: sample.rejected_by_user?.full_name || null,
-            },
+        const sampleWithNames = {
+            ...sample,
+            received_by_name: sample.received_by_user?.full_name || null,
+            rejected_by_name: sample.rejected_by_user?.full_name || null,
         }
+        const enrichedSamples = await enrichSampleReceiverNames([sampleWithNames])
+        if ('error' in enrichedSamples) {
+            return { error: enrichedSamples.error }
+        }
+
+        return { data: enrichedSamples.data[0] }
     } catch (error) {
         console.error('Error in getSample:', error)
         return { error: error instanceof Error ? error.message : 'Failed to fetch sample' }

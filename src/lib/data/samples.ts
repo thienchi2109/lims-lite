@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { isValidUUID } from '@/lib/utils-lims'
 import {
     getConfidentialAssociatedSampleIds,
@@ -17,6 +17,14 @@ interface FetchSamplesRpcPayload {
     total_count?: number | string | null
 }
 
+interface SampleReceiverFields {
+    received_by: string | null
+    received_by_name: string | null
+}
+
+const SAMPLE_RECEIVER_LOAD_ERROR = 'Không thể tải thông tin người nhận mẫu'
+const SAMPLE_RECEIVER_LOAD_LOG_MESSAGE = 'Error loading sample receiver information:'
+
 function normalizeReceiverId(receiverId: SampleListParams['receiverId']) {
     return typeof receiverId === 'string' && isValidUUID(receiverId)
         ? receiverId
@@ -25,6 +33,53 @@ function normalizeReceiverId(receiverId: SampleListParams['receiverId']) {
 
 function normalizeSortBy(sortBy: SampleListParams['sortBy']) {
     return sortBy && SAMPLE_SORT_COLUMNS.has(sortBy) ? sortBy : 'updated_at'
+}
+
+export async function enrichSampleReceiverNames<T extends SampleReceiverFields>(
+    samples: T[],
+): Promise<{ data: T[] } | { error: string }> {
+    const receiverIds = [
+        ...new Set(
+            samples.flatMap((sample) => sample.received_by ? [sample.received_by] : []),
+        ),
+    ]
+
+    if (receiverIds.length === 0) {
+        return {
+            data: samples.map((sample) => sample.received_by_name === null
+                ? sample
+                : { ...sample, received_by_name: null }),
+        }
+    }
+
+    try {
+        const { data, error } = await createAdminClient()
+            .from('users')
+            .select('id, full_name')
+            .in('id', receiverIds)
+            .is('deleted_at', null)
+
+        if (error) {
+            console.error(SAMPLE_RECEIVER_LOAD_LOG_MESSAGE, error)
+            return { error: SAMPLE_RECEIVER_LOAD_ERROR }
+        }
+
+        const receiverNames = new Map(
+            (data ?? []).map((receiver) => [receiver.id, receiver.full_name]),
+        )
+
+        return {
+            data: samples.map((sample) => ({
+                ...sample,
+                received_by_name: sample.received_by
+                    ? receiverNames.get(sample.received_by) ?? null
+                    : null,
+            })),
+        }
+    } catch (error) {
+        console.error(SAMPLE_RECEIVER_LOAD_LOG_MESSAGE, error)
+        return { error: SAMPLE_RECEIVER_LOAD_ERROR }
+    }
 }
 
 /**
@@ -94,35 +149,32 @@ export async function fetchSamples(params: SampleListParams) {
     const samples = Array.isArray(payload.rows) ? payload.rows : []
     const count = Number(payload.total_count ?? 0)
 
-    if (access.canAccessConfidential) {
-        return {
-            data: samples,
-            count,
-            page: validatedParams.page,
-            pageSize: validatedParams.pageSize,
-            totalPages: Math.ceil(count / validatedParams.pageSize),
+    if (!access.canAccessConfidential) {
+        let confidentialSampleIds: { data: Set<string> }
+        try {
+            confidentialSampleIds = await getConfidentialAssociatedSampleIds(
+                samples.map((sample) => sample.id),
+            )
+        } catch (error) {
+            console.error('Error verifying confidential sample associations:', error)
+            return { error: 'Không thể tải danh sách mẫu' }
+        }
+
+        if (confidentialSampleIds.data.size > 0) {
+            console.error('Confidential samples leaked from get_samples_page RPC', {
+                leakedSampleIds: [...confidentialSampleIds.data],
+            })
+            return { error: 'Không thể tải danh sách mẫu' }
         }
     }
 
-    let confidentialSampleIds: { data: Set<string> }
-    try {
-        confidentialSampleIds = await getConfidentialAssociatedSampleIds(
-            samples.map((sample) => sample.id),
-        )
-    } catch (error) {
-        console.error('Error verifying confidential sample associations:', error)
-        return { error: 'Không thể tải danh sách mẫu' }
-    }
-
-    if (confidentialSampleIds.data.size > 0) {
-        console.error('Confidential samples leaked from get_samples_page RPC', {
-            leakedSampleIds: [...confidentialSampleIds.data],
-        })
-        return { error: 'Không thể tải danh sách mẫu' }
+    const enrichedSamples = await enrichSampleReceiverNames(samples)
+    if ('error' in enrichedSamples) {
+        return enrichedSamples
     }
 
     return {
-        data: samples,
+        data: enrichedSamples.data,
         count,
         page: validatedParams.page,
         pageSize: validatedParams.pageSize,

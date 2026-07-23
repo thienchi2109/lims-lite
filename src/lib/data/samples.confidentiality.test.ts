@@ -94,6 +94,13 @@ describe('fetchSamples confidentiality concealment', () => {
                     })
                 }
 
+                if (table === 'users') {
+                    return createThenableQuery({
+                        data: [{ id: USER_ID, full_name: 'Nguyễn Văn A' }],
+                        error: null,
+                    })
+                }
+
                 throw new Error(`Unexpected admin table: ${table}`)
             },
         })
@@ -104,7 +111,7 @@ describe('fetchSamples confidentiality concealment', () => {
         mockRpc.mockResolvedValueOnce({
             data: {
                 rows: [
-                    buildSampleRow(),
+                    buildSampleRow({ received_by_name: null }),
                 ],
                 total_count: 1,
             },
@@ -248,6 +255,7 @@ describe('fetchSamples confidentiality concealment', () => {
                         id: CONFIDENTIAL_SAMPLE_ID,
                         sample_id: 'S-HIV-001',
                         client_name: 'Bệnh nhân HIV',
+                        received_by_name: 'Tên RPC cũ',
                     }),
                 ],
                 total_count: 1,
