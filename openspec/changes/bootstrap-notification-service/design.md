@@ -49,7 +49,7 @@ The MVP uses one compiled Go process that runs:
 - A periodic outbox-ingestion goroutine.
 - A delivery-worker goroutine.
 
-One process avoids cross-container SQLite locking and reduces home-server operational overhead. A root cancellation context owns the HTTP server and worker goroutines. A critical worker exit either fails the process so Docker can restart it or makes readiness fail immediately; graceful shutdown stops new claims, drains or safely releases leased work, and closes HTTP and database resources within a timeout.
+One process avoids cross-container SQLite locking and reduces home-server operational overhead. A root cancellation context owns the HTTP server and worker goroutines. An unexpected exit from an enabled critical worker, or failure to advance its heartbeat/progress within the configured `worker_stall_timeout`, cancels the root context and terminates the process nonzero so Docker restarts it. Disabled workers are excluded from this rule. Startup fails unless the timeout exceeds the worker's maximum operation deadline plus poll interval.
 
 Internal Go packages still separate configuration, API, SQLite, ingestion, jobs, delivery, and operations so they can become separate processes later. S0 selects the Go version, HTTP stack, SQLite driver, migration tool, and CGO policy after consulting current primary documentation. S3 uses the official `firebase.google.com/go/v4` Admin SDK. Library choices MUST preserve the specified language-neutral wire contracts.
 
@@ -131,7 +131,7 @@ Required uniqueness:
 
 Rebind or reactivation increments `owner_version`. Delivery rows snapshot `app_id`, `owner_user_id`, and `owner_version` so later installation mutation cannot rewrite delivery history.
 
-Job states distinguish `queued`, `fanout_processing`, `deliveries_pending`, `completed_no_targets`, and `completed`. Fan-out occurs in one SQLite transaction. A job becomes `completed` only when all of its delivery rows are terminal; accepted, failed, and expired counts remain separately observable.
+Job states distinguish `queued`, `suppressed_pre_rollout`, `fanout_processing`, `deliveries_pending`, `completed_no_targets`, and `completed`. Fan-out occurs in one SQLite transaction. A job becomes `completed` only when all of its delivery rows are terminal; accepted, failed, expired, and stale-installation-skip counts remain separately observable.
 
 ### Decision 4: Use a two-stage durable handoff
 
@@ -139,13 +139,15 @@ The ingestion loop:
 
 1. Claims a bounded batch through the LIMS outbox function.
 2. Receives a fresh claim token and lease expiry, then validates the event version and required fields.
-3. Inserts or finds the SQLite job by `source_event_id`.
+3. Inserts the SQLite job or finds it by `source_event_id` and compares every immutable field: event type, `app_id`, recipient user, sample ID, sample code, and occurrence time.
 4. Commits the SQLite transaction.
 5. Acknowledges the LIMS event using the current claim token.
 
-If the process crashes after step 4 and before step 5, the event is claimed again, the unique job is reused, and the event is acknowledged without creating a duplicate.
+If the process crashes after step 4 and before step 5, the event is claimed again. An identical immutable payload reuses the unique job and is acknowledged without creating a duplicate. A mismatched payload for the same `source_event_id` is an integrity conflict: the service records a terminal ingestion conflict, reports it through the current LIMS failure claim, alerts operations, and does not acknowledge or deliver it.
 
 Retryable ingestion failures release the event with bounded backoff. Unsupported or malformed events are reported with the current claim token into the LIMS terminal quarantine state and are not silently acknowledged, delivered, or reclaimed forever. Expired claims receive a new token; operations using an older token are rejected as stale.
+
+Production activation also supplies a UTC `delivery_cutoff_at`. Events older than the cutoff are ingested into terminal `suppressed_pre_rollout` jobs and acknowledged without fan-out or FCM submission. R0 drains this historical backlog before registration or normal delivery is enabled.
 
 ### Decision 5: Authenticate every non-health API request as service-to-service
 
@@ -163,13 +165,15 @@ The API MUST:
 
 An FID identifies an app installation, not a permanent user identity. Upserting the same `(app_id, fid)` for a new authenticated user transfers ownership, increments `owner_version`, and returns an opaque installation handle plus the new version. Reactivating a disabled installation also increments the version; refreshing the same active owner does not.
 
-Logout, explicit opt-out, permanent-invalid FCM responses, and stale-installation maintenance use compare-and-disable with expected `app_id`, owner, and `owner_version`. A delayed request or response for an older generation is an idempotent no-op. Installation mutation never rewrites the owner snapshot stored on historical deliveries.
+Logout, explicit opt-out, permanent-invalid FCM responses, and stale-installation maintenance target the opaque installation handle and use compare-and-disable with expected `app_id`, owner, and `owner_version`. A delayed request or response for an older generation is an idempotent no-op. Installation mutation never rewrites the owner snapshot stored on historical deliveries.
 
 ### Decision 7: Fan out to all enabled installations for the snapshotted recipient
 
 For each job, the service creates one delivery per enabled installation matching both the event's `app_id` and `recipient_user_id`. No doctor, manager, unrelated analyst, or different application namespace lookup occurs.
 
 Each distinct source event is sendable, so a reopened and recompleted sample creates another job. Reprocessing the same source event does not.
+
+Immediately before FCM submission, the worker re-reads the installation by opaque handle and verifies that it remains enabled and that `app_id`, owner user, and `owner_version` still equal the delivery snapshot. A mismatch makes the delivery terminal `skipped_stale_installation` without calling FCM. This closes the queue-time rebind window; permanent-invalid responses use the same handle and generation fence.
 
 ### Decision 8: Keep FCM status truthful
 
@@ -181,11 +185,14 @@ processing
 accepted_by_fcm
 failed
 expired
+skipped_stale_installation
 ```
 
 Delivery claims use a lease token and expiry so crashed `processing` work becomes recoverable and stale workers cannot commit over a newer attempt. An FCM message ID sets `accepted_by_fcm`; it does not set `delivered`. Transient errors are retried with bounded exponential backoff and jitter. Permanent invalid-installation errors compare-and-disable only the snapshotted ownership generation. Payload errors fail the delivery and alert operations rather than deleting a valid FID.
 
 FCM submission is at-least-once. If FCM accepts a message and the process crashes before SQLite records that response, the recovered delivery may be submitted again. Unique rows and fencing prevent duplicate internal state, but cannot promise exactly-once browser display.
+
+Graceful shutdown stops new delivery claims first. An attempt not yet submitted to FCM is released safely. Once the provider request has been dispatched, the worker waits up to the configured provider deadline for a definitive response and persists that response before releasing the lease. If shutdown reaches its timeout without a definitive provider outcome, the service never marks the delivery complete; it leaves the processing lease to expire and records or logs an `outcome_unknown` attempt for idempotent recovery. A later retry may duplicate provider submission under the documented at-least-once contract.
 
 ### Decision 9: Fix the visible payload and omit navigation data
 
@@ -209,6 +216,8 @@ The Compose stack:
 - Runs as non-root with dropped capabilities and `no-new-privileges`.
 - Uses a read-only root filesystem where practical and a writable SQLite volume only.
 - Defines health checks, restart policy, resource limits, log rotation, and graceful shutdown.
+
+SQLite backups use the online backup mechanism, are encrypted with a separately managed key, and are written to an access-restricted destination outside both the service volume and the home-server failure domain. Retention and rotation are bounded. Backup creation, integrity verification, restore verification, and maximum-age failures all alert operations.
 
 ### Decision 11: Follow the shared PR-sized roadmap
 
@@ -250,10 +259,10 @@ After all implementation PRs merge, joint operational gate R0 creates runtime cr
 4. Complete S3 with a Firebase test project and test-only FID/service-worker harness before production credentials are mounted.
 5. Complete S4: production-ready Compose, secret mounts, resource controls, backup/restore, worker-aware health, and backlog monitoring without enabling production traffic.
 6. Complete L4 so both repositories declare the shared network, configuration, and verification commands.
-7. Execute R0 to create the external network and dedicated PostgreSQL LOGIN, then deploy the service with ingestion, installation API, and delivery disabled.
-8. Verify private connectivity, SQLite migrations, worker health, and restore evidence.
-9. Enable ingestion and installation API, then register controlled analyst browsers while LIMS is `registration_only`.
-10. Execute the joint end-to-end gate before enabling `banner_enabled`.
+7. Execute R0 to record `delivery_cutoff_at`, create the external network and dedicated PostgreSQL LOGIN, then deploy the service with ingestion, installation API, and delivery disabled.
+8. Verify private connectivity, SQLite migrations, worker health, encrypted off-host backup, and restore evidence.
+9. Enable pre-rollout drain mode and verify every pre-cutoff event becomes terminal `suppressed_pre_rollout` without FCM submission.
+10. Enable normal delivery and the installation API, register allowlisted analyst browsers while LIMS is `registration_only`, and execute the joint end-to-end gate before enabling `banner_enabled`.
 
 Rollback strategy:
 

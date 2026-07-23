@@ -109,7 +109,7 @@ Supported operations:
 
 - Upsert or refresh the current FID after permission is granted.
 - Rebind the same FID when another user authenticates in the same browser and return a new opaque installation handle plus ownership generation.
-- Disable the current installation before logout using the expected user and ownership generation; a stale request is an idempotent no-op.
+- Disable the current installation before logout using its opaque installation handle plus the expected user and ownership generation; a stale request is an idempotent no-op.
 - Reconcile permission revocation or FID changes during later authenticated sessions.
 
 LIMS derives `app_id` from server configuration and never accepts it or `user_id` from the browser. The LIMS backend never stores the Firebase service-account credential. Full FIDs MUST NOT appear in application logs or audit payloads.
@@ -118,6 +118,9 @@ LIMS derives `app_id` from server configuration and never accepts it or `user_id
 
 When browser permission is undecided, LIMS presents a one-time post-login banner. The browser permission prompt opens only after the user presses `Bật thông báo`.
 
+- `off` rejects all registration/rebind requests and exposes no browser control.
+- `registration_only` permits registration only for authenticated user IDs in a validated server-side rollout allowlist. The backend enforces the allowlist even when callers bypass the UI.
+- `banner_enabled` permits active analysts to register and enables the one-time banner.
 - Granting permission registers the current FID.
 - Denial or dismissal does not repeatedly prompt.
 - The profile page always exposes current-browser notification state and controls.
@@ -133,7 +136,7 @@ Title: Mẫu đã hoàn thành
 Body: Mẫu {sample_code} đã được phê duyệt
 ```
 
-FCM uses a data-only message carrying only the versioned presentation type plus the fixed title and body. This prevents provider auto-display from racing the LIMS presentation path. One shared LIMS presentation function handles foreground and background messages, while the service worker owns background display and click behavior.
+FCM uses a data-only message carrying only the versioned presentation type plus the fixed title and body. This prevents provider auto-display from racing the LIMS presentation path. A shared formatter validates the envelope and builds notification options but never displays them. When a controlled page is active, only the foreground page handler presents the message. When no controlled page handles it, only the service worker calls `showNotification`; the service worker also owns click behavior. One received message therefore has one presentation owner.
 
 The payload contains no customer name, patient identifier, result value, assay name, confidential flag, sample UUID, `app_id`, sample-detail URL, or deep link. Clicking the notification only focuses an existing LIMS window or opens the application root.
 
@@ -154,7 +157,7 @@ Each phase below is one PR and must be independently testable and deploy-safe.
 | 9 | S4 | `notification-service` | Production secrets, backup, logs, resource limits, runbook | Service stack is production-ready |
 | 10 | L4 | `lims-lite` | Shared private network for app/outbox access, environment wiring, deployment runbook | LIMS and the service can communicate privately |
 
-After all PRs are merged, operational gate R0 applies any pending migrations, creates or verifies the external private network and dedicated runtime credentials, deploys the service dark, and verifies health. It then moves the LIMS rollout mode from `off` to `registration_only`, executes controlled cross-service tests, and only then moves to `banner_enabled`.
+After all PRs are merged, operational gate R0 applies any pending migrations, records a UTC `delivery_cutoff_at`, creates or verifies the external private network and dedicated runtime credentials, deploys the service dark, and verifies health. Ingestion first runs in pre-rollout drain mode: events older than the cutoff become terminal `suppressed_pre_rollout` jobs and are acknowledged without FCM submission. Only after the pre-cutoff backlog is drained may delivery and `registration_only` be enabled for controlled cross-service tests; `banner_enabled` remains the final step.
 
 ## Risks / Trade-offs
 
@@ -175,10 +178,10 @@ After all PRs are merged, operational gate R0 applies any pending migrations, cr
 4. Implement S0-S3 without enabling the browser integration.
 5. Merge L2 and L3 with the production rollout mode set to `off`.
 6. Complete S4 and L4 so both repositories are production-ready but inactive.
-7. Execute R0 to create or verify the external network, runtime LOGIN credential, secret mounts, and dark deployment.
-8. Enable ingestion and inspect idempotent jobs for any accumulated events.
-9. Set `registration_only` for a controlled analyst account and run an end-to-end `review -> completed` test, including a reopen and second completion.
-10. Set `banner_enabled` after the controlled evidence and observation gates pass.
+7. Execute R0 to record `delivery_cutoff_at`, create or verify the external network, runtime LOGIN credential, secret mounts, and dark deployment.
+8. Enable pre-rollout drain mode; ingest and terminally suppress all events older than the cutoff without calling FCM, then verify that no pre-cutoff event remains deliverable.
+9. Enable normal delivery for events at or after the cutoff, set `registration_only` with its server-side user allowlist, and run an end-to-end `review -> completed` test including a reopen and second completion.
+10. Set `banner_enabled` only after the controlled evidence and observation gates pass.
 
 Rollback strategy:
 

@@ -14,6 +14,17 @@ The Notification Service SHALL convert each supported LIMS outbox event into one
 - **THEN** later ingestion reuses the existing job
 - **AND** creates no duplicate job
 
+#### Scenario: Identical event is claimed again
+- **WHEN** an existing `event_id` is claimed with the same immutable event type, `app_id`, recipient, sample ID, sample code, and occurrence time
+- **THEN** the service reuses the existing job
+- **AND** may acknowledge the retry after confirming equality
+
+#### Scenario: Existing event ID has conflicting payload
+- **WHEN** an existing `event_id` is claimed with any different immutable field
+- **THEN** the service records and alerts a terminal ingestion integrity conflict
+- **AND** reports failure using the current LIMS claim token
+- **AND** does not acknowledge or deliver the conflicting event
+
 #### Scenario: Unsupported event version is claimed
 - **WHEN** the service claims an event version it does not support
 - **THEN** it reports a non-retryable ingestion failure using the current claim token
@@ -24,6 +35,11 @@ The Notification Service SHALL convert each supported LIMS outbox event into one
 - **WHEN** a worker acknowledges, releases, or fails an event using an expired claim token
 - **THEN** LIMS rejects the stale operation
 - **AND** the service does not overwrite the newer claim state
+
+#### Scenario: Historical event predates production delivery
+- **WHEN** an event's `occurred_at` is earlier than the configured production `delivery_cutoff_at`
+- **THEN** the service creates or reuses a terminal `suppressed_pre_rollout` job
+- **AND** acknowledges the source event without fan-out or FCM submission
 
 ### Requirement: Completion jobs target one application and analyst
 The Notification Service SHALL fan out a completion job only to enabled installations matching the event's `app_id` and snapshotted `recipient_user_id`.
@@ -45,6 +61,12 @@ The Notification Service SHALL fan out a completion job only to enabled installa
 #### Scenario: Another application has an installation for the same user
 - **WHEN** the same user ID has an enabled installation under a different `app_id`
 - **THEN** the service creates no delivery for that installation
+
+#### Scenario: Installation changes after fan-out
+- **WHEN** an installation is disabled, rebound, or reactivated after a delivery is created but before FCM submission
+- **THEN** the worker re-checks the installation by opaque handle immediately before sending
+- **AND** verifies `enabled`, `app_id`, owner user, and `owner_version` against the delivery snapshot
+- **AND** records terminal `skipped_stale_installation` without calling FCM when any value differs
 
 ### Requirement: Distinct completion events are delivered independently
 The Notification Service SHALL deliver every distinct completion event while deduplicating retries of the same event.
@@ -70,9 +92,9 @@ The Notification Service SHALL record a durable terminal job outcome after fan-o
 - **AND** records a target count of zero and completion time
 
 #### Scenario: All deliveries reach terminal states
-- **WHEN** every delivery for a job is `accepted_by_fcm`, `failed`, or `expired`
+- **WHEN** every delivery for a job is `accepted_by_fcm`, `failed`, `expired`, or `skipped_stale_installation`
 - **THEN** the job becomes `completed`
-- **AND** preserves separate accepted, failed, and expired counts for operations
+- **AND** preserves separate accepted, failed, expired, and stale-installation-skip counts for operations
 
 #### Scenario: Process restarts during fan-out
 - **WHEN** the service stops during job fan-out
@@ -112,6 +134,13 @@ The Notification Service SHALL use leases and fencing to prevent duplicate inter
 - **THEN** the expired delivery lease is recoverable
 - **AND** a later attempt may submit the message again
 - **AND** operations can distinguish attempts without creating a duplicate delivery row
+
+#### Scenario: Shutdown interrupts an in-flight provider request
+- **WHEN** shutdown reaches its timeout after an FCM request was dispatched but before a definitive response was persisted
+- **THEN** the service does not mark the delivery accepted, failed, expired, or completed
+- **AND** leaves the processing lease to expire for fenced recovery
+- **AND** records or logs the attempt as `outcome_unknown`
+- **AND** a later retry follows the documented at-least-once semantics
 
 ### Requirement: Retry policy distinguishes transient and permanent failures
 The Notification Service SHALL retry transient failures with bounded backoff and SHALL stop retrying permanent failures.

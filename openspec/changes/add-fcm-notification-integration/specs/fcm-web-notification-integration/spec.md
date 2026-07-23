@@ -9,8 +9,13 @@ The system SHALL request browser notification permission only after an authentic
 
 #### Scenario: Controlled registration is enabled
 - **WHEN** the rollout mode is `registration_only`
-- **THEN** an analyst selected for the controlled rollout can enable the current browser from profile controls
+- **THEN** an authenticated analyst whose user ID is in the server-side rollout allowlist can enable the current browser from profile controls
 - **AND** the system does not show the one-time opt-in banner
+
+#### Scenario: Analyst bypasses the controlled-rollout UI
+- **WHEN** the rollout mode is `registration_only` and an authenticated analyst outside the server-side allowlist calls the registration boundary directly
+- **THEN** LIMS rejects the request before calling the Notification Service
+- **AND** creates or changes no installation
 
 #### Scenario: Undecided permission shows one-time banner
 - **WHEN** the rollout mode is `banner_enabled` and an analyst signs in on a supported browser whose notification permission is undecided
@@ -47,7 +52,7 @@ The system SHALL proxy FID lifecycle operations through a same-origin authentica
 
 #### Scenario: Analyst logs out
 - **WHEN** an analyst logs out from a registered browser
-- **THEN** LIMS attempts to disable that browser installation with the expected user and ownership generation before destroying the session
+- **THEN** LIMS attempts to disable that browser installation using its opaque handle plus the expected user and ownership generation before destroying the session
 - **AND** a stale disable after rebind is treated as an idempotent no-op
 - **AND** logout still completes if the Notification Service is temporarily unavailable
 
@@ -60,10 +65,15 @@ The system SHALL proxy FID lifecycle operations through a same-origin authentica
 The system SHALL display the fixed completion message from a data-only FCM message and SHALL not send navigation or clinical context through FCM.
 
 #### Scenario: Background completion notification is displayed
-- **WHEN** FCM delivers a sample completion notification to an enabled analyst browser
-- **THEN** the LIMS foreground handler or service worker presents exactly one notification for that received message
+- **WHEN** FCM delivers a data-only completion message without a controlled LIMS page handling it
+- **THEN** only the service worker presents one notification for that received message
 - **AND** the notification title is `Mẫu đã hoàn thành`
 - **AND** the body is `Mẫu {sample_code} đã được phê duyệt`
+
+#### Scenario: Foreground completion notification is displayed
+- **WHEN** FCM delivers a data-only completion message to a controlled active LIMS page
+- **THEN** only the foreground page handler presents one notification for that received message
+- **AND** the service worker does not present the same received message
 
 #### Scenario: Notification contains no sensitive context
 - **WHEN** LIMS or its service worker constructs or handles the notification
@@ -83,7 +93,7 @@ The system SHALL allow an analyst to enable notifications on multiple browsers a
 
 #### Scenario: Analyst disables the current browser
 - **WHEN** the analyst disables notifications from the profile on one browser
-- **THEN** LIMS disables that installation
+- **THEN** LIMS disables that installation using its opaque handle and expected ownership generation
 - **AND** leaves the analyst's other enabled installations unchanged
 
 ### Requirement: Push availability never controls approval success

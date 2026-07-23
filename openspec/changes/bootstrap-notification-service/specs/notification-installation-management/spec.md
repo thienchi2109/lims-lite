@@ -39,17 +39,22 @@ The Notification Service SHALL treat `(app_id, fid)` as one browser installation
 The Notification Service SHALL compare-and-disable installations on logout, explicit current-browser opt-out, permission revocation, permanent FCM invalidation, or stale-installation maintenance without deleting history.
 
 #### Scenario: LIMS disables current browser on logout
-- **WHEN** LIMS sends a valid disable request with the expected `app_id`, owner, and `owner_version`
+- **WHEN** LIMS sends a valid disable request with the opaque installation handle and expected `app_id`, owner, and `owner_version`
 - **THEN** the service marks it disabled
 - **AND** excludes it from future fan-out
 
 #### Scenario: Delayed logout targets an older owner
-- **WHEN** a disable request arrives after the installation has been rebound or reactivated to a newer ownership generation
+- **WHEN** a handle-targeted disable request arrives after that installation has been rebound or reactivated to a newer ownership generation
 - **THEN** the service performs an idempotent no-op
 - **AND** leaves the newer installation enabled
 
+#### Scenario: Disable request targets another installation
+- **WHEN** the supplied opaque handle does not identify the installation matching the expected application, owner, and generation
+- **THEN** the service performs no mutation
+- **AND** does not disable another browser with the same owner version
+
 #### Scenario: FCM reports permanent invalidation
-- **WHEN** FCM reports that an installation delivery for the current ownership generation is no longer registered
+- **WHEN** FCM reports that a delivery's opaque installation handle and ownership generation are no longer registered
 - **THEN** the service disables that installation with an operational reason
 - **AND** preserves its historical delivery records
 
