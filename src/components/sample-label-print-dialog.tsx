@@ -29,6 +29,11 @@ const PRESETS: Array<{
         description: 'Khổ trang 71.1 x 89mm, in 1 hàng gồm 2 tem 35.5 x 22.9mm ở mép trên.',
     },
     {
+        value: 'thermal-35x23-hprt-one-row-2up',
+        label: 'HPRT HT300/HT330 - 2 tem / 1 hàng',
+        description: 'Khổ 71.1 x 22.9mm. Chỉ dùng với profile driver cùng kích thước; không chọn profile 4x4.',
+    },
+    {
         value: 'thermal-35x22-2up',
         label: '35 x 22mm - 2 tem ngang cũ',
         description: 'Preset cũ cho cấu hình in 72 x 22mm, gap 2mm.',

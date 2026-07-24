@@ -63,7 +63,9 @@ describe('printSampleBarcodeLabel', () => {
             copies: 1,
             preset: 'small-tube',
         })
-        expect(mockGenerateSampleLabelHtml).toHaveBeenCalledWith(sample, { preset: 'small-tube' })
+        expect(mockGenerateSampleLabelHtml).toHaveBeenCalledWith(sample, {
+            preset: 'small-tube',
+        })
         expect(mockOpenPendingDetachedHtmlDocument.mock.invocationCallOrder[0]).toBeLessThan(
             mockFetchSampleDetail.mock.invocationCallOrder[0],
         )
@@ -81,6 +83,21 @@ describe('printSampleBarcodeLabel', () => {
         onFailed()
         expect(mockToastError).toHaveBeenCalledWith('Trình duyệt đã chặn cửa sổ in')
         expect(mockToastError).toHaveBeenCalledWith('Không thể mở tài liệu in')
+    })
+
+    it('maps the HPRT render preset to the existing audited preset', async () => {
+        await printSampleBarcodeLabel('sample-uuid', {
+            preset: 'thermal-35x23-hprt-one-row-2up',
+        })
+
+        expect(mockRecordSampleLabelPrintClient).toHaveBeenCalledWith({
+            sampleId: 'sample-uuid',
+            copies: 1,
+            preset: 'thermal-35x23-sheet-2up',
+        })
+        expect(mockGenerateSampleLabelHtml).toHaveBeenCalledWith(sample, {
+            preset: 'thermal-35x23-hprt-one-row-2up',
+        })
     })
 
     it('closes the detached shell when audit recording fails', async () => {

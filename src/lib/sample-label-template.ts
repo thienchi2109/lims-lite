@@ -3,11 +3,17 @@ import type { SampleWithUser } from '@/types'
 
 export type SampleLabelPreset =
     | 'thermal-35x23-sheet-2up'
+    | 'thermal-35x23-hprt-one-row-2up'
     | 'thermal-35x22-2up'
     | 'small-tube'
     | 'container'
 
-export const DEFAULT_SAMPLE_LABEL_PRESET: SampleLabelPreset = 'thermal-35x23-sheet-2up'
+export type SampleLabelAuditPreset = Exclude<
+    SampleLabelPreset,
+    'thermal-35x23-hprt-one-row-2up'
+>
+
+export const DEFAULT_SAMPLE_LABEL_PRESET: SampleLabelAuditPreset = 'thermal-35x23-sheet-2up'
 
 interface SampleLabelOptions {
     preset?: SampleLabelPreset
@@ -41,6 +47,15 @@ const LABEL_PRESETS: Record<SampleLabelPreset, {
     'thermal-35x23-sheet-2up': {
         pageWidth: '71.1mm',
         pageHeight: '89mm',
+        labelWidth: '35.5mm',
+        labelHeight: '22.9mm',
+        barcodeHeight: 9,
+        columns: 2,
+        columnGap: '0mm',
+    },
+    'thermal-35x23-hprt-one-row-2up': {
+        pageWidth: '71.1mm',
+        pageHeight: '22.9mm',
         labelWidth: '35.5mm',
         labelHeight: '22.9mm',
         barcodeHeight: 9,
@@ -115,6 +130,12 @@ function getLabelPadding(presetName: SampleLabelPreset) {
 function isTwoColumnThermalPreset(presetName: SampleLabelPreset) {
     return presetName === 'thermal-35x22-2up'
         || presetName === 'thermal-35x23-sheet-2up'
+        || presetName === 'thermal-35x23-hprt-one-row-2up'
+}
+
+function usesCompactVerticalLayout(presetName: SampleLabelPreset) {
+    return presetName === 'thermal-35x23-sheet-2up'
+        || presetName === 'thermal-35x23-hprt-one-row-2up'
 }
 
 export function renderSampleBarcodeSvg(sampleId: string, height: number) {
@@ -148,7 +169,7 @@ export function generateSampleLabelHtml(
     const metaItems = [clientName, birthYear].filter(Boolean)
     const isCompactMeta = isTwoColumnThermalPreset(presetName) && metaItems.join(' ').length > 24
     const metaClass = isCompactMeta ? 'meta compact' : 'meta'
-    const compactVerticalAttribute = presetName === 'thermal-35x23-sheet-2up'
+    const compactVerticalAttribute = usesCompactVerticalLayout(presetName)
         ? ' data-compact-vertical="true"'
         : ''
     const barcodeSvg = renderSampleBarcodeSvg(sampleId, preset.barcodeHeight)
@@ -194,6 +215,7 @@ export function generateSampleLabelHtml(
             display: grid;
             grid-template-columns: ${sheetColumns};
             column-gap: ${preset.columnGap};
+            justify-content: start;
         }
 
         .sample-label {
