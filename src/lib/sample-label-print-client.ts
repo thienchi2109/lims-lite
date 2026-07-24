@@ -7,6 +7,7 @@ import {
     generateSampleLabelHtml,
     type SampleLabelPreset,
 } from '@/lib/sample-label-template'
+import { openPendingDetachedHtmlDocument } from '@/lib/detached-html-document'
 import { toast } from 'sonner'
 
 interface PrintSampleBarcodeLabelOptions {
@@ -18,6 +19,10 @@ export async function printSampleBarcodeLabel(
     options: PrintSampleBarcodeLabelOptions = {},
 ) {
     const preset = options.preset ?? DEFAULT_SAMPLE_LABEL_PRESET
+    const printDocument = openPendingDetachedHtmlDocument({
+        onBlocked: () => toast.error('Trình duyệt đã chặn cửa sổ in'),
+        onFailed: () => toast.error('Không thể mở tài liệu in'),
+    })
 
     try {
         const sample = await fetchSampleDetail(sampleId)
@@ -28,22 +33,15 @@ export async function printSampleBarcodeLabel(
         })
 
         if (auditResult?.error) {
+            printDocument.close()
             toast.error(String(auditResult.error))
             return
         }
 
-        const printWindow = window.open('', '_blank')
-        if (!printWindow) {
-            toast.error('Trình duyệt đã chặn cửa sổ in')
-            return
-        }
-
         const html = generateSampleLabelHtml(sample, { preset })
-        printWindow.document.open()
-        printWindow.document.write(html)
-        printWindow.document.close()
-        printWindow.onload = () => printWindow.print()
+        printDocument.render(html, { autoPrint: true })
     } catch (error) {
+        printDocument.close()
         const message = error instanceof Error ? error.message : 'Có lỗi xảy ra khi in nhãn barcode'
         toast.error(message)
         console.error(error)

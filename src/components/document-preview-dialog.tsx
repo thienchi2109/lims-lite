@@ -12,7 +12,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { openDetachedHtmlDocument } from '@/lib/detached-html-document'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 const PREVIEW_DOCUMENT_WIDTH = 920
 const PREVIEW_DOCUMENT_HEIGHT = 1260
@@ -50,7 +52,6 @@ export function DocumentPreviewDialog({
   toolbarAction,
   actionError,
 }: DocumentPreviewDialogProps) {
-  const iframeRef = React.useRef<HTMLIFrameElement | null>(null)
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
   const [viewportSize, setViewportSize] = React.useState(() => ({
     height: typeof window === 'undefined' ? PREVIEW_DOCUMENT_HEIGHT : window.innerHeight,
@@ -111,29 +112,20 @@ export function DocumentPreviewDialog({
   }, [open])
 
   const handlePrint = () => {
-    const frameWindow = iframeRef.current?.contentWindow
-    if (!frameWindow) {
-      return
-    }
-
-    frameWindow.focus()
-    frameWindow.print()
+    if (!html) return
+    openDetachedHtmlDocument(html, {
+      autoPrint: true,
+      onBlocked: () => toast.error('Trình duyệt đã chặn cửa sổ in'),
+      onFailed: () => toast.error('Không thể mở tài liệu in'),
+    })
   }
 
   const handleOpenInNewTab = () => {
-    if (!html) {
-      return
-    }
-
-    const documentWindow = window.open('', '_blank')
-    if (!documentWindow) {
-      return
-    }
-
-    documentWindow.opener = null
-    documentWindow.document.open()
-    documentWindow.document.write(html)
-    documentWindow.document.close()
+    if (!html) return
+    openDetachedHtmlDocument(html, {
+      onBlocked: () => toast.error('Trình duyệt đã chặn tab xem trước'),
+      onFailed: () => toast.error('Không thể mở tab xem trước'),
+    })
   }
 
   const hasReadyDocument = Boolean(html && !loading && !error)
@@ -287,10 +279,9 @@ export function DocumentPreviewDialog({
                   style={{ height: `${frameHeight}px`, width: `${frameWidth}px` }}
                 >
                   <iframe
-                    ref={iframeRef}
                     title={title}
                     srcDoc={html}
-                    sandbox="allow-same-origin allow-modals"
+                    sandbox="allow-same-origin"
                     className="block border-0 bg-white"
                     style={{
                       height: `${PREVIEW_DOCUMENT_HEIGHT}px`,

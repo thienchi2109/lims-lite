@@ -13,6 +13,7 @@ import { fetchSampleDetail } from '@/hooks/use-sample-detail'
 import { generatePrintTemplate } from '@/lib/print-template'
 import { DEFAULT_SAMPLE_LABEL_PRESET } from '@/lib/sample-label-template'
 import { printSampleBarcodeLabel } from '@/lib/sample-label-print-client'
+import { openPendingDetachedHtmlDocument } from '@/lib/detached-html-document'
 import { toast } from 'sonner'
 import type { ResultWithAssay } from '@/types'
 
@@ -81,15 +82,10 @@ export function usePrintHandlers(
     }, [])
 
     const handlePrintCoABody = useCallback(async () => {
-        const printWindow = window.open('', '_blank')
-        if (!printWindow) {
-            toast.error('Trình duyệt đã chặn cửa sổ in')
-            return
-        }
-
-        printWindow.document.write(
-            '<html><head><title>Đang tải...</title></head><body><p style="font-family:sans-serif;text-align:center;margin-top:40px;">Đang tải...</p></body></html>'
-        )
+        const printDocument = openPendingDetachedHtmlDocument({
+            onBlocked: () => toast.error('Trình duyệt đã chặn cửa sổ in'),
+            onFailed: () => toast.error('Không thể mở tài liệu in'),
+        })
 
         try {
             const response = await fetch(`/api/coa/view?sample_id=${sampleId}`, { cache: 'no-store' })
@@ -112,12 +108,9 @@ export function usePrintHandlers(
                 html = bodyOnlyStyles + html
             }
 
-            printWindow.document.open()
-            printWindow.document.write(html)
-            printWindow.document.close()
-            printWindow.onload = () => printWindow.print()
+            printDocument.render(html, { autoPrint: true })
         } catch (err) {
-            printWindow.close()
+            printDocument.close()
             const message = err instanceof Error ? err.message : 'Không thể tải phiếu kết quả'
             toast.error(message)
             console.error(err)

@@ -11,6 +11,8 @@ import { useState, useSyncExternalStore } from 'react'
 import { FileText, Download, Printer, Copy, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { openDetachedHtmlDocument } from '@/lib/detached-html-document'
+import { toast } from 'sonner'
 
 interface PortalQRCodeProps {
     size?: number
@@ -72,9 +74,7 @@ export function PortalQRCode({
     const handlePrint = () => {
         if (!qrCodeUrl) return
 
-        const printWindow = window.open('', '_blank')
-        if (printWindow) {
-            printWindow.document.write(`
+        openDetachedHtmlDocument(`
                 <!DOCTYPE html>
                 <html>
                 <head>
@@ -178,18 +178,13 @@ export function PortalQRCode({
                             Hệ thống CDC-LIMS - Tuân thủ tiêu chuẩn 21 CFR Part 11
                         </div>
                     </div>
-                    <script>
-                        window.onload = function() {
-                            setTimeout(function() {
-                                window.print();
-                            }, 500);
-                        }
-                    </script>
                 </body>
                 </html>
-            `)
-            printWindow.document.close()
-        }
+            `, {
+                autoPrint: true,
+                onBlocked: () => toast.error('Trình duyệt đã chặn cửa sổ in'),
+                onFailed: () => toast.error('Không thể mở tài liệu in'),
+            })
     }
 
     if (variant === 'inline') {

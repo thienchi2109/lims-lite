@@ -21,6 +21,16 @@ vi.mock('@/lib/sample-label-print-client', () => ({
     printSampleBarcodeLabel: vi.fn(),
 }))
 
+const mockPendingPrintDocument = vi.hoisted(() => ({
+    render: vi.fn(),
+    close: vi.fn(),
+}))
+const mockOpenPendingDetachedHtmlDocument = vi.hoisted(() => vi.fn())
+
+vi.mock('@/lib/detached-html-document', () => ({
+    openPendingDetachedHtmlDocument: mockOpenPendingDetachedHtmlDocument,
+}))
+
 vi.mock('sonner', () => ({
     toast: { error: vi.fn() },
 }))
@@ -36,21 +46,10 @@ const mockPrintSampleBarcodeLabel = vi.mocked(printSampleBarcodeLabel)
 
 describe('usePrintHandlers', () => {
     const results = [{ id: 'r1', assay_name: 'Glucose', value: '5.0' }] as any[]
-    let mockPrintWindow: any
 
     beforeEach(() => {
         vi.clearAllMocks()
-        mockPrintWindow = {
-            document: { write: vi.fn(), close: vi.fn(), open: vi.fn() },
-            print: vi.fn(),
-            close: vi.fn(),
-            onload: null as (() => void) | null,
-        }
-        // Simulate onload firing synchronously for tests
-        Object.defineProperty(mockPrintWindow, 'onload', {
-            set(fn: () => void) { fn?.() },
-            get() { return null },
-        })
+        mockOpenPendingDetachedHtmlDocument.mockReturnValue(mockPendingPrintDocument)
     })
 
     afterEach(() => {
@@ -142,7 +141,6 @@ describe('usePrintHandlers', () => {
 
     describe('handlePrintCoABody', () => {
         it('fetches CoA HTML and prints with body-only styles', async () => {
-            vi.spyOn(window, 'open').mockReturnValue(mockPrintWindow)
             vi.spyOn(global, 'fetch').mockResolvedValue({
                 ok: true,
                 text: () => Promise.resolve('<html><head></head><body>CoA</body></html>'),
@@ -152,23 +150,44 @@ describe('usePrintHandlers', () => {
 
             await act(async () => { await result.current.handlePrintCoABody() })
 
+            expect(mockOpenPendingDetachedHtmlDocument).toHaveBeenCalledWith({
+                onBlocked: expect.any(Function),
+                onFailed: expect.any(Function),
+            })
+            expect(mockOpenPendingDetachedHtmlDocument.mock.invocationCallOrder[0]).toBeLessThan(
+                vi.mocked(global.fetch).mock.invocationCallOrder[0],
+            )
             expect(global.fetch).toHaveBeenCalledWith(
                 '/api/coa/view?sample_id=sample-1',
                 { cache: 'no-store' },
             )
-            // Verify body-only styles were injected
-            const writtenHtml = mockPrintWindow.document.write.mock.calls[1]?.[0] ?? ''
-            expect(writtenHtml).toContain('.header { visibility: hidden')
+            expect(mockPendingPrintDocument.render).toHaveBeenCalledWith(
+                expect.stringContaining('.header { visibility: hidden'),
+                { autoPrint: true },
+            )
+
+            const onBlocked = mockOpenPendingDetachedHtmlDocument.mock.calls[0]?.[0]?.onBlocked
+            const onFailed = mockOpenPendingDetachedHtmlDocument.mock.calls[0]?.[0]?.onFailed
+            onBlocked()
+            onFailed()
+            expect(toast.error).toHaveBeenCalledWith('Trình duyệt đã chặn cửa sổ in')
+            expect(toast.error).toHaveBeenCalledWith('Không thể mở tài liệu in')
         })
 
-        it('toasts error when popup is blocked', async () => {
-            vi.spyOn(window, 'open').mockReturnValue(null)
+        it('closes the detached print shell when loading CoA HTML fails', async () => {
+            const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+            vi.spyOn(global, 'fetch').mockResolvedValue({
+                ok: false,
+            } as Response)
 
             const { result } = renderHook(() => usePrintHandlers('sample-1', results))
 
             await act(async () => { await result.current.handlePrintCoABody() })
 
-            expect(toast.error).toHaveBeenCalledWith('Trình duyệt đã chặn cửa sổ in')
+            expect(mockPendingPrintDocument.render).not.toHaveBeenCalled()
+            expect(mockPendingPrintDocument.close).toHaveBeenCalledTimes(1)
+            expect(toast.error).toHaveBeenCalledWith('Không thể tải phiếu kết quả')
+            errorSpy.mockRestore()
         })
     })
 

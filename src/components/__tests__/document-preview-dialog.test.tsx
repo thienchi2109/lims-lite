@@ -1,11 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 
+const mockOpenDetachedHtmlDocument = vi.hoisted(() => vi.fn())
+const mockToastError = vi.hoisted(() => vi.fn())
+
+vi.mock('@/lib/detached-html-document', () => ({
+  openDetachedHtmlDocument: mockOpenDetachedHtmlDocument,
+}))
+
+vi.mock('sonner', () => ({
+  toast: { error: mockToastError },
+}))
+
 import { DocumentPreviewDialog } from '../document-preview-dialog'
 
 describe('DocumentPreviewDialog', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    vi.clearAllMocks()
     Object.defineProperty(window, 'innerWidth', {
       configurable: true,
       writable: true,
@@ -38,16 +50,7 @@ describe('DocumentPreviewDialog', () => {
     expect(screen.queryByTitle('Phiếu kết quả')).toBeNull()
   })
 
-  it('renders the html document and opens the fetched document in a new tab', () => {
-    const newTab = {
-      opener: window,
-      document: {
-        open: vi.fn(),
-        write: vi.fn(),
-        close: vi.fn(),
-      },
-    }
-    const openSpy = vi.spyOn(window, 'open').mockReturnValue(newTab as unknown as Window)
+  it('renders the html document and opens detached print and preview tabs', () => {
     const onOpenChange = vi.fn()
     const html = '<html><body><h1>CoA</h1></body></html>'
 
@@ -64,29 +67,38 @@ describe('DocumentPreviewDialog', () => {
     )
 
     const iframe = screen.getByTitle('Phiếu kết quả')
-    expect(iframe.getAttribute('sandbox')).toBe('allow-same-origin allow-modals')
-    const focusSpy = vi.fn()
-    const printSpy = vi.fn()
-    Object.defineProperty(iframe, 'contentWindow', {
-      configurable: true,
-      value: {
-        focus: focusSpy,
-        print: printSpy,
-      },
-    })
-
+    expect(iframe.getAttribute('sandbox')).toBe('allow-same-origin')
     expect(iframe.getAttribute('srcdoc')).toContain('CoA')
 
     fireEvent.click(screen.getByRole('button', { name: 'In tài liệu' }))
     fireEvent.click(screen.getByRole('button', { name: 'Mở trong tab mới' }))
 
-    expect(focusSpy).toHaveBeenCalledTimes(1)
-    expect(printSpy).toHaveBeenCalledTimes(1)
-    expect(openSpy).toHaveBeenCalledWith('', '_blank')
-    expect(newTab.opener).toBeNull()
-    expect(newTab.document.open).toHaveBeenCalledTimes(1)
-    expect(newTab.document.write).toHaveBeenCalledWith(html)
-    expect(newTab.document.close).toHaveBeenCalledTimes(1)
+    expect(mockOpenDetachedHtmlDocument).toHaveBeenNthCalledWith(
+      1,
+      html,
+      {
+        autoPrint: true,
+        onBlocked: expect.any(Function),
+        onFailed: expect.any(Function),
+      },
+    )
+    expect(mockOpenDetachedHtmlDocument).toHaveBeenNthCalledWith(
+      2,
+      html,
+      {
+        onBlocked: expect.any(Function),
+        onFailed: expect.any(Function),
+      },
+    )
+
+    mockOpenDetachedHtmlDocument.mock.calls[0]?.[1]?.onBlocked()
+    mockOpenDetachedHtmlDocument.mock.calls[0]?.[1]?.onFailed()
+    mockOpenDetachedHtmlDocument.mock.calls[1]?.[1]?.onBlocked()
+    mockOpenDetachedHtmlDocument.mock.calls[1]?.[1]?.onFailed()
+    expect(mockToastError).toHaveBeenCalledWith('Trình duyệt đã chặn cửa sổ in')
+    expect(mockToastError).toHaveBeenCalledWith('Không thể mở tài liệu in')
+    expect(mockToastError).toHaveBeenCalledWith('Trình duyệt đã chặn tab xem trước')
+    expect(mockToastError).toHaveBeenCalledWith('Không thể mở tab xem trước')
 
     fireEvent.click(screen.getByRole('button', { name: 'Đóng' }))
     expect(onOpenChange).toHaveBeenCalledWith(false)
