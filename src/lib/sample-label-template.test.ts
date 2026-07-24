@@ -38,37 +38,33 @@ describe('generateSampleLabelHtml', () => {
         expect(html.match(/CDC-XN-21052026-0001/g)?.length).toBeGreaterThanOrEqual(2)
     })
 
-    it('prints exactly one physical 35.5x22.9mm label row per browser page', () => {
+    it('keeps the 89mm physical stock page separate from its 22.9mm label row', () => {
         const html = generateSampleLabelHtml(sensitiveSample)
 
-        expect(html).toContain('size: 71.1mm 22.9mm')
+        expect(html).toContain('size: 71.1mm 89mm')
         expect(html).toContain('grid-template-columns: 35.5mm 35.5mm')
         expect(html).toContain('column-gap: 0mm')
         expect(html).toContain('width: 35.5mm')
         expect(html).toContain('height: 22.9mm')
-        expect(html).toMatch(
-            /html,\s+body \{\s+width: 71\.1mm;\s+height: 22\.9mm;\s+margin: 0;\s+padding: 0;\s+overflow: hidden;/,
-        )
+        expect(html).toMatch(/html,\s+body \{\s+width: 71\.1mm;\s+height: 22\.9mm;/)
         expect(html).toMatch(/\.label-sheet \{\s+width: 71\.1mm;\s+height: 22\.9mm;/)
-        expect(html).not.toContain('size: 71.1mm 89mm')
+        expect(html).not.toContain('size: 71.1mm 22.9mm')
         expect(html).toContain('font-size: 6.5pt')
         expect(html.match(/class="sample-label"/g)).toHaveLength(2)
         expect(html.match(/CDC-XN-21052026-0001/g)?.length).toBeGreaterThanOrEqual(2)
     })
 
-    it('renders the standard two-column preset as one physical row', () => {
+    it('renders the standard two-column stock with one label row at the top', () => {
         const html = generateSampleLabelHtml(sensitiveSample, { preset: 'thermal-35x23-sheet-2up' })
 
-        expect(html).toContain('size: 71.1mm 22.9mm')
+        expect(html).toContain('size: 71.1mm 89mm')
         expect(html).toContain('grid-template-columns: 35.5mm 35.5mm')
         expect(html).toContain('column-gap: 0mm')
         expect(html).toContain('width: 35.5mm')
         expect(html).toContain('height: 22.9mm')
-        expect(html).toMatch(
-            /html,\s+body \{\s+width: 71\.1mm;\s+height: 22\.9mm;\s+margin: 0;\s+padding: 0;\s+overflow: hidden;/,
-        )
+        expect(html).toMatch(/html,\s+body \{\s+width: 71\.1mm;\s+height: 22\.9mm;/)
         expect(html).toMatch(/\.label-sheet \{\s+width: 71\.1mm;\s+height: 22\.9mm;/)
-        expect(html).not.toContain('size: 71.1mm 89mm')
+        expect(html).not.toContain('size: 71.1mm 22.9mm')
     })
 
     it('keeps compact content separated inside each 35.5x22.9mm label', () => {

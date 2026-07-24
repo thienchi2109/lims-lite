@@ -31,7 +31,7 @@ describe('SampleLabelPrintDialog', () => {
 
         expect(screen.getByLabelText<HTMLInputElement>('35.5 x 22.9mm - template chuẩn').checked).toBe(true)
         expect(screen.getByLabelText<HTMLInputElement>('35 x 22mm - 2 tem ngang cũ')).toBeDefined()
-        expect(screen.getByText('Khổ trang 71.1 x 22.9mm, gồm 2 tem 35.5 x 22.9mm.')).toBeDefined()
+        expect(screen.getByText('Khổ trang 71.1 x 89mm, in 1 hàng gồm 2 tem 35.5 x 22.9mm ở mép trên.')).toBeDefined()
 
         fireEvent.click(screen.getByRole('button', { name: 'In nhãn' }))
 
