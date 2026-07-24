@@ -39,6 +39,36 @@ describe('SampleLabelPrintDialog', () => {
         expect(onPrint).toHaveBeenCalledWith('thermal-35x23-sheet-2up')
     })
 
+    it('selects and persists the opt-in HPRT one-row preset with its driver warning', () => {
+        const onPrint = vi.fn()
+
+        render(
+            <SampleLabelPrintDialog
+                open
+                onOpenChange={vi.fn()}
+                onPrint={onPrint}
+            />,
+        )
+
+        const presetRadios = screen.getAllByRole<HTMLInputElement>('radio')
+        expect(presetRadios[0]?.value).toBe('thermal-35x23-sheet-2up')
+        expect(presetRadios[1]?.value).toBe('thermal-35x23-hprt-one-row-2up')
+
+        fireEvent.click(screen.getByLabelText('HPRT HT300/HT330 - 2 tem / 1 hàng'))
+
+        expect(screen.getByText(
+            'Khổ 71.1 x 22.9mm. Chỉ dùng với profile driver cùng kích thước; không chọn profile 4x4.',
+        )).toBeDefined()
+
+        fireEvent.click(screen.getByRole('button', { name: 'In nhãn' }))
+
+        expect(mockSetItem).toHaveBeenCalledWith(
+            'sample-label-print-preset',
+            'thermal-35x23-hprt-one-row-2up',
+        )
+        expect(onPrint).toHaveBeenCalledWith('thermal-35x23-hprt-one-row-2up')
+    })
+
     it('uses the last saved preset when the dialog opens', () => {
         vi.mocked(window.localStorage.getItem).mockReturnValue('container')
 

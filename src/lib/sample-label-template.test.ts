@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { generateSampleLabelHtml } from './sample-label-template'
+import {
+    DEFAULT_SAMPLE_LABEL_PRESET,
+    generateSampleLabelHtml,
+} from './sample-label-template'
 import type { SampleWithUser } from '@/types'
 
 const sensitiveSample = {
@@ -65,6 +68,32 @@ describe('generateSampleLabelHtml', () => {
         expect(html).toMatch(/html,\s+body \{\s+width: 71\.1mm;\s+height: 22\.9mm;/)
         expect(html).toMatch(/\.label-sheet \{\s+width: 71\.1mm;\s+height: 22\.9mm;/)
         expect(html).not.toContain('size: 71.1mm 22.9mm')
+    })
+
+    it('adds an opt-in HPRT one-row preset without changing the standard preset', () => {
+        const hprtPreset = 'thermal-35x23-hprt-one-row-2up'
+
+        expect(() => generateSampleLabelHtml(sensitiveSample, { preset: hprtPreset })).not.toThrow()
+
+        const hprtHtml = generateSampleLabelHtml(sensitiveSample, { preset: hprtPreset })
+        const standardHtml = generateSampleLabelHtml(sensitiveSample, {
+            preset: 'thermal-35x23-sheet-2up',
+        })
+
+        expect(hprtHtml).toContain('size: 71.1mm 22.9mm')
+        expect(hprtHtml).toContain('grid-template-columns: 35.5mm 35.5mm')
+        expect(hprtHtml).toContain('column-gap: 0mm')
+        expect(hprtHtml).toContain('justify-content: start')
+        expect(hprtHtml).toContain('width: 35.5mm')
+        expect(hprtHtml).toContain('height: 22.9mm')
+        expect(hprtHtml.match(/class="sample-label"/g)).toHaveLength(2)
+        expect(hprtHtml.match(/<section class="sample-label" data-compact-vertical="true"/g)).toHaveLength(2)
+        expect(hprtHtml).toContain('grid-template-rows: auto auto auto')
+        expect(hprtHtml).toContain('align-content: center')
+        expect(71.1 - (35.5 * 2)).toBeCloseTo(0.1)
+        expect(DEFAULT_SAMPLE_LABEL_PRESET).toBe('thermal-35x23-sheet-2up')
+        expect(standardHtml).toContain('size: 71.1mm 89mm')
+        expect(standardHtml).not.toContain('size: 71.1mm 22.9mm')
     })
 
     it('keeps compact content separated inside each 35.5x22.9mm label', () => {

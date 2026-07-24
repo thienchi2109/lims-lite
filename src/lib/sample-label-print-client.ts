@@ -19,6 +19,9 @@ export async function printSampleBarcodeLabel(
     options: PrintSampleBarcodeLabelOptions = {},
 ) {
     const preset = options.preset ?? DEFAULT_SAMPLE_LABEL_PRESET
+    const auditPreset = preset === 'thermal-35x23-hprt-one-row-2up'
+        ? DEFAULT_SAMPLE_LABEL_PRESET
+        : preset
     const printDocument = openPendingDetachedHtmlDocument({
         onBlocked: () => toast.error('Trình duyệt đã chặn cửa sổ in'),
         onFailed: () => toast.error('Không thể mở tài liệu in'),
@@ -29,7 +32,7 @@ export async function printSampleBarcodeLabel(
         const auditResult = await recordSampleLabelPrintClient({
             sampleId,
             copies: 1,
-            preset,
+            preset: auditPreset,
         })
 
         if (auditResult?.error) {
