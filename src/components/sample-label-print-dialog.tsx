@@ -26,7 +26,7 @@ const PRESETS: Array<{
     {
         value: 'thermal-35x23-sheet-2up',
         label: '35.5 x 22.9mm - template chuẩn',
-        description: 'Khổ trang 71.1 x 89mm, in 1 hàng gồm 2 tem 35.5 x 22.9mm ở mép trên.',
+        description: 'Khổ trang 71.1 x 22.9mm, gồm 2 tem 35.5 x 22.9mm.',
     },
     {
         value: 'thermal-35x22-2up',
