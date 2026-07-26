@@ -9,27 +9,48 @@ import {
     type CancelApproval,
 } from '@/types'
 import { generateCoA } from './coa'
-import { firstRelation, type RelationValue } from '@/lib/supabase/relations'
 import {
     failCoAReportGeneration,
     queueCoAReportForGeneration,
 } from '@/lib/coa/report-provenance'
-
-type ResultAssayRelation = {
-    is_confidential: boolean | null
-}
 
 type QCApprovalStatusRow = {
     can_approve: boolean
     blocking_reason: string | null
 }
 
-type ResultApprovalUpdate = {
-    status: 'approved'
-    approved_by: string
-    approved_at: string
-    approval_note?: string
-}
+const ATOMIC_APPROVAL_SUCCESS_CODES = new Set([
+    'APPROVED',
+    'ALREADY_APPROVED',
+])
+
+const ATOMIC_APPROVAL_FAILURE_MESSAGES = {
+    NOT_AUTHENTICATED: 'Unauthorized',
+    MANAGER_REQUIRED: 'Only managers can approve results',
+    CONFIDENTIAL_ACCESS_REQUIRED: 'Không có quyền phê duyệt kết quả bảo mật',
+    SAMPLE_NOT_REVIEW: 'Can only approve results for samples under review',
+    RESULT_NOT_FOUND: 'Không thể phê duyệt một hoặc nhiều kết quả đã chọn',
+    RESULT_NOT_ENTERED: 'Can only approve results with status "entered"',
+    RESULT_SAMPLE_MISMATCH: 'All results must belong to the same sample',
+    REQUEST_CONFLICT: 'Invalid input data',
+} as const
+
+type AtomicApprovalFailureCode =
+    | keyof typeof ATOMIC_APPROVAL_FAILURE_MESSAGES
+    | 'QC_BLOCKED'
+    | 'QC_RESPONSE_INVALID'
+
+type AtomicApprovalOutcome =
+    | {
+        success: true
+        approvedCount: number
+        sampleCompleted: boolean
+    }
+    | {
+        success: false
+        code: AtomicApprovalFailureCode
+        blockedCount?: number
+    }
 
 function isQCApprovalStatusRow(value: unknown): value is QCApprovalStatusRow {
     if (!value || typeof value !== 'object') return false
@@ -45,6 +66,114 @@ function createInvalidQCApprovalStatusResponse(rowCount: number) {
         qc_blocked: true,
         blocked_count: rowCount,
     }
+}
+
+function parseAtomicApprovalOutcome(value: unknown): AtomicApprovalOutcome | null {
+    if (!value || typeof value !== 'object') return null
+
+    const row = value as Record<string, unknown>
+    if (typeof row.success !== 'boolean' || typeof row.outcome_code !== 'string') {
+        return null
+    }
+
+    if (row.success) {
+        const approvedCount = row.approved_count
+        if (
+            !ATOMIC_APPROVAL_SUCCESS_CODES.has(row.outcome_code)
+            || !Number.isInteger(approvedCount)
+            || (approvedCount as number) < 1
+            || typeof row.sample_completed !== 'boolean'
+        ) {
+            return null
+        }
+
+        return {
+            success: true,
+            approvedCount: approvedCount as number,
+            sampleCompleted: row.sample_completed,
+        }
+    }
+
+    const failureCode = row.outcome_code as AtomicApprovalFailureCode
+    if (
+        !Object.prototype.hasOwnProperty.call(
+            ATOMIC_APPROVAL_FAILURE_MESSAGES,
+            failureCode,
+        )
+        && failureCode !== 'QC_BLOCKED'
+        && failureCode !== 'QC_RESPONSE_INVALID'
+    ) {
+        return null
+    }
+
+    const errorParams = row.error_params
+    const blockedCount = errorParams
+        && typeof errorParams === 'object'
+        && Number.isInteger((errorParams as Record<string, unknown>).blocked_count)
+        && ((errorParams as Record<string, unknown>).blocked_count as number) > 0
+        ? (errorParams as Record<string, unknown>).blocked_count as number
+        : undefined
+
+    return {
+        success: false,
+        code: failureCode,
+        blockedCount,
+    }
+}
+
+async function createQCBlockedResponse(
+    supabase: Awaited<ReturnType<typeof createClient>>,
+    resultIds: string[],
+    blockedCount: number
+) {
+    const { data: qcCheck, error: qcCheckError } = await supabase.rpc(
+        'check_qc_approval_status',
+        { p_result_ids: resultIds }
+    )
+
+    if (qcCheckError) {
+        console.error('Error reading QC blocking reasons after approval rollback:', qcCheckError)
+    }
+
+    const reasons = Array.isArray(qcCheck)
+        ? qcCheck
+            .filter(isQCApprovalStatusRow)
+            .filter((result) => !result.can_approve)
+            .map((result) => result.blocking_reason)
+            .filter((reason): reason is string => Boolean(reason))
+        : []
+
+    return {
+        error: `Không thể phê duyệt: QC bị chặn. ${reasons.join('; ') || 'Giải quyết vi phạm QC trước.'}`,
+        qc_blocked: true,
+        blocked_count: blockedCount,
+    }
+}
+
+async function triggerCompletedSampleCoA(sampleId: string) {
+    const report = await queueCoAReportForGeneration(sampleId)
+    if (!report?.claimed || !report.generationClaimId) return
+
+    const generationClaimId = report.generationClaimId
+    void generateCoA(sampleId, undefined, report)
+        .then((result) => {
+            if (!result.success && result.shouldRecordFailure !== false) {
+                console.error(
+                    'Auto CoA generation failed for sample',
+                    sampleId,
+                    result.error,
+                )
+            }
+        })
+        .catch(async (error) => {
+            console.error('Auto CoA generation crashed for sample', sampleId, error)
+            await failCoAReportGeneration(
+                report.reportId,
+                generationClaimId,
+                error instanceof Error ? error.message : 'Lỗi không xác định khi tạo CoA',
+                false,
+            )
+        })
 }
 
 async function sampleHasConfidentialResults(sampleIds: string[]) {
@@ -75,7 +204,7 @@ async function sampleHasConfidentialResults(sampleIds: string[]) {
 }
 
 /**
- * Approves a batch of results (Manager only)
+ * Approves selected results for one sample (Manager only).
  */
 export async function approveResults(data: ApproveResults) {
     try {
@@ -89,194 +218,55 @@ export async function approveResults(data: ApproveResults) {
             return { error: 'Unauthorized' }
         }
 
-        // Verify user is manager
-        const { data: userData } = await supabase
-            .from('users')
-            .select('role, can_access_confidential')
-            .eq('id', user.id)
-            .single()
-
-        if (userData?.role !== 'manager') {
-            return { error: 'Only managers can approve results' }
-        }
-
         const validatedData = ApproveResultsSchema.parse(data)
-
-        // Fetch results to verify they exist and have status='entered'
-        const { data: results, error: fetchError } = await supabase
-            .from('results')
-            .select(`
-                id,
-                status,
-                sample_id,
-                assay:assay_definitions!results_assay_id_fkey(
-                    is_confidential
-                )
-            `)
-            .in('id', validatedData.resultIds)
-
-        if (fetchError) {
-            console.error('Error fetching results for approval:', fetchError)
-            return { error: fetchError.message }
-        }
-
-        if (results.length !== validatedData.resultIds.length) {
-            return { error: 'Không thể phê duyệt một hoặc nhiều kết quả đã chọn' }
-        }
-
-        const invalidResults = results.filter((result) => result.status !== 'entered')
-        if (invalidResults.length > 0) {
-            return { error: 'Can only approve results with status "entered"' }
-        }
-
-        const includesConfidentialResult = results.some(
-            (result) => firstRelation(result.assay as RelationValue<ResultAssayRelation>)?.is_confidential === true
+        const adminClient = createAdminClient()
+        const { data: rawOutcome, error: approvalError } = await adminClient.rpc(
+            'approve_sample_results_server',
+            {
+                p_manager_id: user.id,
+                p_sample_id: validatedData.sampleId,
+                p_result_ids: validatedData.resultIds,
+                p_approval_note: validatedData.note ?? null,
+            }
         )
-        if (includesConfidentialResult && userData?.can_access_confidential !== true) {
-            return { error: 'Không có quyền phê duyệt kết quả bảo mật' }
+
+        if (approvalError) {
+            console.error('Error approving results atomically:', approvalError)
+            return { error: approvalError.message }
         }
 
-        const sampleIds = [...new Set(results.map((result) => result.sample_id))]
-        if (sampleIds.length > 1) {
-            return { error: 'All results must belong to the same sample' }
+        const outcome = parseAtomicApprovalOutcome(rawOutcome)
+        if (!outcome) {
+            console.error('Atomic approval RPC returned an invalid outcome')
+            return { error: 'Failed to approve results' }
         }
 
-        const confidentialSampleCheck = await sampleHasConfidentialResults(sampleIds)
-        if (confidentialSampleCheck.error) {
-            return { error: confidentialSampleCheck.error }
-        }
-        if (confidentialSampleCheck.hasConfidential && userData?.can_access_confidential !== true) {
-            return { error: 'Không có quyền phê duyệt kết quả bảo mật' }
-        }
-
-        if (sampleIds[0]) {
-            const { data: sample, error: sampleError } = await supabase
-                .from('samples')
-                .select('status')
-                .eq('id', sampleIds[0])
-                .single()
-
-            if (sampleError) {
-                console.error('Error fetching sample for approval:', sampleError)
-                return { error: sampleError.message }
+        if (!outcome.success) {
+            if (outcome.code === 'QC_RESPONSE_INVALID') {
+                return createInvalidQCApprovalStatusResponse(validatedData.resultIds.length)
+            }
+            if (outcome.code === 'QC_BLOCKED') {
+                return createQCBlockedResponse(
+                    supabase,
+                    validatedData.resultIds,
+                    outcome.blockedCount ?? validatedData.resultIds.length,
+                )
             }
 
-            if (sample?.status !== 'review') {
-                return { error: 'Can only approve results for samples under review' }
-            }
-        }
-
-        // QC Session Check: Block approval if QC is blocked
-        const { data: qcCheck, error: qcCheckError } = await supabase.rpc('check_qc_approval_status', {
-            p_result_ids: validatedData.resultIds,
-        })
-
-        if (qcCheckError || !qcCheck) {
-            if (qcCheckError) console.error('Error checking QC approval status:', qcCheckError)
-            return createInvalidQCApprovalStatusResponse(validatedData.resultIds.length)
-        }
-
-        if (!Array.isArray(qcCheck)) {
-            return createInvalidQCApprovalStatusResponse(validatedData.resultIds.length)
-        }
-
-        const qcStatusRows = qcCheck.filter(isQCApprovalStatusRow)
-        if (qcStatusRows.length !== qcCheck.length || qcCheck.length !== validatedData.resultIds.length) {
-            return createInvalidQCApprovalStatusResponse(validatedData.resultIds.length)
-        }
-
-        const blockedResults = qcStatusRows.filter((result) => !result.can_approve)
-        if (blockedResults.length > 0) {
-            const reasons = blockedResults
-                .map((result) => result.blocking_reason)
-                .filter(Boolean)
-                .join('; ')
             return {
-                error: `Không thể phê duyệt: QC bị chặn. ${reasons || 'Giải quyết vi phạm QC trước.'}`,
-                qc_blocked: true,
-                blocked_count: blockedResults.length,
+                error: ATOMIC_APPROVAL_FAILURE_MESSAGES[outcome.code],
             }
         }
 
-        // Perform batch approval
-        const updateData: ResultApprovalUpdate = {
-            status: 'approved',
-            approved_by: user.id,
-            approved_at: new Date().toISOString(),
-        }
-
-        if (validatedData.note) {
-            updateData.approval_note = validatedData.note
-        }
-
-        const { error: updateError } = await supabase
-            .from('results')
-            .update(updateData)
-            .in('id', validatedData.resultIds)
-
-        if (updateError) {
-            console.error('Error approving results:', updateError)
-            return { error: updateError.message }
-        }
-
-        // Check if all results for this sample are now approved
-        if (sampleIds[0]) {
-            const { count } = await supabase
-                .from('results')
-                .select('id', { count: 'exact', head: true })
-                .eq('sample_id', sampleIds[0])
-                .neq('status', 'approved')
-
-            const newStatus = count === 0 ? 'completed' : 'review'
-
-            const sampleUpdateData: Record<string, unknown> = { status: newStatus }
-            if (newStatus === 'completed') {
-                sampleUpdateData.rejection_reason = null
-                sampleUpdateData.rejected_at = null
-                sampleUpdateData.rejected_by = null
-            }
-
-            await supabase
-                .from('samples')
-                .update(sampleUpdateData)
-                .eq('id', sampleIds[0])
-
-            // Auto-generate CoA when sample is completed (all results approved)
-            // Fire-and-forget: don't block the approval response
-            // Failures are recorded in coa_reports so Manager can see and retry
-            if (newStatus === 'completed') {
-                const completedSampleId = sampleIds[0]
-                const report = await queueCoAReportForGeneration(completedSampleId)
-                if (report?.claimed && report.generationClaimId) {
-                    void generateCoA(completedSampleId, undefined, report)
-                        .then((result) => {
-                            if (!result.success && result.shouldRecordFailure !== false) {
-                                console.error(
-                                    'Auto CoA generation failed for sample',
-                                    completedSampleId,
-                                    result.error,
-                                )
-                            }
-                        })
-                        .catch(async (err) => {
-                            console.error('Auto CoA generation crashed for sample', completedSampleId, err)
-                            await failCoAReportGeneration(
-                                report.reportId,
-                                report.generationClaimId!,
-                                err instanceof Error ? err.message : 'Lỗi không xác định khi tạo CoA'
-                                ,
-                                false,
-                            )
-                        })
-                }
-            }
+        if (outcome.sampleCompleted) {
+            await triggerCompletedSampleCoA(validatedData.sampleId)
         }
 
         revalidatePath('/manager/approvals', 'page')
         revalidatePath('/manager/results/[sampleId]', 'page')
         revalidatePath('/manager/samples', 'page')
 
-        return { success: true, approvedCount: validatedData.resultIds.length }
+        return { success: true, approvedCount: outcome.approvedCount }
     } catch (error) {
         console.error('Error in approveResults:', error)
         if (error instanceof Error && error.message.includes('parse')) {

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
     getSamples: vi.fn(),
@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
     createClient: vi.fn(),
     updateUser: vi.fn(),
     getSampleSubmissionReview: vi.fn(),
+    approveResults: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -54,7 +55,7 @@ vi.mock('@/app/actions/submission-reviews', () => ({
 }))
 
 vi.mock('@/app/actions/results-approval', () => ({
-    approveResults: vi.fn(),
+    approveResults: (...args: unknown[]) => mocks.approveResults(...args),
     cancelApproval: vi.fn(),
 }))
 
@@ -157,6 +158,35 @@ function mockRole(role: string) {
     })
 }
 
+function mockPasswordOnlyOtpManager() {
+    const usersQuery: Record<string, unknown> = {
+        select: vi.fn(() => usersQuery),
+        eq: vi.fn(() => usersQuery),
+        single: vi.fn(async () => ({
+            data: {
+                role: 'manager',
+                can_access_confidential: false,
+                manager_otp_settings: { updated_at: '2026-07-26T00:00:00.000Z' },
+            },
+            error: null,
+        })),
+    }
+
+    mocks.createClient.mockResolvedValue({
+        auth: {
+            getUser: vi.fn().mockResolvedValue({
+                data: { user: { id: 'manager-1' } },
+                error: null,
+            }),
+            getSession: vi.fn().mockResolvedValue({
+                data: { session: { access_token: null } },
+                error: null,
+            }),
+        },
+        from: () => usersQuery,
+    })
+}
+
 describe('client action role guard', () => {
     beforeEach(() => {
         vi.clearAllMocks()
@@ -173,6 +203,11 @@ describe('client action role guard', () => {
         mocks.getSampleSubmissionReview.mockResolvedValue({
             data: { submissions: [] },
         })
+        mocks.approveResults.mockResolvedValue({ success: true, approvedCount: 1 })
+    })
+
+    afterEach(() => {
+        vi.unstubAllEnvs()
     })
 
     it('allows doctor to call the completed samples read action', async () => {
@@ -209,6 +244,25 @@ describe('client action role guard', () => {
             error: 'Bạn không có quyền thực hiện thao tác này',
         })
         expect(mocks.updateSample).not.toHaveBeenCalled()
+    })
+
+    it('denies approveResults before the privileged handler when manager OTP is missing', async () => {
+        vi.stubEnv('MANAGER_EMAIL_OTP_ENABLED', 'TRUE')
+        vi.stubEnv('MANAGER_HIV_EMAIL_OTP_ENABLED', 'FALSE')
+        vi.stubEnv('ANALYST_HIV_EMAIL_OTP_ENABLED', 'FALSE')
+        vi.stubEnv('MANAGER_OTP_STEP_UP_SECRET', 'route-test-step-up-secret')
+        mockPasswordOnlyOtpManager()
+
+        const response = await POST(buildRequest('approveResults', {
+            sampleId: '11111111-1111-4111-8111-111111111111',
+            resultIds: ['22222222-2222-4222-8222-222222222222'],
+        }))
+
+        expect(response.status).toBe(403)
+        await expect(response.json()).resolves.toEqual({
+            error: 'Yêu cầu xác thực OTP email quản lý trước khi tiếp tục',
+        })
+        expect(mocks.approveResults).not.toHaveBeenCalled()
     })
 
     it('denies doctor global search before the handler runs', async () => {
