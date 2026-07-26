@@ -1,5 +1,5 @@
 -- DARK APPROVAL BATCH STORAGE SCHEMA AND SECURITY CONTRACT
--- Run after migration 193 through the approved home-server Docker path.
+-- Run after migration 194 through the approved home-server Docker path.
 \set ON_ERROR_STOP on
 SET client_encoding = 'UTF8';
 SET search_path TO public, extensions;
@@ -64,7 +64,7 @@ BEGIN
     LOOP
         IF to_regclass('public.' || v_table_name) IS NULL THEN
             RAISE EXCEPTION
-                'Migration 193 relation public.% is missing',
+                'Migration 194 relation public.% is missing',
                 v_table_name;
         END IF;
 
@@ -245,7 +245,7 @@ BEGIN
     ]
     LOOP
         IF v_function IS NULL THEN
-            RAISE EXCEPTION 'Migration 193 storage helper function is missing';
+            RAISE EXCEPTION 'Migration 194 storage helper function is missing';
         END IF;
 
         SELECT
@@ -339,13 +339,13 @@ BEGIN
                 'EXECUTE'
             )
         ),
-        'Migration 193 helpers must not retain API-role execute privileges'
+        'Migration 194 helpers must not retain API-role execute privileges'
     );
 
     PERFORM pg_temp.assert_approval_batch_schema(
         'storage_catalog_is_exact',
         public.approval_batch_storage_catalog_is_exact(),
-        'Migration 193 exact storage catalog checker must pass'
+        'Migration 194 exact storage catalog checker must pass'
     );
 
     PERFORM pg_temp.assert_approval_batch_schema(
@@ -364,7 +364,7 @@ BEGIN
                   'test_approval_batch_persistence_security'
               ])
         ),
-        'Migration 193 must leave all approval batch contracts absent'
+        'Migration 194 must leave all approval batch contracts absent'
     );
 
     SELECT pg_get_functiondef('public.run_security_tests()'::REGPROCEDURE)
@@ -375,7 +375,7 @@ BEGIN
         v_function_definition ILIKE '%Atomic Result Approval RPC Security%'
         AND v_function_definition NOT ILIKE
             '%Approval Batch Persistence Security%',
-        'Migration 193 must not register approval batch persistence security'
+        'Migration 194 must not register approval batch persistence security'
     );
 END;
 $catalog$;
