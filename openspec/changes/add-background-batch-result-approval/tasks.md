@@ -76,13 +76,14 @@ application continues using the old approval write sequence.
 changing user-visible behavior. Review-size target: about 1,200 changed lines;
 keep an atomic migration together when splitting would reduce auditability.
 
-**P1 scope assessment (2026-07-26):** The phase contains 1,641 additions in one
-forward-only atomic/security migration and its focused runtime/rollback and
-two-session concurrency suites. This exceeds the 1,500-line review warning but
-remains one deployable, single-purpose unit; splitting the migration from its
-security registration or splitting its direct SQL evidence would reduce
-auditability and make the approval contract harder to review. No application,
-UI, worker, or single-approval path changed.
+**P1 scope assessment (2026-07-26):** The phase contains 1,695 changed lines
+(1,688 additions and 7 deletions) in one forward-only atomic/security migration,
+its focused runtime/rollback and two-session concurrency suites, and this task
+record. This exceeds the 1,500-line review warning but remains one deployable,
+single-purpose unit; splitting the migration from its security registration or
+splitting its direct SQL evidence would reduce auditability and make the
+approval contract harder to review. No application, UI, worker, or
+single-approval path changed.
 
 ## 3. Phase P2 - Synchronous Single-Approval Cutover
 
