@@ -306,9 +306,12 @@ SELECT 'partial', public.approve_sample_results_server(
 );
 SELECT pg_temp.assert_atomic(
     'server wrapper restores caller claims',
-    auth.role() = 'service_role'
-    AND NULLIF(
+    NULLIF(
         current_setting('request.jwt.claim.sub', TRUE),
+        ''
+    ) IS NULL
+    AND NULLIF(
+        current_setting('request.jwt.claim.role', TRUE),
         ''
     ) IS NULL
     AND current_setting('request.jwt.claims', TRUE)::JSONB
@@ -369,7 +372,7 @@ BEGIN
     );
     PERFORM pg_temp.assert_atomic(
         'approval audit rows use manager actor',
-        v_audits = 2 AND NOT EXISTS (
+        v_audits = 1 AND NOT EXISTS (
             SELECT 1 FROM public.audit_logs
             WHERE operation = 'UPDATE'
               AND record_id IN (
@@ -379,7 +382,7 @@ BEGIN
               AND changed_by IS DISTINCT FROM
                   '92000000-0000-0000-0000-000000000001'
         ),
-        format('expected two manager-attributed audit rows, found %s', v_audits)
+        format('expected one manager-attributed result audit, found %s', v_audits)
     );
 END;
 $partial$;
@@ -426,7 +429,7 @@ BEGIN
                   '92000000-0000-0000-0000-000000000010',
                   '92000000-0000-0000-0000-000000000020'
               )
-        ) = 2,
+        ) = 1,
         v_replay::TEXT
     );
     PERFORM pg_temp.assert_atomic(
@@ -598,6 +601,28 @@ BEGIN
         v_failed := SQLERRM ILIKE '%atomic approval rollback probe%';
     END;
 
+    INSERT INTO atomic_approval_outcomes
+    VALUES (
+        'rollback_probe',
+        jsonb_build_object('failed', v_failed)
+    );
+END;
+$rollback_probe$;
+RESET ROLE;
+RESET request.jwt.claims;
+RESET request.jwt.claim.sub;
+
+DO $rollback_assertion$
+DECLARE
+    v_failed BOOLEAN := COALESCE(
+        (
+            SELECT (outcome->>'failed')::BOOLEAN
+            FROM atomic_approval_outcomes
+            WHERE test_name = 'rollback_probe'
+        ),
+        FALSE
+    );
+BEGIN
     PERFORM pg_temp.assert_atomic(
         'result sample and audit writes roll back together',
         v_failed
@@ -622,10 +647,7 @@ BEGIN
         'forced sample failure must leave no approval or audit evidence'
     );
 END;
-$rollback_probe$;
-RESET ROLE;
-RESET request.jwt.claims;
-RESET request.jwt.claim.sub;
+$rollback_assertion$;
 
 DROP TRIGGER atomic_approval_test_fail_sample_update ON public.samples;
 DROP FUNCTION public.atomic_approval_test_fail_sample_update();

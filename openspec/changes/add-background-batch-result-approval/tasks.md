@@ -49,32 +49,40 @@ reuse stable typed contracts. Review-size target: about 800 changed lines.
 **PR boundary:** One forward-only migration and focused SQL tests. The existing
 application continues using the old approval write sequence.
 
-- [ ] 2.1 Add failing SQL tests proving result updates, sample
+- [x] 2.1 Add failing SQL tests proving result updates, sample
   status/rejection-reset updates, approval provenance, and audit rows commit or
   roll back together for one sample.
-- [ ] 2.2 Add failing SQL tests for deterministic row locking, concurrent
+- [x] 2.2 Add failing SQL tests for deterministic row locking, concurrent
   approval attempts, exact selected-result validation, selected results no
   longer being `entered`, later-added results remaining unapproved, and
   idempotent replay.
-- [ ] 2.3 Add failing SQL tests preserving manager role, current confidential
+- [x] 2.3 Add failing SQL tests preserving manager role, current confidential
   access, `review`/`entered` states, QC fail-closed behavior, note bounds,
   immutable submission snapshots, and manager-attributed audit rows.
-- [ ] 2.4 Create the next-numbered migration implementing the internal atomic
+- [x] 2.4 Create the next-numbered migration implementing the internal atomic
   approval command plus a server-only wrapper with pinned `search_path`,
   explicit revokes from `anon` and `authenticated`, a narrow protected-server
   grant, stable outcome codes, and a `sample_completed` handoff signal.
-- [ ] 2.5 Extend security tests for anonymous denial, direct password-only
+- [x] 2.5 Extend security tests for anonymous denial, direct password-only
   manager JWT denial, internal-function denial, protected-server access, RLS
   preservation, function grants, and audit attribution.
-- [ ] 2.6 Commit the migration before applying it; after first application,
+- [x] 2.6 Commit the migration before applying it; after first application,
   treat it as immutable and use a new migration for every correction.
-- [ ] 2.7 Apply the committed migration only through the approved home-server
+- [x] 2.7 Apply the committed migration only through the approved home-server
   SSH and Docker path, then run focused SQL suites and
   `SELECT * FROM run_security_tests();`.
 
 **Exit gate:** The unused atomic RPC is deployed and fully verified without
 changing user-visible behavior. Review-size target: about 1,200 changed lines;
 keep an atomic migration together when splitting would reduce auditability.
+
+**P1 scope assessment (2026-07-26):** The phase contains 1,641 additions in one
+forward-only atomic/security migration and its focused runtime/rollback and
+two-session concurrency suites. This exceeds the 1,500-line review warning but
+remains one deployable, single-purpose unit; splitting the migration from its
+security registration or splitting its direct SQL evidence would reduce
+auditability and make the approval contract harder to review. No application,
+UI, worker, or single-approval path changed.
 
 ## 3. Phase P2 - Synchronous Single-Approval Cutover
 

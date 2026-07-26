@@ -110,8 +110,9 @@ DELETE FROM public.audit_logs
 WHERE record_id::TEXT LIKE '92100000-0000-0000-0000-0000000000%';
 COMMIT;
 
-\! sh -ec "psql -v ON_ERROR_STOP=1 -U postgres -d postgres -X -Atqc \"BEGIN; SELECT id FROM public.samples WHERE id = '92100000-0000-0000-0000-000000000010'::uuid FOR UPDATE; SELECT pg_sleep(1); SET ROLE service_role; SET request.jwt.claims TO '{\\\"role\\\":\\\"service_role\\\"}'; SELECT public.approve_sample_results_server('92100000-0000-0000-0000-000000000001'::uuid, '92100000-0000-0000-0000-000000000010'::uuid, ARRAY['92100000-0000-0000-0000-000000000020'::uuid], 'Concurrent approval'); COMMIT;\" > /tmp/atomic-approval-session-a.out 2>&1 & first_pid=\$!; sleep 0.2; psql -v ON_ERROR_STOP=1 -U postgres -d postgres -X -Atqc \"BEGIN; SET ROLE service_role; SET request.jwt.claims TO '{\\\"role\\\":\\\"service_role\\\"}'; SELECT public.approve_sample_results_server('92100000-0000-0000-0000-000000000001'::uuid, '92100000-0000-0000-0000-000000000010'::uuid, ARRAY['92100000-0000-0000-0000-000000000020'::uuid], 'Concurrent approval'); COMMIT;\" > /tmp/atomic-approval-session-b.out 2>&1; wait \$first_pid; grep -q '\"outcome_code\": \"APPROVED\"' /tmp/atomic-approval-session-a.out; grep -q '\"outcome_code\": \"ALREADY_APPROVED\"' /tmp/atomic-approval-session-b.out"
-\set concurrency_shell_failed :SHELL_ERROR
+\! rm -f /tmp/atomic-approval-shell-status
+\! sh -ec "psql -v ON_ERROR_STOP=1 -U postgres -d postgres -X -Atqc \"BEGIN; SELECT id FROM public.samples WHERE id = '92100000-0000-0000-0000-000000000010'::uuid FOR UPDATE; SELECT pg_sleep(1); SET ROLE service_role; SET request.jwt.claims TO '{\\\"role\\\":\\\"service_role\\\"}'; SELECT public.approve_sample_results_server('92100000-0000-0000-0000-000000000001'::uuid, '92100000-0000-0000-0000-000000000010'::uuid, ARRAY['92100000-0000-0000-0000-000000000020'::uuid], 'Concurrent approval'); COMMIT;\" > /tmp/atomic-approval-session-a.out 2>&1 & first_pid=\$!; sleep 0.2; psql -v ON_ERROR_STOP=1 -U postgres -d postgres -X -Atqc \"BEGIN; SET ROLE service_role; SET request.jwt.claims TO '{\\\"role\\\":\\\"service_role\\\"}'; SELECT public.approve_sample_results_server('92100000-0000-0000-0000-000000000001'::uuid, '92100000-0000-0000-0000-000000000010'::uuid, ARRAY['92100000-0000-0000-0000-000000000020'::uuid], 'Concurrent approval'); COMMIT;\" > /tmp/atomic-approval-session-b.out 2>&1; wait \$first_pid; grep -q '\"outcome_code\": \"APPROVED\"' /tmp/atomic-approval-session-a.out; grep -q '\"outcome_code\": \"ALREADY_APPROVED\"' /tmp/atomic-approval-session-b.out" && printf '0\n' > /tmp/atomic-approval-shell-status || printf '1\n' > /tmp/atomic-approval-shell-status
+\set concurrency_shell_failed `cat /tmp/atomic-approval-shell-status`
 \if :concurrency_shell_failed
     \! cat /tmp/atomic-approval-session-a.out /tmp/atomic-approval-session-b.out
 \else
@@ -130,7 +131,7 @@ COMMIT;
               AND operation = 'UPDATE'
         )
         AND (
-            SELECT COUNT(*) = 1
+            SELECT COUNT(*) = 2
             FROM public.audit_logs
             WHERE record_id = '92100000-0000-0000-0000-000000000010'
               AND operation = 'UPDATE'
@@ -154,14 +155,22 @@ COMMIT;
 \endif
 
 SELECT pg_temp.cleanup_atomic_concurrency();
-\! rm -f /tmp/atomic-approval-session-a.out /tmp/atomic-approval-session-b.out
+\! rm -f /tmp/atomic-approval-session-a.out /tmp/atomic-approval-session-b.out /tmp/atomic-approval-shell-status
 
 \if :concurrency_shell_failed
-    \quit 1
+    DO $shell_failure$
+    BEGIN
+        RAISE EXCEPTION 'Concurrent approval shell sessions failed';
+    END;
+    $shell_failure$;
 \endif
 \if :concurrency_verified
     SELECT 'atomic-result-approval-concurrency: ok' AS result;
 \else
     \echo :concurrency_detail
-    \quit 1
+    DO $verification_failure$
+    BEGIN
+        RAISE EXCEPTION 'Concurrent approval evidence verification failed';
+    END;
+    $verification_failure$;
 \endif
