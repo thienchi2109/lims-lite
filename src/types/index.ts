@@ -10,6 +10,7 @@ export * from './lab'
 
 // Workflow types: approval, signatures, CoA
 export * from './workflow'
+export * from './approval-batch'
 
 // Result review types: manual assessments and submission payloads
 export * from './result-review'

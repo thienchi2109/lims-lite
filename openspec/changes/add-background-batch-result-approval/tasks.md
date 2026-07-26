@@ -23,23 +23,23 @@
 **PR boundary:** Characterization tests and typed contracts only. No production
 approval behavior, database schema, worker, or UI behavior changes.
 
-- [ ] 1.1 Trace and record the current `approveResults` callers, manager OTP
+- [x] 1.1 Trace and record the current `approveResults` callers, manager OTP
   boundary, `ApproveResultsSchema`, QC RPC, confidential checks, audit triggers,
   submission provenance, sample completion update, and CoA queue/generation
   handoff.
-- [ ] 1.2 Add characterization tests for successful single approval,
+- [x] 1.2 Add characterization tests for successful single approval,
   partial-result approval, final-result sample completion, optional approval
   note, and non-blocking CoA behavior.
-- [ ] 1.3 Add characterization tests for unauthorized role, missing
+- [x] 1.3 Add characterization tests for unauthorized role, missing
   confidential access, non-review sample, non-entered result, cross-sample or
   missing result IDs, QC blocked, malformed QC response, and database failure.
-- [ ] 1.4 Define strict Zod contracts for single approval, batch submission,
+- [x] 1.4 Define strict Zod contracts for single approval, batch submission,
   select-all response, progress, item outcomes, and retry with sanitized
   Vietnamese error mapping.
-- [ ] 1.5 Confirm the final extension points from
+- [x] 1.5 Confirm the final extension points from
   `optimize-approval-queue-two-phase` and document how later UI phases reuse its
   pagination/query-key contract.
-- [ ] 1.6 Run the focused approval tests, changed-file lint, and typecheck.
+- [x] 1.6 Run the focused approval tests, changed-file lint, and typecheck.
 
 **Exit gate:** Current approval behavior is locked by tests and later phases can
 reuse stable typed contracts. Review-size target: about 800 changed lines.
