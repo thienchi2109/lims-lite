@@ -138,29 +138,57 @@ unchanged.
 **PR boundary:** Batch relations, RLS, indexes, and database creation/read
 contracts only. No worker process or manager UI.
 
-- [ ] 4.1 Add failing SQL tests for `approval_batches`,
+- [x] 4.1 Add failing SQL tests for `approval_batches`,
   `approval_batch_items`, and append-only `approval_batch_item_attempts`,
   including status constraints, immutable request data, canonical request
   fingerprints, idempotency-key mismatch conflicts, unique sample items, parent
   retry batches, and no hard-delete path.
-- [ ] 4.2 Add failing SQL tests for exact selection snapshots, all-or-nothing
+- [x] 4.2 Add failing SQL tests for exact selection snapshots, all-or-nothing
   item creation, progress aggregation, and the `(batch_id, status)` index using
   representative 200-item data.
-- [ ] 4.3 Create the next-numbered forward-only migration for batch tables,
+- [x] 4.3 Create the next-numbered forward-only migration for batch tables,
   indexes, comments, audit triggers, and RLS with explicit manager ownership and
   role checks.
-- [ ] 4.4 Add server-only mutation contracts for batch creation and child retry,
+- [x] 4.4 Add server-only mutation contracts for batch creation and child retry,
   plus owner-scoped progress and paginated outcome reads, without granting
   direct client DML or mutation RPC execution to `anon` or `authenticated`.
-- [ ] 4.5 Persist only server-derived step-up metadata and immutable approval
+- [x] 4.5 Persist only server-derived step-up metadata and immutable approval
   intent; prove OTP values, cookies, access/refresh tokens, and JWTs cannot be
   stored.
-- [ ] 4.6 Commit before apply, use the approved home-server migration path, and
+- [x] 4.6 Commit before apply, use the approved home-server migration path, and
   run focused SQL plus `run_security_tests()` immediately after application.
 
 **Exit gate:** Durable batch state is deployed dark and inaccessible except
 through narrow server-only mutation and owner-scoped read contracts.
 Review-size target: about 1,200 changed lines.
+
+**Phase P3 evidence (2026-07-26):** Migration 193 was committed before its
+single execution, then rolled back atomically when its final
+representation-sensitive catalog assertion rejected PostgreSQL-normalized
+definitions. It remains immutable and was neither edited nor rerun. Migration
+194 was committed and applied forward-only through the home-server SSH and
+Docker path; the storage-only schema suite passed at that checkpoint, the
+PostgREST schema cache was reloaded, and `run_security_tests()` passed.
+Migration 195 was then committed and applied through the same path, followed by
+another schema-cache reload. Current-state contract, representative 200-item
+runtime, and two-session create/retry concurrency suites pass. The contract
+schema suite revalidates the exact migration 194 storage catalog, and live
+checks return true for the storage checker, persistence security checker, and
+all creation, retry, progress, and outcome contracts. The final security runner
+returns true for every registered test.
+
+Typecheck and lint exit successfully; lint reports 88 pre-existing warnings and
+no errors. Strict OpenSpec validation reports
+`add-background-batch-result-approval` valid. No API, UI, worker, polling, or
+Phase P4 surface is included.
+
+**Phase P3 scope assessment:** The final diff is 7,086 changed lines (7,080
+additions and 6 deletions) across eight files. The size is dominated by the
+immutable 1,553-line migration 193, its required 1,597-line forward-only
+recovery migration 194, the 1,541-line contract migration 195, and direct SQL
+evidence. Historical migrations cannot be compressed or removed after
+execution; splitting contracts from their grants, security registration, or
+transactional verification would reduce auditability.
 
 ## 5. Phase P4 - Batch Request and Read APIs
 
