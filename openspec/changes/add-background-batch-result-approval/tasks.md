@@ -90,26 +90,48 @@ single-approval path changed.
 **PR boundary:** Refactor only normal one-sample approval to the atomic RPC.
 Do not add batch tables, APIs, worker code, or multi-select UI.
 
-- [ ] 3.1 Replace the multi-round-trip write sequence in `approveResults` with
+- [x] 3.1 Replace the multi-round-trip write sequence in `approveResults` with
   one server-only atomic RPC call after the existing server-side OTP guard while
   preserving the current `ApproveResults` client contract.
-- [ ] 3.2 Keep one-sample `Duyệt` synchronous and prove it creates no batch or
+- [x] 3.2 Keep one-sample `Duyệt` synchronous and prove it creates no batch or
   worker item.
-- [ ] 3.3 Preserve current query invalidation and approval queue refresh after a
+- [x] 3.3 Preserve current query invalidation and approval queue refresh after a
   committed result.
-- [ ] 3.4 Preserve current single-path CoA behavior by invoking the existing
+- [x] 3.4 Preserve current single-path CoA behavior by invoking the existing
   queue contract and non-blocking TypeScript generation trigger only after a
   completed-sample outcome.
-- [ ] 3.5 Run all Phase P0 characterization tests plus atomic rollback and CoA
+- [x] 3.5 Run all Phase P0 characterization tests plus atomic rollback and CoA
   handoff tests.
-- [ ] 3.6 Measure database calls and one-sample latency before and after
+- [x] 3.6 Measure database calls and one-sample latency before and after
   cutover; fail the phase if it introduces queue/polling latency or regresses
   synchronous p95 latency by more than 10 percent from the Phase P0 baseline.
-- [ ] 3.7 Run changed-file lint, typecheck, and the relevant shared approval
+- [x] 3.7 Run changed-file lint, typecheck, and the relevant shared approval
   tests.
 
 **Exit gate:** Single approval uses the atomic core with behavior parity and no
 batch-path dependency. Review-size target: about 900 changed lines.
+
+**Phase P2 evidence:** The TDD red run failed 18 adapter assertions against the
+legacy table-write sequence; the first green run passed 23/23 focused adapter
+tests. Final focused verification passed 20 approval/action/OTP/UI/hook files
+(122/122 tests) plus the cache-query refresh regression. The home-server SQL
+suites passed atomic rollback/concurrency and completed-sample CoA revalidation.
+The transactionally rolled-back, alternating-order 40-iteration database
+benchmark reduced the synchronous one-sample core from 8 calls to 1: legacy
+p50/p95 4.165/4.822 ms versus atomic 1.554/2.134 ms, a -55.74% p95 change.
+Route coverage proves an OTP-denied manager request cannot dispatch the
+privileged approval handler; adapter coverage proves no queue/polling boundary
+and preserves cache revalidation plus claimed/unclaimed CoA handoff behavior.
+Live catalog checks found the atomic RPC and no batch tables, items, or attempts.
+
+**Phase P2 scope reassessment:** The final diff is 2,256 changed lines (1,038
+additions and 1,218 deletions). It exceeds the 1,500-line warning because the
+obsolete multi-round-trip test harness is removed, unchanged cancellation
+coverage is isolated, and a rollback-safe benchmark is added alongside the
+atomic adapter. Splitting those tests from the caller cutover would leave either
+PR without reviewable behavior-parity evidence. No migration, batch schema,
+API, UI, polling, or worker surface is included; migration 192 remains
+unchanged.
 
 ## 4. Phase P3 - Dark Batch Persistence Schema
 

@@ -1,12 +1,14 @@
-/** Phase P0 baseline after the API OTP guard and before the atomic P1 path. */
+/** Phase P2 characterization for the synchronous atomic single-approval path. */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockCreateClient = vi.hoisted(() => vi.fn())
 const mockCreateAdminClient = vi.hoisted(() => vi.fn())
+const mockAdminRpc = vi.hoisted(() => vi.fn())
 const mockGenerateCoA = vi.hoisted(() => vi.fn())
 const mockQueueCoAReportForGeneration = vi.hoisted(() => vi.fn())
 const mockFailCoAReportGeneration = vi.hoisted(() => vi.fn())
+const mockRevalidatePath = vi.hoisted(() => vi.fn())
 
 vi.mock('@/lib/supabase/server', () => ({
     createClient: mockCreateClient,
@@ -25,169 +27,80 @@ vi.mock('@/lib/coa/report-provenance', () => ({
 }))
 
 vi.mock('next/cache', () => ({
-    revalidatePath: vi.fn(),
+    revalidatePath: (...args: unknown[]) => mockRevalidatePath(...args),
 }))
 
 import { approveResults } from '@/app/actions/results-approval'
 
 const USER_ID = '11111111-1111-4111-8111-111111111111'
 const SAMPLE_ID = '22222222-2222-4222-8222-222222222222'
-const OTHER_SAMPLE_ID = '33333333-3333-4333-8333-333333333333'
 const RESULT_ID = '44444444-4444-4444-8444-444444444444'
-const OTHER_RESULT_ID = '55555555-5555-4555-8555-555555555555'
 
-type ResultRow = {
-    id: string
-    status: string
-    sample_id: string
-    assay?: { is_confidential: boolean } | null
-}
-
-type Scenario = {
-    authenticated: boolean
-    role: string
-    canAccessConfidential: boolean
-    results: ResultRow[]
-    resultFetchError: string | null
-    sampleStatus: string
-    qcData: unknown
-    qcError: string | null
-    resultUpdateError: string | null
-    remainingUnapproved: number
-}
-
-type CapturedUpdates = {
-    results: Array<Record<string, unknown>>
-    samples: Array<Record<string, unknown>>
-}
-
-function createScenario(overrides: Partial<Scenario> = {}): Scenario {
-    return {
-        authenticated: true,
-        role: 'manager',
-        canAccessConfidential: true,
-        results: [{ id: RESULT_ID, status: 'entered', sample_id: SAMPLE_ID }],
-        resultFetchError: null,
-        sampleStatus: 'review',
-        qcData: [{ can_approve: true, blocking_reason: null }],
-        qcError: null,
-        resultUpdateError: null,
-        remainingUnapproved: 1,
-        ...overrides,
+type AtomicOutcome = {
+    success: boolean
+    outcome_code: string
+    approved_count?: number
+    sample_completed?: boolean
+    replayed?: boolean
+    error_params?: {
+        blocked_count?: number
     }
 }
 
-function createSupabaseClient(scenario: Scenario, updates: CapturedUpdates) {
-    return {
-        auth: {
-            getUser: vi.fn().mockResolvedValue({
-                data: {
-                    user: scenario.authenticated ? { id: USER_ID } : null,
-                },
-            }),
-        },
-        rpc: vi.fn().mockResolvedValue({
-            data: scenario.qcData,
-            error: scenario.qcError ? { message: scenario.qcError } : null,
-        }),
-        from: vi.fn((table: string) => {
-            let operation: 'select' | 'update' | null = null
-            let updatePayload: Record<string, unknown> | null = null
-            const chain: Record<string, ReturnType<typeof vi.fn>> = {}
-
-            chain.select = vi.fn(() => {
-                operation = 'select'
-                return chain
-            })
-            chain.update = vi.fn((payload: Record<string, unknown>) => {
-                operation = 'update'
-                updatePayload = payload
-                updates[table as keyof CapturedUpdates]?.push(payload)
-                return chain
-            })
-            chain.in = vi.fn(() => {
-                if (table === 'results' && operation === 'select') {
-                    return Promise.resolve({
-                        data: scenario.results,
-                        error: scenario.resultFetchError
-                            ? { message: scenario.resultFetchError }
-                            : null,
-                    })
-                }
-                if (table === 'results' && operation === 'update') {
-                    return Promise.resolve({
-                        error: scenario.resultUpdateError
-                            ? { message: scenario.resultUpdateError }
-                            : null,
-                    })
-                }
-                return chain
-            })
-            chain.eq = vi.fn(() => {
-                if (table === 'samples' && operation === 'update') {
-                    return Promise.resolve({ data: updatePayload, error: null })
-                }
-                return chain
-            })
-            chain.single = vi.fn(() => {
-                if (table === 'users') {
-                    return Promise.resolve({
-                        data: {
-                            role: scenario.role,
-                            can_access_confidential: scenario.canAccessConfidential,
-                        },
-                        error: null,
-                    })
-                }
-                return Promise.resolve({
-                    data: { status: scenario.sampleStatus },
-                    error: null,
-                })
-            })
-            chain.neq = vi.fn(() =>
-                Promise.resolve({
-                    count: scenario.remainingUnapproved,
-                    error: null,
-                })
-            )
-
-            return chain
-        }),
-    }
-}
-
-function createAdminClient() {
-    const chain: Record<string, ReturnType<typeof vi.fn>> = {}
-    chain.select = vi.fn(() => chain)
-    chain.in = vi.fn(() => chain)
-    chain.eq = vi.fn(() =>
-        Promise.resolve({
-            data: [],
-            error: null,
-        })
-    )
-    return { from: vi.fn(() => chain) }
+type ApprovalScenario = {
+    authenticated?: boolean
+    outcome?: AtomicOutcome | unknown
+    rpcError?: string | null
+    qcData?: unknown
+    qcError?: string | null
 }
 
 async function runApproval(
-    overrides: Partial<Scenario> = {},
+    scenario: ApprovalScenario = {},
     input: { sampleId: string; resultIds: string[]; note?: string } = {
         sampleId: SAMPLE_ID,
         resultIds: [RESULT_ID],
     }
 ) {
-    const scenario = createScenario(overrides)
-    const updates: CapturedUpdates = { results: [], samples: [] }
-    mockCreateClient.mockResolvedValue(createSupabaseClient(scenario, updates))
-    mockCreateAdminClient.mockReturnValue(createAdminClient())
+    const userRpc = vi.fn().mockResolvedValue({
+        data: scenario.qcData ?? [],
+        error: scenario.qcError ? { message: scenario.qcError } : null,
+    })
+    const userFrom = vi.fn(() => {
+        throw new Error('approveResults must not perform table queries before the atomic RPC')
+    })
+    const getUser = vi.fn().mockResolvedValue({
+        data: {
+            user: scenario.authenticated === false ? null : { id: USER_ID },
+        },
+    })
+
+    mockCreateClient.mockResolvedValue({
+        auth: { getUser },
+        rpc: userRpc,
+        from: userFrom,
+    })
+    mockAdminRpc.mockResolvedValue({
+        data: scenario.outcome ?? {
+            success: true,
+            outcome_code: 'APPROVED',
+            approved_count: input.resultIds.length,
+            sample_completed: false,
+            replayed: false,
+        },
+        error: scenario.rpcError ? { message: scenario.rpcError } : null,
+    })
+    mockCreateAdminClient.mockReturnValue({ rpc: mockAdminRpc })
 
     return {
         result: await approveResults(input),
-        updates,
+        getUser,
+        userRpc,
+        userFrom,
     }
 }
 
-describe('approveResults current behavior', () => {
+describe('approveResults atomic single-approval behavior', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockQueueCoAReportForGeneration.mockResolvedValue({
@@ -199,24 +112,40 @@ describe('approveResults current behavior', () => {
         mockFailCoAReportGeneration.mockResolvedValue(true)
     })
 
-    it('approves one entered result and keeps a partial sample in review', async () => {
-        const { result, updates } = await runApproval()
+    it('uses one server-only atomic approval call and preserves the success contract', async () => {
+        const { result, getUser, userFrom } = await runApproval()
 
         expect(result).toEqual({ success: true, approvedCount: 1 })
-        expect(updates.results[0]).toEqual({
-            status: 'approved',
-            approved_by: USER_ID,
-            approved_at: expect.any(String),
+        expect(getUser).toHaveBeenCalledOnce()
+        expect(userFrom).not.toHaveBeenCalled()
+        expect(mockAdminRpc).toHaveBeenCalledOnce()
+        expect(mockAdminRpc).toHaveBeenCalledWith('approve_sample_results_server', {
+            p_manager_id: USER_ID,
+            p_sample_id: SAMPLE_ID,
+            p_result_ids: [RESULT_ID],
+            p_approval_note: null,
         })
-        expect(updates.samples).toEqual([{ status: 'review' }])
         expect(mockQueueCoAReportForGeneration).not.toHaveBeenCalled()
+        expect(mockRevalidatePath.mock.calls).toEqual([
+            ['/manager/approvals', 'page'],
+            ['/manager/results/[sampleId]', 'page'],
+            ['/manager/samples', 'page'],
+        ])
     })
 
     it('preserves the optional note and returns before CoA rendering settles', async () => {
         mockGenerateCoA.mockReturnValue(new Promise(() => undefined))
 
-        const { result, updates } = await runApproval(
-            { remainingUnapproved: 0 },
+        const { result } = await runApproval(
+            {
+                outcome: {
+                    success: true,
+                    outcome_code: 'APPROVED',
+                    approved_count: 1,
+                    sample_completed: true,
+                    replayed: false,
+                },
+            },
             {
                 sampleId: SAMPLE_ID,
                 resultIds: [RESULT_ID],
@@ -225,109 +154,88 @@ describe('approveResults current behavior', () => {
         )
 
         expect(result).toEqual({ success: true, approvedCount: 1 })
-        expect(updates.results[0]).toMatchObject({
-            approval_note: 'Đã đối chiếu hồ sơ',
+        expect(mockAdminRpc).toHaveBeenCalledWith('approve_sample_results_server', {
+            p_manager_id: USER_ID,
+            p_sample_id: SAMPLE_ID,
+            p_result_ids: [RESULT_ID],
+            p_approval_note: 'Đã đối chiếu hồ sơ',
         })
-        expect(updates.samples).toEqual([
-            {
-                status: 'completed',
-                rejection_reason: null,
-                rejected_at: null,
-                rejected_by: null,
-            },
-        ])
         expect(mockQueueCoAReportForGeneration).toHaveBeenCalledWith(SAMPLE_ID)
         expect(mockGenerateCoA).toHaveBeenCalledOnce()
     })
 
-    it('rejects an unauthorized role without mutating results', async () => {
-        const { result, updates } = await runApproval({ role: 'analyst' })
-
-        expect(result).toEqual({ error: 'Only managers can approve results' })
-        expect(updates.results).toHaveLength(0)
-    })
-
-    it('rejects a confidential result without current confidential access', async () => {
+    it('accepts an idempotent already-approved outcome through the existing contract', async () => {
         const { result } = await runApproval({
-            canAccessConfidential: false,
-            results: [{
-                id: RESULT_ID,
-                status: 'entered',
-                sample_id: SAMPLE_ID,
-                assay: { is_confidential: true },
-            }],
-        })
-
-        expect(result).toEqual({
-            error: 'Không có quyền phê duyệt kết quả bảo mật',
-        })
-    })
-
-    it('rejects results when the sample is no longer under review', async () => {
-        const { result } = await runApproval({ sampleStatus: 'completed' })
-
-        expect(result).toEqual({
-            error: 'Can only approve results for samples under review',
-        })
-    })
-
-    it('rejects a selected result that is no longer entered', async () => {
-        const { result } = await runApproval({
-            results: [{ id: RESULT_ID, status: 'approved', sample_id: SAMPLE_ID }],
-        })
-
-        expect(result).toEqual({
-            error: 'Can only approve results with status "entered"',
-        })
-    })
-
-    it('rejects missing selected result IDs', async () => {
-        const { result } = await runApproval({ results: [] })
-
-        expect(result).toEqual({
-            error: 'Không thể phê duyệt một hoặc nhiều kết quả đã chọn',
-        })
-    })
-
-    it('rejects result IDs spanning more than one sample', async () => {
-        const { result } = await runApproval(
-            {
-                results: [
-                    { id: RESULT_ID, status: 'entered', sample_id: SAMPLE_ID },
-                    {
-                        id: OTHER_RESULT_ID,
-                        status: 'entered',
-                        sample_id: OTHER_SAMPLE_ID,
-                    },
-                ],
-                qcData: [
-                    { can_approve: true, blocking_reason: null },
-                    { can_approve: true, blocking_reason: null },
-                ],
+            outcome: {
+                success: true,
+                outcome_code: 'ALREADY_APPROVED',
+                approved_count: 1,
+                sample_completed: false,
+                replayed: true,
             },
-            {
-                sampleId: SAMPLE_ID,
-                resultIds: [RESULT_ID, OTHER_RESULT_ID],
-            }
-        )
-
-        expect(result).toEqual({
-            error: 'All results must belong to the same sample',
         })
-    })
-
-    it('records that the current action derives the sample from result IDs', async () => {
-        const { result } = await runApproval(
-            { results: [{ id: RESULT_ID, status: 'entered', sample_id: OTHER_SAMPLE_ID }] },
-            { sampleId: SAMPLE_ID, resultIds: [RESULT_ID] }
-        )
 
         expect(result).toEqual({ success: true, approvedCount: 1 })
+        expect(mockQueueCoAReportForGeneration).not.toHaveBeenCalled()
+        expect(mockRevalidatePath).toHaveBeenCalledTimes(3)
     })
 
-    it('fails closed when QC blocks approval', async () => {
+    it('skips TypeScript CoA rendering when the queue claim is unavailable', async () => {
+        mockQueueCoAReportForGeneration.mockResolvedValue(null)
+
         const { result } = await runApproval({
-            qcData: [{ can_approve: false, blocking_reason: 'Westgard 1-3s' }],
+            outcome: {
+                success: true,
+                outcome_code: 'APPROVED',
+                approved_count: 1,
+                sample_completed: true,
+                replayed: false,
+            },
+        })
+
+        expect(result).toEqual({ success: true, approvedCount: 1 })
+        expect(mockQueueCoAReportForGeneration).toHaveBeenCalledWith(SAMPLE_ID)
+        expect(mockGenerateCoA).not.toHaveBeenCalled()
+    })
+
+    it('rejects an unauthenticated request before creating the service client', async () => {
+        const { result } = await runApproval({ authenticated: false })
+
+        expect(result).toEqual({ error: 'Unauthorized' })
+        expect(mockCreateAdminClient).not.toHaveBeenCalled()
+        expect(mockAdminRpc).not.toHaveBeenCalled()
+    })
+
+    it.each([
+        ['MANAGER_REQUIRED', 'Only managers can approve results'],
+        ['CONFIDENTIAL_ACCESS_REQUIRED', 'Không có quyền phê duyệt kết quả bảo mật'],
+        ['SAMPLE_NOT_REVIEW', 'Can only approve results for samples under review'],
+        ['RESULT_NOT_ENTERED', 'Can only approve results with status "entered"'],
+        ['RESULT_NOT_FOUND', 'Không thể phê duyệt một hoặc nhiều kết quả đã chọn'],
+        ['RESULT_SAMPLE_MISMATCH', 'All results must belong to the same sample'],
+        ['REQUEST_CONFLICT', 'Invalid input data'],
+        ['NOT_AUTHENTICATED', 'Unauthorized'],
+    ])('maps %s to the existing client error contract', async (outcomeCode, error) => {
+        const { result } = await runApproval({
+            outcome: { success: false, outcome_code: outcomeCode },
+        })
+
+        expect(result).toEqual({ error })
+        expect(mockQueueCoAReportForGeneration).not.toHaveBeenCalled()
+        expect(mockRevalidatePath).not.toHaveBeenCalled()
+    })
+
+    it('preserves QC blocked details with a read-only reason lookup after rollback', async () => {
+        const { result, userRpc } = await runApproval({
+            outcome: {
+                success: false,
+                outcome_code: 'QC_BLOCKED',
+                error_params: { blocked_count: 1 },
+            },
+            qcData: [{
+                can_approve: false,
+                blocking_reason: 'Westgard 1-3s',
+            }],
         })
 
         expect(result).toEqual({
@@ -335,25 +243,52 @@ describe('approveResults current behavior', () => {
             qc_blocked: true,
             blocked_count: 1,
         })
+        expect(userRpc).toHaveBeenCalledWith('check_qc_approval_status', {
+            p_result_ids: [RESULT_ID],
+        })
+        expect(mockRevalidatePath).not.toHaveBeenCalled()
     })
 
-    it('fails closed when the QC response is malformed', async () => {
-        const { result } = await runApproval({ qcData: { can_approve: true } })
+    it('fails closed when the atomic RPC reports malformed QC evidence', async () => {
+        const { result, userRpc } = await runApproval({
+            outcome: {
+                success: false,
+                outcome_code: 'QC_RESPONSE_INVALID',
+            },
+        })
 
         expect(result).toEqual({
             error: 'Không thể phê duyệt: QC bị chặn. Phản hồi kiểm tra QC không hợp lệ.',
             qc_blocked: true,
             blocked_count: 1,
         })
+        expect(userRpc).not.toHaveBeenCalled()
     })
 
-    it('returns a database update failure without completing the sample', async () => {
-        const { result, updates } = await runApproval({
-            resultUpdateError: 'database unavailable',
-        })
+    it('returns an RPC transport failure without CoA handoff or revalidation', async () => {
+        const { result } = await runApproval({ rpcError: 'database unavailable' })
 
         expect(result).toEqual({ error: 'database unavailable' })
-        expect(updates.samples).toHaveLength(0)
         expect(mockQueueCoAReportForGeneration).not.toHaveBeenCalled()
+        expect(mockRevalidatePath).not.toHaveBeenCalled()
+    })
+
+    it.each([
+        {
+            success: true,
+            outcome_code: 'APPROVED',
+            approved_count: '1',
+            sample_completed: false,
+        },
+        {
+            success: false,
+            outcome_code: 'toString',
+        },
+    ])('fails closed on an unknown or malformed atomic outcome', async (outcome) => {
+        const { result } = await runApproval({ outcome })
+
+        expect(result).toEqual({ error: 'Failed to approve results' })
+        expect(mockQueueCoAReportForGeneration).not.toHaveBeenCalled()
+        expect(mockRevalidatePath).not.toHaveBeenCalled()
     })
 })
