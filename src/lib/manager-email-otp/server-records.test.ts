@@ -66,7 +66,7 @@ describe('manager OTP server records', () => {
     })
 
     it('delegates verification to the database RPC after confirming challenge ownership', async () => {
-        const challengeQuery = createChallengeQuery({
+        const pendingChallengeQuery = createChallengeQuery({
             id: '33333333-3333-4333-8333-333333333333',
             code_hash: 'stored-hash',
             expires_at: '2026-06-02T04:05:00.000Z',
@@ -75,12 +75,24 @@ describe('manager OTP server records', () => {
             attempt_count: 0,
             resend_available_at: '2026-06-02T04:01:00.000Z',
         })
+        const verifiedChallengeQuery = createChallengeQuery({
+            id: '33333333-3333-4333-8333-333333333333',
+            code_hash: 'stored-hash',
+            expires_at: '2026-06-02T04:05:00.000Z',
+            used_at: '2026-06-02T04:00:30.000Z',
+            locked_at: null,
+            attempt_count: 0,
+            resend_available_at: '2026-06-02T04:01:00.000Z',
+        })
         const rpc = vi.fn(async () => ({
             data: { ok: true, status: 'verified' },
             error: null,
         }))
+        const from = vi.fn()
+            .mockReturnValueOnce(pendingChallengeQuery)
+            .mockReturnValueOnce(verifiedChallengeQuery)
         mocks.createAdminClient.mockReturnValue({
-            from: vi.fn(() => challengeQuery),
+            from,
             rpc,
         })
 
@@ -89,14 +101,19 @@ describe('manager OTP server records', () => {
         await expect(verifyManagerOtpChallengeRecord(context, {
             challengeId: '33333333-3333-4333-8333-333333333333',
             code: '123456',
-        })).resolves.toEqual({ ok: true })
+        })).resolves.toEqual({
+            ok: true,
+            authorizationId: '33333333-3333-4333-8333-333333333333',
+            verifiedAt: '2026-06-02T04:00:30.000Z',
+        })
         expect(rpc).toHaveBeenCalledWith('verify_manager_otp_challenge', {
             p_challenge_id: '33333333-3333-4333-8333-333333333333',
             p_code: '123456',
             p_session_id: 'session-1',
             p_user_id: '11111111-1111-4111-8111-111111111111',
         })
-        expect(challengeQuery.update).not.toHaveBeenCalled()
+        expect(pendingChallengeQuery.update).not.toHaveBeenCalled()
+        expect(verifiedChallengeQuery.update).not.toHaveBeenCalled()
     })
 
     it('delegates challenge creation to the database RPC so eligibility and insert are atomic', async () => {

@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
     createManagerStepUpCookieValue,
     getManagerStepUpSecret,
+    readManagerStepUpCookieValue,
     verifyManagerStepUpCookieValue,
 } from './step-up'
 
@@ -39,6 +40,28 @@ describe('manager OTP step-up cookie contract', () => {
                 now: new Date('2026-06-01T01:00:00.000Z'),
             }),
         ).toEqual({ ok: true })
+    })
+
+    it('returns trusted batch authorization metadata without exposing the cookie value', async () => {
+        const cookieValue = await createManagerStepUpCookieValue({
+            ...baseInput,
+            authorizationId: '33333333-3333-4333-8333-333333333333',
+            verifiedAt: '2026-06-01T00:30:00.000Z',
+        })
+
+        await expect(
+            readManagerStepUpCookieValue(cookieValue, {
+                ...baseInput,
+                now: new Date('2026-06-01T01:00:00.000Z'),
+            }),
+        ).resolves.toEqual({
+            ok: true,
+            payload: expect.objectContaining({
+                authorizationId: '33333333-3333-4333-8333-333333333333',
+                verifiedAt: '2026-06-01T00:30:00.000Z',
+                cohort: 'standard',
+            }),
+        })
     })
 
     it('accepts the analyst confidential cohort in the shared step-up cookie contract', async () => {

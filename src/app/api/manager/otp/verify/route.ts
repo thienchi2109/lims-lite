@@ -55,6 +55,8 @@ export async function POST(request: Request) {
         otpEmailUpdatedAt: context.otpEmailUpdatedAt,
         expiresAt,
         secret: getManagerStepUpSecret(),
+        authorizationId: result.authorizationId,
+        verifiedAt: result.verifiedAt,
     })
     const response = NextResponse.json({ ok: true })
     response.cookies.set(MANAGER_STEP_UP_COOKIE_NAME, cookieValue, getManagerStepUpCookieOptions(expiresAt))

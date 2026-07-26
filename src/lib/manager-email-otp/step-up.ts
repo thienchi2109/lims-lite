@@ -11,6 +11,8 @@ type CreateInput = {
     otpEmailUpdatedAt: string
     expiresAt: Date
     secret: string
+    authorizationId?: string
+    verifiedAt?: string
 }
 
 type VerifyInput = CreateInput & {
@@ -81,6 +83,12 @@ export async function createManagerStepUpCookieValue(input: CreateInput) {
         cohort: input.cohort,
         otpEmailUpdatedAt: input.otpEmailUpdatedAt,
         expiresAt: input.expiresAt.toISOString(),
+        ...(input.authorizationId && input.verifiedAt
+            ? {
+                  authorizationId: input.authorizationId,
+                  verifiedAt: input.verifiedAt,
+              }
+            : {}),
     }
     const encodedPayload = encodeBase64Url(JSON.stringify(payload))
     const signature = await signPayload(encodedPayload, input.secret)
@@ -88,10 +96,13 @@ export async function createManagerStepUpCookieValue(input: CreateInput) {
     return `${encodedPayload}.${signature}`
 }
 
-export async function verifyManagerStepUpCookieValue(
+export async function readManagerStepUpCookieValue(
     cookieValue: string | null | undefined,
     input: VerifyInput,
-): Promise<{ ok: true } | { ok: false; reason: 'missing' | 'invalid' | 'expired' | 'mismatch' }> {
+): Promise<
+    | { ok: true; payload: ManagerStepUpPayload }
+    | { ok: false; reason: 'missing' | 'invalid' | 'expired' | 'mismatch' }
+> {
     if (!cookieValue) {
         return { ok: false, reason: 'missing' }
     }
@@ -130,7 +141,17 @@ export async function verifyManagerStepUpCookieValue(
         return { ok: false, reason: 'mismatch' }
     }
 
-    return { ok: true }
+    return { ok: true, payload }
+}
+
+export async function verifyManagerStepUpCookieValue(
+    cookieValue: string | null | undefined,
+    input: VerifyInput,
+): Promise<
+    { ok: true } | { ok: false; reason: 'missing' | 'invalid' | 'expired' | 'mismatch' }
+> {
+    const result = await readManagerStepUpCookieValue(cookieValue, input)
+    return result.ok ? { ok: true } : result
 }
 
 export function getManagerStepUpCookieOptions(expiresAt?: Date) {

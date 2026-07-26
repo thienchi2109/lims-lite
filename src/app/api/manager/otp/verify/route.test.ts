@@ -44,7 +44,11 @@ describe('manager OTP verify route', () => {
             maskedEmail: 'ma***@example.com',
         })
         mocks.getManagerOtpStepUpCohort.mockReturnValue('standard')
-        mocks.verifyManagerOtpChallengeRecord.mockResolvedValue({ ok: true })
+        mocks.verifyManagerOtpChallengeRecord.mockResolvedValue({
+            ok: true,
+            authorizationId: '33333333-3333-4333-8333-333333333333',
+            verifiedAt: '2026-06-01T00:30:00.000Z',
+        })
     })
 
     it('rejects missing manager OTP cohort before consuming the challenge', async () => {
@@ -90,6 +94,8 @@ describe('manager OTP verify route', () => {
             sessionId: 'session-analyst-1',
             cohort: 'analyst-confidential',
             otpEmailUpdatedAt: '2026-06-01T00:00:00.000Z',
+            authorizationId: '33333333-3333-4333-8333-333333333333',
+            verifiedAt: '2026-06-01T00:30:00.000Z',
         }))
     })
 })

@@ -23,6 +23,13 @@ import type { SubmitResultReview } from '@/types'
 import type { ClientActionName } from '@/lib/client-actions/types'
 import type { SampleLabelAuditPreset } from '@/lib/sample-label-template'
 
+export {
+    fetchApprovalBatchClient,
+    fetchApprovalSelectAllClient,
+    retryApprovalBatchClient,
+    submitApprovalBatchClient,
+} from '@/lib/approval-batches/client'
+
 const ENDPOINT = '/api/client-actions'
 const SESSION_EXPIRY_ENDPOINT = '/api/auth/session-expiry'
 

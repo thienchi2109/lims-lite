@@ -202,7 +202,16 @@ export async function verifyManagerOtpChallengeRecord(context: Extract<ManagerOt
     }
 
     if (result.ok === true) {
-        return { ok: true as const }
+        const verifiedChallenge = await readChallenge(context, challenge.id)
+        if (!verifiedChallenge?.used_at) {
+            return { ok: false as const, status: 'persist_failed' }
+        }
+
+        return {
+            ok: true as const,
+            authorizationId: verifiedChallenge.id,
+            verifiedAt: verifiedChallenge.used_at,
+        }
     }
 
     if (

@@ -98,6 +98,15 @@ export const ManagerStepUpPayloadSchema = z.object({
     cohort: z.enum(['standard', 'confidential', 'analyst-confidential']),
     otpEmailUpdatedAt: z.string().min(1),
     expiresAt: z.string().datetime(),
+    authorizationId: z.string().uuid().optional(),
+    verifiedAt: z.string().datetime().optional(),
+}).superRefine((value, context) => {
+    if (Boolean(value.authorizationId) !== Boolean(value.verifiedAt)) {
+        context.addIssue({
+            code: 'custom',
+            message: 'Step-up authorization metadata must be complete',
+        })
+    }
 })
 
 export type ManagerStepUpPayload = z.infer<typeof ManagerStepUpPayloadSchema>

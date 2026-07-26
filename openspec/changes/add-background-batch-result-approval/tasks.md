@@ -195,34 +195,77 @@ transactional verification would reduce auditability.
 **PR boundary:** Server/API and `api-client` integration only, protected by a
 disabled feature flag. No worker or queue UI.
 
-- [ ] 5.1 Implement an authorization-scoped select-all endpoint that returns
+- [x] 5.1 Implement an authorization-scoped select-all endpoint that returns
   the exact set and count of currently pending approval-visible sample IDs
   across every queue page.
-- [ ] 5.2 Implement batch submission that validates current manager OTP
+- [x] 5.2 Implement batch submission that validates current manager OTP
   step-up, accepts two or more distinct IDs, snapshots every result currently
   in `entered` status for each sample, persists a canonical request fingerprint,
   and creates every item or none through the server-only mutation contract.
-- [ ] 5.3 Implement owner-scoped status and paginated outcome reads with
+- [x] 5.3 Implement owner-scoped status and paginated outcome reads with
   concealed unauthorized/confidential behavior.
-- [ ] 5.4 Implement failed-item retry as a new child batch after current manager
+- [x] 5.4 Implement failed-item retry as a new child batch after current manager
   and OTP validation while preserving original terminal history.
-- [ ] 5.5 Route all client calls through `src/lib/api-client.ts`, return HTTP
+- [x] 5.5 Route all client calls through `src/lib/api-client.ts`, return HTTP
   `202` plus `batchId` for accepted submit/retry requests, and validate every
   response with the Phase P0 schemas. Return the existing batch for the same
   idempotency key and fingerprint, and a conflict for a mismatched fingerprint.
-- [ ] 5.6 Add API tests for OTP, role and confidential authorization, two- and
+- [x] 5.6 Add API tests for OTP, role and confidential authorization, two- and
   200-sample submission, queue-wide selection across pagination, exact
   `entered` result snapshots, partial approval, later-added results, selected
   results no longer `entered`, matching and mismatched duplicate request keys,
   all-or-nothing failure, owner-scoped reads, pagination, and retry eligibility.
-- [ ] 5.7 Enforce the feature flag inside select-all, submit, and retry
+- [x] 5.7 Enforce the feature flag inside select-all, submit, and retry
   endpoints, and test that direct API requests are rejected while disabled.
-- [ ] 5.8 Run focused API tests, changed-file lint, and typecheck with the
+- [x] 5.8 Run focused API tests, changed-file lint, and typecheck with the
   feature flag still disabled.
 
 **Exit gate:** Batch requests can be created and inspected through tested APIs,
 but managers cannot access the feature and no item executes. Review-size
 target: about 1,100 changed lines.
+
+**Phase P4 evidence (2026-07-26):** Added dedicated select-all, submit,
+owner-detail, and retry APIs plus validated `api-client` exports. Select-all
+uses the authenticated manager client, walks deterministic 100-row ranges, and
+removes confidential sample IDs when current access is absent. Submit and retry
+require current signed OTP metadata, then call only the migration 195
+service-role contracts with the database provenance cohort
+`manager_email_otp`; matching replays return the existing batch and mismatched
+fingerprints return a conflict. Detail reads remain available while entry
+points are disabled, authorize through both owner-scoped read RPCs, and only
+then use the service role to retrieve the required `updated_at` metadata.
+
+The API request schema rejects caller-supplied result snapshots, while the
+single atomic migration 195 call owns exact `entered` snapshots,
+all-or-nothing creation, and exclusion of later-added results. Route tests cover
+request validation, same-origin submit/retry, feature-flag rejection, and
+accepted `202` responses; server tests cover authorization, exact RPC arguments,
+idempotency, owner reads, outcome mapping, and cross-page selection. The P3 SQL
+contract tests remain the database-level proof for snapshot and atomic
+creation semantics. Migrations 192-195 and their evidence remain byte-for-byte
+unchanged.
+
+TDD evidence: baseline focused coverage passed `35/35`; the initial RED run
+failed eight test files for the absent P4 modules, routes, API exports, and OTP
+provenance metadata. First GREEN passed `45/45`. Contract review then exposed
+the cookie-cohort/database-cohort mismatch; its RED run failed `3` assertions
+until `manager_email_otp` mapping was added. A pagination-metadata regression
+also failed before the response validator was tightened. Review regressions
+then failed `2` tests for truncated select-all traversal and unauthorized table
+metadata reads; the focused server/route GREEN run passed `23/23`. Final focused
+P0, batch API, manager OTP, middleware, and client-action coverage passes
+`120/120` across 19 files. Changed-file ESLint, typecheck, full lint, strict
+OpenSpec validation, diff check, and migration checksum checks pass; full lint
+retains the existing `88` warnings and reports no errors.
+
+No UI, worker, polling, Compose, Docker, or migration file changed. The feature
+flag remains default-disabled as
+`BACKGROUND_BATCH_RESULT_APPROVAL_ENABLED=FALSE`. Stop before Phase P5.
+
+**Phase P4 scope assessment:** The final review surface is 2,023 changed lines
+across 26 files: 923 production lines, 1,041 test lines, and 59 OpenSpec evidence
+lines. Production code remains below the phase's approximate 1,100-line target;
+the larger total is driven by the required API/OTP regression matrix.
 
 ## 6. Phase P5 - Worker Database Claim and Execution
 
