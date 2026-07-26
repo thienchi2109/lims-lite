@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import {
     APPROVAL_ERROR_MESSAGES_VI,
     ApprovalBatchItemOutcomeSchema,
@@ -15,6 +16,7 @@ import {
     SingleApprovalResponseSchema,
     getApprovalErrorMessageVi,
 } from './approval-batch'
+
 const BATCH_ID = '11111111-1111-4111-8111-111111111111'
 const ITEM_ID = '22222222-2222-4222-8222-222222222222'
 const SAMPLE_ID = '33333333-3333-4333-8333-333333333333'
@@ -23,6 +25,7 @@ const RESULT_ID = '55555555-5555-4555-8555-555555555555'
 const REQUEST_KEY = '66666666-6666-4666-8666-666666666666'
 const CASE_UUID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const NOW = '2026-07-26T02:00:00.000Z'
+
 describe('approval P0 contracts', () => {
     it('keeps single approval compatible with the synchronous response shape', () => {
         expect(SingleApprovalRequestSchema.parse({
@@ -53,6 +56,7 @@ describe('approval P0 contracts', () => {
             error: 'raw database message',
         }).success).toBe(false)
     })
+
     it('rejects duplicate IDs and untrusted fields in approval requests', () => {
         expect(SingleApprovalRequestSchema.safeParse({
             sampleId: SAMPLE_ID,
@@ -70,6 +74,7 @@ describe('approval P0 contracts', () => {
             sampleIds: [CASE_UUID, CASE_UUID.toUpperCase()],
         }).success).toBe(false)
     })
+
     it('defines an idempotent batch submission capped at 200 samples', () => {
         expect(ApprovalBatchSubmissionRequestSchema.parse({
             requestKey: REQUEST_KEY,
@@ -94,6 +99,7 @@ describe('approval P0 contracts', () => {
             batchId: BATCH_ID,
         })).toEqual({ batchId: BATCH_ID })
     })
+
     it('requires select-all count to match its exact sample snapshot', () => {
         const completeQueueSnapshot = Array.from(
             { length: 201 },
@@ -108,6 +114,7 @@ describe('approval P0 contracts', () => {
             count: 1,
         }).success).toBe(false)
     })
+
     it('requires durable progress counts to equal the batch total', () => {
         const progress = {
             batchId: BATCH_ID,
@@ -123,12 +130,14 @@ describe('approval P0 contracts', () => {
             completedAt: null,
             updatedAt: NOW,
         }
+
         expect(ApprovalBatchProgressSchema.parse(progress)).toEqual(progress)
         expect(ApprovalBatchProgressSchema.safeParse({
             ...progress,
             totalCount: 5,
         }).success).toBe(false)
     })
+
     it('rejects contradictory terminal and active progress states', () => {
         const completed = {
             batchId: BATCH_ID,
@@ -144,6 +153,7 @@ describe('approval P0 contracts', () => {
             completedAt: NOW,
             updatedAt: NOW,
         }
+
         expect(ApprovalBatchProgressSchema.parse(completed)).toEqual(completed)
         expect(ApprovalBatchProgressSchema.safeParse({
             ...completed,
@@ -159,6 +169,7 @@ describe('approval P0 contracts', () => {
             status: 'completed_with_failures',
         }).success).toBe(false)
     })
+
     it('keeps failed item errors sanitized and succeeded items error-free', () => {
         const failedItem = {
             itemId: ITEM_ID,
@@ -171,6 +182,7 @@ describe('approval P0 contracts', () => {
             },
             completedAt: NOW,
         }
+
         expect(ApprovalBatchItemOutcomeSchema.parse(failedItem)).toEqual(failedItem)
         expect(ApprovalBatchItemOutcomeSchema.safeParse({
             ...failedItem,
@@ -191,6 +203,7 @@ describe('approval P0 contracts', () => {
             rawMessage: 'postgres connection string',
         }).success).toBe(false)
     })
+
     it('defines paginated outcomes and parent-only retry intent', () => {
         const outcome = {
             itemId: ITEM_ID,
@@ -200,6 +213,7 @@ describe('approval P0 contracts', () => {
             error: null,
             completedAt: NOW,
         }
+
         expect(ApprovalBatchOutcomePageSchema.parse({
             batchId: BATCH_ID,
             items: [outcome],
@@ -216,6 +230,7 @@ describe('approval P0 contracts', () => {
             requestKey: REQUEST_KEY,
         })
     })
+
     it('rejects contradictory outcome pagination metadata', () => {
         const outcome = {
             itemId: ITEM_ID,
@@ -233,6 +248,7 @@ describe('approval P0 contracts', () => {
             totalCount: 1,
             totalPages: 1,
         }
+
         expect(ApprovalBatchOutcomePageSchema.safeParse({
             ...page,
             items: [outcome, { ...outcome, itemId: RESULT_ID }],
@@ -265,8 +281,10 @@ describe('approval P0 contracts', () => {
             totalPages: 0,
         }).success).toBe(true)
     })
+
     it('maps every stable error code to a Vietnamese-safe message', () => {
         const codes = ApprovalErrorCodeSchema.options
+
         expect(Object.keys(APPROVAL_ERROR_MESSAGES_VI).sort()).toEqual(
             [...codes].sort()
         )

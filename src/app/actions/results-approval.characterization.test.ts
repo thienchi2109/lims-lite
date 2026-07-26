@@ -211,6 +211,7 @@ describe('approveResults current behavior', () => {
         expect(updates.samples).toEqual([{ status: 'review' }])
         expect(mockQueueCoAReportForGeneration).not.toHaveBeenCalled()
     })
+
     it('preserves the optional note and returns before CoA rendering settles', async () => {
         mockGenerateCoA.mockReturnValue(new Promise(() => undefined))
 
@@ -238,12 +239,14 @@ describe('approveResults current behavior', () => {
         expect(mockQueueCoAReportForGeneration).toHaveBeenCalledWith(SAMPLE_ID)
         expect(mockGenerateCoA).toHaveBeenCalledOnce()
     })
+
     it('rejects an unauthorized role without mutating results', async () => {
         const { result, updates } = await runApproval({ role: 'analyst' })
 
         expect(result).toEqual({ error: 'Only managers can approve results' })
         expect(updates.results).toHaveLength(0)
     })
+
     it('rejects a confidential result without current confidential access', async () => {
         const { result } = await runApproval({
             canAccessConfidential: false,
@@ -259,6 +262,7 @@ describe('approveResults current behavior', () => {
             error: 'Không có quyền phê duyệt kết quả bảo mật',
         })
     })
+
     it('rejects results when the sample is no longer under review', async () => {
         const { result } = await runApproval({ sampleStatus: 'completed' })
 
@@ -266,6 +270,7 @@ describe('approveResults current behavior', () => {
             error: 'Can only approve results for samples under review',
         })
     })
+
     it('rejects a selected result that is no longer entered', async () => {
         const { result } = await runApproval({
             results: [{ id: RESULT_ID, status: 'approved', sample_id: SAMPLE_ID }],
@@ -275,6 +280,7 @@ describe('approveResults current behavior', () => {
             error: 'Can only approve results with status "entered"',
         })
     })
+
     it('rejects missing selected result IDs', async () => {
         const { result } = await runApproval({ results: [] })
 
@@ -282,6 +288,7 @@ describe('approveResults current behavior', () => {
             error: 'Không thể phê duyệt một hoặc nhiều kết quả đã chọn',
         })
     })
+
     it('rejects result IDs spanning more than one sample', async () => {
         const { result } = await runApproval(
             {
@@ -308,6 +315,7 @@ describe('approveResults current behavior', () => {
             error: 'All results must belong to the same sample',
         })
     })
+
     it('records that the current action derives the sample from result IDs', async () => {
         const { result } = await runApproval(
             { results: [{ id: RESULT_ID, status: 'entered', sample_id: OTHER_SAMPLE_ID }] },
@@ -316,6 +324,7 @@ describe('approveResults current behavior', () => {
 
         expect(result).toEqual({ success: true, approvedCount: 1 })
     })
+
     it('fails closed when QC blocks approval', async () => {
         const { result } = await runApproval({
             qcData: [{ can_approve: false, blocking_reason: 'Westgard 1-3s' }],
@@ -327,6 +336,7 @@ describe('approveResults current behavior', () => {
             blocked_count: 1,
         })
     })
+
     it('fails closed when the QC response is malformed', async () => {
         const { result } = await runApproval({ qcData: { can_approve: true } })
 
@@ -336,6 +346,7 @@ describe('approveResults current behavior', () => {
             blocked_count: 1,
         })
     })
+
     it('returns a database update failure without completing the sample', async () => {
         const { result, updates } = await runApproval({
             resultUpdateError: 'database unavailable',

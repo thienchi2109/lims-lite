@@ -1,8 +1,9 @@
 /**
  * Typed approval contracts introduced by Phase P0.
  *
- * Current path: approval-dialog -> approveResultsClient -> OTP guard -> approveResults. Database audit
- * triggers and sample-submission/CoA provenance RPCs remain unchanged.
+ * Current path: approval-dialog -> approveResultsClient -> client-action
+ * OTP guard -> approveResults. Database audit triggers and
+ * sample-submission/CoA provenance RPCs remain unchanged.
  *
  * Later queue UI phases must extend the existing approvalKeys.list hierarchy
  * and cache-first useApprovalQueue contract with pagination parameters instead
