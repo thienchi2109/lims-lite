@@ -109,7 +109,7 @@ BEGIN
     PERFORM pg_temp.assert_approval_batch_schema(
         'safe_step_up_columns_only',
         (
-            SELECT array_agg(column_name ORDER BY ordinal_position)
+            SELECT array_agg(column_name::TEXT ORDER BY ordinal_position)
             FROM information_schema.columns
             WHERE table_schema = 'public'
               AND table_name = 'approval_batches'
@@ -383,6 +383,7 @@ $catalog$;
 DO $fixtures_and_guards$
 DECLARE
     v_manager_id UUID := '93100000-0000-0000-0000-000000000001';
+    v_analyst_id UUID := '93100000-0000-0000-0000-000000000015';
     v_sample_id UUID := '93100000-0000-0000-0000-000000000002';
     v_result_id UUID := '93100000-0000-0000-0000-000000000003';
     v_batch_id UUID := '93100000-0000-0000-0000-000000000004';
@@ -395,7 +396,9 @@ DECLARE
     v_terminal_updated_at TIMESTAMPTZ;
 BEGIN
     INSERT INTO auth.users (id, email)
-    VALUES (v_manager_id, 'approval-batch-schema@lims.local')
+    VALUES
+        (v_manager_id, 'approval-batch-schema@lims.local'),
+        (v_analyst_id, 'approval-batch-schema-analyst@lims.local')
     ON CONFLICT (id) DO NOTHING;
 
     INSERT INTO public.users (
@@ -409,6 +412,20 @@ BEGIN
     )
     ON CONFLICT (id) DO UPDATE
     SET role = 'manager',
+        can_access_confidential = TRUE,
+        deleted_at = NULL;
+
+    INSERT INTO public.users (
+        id, username, full_name, role, email,
+        can_access_confidential, deleted_at
+    )
+    VALUES (
+        v_analyst_id, 'approval_batch_schema_analyst',
+        'Approval Batch Schema Analyst', 'analyst',
+        'approval-batch-schema-analyst@lims.local', TRUE, NULL
+    )
+    ON CONFLICT (id) DO UPDATE
+    SET role = 'analyst',
         can_access_confidential = TRUE,
         deleted_at = NULL;
 
@@ -439,7 +456,7 @@ BEGIN
     VALUES (
         v_sample_id, 'BATCH-SCHEMA-001',
         '93100000-0000-0000-0000-000000000007',
-        'Approval Batch Schema Client', 'review', v_manager_id,
+        'Approval Batch Schema Client', 'review', v_analyst_id,
         'Máu', TRUE
     );
 
@@ -449,7 +466,7 @@ BEGIN
     VALUES (
         v_result_id, v_sample_id,
         '93100000-0000-0000-0000-000000000008',
-        '1.0', 'entered', v_manager_id, NOW()
+        '1.0', 'entered', v_analyst_id, NOW()
     );
 
     PERFORM set_config(
