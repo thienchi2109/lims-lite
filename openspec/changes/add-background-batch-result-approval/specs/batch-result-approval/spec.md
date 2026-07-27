@@ -340,6 +340,21 @@ counts, and sanitized structured outcomes without logging patient/client
 identity, sample codes, result values, approval notes, OTP data, signatures,
 tokens, or raw confidential errors.
 
+#### Scenario: Worker reports authoritative oldest eligible queue age
+
+- **WHEN** PostgreSQL observes approval batch items after a claim
+- **THEN** eligible items SHALL exactly match the claim predicate for queued
+  first attempts, due retry waits below attempt three, and expired processing
+  leases below attempt three
+- **AND** queue age SHALL equal database observation time minus the earliest
+  eligible item `created_at`, clamped to zero
+- **AND** no eligible item SHALL report zero seconds
+- **AND** a failed observation SHALL make database readiness unhealthy and
+  export the queue-age gauge as `NaN` rather than falsely reporting an empty
+  queue
+- **AND** the observability contract SHALL return no item, manager, sample,
+  result, note, patient, or client data.
+
 #### Scenario: Worker records an item attempt
 
 - **WHEN** an item attempt starts or ends

@@ -346,6 +346,16 @@ Worker health distinguishes process liveness from database readiness. Alerts
 cover stale leases, growing queue age, repeated terminal failures, and worker
 unavailability.
 
+The authoritative queue-age observation is database-derived after each claim
+and before claimed executions begin. Eligibility exactly matches the claim
+contract: queued first attempts, due retry waits below attempt three, and
+expired processing leases below attempt three. PostgreSQL returns only its
+observation timestamp and the nonnegative seconds since the earliest eligible
+item `created_at`; no eligible item returns zero. If the observation fails, the
+worker still executes every lease it already claimed, marks readiness
+unhealthy, and exports `NaN` so an unknown value cannot be mistaken for an
+empty queue.
+
 ## Risks / Trade-offs
 
 - **Higher database write concurrency can increase lock contention** →

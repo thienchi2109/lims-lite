@@ -117,6 +117,8 @@ BEGIN
 END;
 $security$;
 
+GRANT approval_batch_worker TO postgres;
+
 CREATE FUNCTION pg_temp.observe_worker_queue()
 RETURNS TABLE (
     observed_at TIMESTAMPTZ,
@@ -374,6 +376,8 @@ BEGIN
     );
 END;
 $queue_age_semantics$;
+
+REVOKE approval_batch_worker FROM postgres;
 
 DO $security_runner$
 DECLARE
