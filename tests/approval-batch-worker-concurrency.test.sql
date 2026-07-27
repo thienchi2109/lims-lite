@@ -19,6 +19,9 @@ BEGIN
 END;
 $contract$;
 
+REVOKE approval_batch_worker FROM postgres;
+GRANT approval_batch_worker TO postgres;
+
 DROP TABLE IF EXISTS public.approval_batch_worker_claim_probe;
 DROP TABLE IF EXISTS public.approval_batch_worker_retry_probe;
 
@@ -402,4 +405,5 @@ SELECT
 SELECT pg_temp.cleanup_approval_batch_worker_concurrency();
 DROP TABLE public.approval_batch_worker_retry_probe;
 DROP TABLE public.approval_batch_worker_claim_probe;
+REVOKE approval_batch_worker FROM postgres;
 \! rm -f /tmp/approval-worker-claim-a.out /tmp/approval-worker-claim-b.out /tmp/approval-worker-claim-status /tmp/approval-worker-locker.out /tmp/approval-worker-retry.out /tmp/approval-worker-retry-status

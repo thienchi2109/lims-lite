@@ -173,6 +173,8 @@ BEGIN
 END;
 $schema$;
 
+GRANT approval_batch_worker TO postgres;
+
 CREATE FUNCTION pg_temp.create_worker_batch(
     p_manager_id UUID,
     p_request_key UUID,
@@ -326,7 +328,7 @@ BEGIN
         v_analyst_id,
         'Máu',
         TRUE
-    FROM generate_series(1, 4) AS fixture(series);
+    FROM generate_series(1, 8) AS fixture(series);
 
     INSERT INTO public.results (
         id, sample_id, assay_id, value, status, entered_by, entered_at
@@ -345,7 +347,7 @@ BEGIN
         'entered'::public.result_status,
         v_analyst_id,
         clock_timestamp()
-    FROM generate_series(1, 4) AS fixture(series);
+    FROM generate_series(1, 8) AS fixture(series);
 END;
 $fixtures$;
 
@@ -372,9 +374,12 @@ DO $success_and_replay$
 DECLARE
     v_manager_id UUID := '93400000-0000-0000-0000-000000000001';
     v_sample_id UUID := '93400010-0000-0000-0000-000000000001';
+    v_other_sample_id UUID := '93400010-0000-0000-0000-000000000002';
     v_result_id UUID := '93400020-0000-0000-0000-000000000001';
     v_batch_id UUID;
+    v_claims JSONB;
     v_claim JSONB;
+    v_other_claim JSONB;
     v_item_id UUID;
     v_claim_token UUID;
     v_outcome JSONB;
@@ -384,9 +389,24 @@ BEGIN
     v_batch_id := pg_temp.create_worker_batch(
         v_manager_id,
         '93400000-0000-0000-0000-000000000101',
-        ARRAY[v_sample_id]
+        ARRAY[v_sample_id, v_other_sample_id]
     );
-    v_claim := pg_temp.claim_worker_items(1, 60) -> 0;
+    v_claims := pg_temp.claim_worker_items(2, 60);
+
+    SELECT claim_record.value
+    INTO v_claim
+    FROM jsonb_array_elements(v_claims) AS claim_record(value)
+    JOIN public.approval_batch_items AS item
+      ON item.id = (claim_record.value ->> 'batch_item_id')::UUID
+    WHERE item.sample_id = v_sample_id;
+
+    SELECT claim_record.value
+    INTO v_other_claim
+    FROM jsonb_array_elements(v_claims) AS claim_record(value)
+    JOIN public.approval_batch_items AS item
+      ON item.id = (claim_record.value ->> 'batch_item_id')::UUID
+    WHERE item.sample_id = v_other_sample_id;
+
     v_item_id := (v_claim ->> 'batch_item_id')::UUID;
     v_claim_token := (v_claim ->> 'claim_token')::UUID;
 
@@ -396,6 +416,7 @@ BEGIN
             SELECT id
             FROM public.approval_batch_items
             WHERE batch_id = v_batch_id
+              AND sample_id = v_sample_id
         )
         AND v_claim_token IS NOT NULL
         AND (v_claim ->> 'attempt_number')::INTEGER = 1
@@ -405,6 +426,10 @@ BEGIN
     );
 
     v_outcome := pg_temp.execute_worker_item(v_item_id, v_claim_token);
+    PERFORM pg_temp.execute_worker_item(
+        (v_other_claim ->> 'batch_item_id')::UUID,
+        (v_other_claim ->> 'claim_token')::UUID
+    );
 
     SELECT count(*)
     INTO v_audit_count
@@ -472,21 +497,30 @@ $success_and_replay$;
 DO $business_failure$
 DECLARE
     v_manager_id UUID := '93400000-0000-0000-0000-000000000001';
-    v_sample_id UUID := '93400010-0000-0000-0000-000000000002';
-    v_result_id UUID := '93400020-0000-0000-0000-000000000002';
+    v_sample_id UUID := '93400010-0000-0000-0000-000000000003';
+    v_other_sample_id UUID := '93400010-0000-0000-0000-000000000004';
+    v_result_id UUID := '93400020-0000-0000-0000-000000000003';
     v_batch_id UUID;
+    v_claims JSONB;
     v_claim JSONB;
     v_outcome JSONB;
 BEGIN
     v_batch_id := pg_temp.create_worker_batch(
         v_manager_id,
         '93400000-0000-0000-0000-000000000102',
-        ARRAY[v_sample_id]
+        ARRAY[v_sample_id, v_other_sample_id]
     );
-    v_claim := pg_temp.claim_worker_items(1, 60) -> 0;
+    v_claims := pg_temp.claim_worker_items(2, 60);
+
+    SELECT claim_record.value
+    INTO v_claim
+    FROM jsonb_array_elements(v_claims) AS claim_record(value)
+    JOIN public.approval_batch_items AS item
+      ON item.id = (claim_record.value ->> 'batch_item_id')::UUID
+    WHERE item.sample_id = v_sample_id;
 
     UPDATE public.users
-    SET role = 'analyst'
+    SET deleted_at = clock_timestamp()
     WHERE id = v_manager_id;
 
     v_outcome := pg_temp.execute_worker_item(
@@ -495,7 +529,7 @@ BEGIN
     );
 
     UPDATE public.users
-    SET role = 'manager'
+    SET deleted_at = NULL
     WHERE id = v_manager_id;
 
     PERFORM pg_temp.assert_worker_contract(
@@ -524,9 +558,12 @@ $business_failure$;
 DO $lease_replacement$
 DECLARE
     v_manager_id UUID := '93400000-0000-0000-0000-000000000001';
-    v_sample_id UUID := '93400010-0000-0000-0000-000000000003';
+    v_sample_id UUID := '93400010-0000-0000-0000-000000000005';
+    v_other_sample_id UUID := '93400010-0000-0000-0000-000000000006';
     v_batch_id UUID;
+    v_claims JSONB;
     v_first JSONB;
+    v_other_claim JSONB;
     v_second JSONB;
     v_third JSONB;
     v_stale JSONB;
@@ -535,13 +572,34 @@ BEGIN
     v_batch_id := pg_temp.create_worker_batch(
         v_manager_id,
         '93400000-0000-0000-0000-000000000103',
-        ARRAY[v_sample_id]
+        ARRAY[v_sample_id, v_other_sample_id]
     );
-    v_first := pg_temp.claim_worker_items(1, 60) -> 0;
+    v_claims := pg_temp.claim_worker_items(2, 60);
+
+    SELECT claim_record.value
+    INTO v_first
+    FROM jsonb_array_elements(v_claims) AS claim_record(value)
+    JOIN public.approval_batch_items AS item
+      ON item.id = (claim_record.value ->> 'batch_item_id')::UUID
+    WHERE item.sample_id = v_sample_id;
+
+    SELECT claim_record.value
+    INTO v_other_claim
+    FROM jsonb_array_elements(v_claims) AS claim_record(value)
+    JOIN public.approval_batch_items AS item
+      ON item.id = (claim_record.value ->> 'batch_item_id')::UUID
+    WHERE item.sample_id = v_other_sample_id;
+
+    PERFORM pg_temp.execute_worker_item(
+        (v_other_claim ->> 'batch_item_id')::UUID,
+        (v_other_claim ->> 'claim_token')::UUID
+    );
+
     v_item_id := (v_first ->> 'batch_item_id')::UUID;
 
     UPDATE public.approval_batch_items
-    SET claim_expires_at = clock_timestamp() - INTERVAL '1 second'
+    SET claimed_at = clock_timestamp() - INTERVAL '2 seconds',
+        claim_expires_at = clock_timestamp() - INTERVAL '1 second'
     WHERE id = v_item_id;
 
     v_second := pg_temp.claim_worker_items(1, 60) -> 0;
@@ -568,12 +626,14 @@ BEGIN
     );
 
     UPDATE public.approval_batch_items
-    SET claim_expires_at = clock_timestamp() - INTERVAL '1 second'
+    SET claimed_at = clock_timestamp() - INTERVAL '2 seconds',
+        claim_expires_at = clock_timestamp() - INTERVAL '1 second'
     WHERE id = v_item_id;
     v_third := pg_temp.claim_worker_items(1, 60) -> 0;
 
     UPDATE public.approval_batch_items
-    SET claim_expires_at = clock_timestamp() - INTERVAL '1 second'
+    SET claimed_at = clock_timestamp() - INTERVAL '2 seconds',
+        claim_expires_at = clock_timestamp() - INTERVAL '1 second'
     WHERE id = v_item_id;
     PERFORM pg_temp.claim_worker_items(1, 60);
 
@@ -616,8 +676,12 @@ $$;
 DO $terminal_refresh_setup$
 DECLARE
     v_manager_id UUID := '93400000-0000-0000-0000-000000000001';
-    v_sample_id UUID := '93400010-0000-0000-0000-000000000004';
+    v_sample_id UUID := '93400010-0000-0000-0000-000000000007';
+    v_other_sample_id UUID := '93400010-0000-0000-0000-000000000008';
     v_batch_id UUID;
+    v_claims JSONB;
+    v_claim JSONB;
+    v_other_claim JSONB;
 BEGIN
     SELECT id
     INTO v_batch_id
@@ -629,7 +693,7 @@ BEGIN
         v_batch_id := pg_temp.create_worker_batch(
             v_manager_id,
             '93400000-0000-0000-0000-000000000104',
-            ARRAY[v_sample_id]
+            ARRAY[v_sample_id, v_other_sample_id]
         );
     END IF;
 
@@ -639,14 +703,33 @@ BEGIN
         claim_token UUID NOT NULL
     ) ON COMMIT DROP;
 
+    v_claims := pg_temp.claim_worker_items(2, 60);
+
+    SELECT claim_record.value
+    INTO v_claim
+    FROM jsonb_array_elements(v_claims) AS claim_record(value)
+    JOIN public.approval_batch_items AS item
+      ON item.id = (claim_record.value ->> 'batch_item_id')::UUID
+    WHERE item.sample_id = v_sample_id;
+
+    SELECT claim_record.value
+    INTO v_other_claim
+    FROM jsonb_array_elements(v_claims) AS claim_record(value)
+    JOIN public.approval_batch_items AS item
+      ON item.id = (claim_record.value ->> 'batch_item_id')::UUID
+    WHERE item.sample_id = v_other_sample_id;
+
+    PERFORM pg_temp.execute_worker_item(
+        (v_other_claim ->> 'batch_item_id')::UUID,
+        (v_other_claim ->> 'claim_token')::UUID
+    );
+
     INSERT INTO approval_batch_worker_crash_state
-    SELECT
+    VALUES (
         v_batch_id,
-        (claim ->> 'batch_item_id')::UUID,
-        (claim ->> 'claim_token')::UUID
-    FROM (
-        SELECT pg_temp.claim_worker_items(1, 60) -> 0 AS claim
-    ) AS claimed;
+        (v_claim ->> 'batch_item_id')::UUID,
+        (v_claim ->> 'claim_token')::UUID
+    );
 
     EXECUTE format(
         'CREATE TRIGGER approval_batch_worker_test_terminal_refresh '
@@ -663,7 +746,7 @@ $terminal_refresh_setup$;
 DO $terminal_refresh_assertions$
 DECLARE
     v_state approval_batch_worker_crash_state%ROWTYPE;
-    v_result_id UUID := '93400020-0000-0000-0000-000000000004';
+    v_result_id UUID := '93400020-0000-0000-0000-000000000007';
     v_failed BOOLEAN := FALSE;
     v_outcome JSONB;
 BEGIN
