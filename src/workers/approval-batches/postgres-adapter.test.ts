@@ -93,6 +93,38 @@ describe('direct PostgreSQL approval batch worker adapter', () => {
     })
   })
 
+  test('reads only privacy-safe worker queue observability', async () => {
+    poolQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          observed_at: '2026-07-27T07:00:00.000Z',
+          oldest_eligible_queue_age_seconds: '42.5',
+        },
+      ],
+    })
+    const database = createPostgresApprovalBatchWorkerDatabase({
+      applicationName: 'approval-worker-opaque-1',
+      database: 'postgres',
+      host: 'postgres',
+      operationTimeoutMs: 10_000,
+      password: 'protected-secret',
+      poolMax: 8,
+      port: 5432,
+      user: 'approval_batch_worker',
+    })
+
+    await expect(database.observeQueue()).resolves.toEqual({
+      observedAt: new Date('2026-07-27T07:00:00.000Z'),
+      oldestEligibleQueueAgeSeconds: 42.5,
+    })
+    expect(poolQuery).toHaveBeenCalledWith({
+      name: 'approval-batch-worker-observability',
+      text: expect.stringMatching(
+        /get_approval_batch_worker_observability\(\)/
+      ),
+    })
+  })
+
   test('executes only by item identity and claim token', async () => {
     poolQuery.mockResolvedValueOnce({
       rows: [

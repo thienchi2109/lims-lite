@@ -7,6 +7,7 @@ import type {
   ApprovalBatchWorkerDatabase,
   ClaimedApprovalBatchItem,
   ExecutionOutcome,
+  WorkerQueueObservation,
 } from './contracts'
 
 const ClaimRowSchema = z.object({
@@ -25,6 +26,11 @@ const ExecutionOutcomeSchema = z
     terminal: z.boolean().optional().default(false),
   })
   .passthrough()
+
+const QueueObservationRowSchema = z.object({
+  observed_at: z.coerce.date(),
+  oldest_eligible_queue_age_seconds: z.coerce.number().finite().nonnegative(),
+})
 
 interface PostgresAdapterConfig {
   applicationName: string
@@ -96,6 +102,17 @@ export function createPostgresApprovalBatchWorkerDatabase(
       const row = z.object({ outcome: z.unknown() }).parse(result.rows[0])
       return parseExecutionOutcome(row.outcome)
     },
+
+    async observeQueue() {
+      const result = await pool.query({
+        name: 'approval-batch-worker-observability',
+        text: `
+          SELECT *
+          FROM public.get_approval_batch_worker_observability()
+        `,
+      })
+      return parseQueueObservation(result.rows[0])
+    },
   }
 }
 
@@ -117,5 +134,14 @@ function parseExecutionOutcome(value: unknown): ExecutionOutcome {
     replayed: parsed.replayed,
     success: parsed.success,
     terminal: parsed.terminal,
+  }
+}
+
+function parseQueueObservation(row: unknown): WorkerQueueObservation {
+  const parsed = QueueObservationRowSchema.parse(row)
+  return {
+    observedAt: parsed.observed_at,
+    oldestEligibleQueueAgeSeconds:
+      parsed.oldest_eligible_queue_age_seconds,
   }
 }

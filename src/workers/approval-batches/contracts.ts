@@ -17,6 +17,11 @@ export interface ExecutionOutcome {
   terminal: boolean
 }
 
+export interface WorkerQueueObservation {
+  observedAt: Date
+  oldestEligibleQueueAgeSeconds: number
+}
+
 export interface ApprovalBatchWorkerDatabase {
   checkReadiness(): Promise<void>
   claimItems(
@@ -25,6 +30,7 @@ export interface ApprovalBatchWorkerDatabase {
   ): Promise<ClaimedApprovalBatchItem[]>
   close(): Promise<void>
   executeItem(batchItemId: string, claimToken: string): Promise<ExecutionOutcome>
+  observeQueue(): Promise<WorkerQueueObservation>
 }
 
 export type WorkerLogLevel = 'error' | 'info' | 'warn'

@@ -25,6 +25,7 @@ export async function runApprovalBatchWorkerRuntime() {
     onPoolError(outcomeCode) {
       metrics.setDatabaseReady(false)
       metrics.recordDatabaseOperationError()
+      metrics.recordQueueObservationUnavailable()
       logger.log({
         event: 'database_pool_error',
         level: 'error',

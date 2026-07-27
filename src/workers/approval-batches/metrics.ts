@@ -10,6 +10,7 @@ export interface WorkerMetricsSnapshot {
   databaseReady: boolean
   failedTotal: number
   inFlight: number
+  oldestEligibleQueueAgeSeconds: number | null
   outcomes: Record<string, number>
   postCommitLeaseReplayRecoveriesTotal: number
   retryClaimsTotal: number
@@ -25,6 +26,7 @@ export class ApprovalBatchWorkerMetrics {
   private failedTotal = 0
   private inFlight = 0
   private readonly inFlightLeaseExpirations = new Map<string, number>()
+  private oldestEligibleQueueAgeSeconds: number | null = null
   private readonly outcomes = new Map<string, number>()
   private postCommitLeaseReplayRecoveriesTotal = 0
   private retryClaimsTotal = 0
@@ -98,6 +100,20 @@ export class ApprovalBatchWorkerMetrics {
     }
   }
 
+  recordQueueObservation(oldestEligibleQueueAgeSeconds: number) {
+    if (
+      !Number.isFinite(oldestEligibleQueueAgeSeconds) ||
+      oldestEligibleQueueAgeSeconds < 0
+    ) {
+      throw new Error('Queue age must be a finite nonnegative number')
+    }
+    this.oldestEligibleQueueAgeSeconds = oldestEligibleQueueAgeSeconds
+  }
+
+  recordQueueObservationUnavailable() {
+    this.oldestEligibleQueueAgeSeconds = null
+  }
+
   setDatabaseReady(ready: boolean) {
     this.databaseReady = ready
   }
@@ -115,6 +131,7 @@ export class ApprovalBatchWorkerMetrics {
       databaseReady: this.databaseReady,
       failedTotal: this.failedTotal,
       inFlight: this.inFlight,
+      oldestEligibleQueueAgeSeconds: this.oldestEligibleQueueAgeSeconds,
       outcomes: Object.fromEntries(this.outcomes),
       postCommitLeaseReplayRecoveriesTotal:
         this.postCommitLeaseReplayRecoveriesTotal,
@@ -148,6 +165,10 @@ export class ApprovalBatchWorkerMetrics {
       metric(
         'approval_batch_worker_continuous_full_claim_saturation_seconds',
         snapshot.continuousFullClaimSaturationSeconds
+      ),
+      metric(
+        'approval_batch_worker_oldest_eligible_queue_age_seconds',
+        snapshot.oldestEligibleQueueAgeSeconds ?? Number.NaN
       ),
     ]
 

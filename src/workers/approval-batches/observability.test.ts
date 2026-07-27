@@ -81,6 +81,29 @@ describe('approval batch worker observability', () => {
     expect(metrics.snapshot().staleInFlightLeases).toBe(1)
   })
 
+  test('distinguishes authoritative queue age from an unavailable observation', () => {
+    const metrics = new ApprovalBatchWorkerMetrics()
+
+    expect(metrics.snapshot().oldestEligibleQueueAgeSeconds).toBeNull()
+    expect(metrics.toPrometheus()).toContain(
+      'approval_batch_worker_oldest_eligible_queue_age_seconds NaN'
+    )
+
+    metrics.recordQueueObservation(42.5)
+
+    expect(metrics.snapshot().oldestEligibleQueueAgeSeconds).toBe(42.5)
+    expect(metrics.toPrometheus()).toContain(
+      'approval_batch_worker_oldest_eligible_queue_age_seconds 42.5'
+    )
+
+    metrics.recordQueueObservationUnavailable()
+
+    expect(metrics.snapshot().oldestEligibleQueueAgeSeconds).toBeNull()
+    expect(metrics.toPrometheus()).toContain(
+      'approval_batch_worker_oldest_eligible_queue_age_seconds NaN'
+    )
+  })
+
   test('keeps liveness healthy while database readiness is unhealthy', async () => {
     const metrics = new ApprovalBatchWorkerMetrics()
     metrics.setDatabaseReady(false)

@@ -111,6 +111,7 @@ export class ApprovalBatchWorker {
     if (!this.shutdownPromise) {
       this.acceptingClaims = false
       this.options.metrics.setDatabaseReady(false)
+      this.options.metrics.recordQueueObservationUnavailable()
       this.stopController.abort()
       this.shutdownPromise = this.finishShutdown()
     }
@@ -149,10 +150,20 @@ export class ApprovalBatchWorker {
         })
       }
 
+      let databaseReady = true
+      try {
+        const observation = await this.options.database.observeQueue()
+        this.options.metrics.recordQueueObservation(
+          observation.oldestEligibleQueueAgeSeconds
+        )
+      } catch (error) {
+        this.recordDatabaseFailure('queue_observability_failed', error)
+        databaseReady = false
+      }
       for (const item of claimedItems) {
         this.startItem(item)
       }
-      return { claimed: claimedItems.length, databaseReady: true }
+      return { claimed: claimedItems.length, databaseReady }
     } catch (error) {
       return this.databaseFailure('claim_cycle_failed', error)
     }
@@ -187,17 +198,22 @@ export class ApprovalBatchWorker {
   }
 
   private databaseFailure(event: string, error: unknown): WorkerCycleResult {
+    this.recordDatabaseFailure(event, error)
+    return { claimed: 0, databaseReady: false }
+  }
+
+  private recordDatabaseFailure(event: string, error: unknown) {
     this.databaseFailureCount += 1
     this.options.metrics.recordClaimCycleInterrupted()
     this.options.metrics.setDatabaseReady(false)
     this.options.metrics.recordDatabaseOperationError()
+    this.options.metrics.recordQueueObservationUnavailable()
     this.options.logger.log({
       event,
       inFlight: this.inFlight.size,
       level: 'warn',
       outcomeCode: classifyDatabaseError(error),
     })
-    return { claimed: 0, databaseReady: false }
   }
 
   private databaseBackoffMs() {
@@ -240,6 +256,7 @@ export class ApprovalBatchWorker {
       .catch((error: unknown) => {
         this.options.metrics.setDatabaseReady(false)
         this.options.metrics.recordDatabaseOperationError()
+        this.options.metrics.recordQueueObservationUnavailable()
         this.options.logger.log({
           attemptNumber: item.attemptNumber,
           batchItemId: item.batchItemId,

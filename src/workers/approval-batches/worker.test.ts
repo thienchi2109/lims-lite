@@ -66,6 +66,10 @@ function createDatabase(
       success: true,
       terminal: false,
     })),
+    observeQueue: vi.fn().mockResolvedValue({
+      observedAt: new Date('2026-07-27T01:00:00.000Z'),
+      oldestEligibleQueueAgeSeconds: 0,
+    }),
     ...overrides,
   }
 }
@@ -104,14 +108,74 @@ describe('ApprovalBatchWorker claim cycle', () => {
     const result = await worker.runCycle()
 
     expect(database.claimItems).toHaveBeenCalledWith(2, 60)
+    expect(database.observeQueue).toHaveBeenCalledTimes(1)
     expect(database.executeItem).not.toHaveBeenCalled()
     expect(result).toEqual({ claimed: 0, databaseReady: true })
     expect(metrics.snapshot()).toMatchObject({
       claimedTotal: 0,
       databaseReady: true,
       inFlight: 0,
+      oldestEligibleQueueAgeSeconds: 0,
       succeededTotal: 0,
     })
+  })
+
+  test('observes authoritative queue age after claiming', async () => {
+    const database = createDatabase({
+      claimItems: vi.fn().mockResolvedValue([firstItem]),
+      observeQueue: vi.fn().mockResolvedValue({
+        observedAt: new Date('2026-07-27T01:00:01.000Z'),
+        oldestEligibleQueueAgeSeconds: 37.25,
+      }),
+    })
+    const metrics = new ApprovalBatchWorkerMetrics()
+    const worker = createWorker(database, { metrics })
+
+    await worker.runCycle()
+    await worker.drain()
+
+    expect(database.claimItems).toHaveBeenCalledTimes(1)
+    expect(database.observeQueue).toHaveBeenCalledTimes(1)
+    expect(
+      vi.mocked(database.claimItems).mock.invocationCallOrder[0]
+    ).toBeLessThan(vi.mocked(database.observeQueue).mock.invocationCallOrder[0])
+    expect(
+      vi.mocked(database.observeQueue).mock.invocationCallOrder[0]
+    ).toBeLessThan(vi.mocked(database.executeItem).mock.invocationCallOrder[0])
+    expect(metrics.snapshot().oldestEligibleQueueAgeSeconds).toBe(37.25)
+  })
+
+  test('keeps claimed work when queue observability fails', async () => {
+    const database = createDatabase({
+      claimItems: vi.fn().mockResolvedValue([firstItem]),
+      observeQueue: vi
+        .fn()
+        .mockRejectedValue(new Error('confidential queue query failure')),
+    })
+    const logger = createLogger()
+    const metrics = new ApprovalBatchWorkerMetrics()
+    const worker = createWorker(database, { logger, metrics })
+
+    await expect(worker.runCycle()).resolves.toEqual({
+      claimed: 1,
+      databaseReady: false,
+    })
+    await worker.drain()
+
+    expect(database.executeItem).toHaveBeenCalledWith(
+      firstItem.batchItemId,
+      firstItem.claimToken
+    )
+    expect(
+      vi.mocked(database.observeQueue).mock.invocationCallOrder[0]
+    ).toBeLessThan(vi.mocked(database.executeItem).mock.invocationCallOrder[0])
+    expect(metrics.snapshot()).toMatchObject({
+      databaseOperationErrorsTotal: 1,
+      databaseReady: false,
+      oldestEligibleQueueAgeSeconds: null,
+      succeededTotal: 1,
+    })
+    expect(JSON.stringify(logger.entries)).not.toContain('confidential')
   })
 
   test('bounds claims to available capacity and records mixed outcomes', async () => {

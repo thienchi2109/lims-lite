@@ -37,7 +37,7 @@ describe('approval batch worker runtime boundary', () => {
     )
   })
 
-  test('keeps SQL access behind claim, execute, and readiness calls', () => {
+  test('keeps SQL access behind claim, execute, observability, and readiness calls', () => {
     const adapter = productionSources.find(
       ({ fileName }) => fileName === 'postgres-adapter.ts'
     )?.source
@@ -45,6 +45,7 @@ describe('approval batch worker runtime boundary', () => {
     expect(adapter).toBeDefined()
     expect(adapter).toContain('claim_approval_batch_items_worker($1, $2)')
     expect(adapter).toContain('execute_approval_batch_item_worker($1, $2)')
+    expect(adapter).toContain('get_approval_batch_worker_observability()')
     expect(adapter).toContain('SELECT 1 AS ready')
     expect(adapter).not.toMatch(
       /\b(?:INSERT|UPDATE|DELETE)\s+(?:INTO\s+)?public\./i
