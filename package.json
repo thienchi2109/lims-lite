@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:worker": "tsc -p tsconfig.worker.json",
     "start": "next start",
+    "start:worker": "node dist-worker/approval-batches/main.js",
     "lint": "eslint",
     "check:no-explicit-any": "node scripts/check-no-explicit-any.mjs",
     "typecheck": "tsc --noEmit",
@@ -13,7 +15,9 @@
     "react-doctor:diff": "npm run lint && react-doctor . --verbose --offline --yes --diff --no-lint",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "test:worker": "vitest run src/workers/approval-batches tests/approval-batch-worker-compose-config.test.ts",
+    "test:worker:dark": "npm run build:worker && node tests/approval-batch-worker-dark-drill.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -52,6 +56,7 @@
     "lucide-react": "^0.554.0",
     "motion": "^12.23.26",
     "next": "^16.2.3",
+    "pg": "^8.22.0",
     "react": "19.2.3",
     "react-day-picker": "^9.12.0",
     "react-dom": "19.2.3",
@@ -77,6 +82,7 @@
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^20",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitest/ui": "^4.1.4",

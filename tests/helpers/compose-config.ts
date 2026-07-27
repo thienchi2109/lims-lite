@@ -12,7 +12,7 @@ export const repositoryRoot = resolve(
   '../..'
 )
 
-export function loadComposeConfig() {
+export function loadComposeConfig(profiles: string[] = []) {
   const environment = { ...process.env }
   const exampleEnvironment = loadExampleEnvironment()
 
@@ -25,6 +25,10 @@ export function loadComposeConfig() {
     }
   }
 
+  const profileArguments = profiles.flatMap((profile) => [
+    '--profile',
+    profile,
+  ])
   const output = execFileSync(
     'docker',
     [
@@ -33,6 +37,7 @@ export function loadComposeConfig() {
       'docker-compose.yml',
       '--env-file',
       '.env.example',
+      ...profileArguments,
       'config',
       '--format',
       'json',
