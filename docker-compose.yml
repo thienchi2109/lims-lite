@@ -286,6 +286,55 @@ services:
       - pdf-client
       - pdf-upstream
 
+  approval-batch-worker:
+    profiles:
+      - approval-batch-worker
+    build:
+      context: .
+      dockerfile: ops/approval-batch-worker/Dockerfile
+    container_name: lims-approval-batch-worker
+    init: true
+    restart: unless-stopped
+    environment:
+      APPROVAL_BATCH_WORKER_DATABASE_HOST: postgres
+      APPROVAL_BATCH_WORKER_DATABASE_NAME: postgres
+      APPROVAL_BATCH_WORKER_DATABASE_PORT: "5432"
+      APPROVAL_BATCH_WORKER_DATABASE_USER: approval_batch_worker
+      APPROVAL_BATCH_WORKER_DATABASE_PASSWORD_FILE: /run/secrets/approval_batch_worker_database_password
+      APPROVAL_BATCH_WORKER_CONCURRENCY: "${APPROVAL_BATCH_WORKER_CONCURRENCY:-8}"
+      APPROVAL_BATCH_WORKER_CLAIM_LEASE_SECONDS: "${APPROVAL_BATCH_WORKER_CLAIM_LEASE_SECONDS:-60}"
+      APPROVAL_BATCH_WORKER_DRAIN_TIMEOUT_MS: "${APPROVAL_BATCH_WORKER_DRAIN_TIMEOUT_MS:-25000}"
+      APPROVAL_BATCH_WORKER_HEALTH_HOST: 0.0.0.0
+      APPROVAL_BATCH_WORKER_HEALTH_PORT: "${APPROVAL_BATCH_WORKER_HEALTH_PORT:-8081}"
+    secrets:
+      - source: approval_batch_worker_database_password
+        target: approval_batch_worker_database_password
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - const http=require('node:http');const request=http.get({host:'127.0.0.1',port:process.env.APPROVAL_BATCH_WORKER_HEALTH_PORT||8081,path:'/ready',timeout:4000},response=>{response.resume();process.exit(response.statusCode===200?0:1)});const fail=()=>process.exit(1);request.on('error',fail);request.on('timeout',()=>{request.destroy();fail()})
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+    mem_reservation: 128m
+    cpus: 0.5
+    pids_limit: 64
+    stop_grace_period: 30s
+
   app:
     container_name: lims-app
     build:
@@ -380,6 +429,8 @@ networks:
     driver: bridge
 
 secrets:
+  approval_batch_worker_database_password:
+    file: ${APPROVAL_BATCH_WORKER_DATABASE_PASSWORD_FILE:-/opt/lims-lite-secrets/approval-batch-worker-database-password}
   pdf_gateway_client_policy:
     file: ${PDF_GATEWAY_CLIENT_POLICY_FILE:?PDF_GATEWAY_CLIENT_POLICY_FILE is required}
   pdf_gateway_lims_token:

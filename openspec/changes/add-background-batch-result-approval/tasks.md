@@ -366,31 +366,102 @@ shared transaction-scoped fixtures and crash-window sequence must stay atomic.
 **PR boundary:** Worker runtime, tests, and disabled Compose service only. No
 manager-facing UI and no feature enablement.
 
-- [ ] 7.1 Add a focused worker module, direct PostgreSQL adapter, separate
+- [x] 7.1 Add a focused worker module, direct PostgreSQL adapter, separate
   build/run script, and strict configuration without importing web request or
   session code.
-- [ ] 7.2 Implement a bounded connection pool and claim loop with default
+- [x] 7.2 Implement a bounded connection pool and claim loop with default
   concurrency `8`, hard maximum `16`, claim size no greater than available
   capacity, cancellable backoff, and operation deadlines.
-- [ ] 7.3 Ensure the process stores no manager JWT or OTP material and invokes
+- [x] 7.3 Ensure the process stores no manager JWT or OTP material and invokes
   only narrow claim/execute/progress RPCs.
-- [ ] 7.4 Implement graceful shutdown that stops new claims and drains in-flight
+- [x] 7.4 Implement graceful shutdown that stops new claims and drains in-flight
   work within a configured timeout.
 - [ ] 7.5 Add liveness/readiness, queue-age and stale-lease metrics, plus
   privacy-safe structured logs containing only opaque IDs, attempts, durations,
   and outcome codes.
-- [ ] 7.6 Add tests for idle polling, mixed outcomes, retry exhaustion,
+- [x] 7.6 Add tests for idle polling, mixed outcomes, retry exhaustion,
   database outage/recovery, two worker loops, restart recovery, and graceful
   shutdown.
-- [ ] 7.7 Add a disabled-by-default Compose worker service using a protected
+- [x] 7.7 Add a disabled-by-default Compose worker service using a protected
   dedicated database credential, bounded resources, health check, restart
   policy, and no published host port.
-- [ ] 7.8 Run worker tests, changed-file lint, typecheck, secret scans, and a
+- [x] 7.8 Run worker tests, changed-file lint, typecheck, secret scans, and a
   dark deployment health/restart drill.
 
 **Exit gate:** The worker is production-shaped and deployable dark, while batch
 submission remains unavailable to managers. Review-size target: about 1,200
 changed lines.
+
+**Phase P6 checkpoint (2026-07-27):** Added a standalone dark worker under
+`src/workers/approval-batches/` with strict secret-file configuration, direct
+`pg` access, and no imports from Next.js request, session, Supabase client, or
+manager OTP code. The worker uses the dedicated `approval_batch_worker` login,
+checks readiness with `SELECT 1`, and invokes only
+`claim_approval_batch_items_worker(integer, integer)` and
+`execute_approval_batch_item_worker(uuid, uuid)`. The pool and claim loop default
+to concurrency `8`, reject values above `16`, never claim above available
+capacity, apply bounded cancellable backoff, and enforce per-operation
+deadlines shorter than the drain window.
+
+Shutdown is idempotent, marks readiness false, stops new claims, waits for an
+active readiness/claim cycle, drains in-flight executions, and retains a forced
+exit timer through health-server and PostgreSQL-pool cleanup. The configured
+drain maximum is `25s`, below Compose's `30s` stop grace period. Runtime
+observability includes `/live`, fail-closed `/ready`, Prometheus metrics for
+database readiness, in-flight work, exact process-local expired claim leases,
+post-commit lease replay recovery, outcomes, and continuous full-claim
+saturation. Structured JSON logs allow only opaque item/worker IDs, attempts,
+durations, counts, events, levels, and outcome codes.
+
+Task 7.5 remains open only for authoritative queue-item age. Immutable P5
+contracts do not return item `created_at` or claim/reclaim reason, and the
+worker role intentionally has no direct table privileges. A full claim proves
+capacity saturation but does not prove current queue age, so the runtime metric
+is honestly exported as
+`approval_batch_worker_continuous_full_claim_saturation_seconds` rather than a
+queue-age metric. Follow-up issue #103 tracks a next-numbered, worker-only
+observability RPC with SQL/security coverage. No migration was added or changed
+in P6.
+
+TDD evidence: the initial P6 RED run failed six suites for absent runtime,
+adapter, observability, and Compose contracts. First GREEN reached `28/28`.
+Review regressions then covered normal-delay listener cleanup, readiness
+ownership, execution/readiness races, expired in-flight leases, bounded
+shutdown, saturation reset across database outages, and shutdown during a
+pending readiness probe; the final worker suite passes `32/32` across seven
+files. A clean-output dark drill exposed inherited TypeScript incremental state
+omitting `main.js`; after disabling incremental emit for the worker config, a
+clean build emits all nine runtime modules and the
+first-start/outage/readiness/SIGTERM/restart drill passes. The saturation metric
+rename also completed a focused RED/GREEN cycle.
+
+Final application-focused coverage passes `247/247` across 44 approval, OTP,
+worker, Compose, hook, and UI regression files. `npm run typecheck`,
+`check:no-explicit-any`, changed-file ESLint, secretlint quick-start `12.0.0`,
+default/profile Compose rendering, and strict OpenSpec validation pass. Full
+lint reports `0` errors and the existing `88` warnings. A local build-only
+Docker verification passes and confirms non-root `10002:10002`, the readiness
+health check, and the worker command; the image is removed afterward and no
+container is started.
+
+Home-server verification ran only through SSH plus
+`sudo -n docker exec ... lims-postgres psql`. Worker contracts pass `16/16`,
+worker concurrency passes `2/2`, atomic approval/concurrency, batch
+contract/runtime/concurrency, and CoA completion revalidation suites exit
+successfully, and `run_security_tests()` passes `33/33`. Migrations 192-199
+retain their P5 checksums. The home checkout remains clean at
+`44332571c06584486c3952e398a777e557bea871`.
+
+No UI, polling UI, P7 schema/outbox work, feature enablement, migration,
+application deployment, Compose service startup, or production configuration
+change is included. Stop before Phase P7.
+
+**Phase P6 scope assessment:** The review surface is 2,542 additions and 15
+deletions across 27 files: 1,095 production worker lines, 1,081 test/drill
+lines, 168 dependency-manifest/lock lines, 120 Compose/build/config lines, and
+78 OpenSpec evidence additions. Production remains within the phase's
+approximate 1,200-line target; the larger total keeps the required failure,
+recovery, privacy, Compose, and shutdown regression matrix beside the runtime.
 
 ## 8. Phase P7 - Durable Approval-to-CoA Outbox
 
