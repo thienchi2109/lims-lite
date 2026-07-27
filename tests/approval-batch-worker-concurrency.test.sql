@@ -75,8 +75,11 @@ BEGIN
         DELETE FROM public.audit_logs
         WHERE record_id = ANY(v_batch_ids)
            OR record_id = ANY(v_item_ids)
-           OR record_id::TEXT LIKE
-               '93500000-0000-0000-0000-0000000000%';
+           OR record_id::TEXT LIKE '935000%'
+           OR changed_by IN (
+               '93500000-0000-0000-0000-000000000001',
+               '93500000-0000-0000-0000-000000000002'
+           );
 
         DELETE FROM public.approval_batch_item_attempts
         WHERE batch_item_id = ANY(v_item_ids);
@@ -102,9 +105,6 @@ BEGIN
     ALTER TABLE public.approval_batches
         ENABLE TRIGGER approval_batches_no_hard_delete;
 
-    DELETE FROM public.audit_logs
-    WHERE record_id::TEXT LIKE
-        '93500000-0000-0000-0000-0000000000%';
     DELETE FROM public.results
     WHERE id::TEXT LIKE '93500020-0000-0000-0000-%';
     DELETE FROM public.samples
@@ -123,6 +123,12 @@ BEGIN
         '93500000-0000-0000-0000-000000000001',
         '93500000-0000-0000-0000-000000000002'
     );
+    DELETE FROM public.audit_logs
+    WHERE record_id::TEXT LIKE '935000%'
+       OR changed_by IN (
+           '93500000-0000-0000-0000-000000000001',
+           '93500000-0000-0000-0000-000000000002'
+       );
 
     TRUNCATE public.approval_batch_worker_claim_probe;
     TRUNCATE public.approval_batch_worker_retry_probe;
@@ -403,6 +409,23 @@ SELECT
     TRUE;
 
 SELECT pg_temp.cleanup_approval_batch_worker_concurrency();
+DO $cleanup_assertions$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM public.audit_logs
+        WHERE record_id::TEXT LIKE '935000%'
+           OR changed_by IN (
+               '93500000-0000-0000-0000-000000000001',
+               '93500000-0000-0000-0000-000000000002'
+           )
+    )
+    THEN
+        RAISE EXCEPTION
+            'Approval worker concurrency fixtures left residual audit rows';
+    END IF;
+END;
+$cleanup_assertions$;
 DROP TABLE public.approval_batch_worker_retry_probe;
 DROP TABLE public.approval_batch_worker_claim_probe;
 REVOKE approval_batch_worker FROM postgres;

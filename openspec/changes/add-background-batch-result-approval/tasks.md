@@ -272,29 +272,94 @@ the larger total is driven by the required API/OTP regression matrix.
 **PR boundary:** Worker-only database role and RPCs with SQL tests. No Node
 worker process, Compose service, or UI.
 
-- [ ] 6.1 Add failing concurrency tests for `FOR UPDATE SKIP LOCKED`, bounded
+- [x] 6.1 Add failing concurrency tests for `FOR UPDATE SKIP LOCKED`, bounded
   claims, claim tokens, lease expiry, stale-token rejection, and interruption
   recovery.
-- [ ] 6.2 Add failing tests for a service-only execution wrapper that accepts
+- [x] 6.2 Add failing tests for a service-only execution wrapper that accepts
   only item ID plus claim token and derives manager, sample, selected result
   set, and note from locked immutable rows.
-- [ ] 6.3 Add the dedicated worker database role and narrow claim/execute grants
+- [x] 6.3 Add the dedicated worker database role and narrow claim/execute grants
   with no direct table DML; deny `anon`, `authenticated`, and unrelated roles.
-- [ ] 6.4 Establish immutable `requested_by` as the transaction-local
+- [x] 6.4 Establish immutable `requested_by` as the transaction-local
   PostgREST-compatible actor, revalidate current manager/confidential access,
   and prove audit triggers record the manager rather than worker login.
-- [ ] 6.5 Implement append-only attempts, terminal business-error
+- [x] 6.5 Implement append-only attempts, terminal business-error
   classification, transient-error classification, maximum three automatic
   attempts, bounded retry scheduling, and terminal batch status derivation.
-- [ ] 6.6 Add crash-window tests before approval, after approval commit but
+- [x] 6.6 Add crash-window tests before approval, after approval commit but
   before acknowledgement, after lease replacement, and during terminal-state
   calculation.
-- [ ] 6.7 Commit/apply the forward-only migration through the approved path and
+- [x] 6.7 Commit/apply the forward-only migration through the approved path and
   run focused SQL plus `run_security_tests()`.
 
 **Exit gate:** PostgreSQL can safely claim and execute items, but no deployed
 process calls the worker RPCs. Review-size target: about 1,200 changed lines;
 keep tightly coupled security grants and tests with their migration.
+
+**Phase P5 evidence (2026-07-27):** Added the restricted login role
+`approval_batch_worker` and worker-only
+`claim_approval_batch_items_worker(integer, integer)` /
+`execute_approval_batch_item_worker(uuid, uuid)` contracts. Claims use bounded
+`FOR UPDATE SKIP LOCKED` selection, opaque claim tokens, expiring leases, and
+stale-token rejection. Execution accepts only the immutable item identity and
+claim token, locks the persisted batch/item snapshot, derives manager, sample,
+selected result IDs, and note from those rows, and revalidates current manager
+and confidential authorization before using the shared atomic approval command.
+Transaction-local PostgREST-compatible actor claims preserve manager-attributed
+result and sample audits; the worker role has no direct batch-table DML or
+unrelated role memberships.
+
+Attempts remain append-only. Business failures terminate immediately, transient
+failures schedule a bounded retry, automatic processing exhausts after three
+attempts, and batch terminal status is derived transactionally. SQL coverage
+includes bounded and concurrent claims, lease replacement, stale tokens,
+interruption recovery, pre-approval failure, post-approval/pre-acknowledgement
+recovery, terminal-state rollback, retry exhaustion, and recovery after a real
+lock timeout. The concurrency harness also asserts that it removes probe tables,
+temporary role membership, fixture rows, and audit evidence after each run.
+
+TDD evidence: the initial worker contract and concurrency suites failed because
+the P5 role and RPCs were absent. Migration 196 provided the first GREEN worker
+contracts. A claim conflict then reproduced against the live database;
+migration 197 executed once but failed its self-verification and rolled back
+atomically. It remains immutable. Migration 198 recovered the ambiguous
+`ON CONFLICT` paths, and migration 199 removed shared batch-row status blocking
+from otherwise independent claims. A final cleanup regression failed on 17
+residual fixture audit rows before the test cleanup moved its last audit delete
+after all audited fixture deletes; the GREEN concurrency run passes `2/2` and
+the post-test residue audit is entirely true.
+
+Migration history is forward-only and byte-for-byte immutable:
+
+- 192: `b89f2d210560f2c5f6b913b7f3516aa282d26e78f5019953d84d837b69d5e801`
+- 193: `15b72d9fa64cd27d6a40bfbbccfc08db462820dfef70dec0cb988ef2161da634`
+- 194: `4e0cf98887e68cb4dea05f3cc65c72f9322f344990791a867cf3630d11c77aa2`
+- 195: `f0d4860406579773ec9854ba2c2d2c735d65a1a5ca620541d6810ae189e1dedf`
+- 196: `f5184364d13cc698928a7607b0aa211f45a3b9e2ef4ce8d13eba35f686be2b47`
+- 197: `3bae836e38497b273475e00f90e32fb0b653662cb49d4568b2ee6c002a7d6f57`
+- 198: `7aa7998b9ad815e641838646812818c071013b186f38a2c1bf3de1bfb1a8b70b`
+- 199: `73248e7c5891e8ea9c59c08474ccf4835a2a6fc0c3b85dbd8ff59e3106126f4f`
+
+Fresh verification passes the worker contract matrix `16/16`, worker
+concurrency `2/2`, atomic approval and atomic concurrency suites, P3 contract,
+runtime, and concurrency suites, and CoA completion revalidation. The historical
+`approval-batch-storage-schema` migration-194 checkpoint is intentionally
+excluded because it asserts that later contracts are absent. Security tests pass
+`33/33`; focused application regressions pass `151/151` across 22 files;
+typecheck passes; full lint reports `0` errors with the existing `88` warnings;
+and strict OpenSpec validation passes.
+
+No Node worker, Compose service, UI, polling, feature enablement, or application
+deployment was added. Stop before Phase P6.
+
+**Phase P5 scope assessment:** The final review surface is 3,013 additions and
+7 deletions across seven files: 1,664 immutable forward-only migration lines,
+1,277 SQL-test lines, and 72 OpenSpec evidence/checklist lines. It exceeds the
+approximate target because migrations 196-199 were applied or attempted and
+cannot be edited or squashed, while their security and concurrency tests remain
+tightly coupled. No Phase P6 implementation is included.
+The SQL test files intentionally exceed the general size target because their
+shared transaction-scoped fixtures and crash-window sequence must stay atomic.
 
 ## 7. Phase P6 - Dark TypeScript Worker Runtime
 
