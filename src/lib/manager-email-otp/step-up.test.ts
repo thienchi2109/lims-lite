@@ -64,6 +64,27 @@ describe('manager OTP step-up cookie contract', () => {
         })
     })
 
+    it('accepts PostgreSQL offset timestamps in step-up authorization metadata', async () => {
+        const cookieValue = await createManagerStepUpCookieValue({
+            ...baseInput,
+            authorizationId: '33333333-3333-4333-8333-333333333333',
+            verifiedAt: '2026-07-27T01:13:05.955+00:00',
+        })
+
+        await expect(
+            readManagerStepUpCookieValue(cookieValue, {
+                ...baseInput,
+                now: new Date('2026-06-01T01:00:00.000Z'),
+            }),
+        ).resolves.toEqual({
+            ok: true,
+            payload: expect.objectContaining({
+                authorizationId: '33333333-3333-4333-8333-333333333333',
+                verifiedAt: '2026-07-27T01:13:05.955Z',
+            }),
+        })
+    })
+
     it('accepts the analyst confidential cohort in the shared step-up cookie contract', async () => {
         const analystInput = {
             ...baseInput,

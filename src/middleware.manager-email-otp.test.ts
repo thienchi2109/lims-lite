@@ -172,6 +172,26 @@ describe('manager email OTP middleware contract', () => {
         expect(response.headers.get('set-cookie') ?? '').not.toContain(`${MANAGER_STEP_UP_COOKIE_NAME}=;`)
     })
 
+    it('allows manager routes after OTP verification returns a PostgreSQL offset timestamp', async () => {
+        mockPasswordOnlyManagerSession()
+        const cookieValue = await createManagerStepUpCookieValue({
+            userId: 'manager-1',
+            sessionId: 'session-1',
+            cohort: 'standard',
+            otpEmailUpdatedAt,
+            expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+            secret: 'middleware-step-up-secret',
+            authorizationId: '33333333-3333-4333-8333-333333333333',
+            verifiedAt: '2026-07-27T01:13:05.955+00:00',
+        })
+        process.env.MANAGER_OTP_STEP_UP_SECRET = 'middleware-step-up-secret'
+
+        const response = await middleware(createRequest('/manager', `${MANAGER_STEP_UP_COOKIE_NAME}=${cookieValue}`))
+
+        expect(response.headers.get('location')).toBeNull()
+        expect(response.headers.get('set-cookie') ?? '').not.toContain(`${MANAGER_STEP_UP_COOKIE_NAME}=;`)
+    })
+
     it('redirects password-only confidential analyst sessions away from /analyst when analyst HIV OTP is enabled', async () => {
         process.env.MANAGER_EMAIL_OTP_ENABLED = 'FALSE'
         process.env.MANAGER_HIV_EMAIL_OTP_ENABLED = 'FALSE'

@@ -86,7 +86,7 @@ export async function createManagerStepUpCookieValue(input: CreateInput) {
         ...(input.authorizationId && input.verifiedAt
             ? {
                   authorizationId: input.authorizationId,
-                  verifiedAt: input.verifiedAt,
+                  verifiedAt: new Date(input.verifiedAt).toISOString(),
               }
             : {}),
     }
