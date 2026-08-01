@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fetchMethodNameSuggestionsClient, fetchSamplesForApprovalCountClient } from './api-client'
+import {
+    fetchAssayDefinitionsClient,
+    fetchMethodNameSuggestionsClient,
+    fetchSamplesForApprovalCountClient,
+} from './api-client'
 
 describe('callClientAction', () => {
     afterEach(() => {
@@ -36,5 +40,24 @@ describe('callClientAction', () => {
         expect(JSON.parse(fetchMock.mock.calls[0][1]?.body as string)).toEqual({
             action: 'getMethodNameSuggestions',
         })
+    })
+
+    it('passes an assay request AbortSignal through to fetch', async () => {
+        const controller = new AbortController()
+        const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+            new Response(JSON.stringify({ data: [] }), {
+                status: 200,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            }),
+        )
+
+        await fetchAssayDefinitionsClient({ search: 'HIV' }, { signal: controller.signal })
+
+        expect(fetchMock).toHaveBeenCalledWith(
+            '/api/client-actions',
+            expect.objectContaining({ signal: controller.signal }),
+        )
     })
 })

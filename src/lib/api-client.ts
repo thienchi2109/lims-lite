@@ -203,8 +203,11 @@ export function submitSampleForReviewClient(data: SubmitResultReview) {
     return callClientAction('submitSampleForReview', data)
 }
 
-export function fetchAssayDefinitionsClient(params?: Record<string, unknown>) {
-    return callClientAction('getAssayDefinitions', params)
+export function fetchAssayDefinitionsClient(
+    params?: Record<string, unknown>,
+    options?: CallClientActionOptions,
+) {
+    return callClientAction('getAssayDefinitions', params, options)
 }
 
 export function fetchMethodsClient() {

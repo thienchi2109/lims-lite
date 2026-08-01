@@ -25,6 +25,7 @@ export function useTestAssignmentGrid({
     const [selectedSpecialtyId, setSelectedSpecialtyId] = useState<string>('all')
     const [isLoading, setIsLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
     const [sortConfig, setSortConfig] = useState<SortConfig>(null)
 
     // Initial Load
@@ -32,58 +33,59 @@ export function useTestAssignmentGrid({
         loadMethods()
     }, [])
 
-    // Reload assays when method filter changes
-    useEffect(() => {
-        const controller = new AbortController()
-        loadAssays(searchQuery, controller.signal)
-        return () => controller.abort()
-    }, [selectedMethodId, selectedSpecialtyId])
-
     // Debounce Search
     useEffect(() => {
-        const controller = new AbortController()
         const timer = setTimeout(() => {
-            loadAssays(searchQuery, controller.signal)
+            setDebouncedSearchQuery(searchQuery)
         }, 300)
 
-        return () => {
-            clearTimeout(timer)
-            controller.abort()
-        }
+        return () => clearTimeout(timer)
     }, [searchQuery])
+
+    // Load assays for the current criteria set
+    useEffect(() => {
+        const controller = new AbortController()
+        const criteria = {
+            pageSize: 2000,
+            methodId: selectedMethodId,
+            specialtyId: selectedSpecialtyId,
+            search: debouncedSearchQuery,
+        }
+
+        const loadAssays = async () => {
+            setIsLoading(true)
+            try {
+                const result = await fetchAssayDefinitionsClient(criteria, {
+                    signal: controller.signal,
+                })
+
+                if (controller.signal.aborted) return
+
+                if (result.data) {
+                    setAvailableAssays(result.data as AssayDefinitionWithMethods[])
+                } else {
+                    setAvailableAssays([])
+                }
+            } catch (error) {
+                if (controller.signal.aborted) return
+                console.error('Failed to load assays', error)
+                setAvailableAssays([])
+            } finally {
+                if (!controller.signal.aborted) {
+                    setIsLoading(false)
+                }
+            }
+        }
+
+        loadAssays()
+
+        return () => controller.abort()
+    }, [debouncedSearchQuery, selectedMethodId, selectedSpecialtyId])
 
     const loadMethods = async () => {
         const result = await fetchMethodsClient()
         if (result.data) {
             setMethods(result.data)
-        }
-    }
-
-    const loadAssays = async (search: string = '', signal?: AbortSignal) => {
-        setIsLoading(true)
-        try {
-            const result = await fetchAssayDefinitionsClient({
-                pageSize: 2000,
-                methodId: selectedMethodId,
-                specialtyId: selectedSpecialtyId,
-                search: search
-            })
-
-            if (signal?.aborted) return
-
-            if (result.data) {
-                setAvailableAssays(result.data as AssayDefinitionWithMethods[])
-            } else {
-                setAvailableAssays([])
-            }
-        } catch (error) {
-            if (signal?.aborted) return
-            console.error('Failed to load assays', error)
-            setAvailableAssays([])
-        } finally {
-            if (!signal?.aborted) {
-                setIsLoading(false)
-            }
         }
     }
 
