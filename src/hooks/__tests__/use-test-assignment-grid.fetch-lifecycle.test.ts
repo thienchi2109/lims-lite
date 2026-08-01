@@ -102,6 +102,42 @@ describe('useTestAssignmentGrid assay fetch lifecycle', () => {
         )
     })
 
+    it('coalesces rapid search updates into one request for the latest value', async () => {
+        const { result } = renderAssignmentGrid()
+        await advanceTimers(300)
+        mockFetchAssayDefinitionsClient.mockClear()
+
+        act(() => {
+            result.current.setSearchQuery('H')
+        })
+        await advanceTimers(100)
+
+        act(() => {
+            result.current.setSearchQuery('HI')
+        })
+        await advanceTimers(100)
+
+        act(() => {
+            result.current.setSearchQuery('HIV')
+        })
+        await advanceTimers(299)
+
+        expect(mockFetchAssayDefinitionsClient).not.toHaveBeenCalled()
+
+        await advanceTimers(1)
+
+        expect(mockFetchAssayDefinitionsClient).toHaveBeenCalledTimes(1)
+        expect(mockFetchAssayDefinitionsClient).toHaveBeenCalledWith(
+            {
+                pageSize: 2000,
+                methodId: 'all',
+                specialtyId: 'all',
+                search: 'HIV',
+            },
+            expect.objectContaining({ signal: expect.any(AbortSignal) }),
+        )
+    })
+
     it('applies filter changes immediately with the latest debounced search and current filters', async () => {
         const { result } = renderAssignmentGrid()
         await advanceTimers(300)
