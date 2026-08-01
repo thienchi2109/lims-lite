@@ -28,6 +28,7 @@ interface MobileViewProps {
     selected: SelectedTest[]
     onChange: (tests: SelectedTest[]) => void
     toggleTestSelection: (assay: AssayDefinitionWithMethods) => void
+    toggleGroupSelection: (assays: AssayDefinitionWithMethods[]) => void
     handleMethodChange: (assayId: string, methodId: string) => void
 
     // Save
@@ -40,7 +41,7 @@ interface MobileViewProps {
     wizardProps?: Omit<AccessionMobileWizardProps,
         'searchQuery' | 'setSearchQuery' | 'selectedSpecialtyId' | 'setSelectedSpecialtyId' |
         'specialties' | 'groupedRows' | 'isLoading' | 'disabledSet' | 'specialtiesMap' |
-        'selected' | 'onChange' | 'toggleTestSelection' | 'handleMethodChange' |
+        'selected' | 'onChange' | 'toggleTestSelection' | 'toggleGroupSelection' | 'handleMethodChange' |
         'onSave' | 'isSaving' | 'isSaveDisabled'
     >
 }
@@ -68,6 +69,7 @@ export function MobileView(props: MobileViewProps) {
                 selected={props.selected}
                 onChange={props.onChange}
                 toggleTestSelection={props.toggleTestSelection}
+                toggleGroupSelection={props.toggleGroupSelection}
                 handleMethodChange={props.handleMethodChange}
                 onSave={props.onSave}
                 isSaving={props.isSaving}

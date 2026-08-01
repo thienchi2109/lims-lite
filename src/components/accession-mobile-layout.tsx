@@ -42,6 +42,7 @@ interface AccessionMobileLayoutProps {
     selected: SelectedTest[]
     onChange: (tests: SelectedTest[]) => void
     toggleTestSelection: (assay: AssayDefinitionWithMethods) => void
+    toggleGroupSelection: (assays: AssayDefinitionWithMethods[]) => void
     handleMethodChange: (assayId: string, methodId: string) => void
     onSave: () => void
     isSaving: boolean
@@ -65,6 +66,7 @@ export function AccessionMobileLayout({
     selected,
     onChange,
     toggleTestSelection,
+    toggleGroupSelection,
     handleMethodChange,
     onSave,
     isSaving,
@@ -168,6 +170,7 @@ export function AccessionMobileLayout({
                         groupedRows={groupedRows}
                         selected={selected}
                         toggleTestSelection={toggleTestSelection}
+                        toggleGroupSelection={toggleGroupSelection}
                         handleMethodChange={handleMethodChange}
                         disabledSet={disabledSet}
                         specialtiesMap={specialtiesMap}

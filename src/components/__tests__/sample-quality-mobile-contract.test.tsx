@@ -85,6 +85,7 @@ function createWizardProps(): AccessionMobileWizardProps {
         selected: [],
         onChange: vi.fn(),
         toggleTestSelection: vi.fn(),
+        toggleGroupSelection: vi.fn(),
         handleMethodChange: vi.fn(),
         onSave: vi.fn(),
         isSaving: false,

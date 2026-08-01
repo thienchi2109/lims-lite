@@ -27,8 +27,11 @@ vi.mock('@/components/ui/accordion', () => ({
     AccordionItem: ({ children, value, ...props }: any) => (
         <div data-testid={`accordion-item-${value}`} {...props}>{children}</div>
     ),
-    AccordionTrigger: ({ children, ...props }: any) => (
-        <button data-testid="accordion-trigger" {...props}>{children}</button>
+    AccordionTrigger: ({ children, leadingAction, ...props }: any) => (
+        <div>
+            {leadingAction}
+            <button data-testid="accordion-trigger" {...props}>{children}</button>
+        </div>
     ),
     AccordionContent: ({ children, ...props }: any) => (
         <div data-testid="accordion-content" {...props}>{children}</div>
@@ -134,10 +137,12 @@ import { TestCatalogAccordion } from '../test-assignment/test-catalog-accordion'
 
 describe('TestCatalogAccordion', () => {
     const mockToggle = vi.fn()
+    const mockToggleGroup = vi.fn()
     const mockMethodChange = vi.fn()
 
     beforeEach(() => {
         mockToggle.mockClear()
+        mockToggleGroup.mockClear()
         mockMethodChange.mockClear()
         accordionSpies.accordionProps.mockClear()
         virtualizerSpies.useVirtualizer.mockClear()
@@ -148,6 +153,7 @@ describe('TestCatalogAccordion', () => {
         groupedRows,
         selected: [] as SelectedTest[],
         toggleTestSelection: mockToggle,
+        toggleGroupSelection: mockToggleGroup,
         handleMethodChange: mockMethodChange,
         disabledSet: emptyDisabledSet,
         specialtiesMap,

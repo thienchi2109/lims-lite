@@ -43,6 +43,7 @@ interface DesktopGridProps {
     // Selection
     selected: SelectedTest[]
     toggleTestSelection: (assay: AssayDefinitionWithMethods) => void
+    toggleGroupSelection: (assays: AssayDefinitionWithMethods[]) => void
     handleMethodChange: (assayId: string, methodId: string) => void
 }
 
@@ -62,6 +63,7 @@ export function DesktopGrid({
     specialtiesMap,
     selected,
     toggleTestSelection,
+    toggleGroupSelection,
     handleMethodChange,
 }: DesktopGridProps) {
     return (
@@ -137,6 +139,7 @@ export function DesktopGrid({
                     groupedRows={groupedRows}
                     selected={selected}
                     toggleTestSelection={toggleTestSelection}
+                    toggleGroupSelection={toggleGroupSelection}
                     handleMethodChange={handleMethodChange}
                     disabledSet={disabledSet}
                     specialtiesMap={specialtiesMap}

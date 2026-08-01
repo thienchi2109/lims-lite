@@ -14,10 +14,21 @@ vi.mock('@/components/accession-wizard-step-customer', () => ({
 }))
 
 vi.mock('@/components/accession-wizard-step-tests', () => ({
-    AccessionWizardStepTests: ({ onNext }: { onNext: () => void }) => (
-        <button type="button" onClick={onNext}>
-            Tiếp tục xét nghiệm
-        </button>
+    AccessionWizardStepTests: ({
+        onNext,
+        toggleGroupSelection,
+    }: {
+        onNext: () => void
+        toggleGroupSelection: (assays: []) => void
+    }) => (
+        <div>
+            <button type="button" onClick={() => toggleGroupSelection([])}>
+                Chọn nhóm wizard
+            </button>
+            <button type="button" onClick={onNext}>
+                Tiếp tục xét nghiệm
+            </button>
+        </div>
     ),
 }))
 
@@ -106,6 +117,7 @@ function createWizardProps(overrides: Partial<AccessionMobileWizardProps> = {}):
         selected: [],
         onChange: vi.fn(),
         toggleTestSelection: vi.fn(),
+        toggleGroupSelection: vi.fn(),
         handleMethodChange: vi.fn(),
         onSave: vi.fn(),
         isSaving: false,
@@ -117,6 +129,16 @@ function createWizardProps(overrides: Partial<AccessionMobileWizardProps> = {}):
 }
 
 describe('AccessionMobileWizard', () => {
+    it('passes group selection into the tests step', () => {
+        const toggleGroupSelection = vi.fn()
+        render(<AccessionMobileWizard {...createWizardProps({ toggleGroupSelection })} />)
+
+        fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục khách hàng' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Chọn nhóm wizard' }))
+
+        expect(toggleGroupSelection).toHaveBeenCalledOnce()
+    })
+
     it('passes submitError into the review step', () => {
         render(
             <AccessionMobileWizard {...createWizardProps({ submitError: 'Không thể lưu mẫu' })} />,

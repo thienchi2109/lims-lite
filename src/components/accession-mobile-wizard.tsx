@@ -52,6 +52,7 @@ export interface AccessionMobileWizardProps {
     selected: SelectedTest[]
     onChange: (tests: SelectedTest[]) => void
     toggleTestSelection: (assay: AssayDefinitionWithMethods) => void
+    toggleGroupSelection: (assays: AssayDefinitionWithMethods[]) => void
     handleMethodChange: (assayId: string, methodId: string) => void
 
     /* Submit */
@@ -141,6 +142,7 @@ export function AccessionMobileWizard(props: AccessionMobileWizardProps) {
                         selected={props.selected}
                         onChange={props.onChange}
                         toggleTestSelection={props.toggleTestSelection}
+                        toggleGroupSelection={props.toggleGroupSelection}
                         handleMethodChange={props.handleMethodChange}
                         onNext={goNext}
                         onBack={goBack}

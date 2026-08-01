@@ -15,6 +15,7 @@ interface AccessionMobileTestListProps {
     groupedRows: GridRow[]
     selected: SelectedTest[]
     toggleTestSelection: (assay: AssayDefinitionWithMethods) => void
+    toggleGroupSelection: (assays: AssayDefinitionWithMethods[]) => void
     handleMethodChange: (assayId: string, methodId: string) => void
     disabledSet: Set<string>
     specialtiesMap: Map<string, { id: string; name: string; code: string }>

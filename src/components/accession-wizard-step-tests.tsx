@@ -29,6 +29,7 @@ interface StepTestsProps {
     selected: SelectedTest[]
     onChange: (tests: SelectedTest[]) => void
     toggleTestSelection: (assay: AssayDefinitionWithMethods) => void
+    toggleGroupSelection: (assays: AssayDefinitionWithMethods[]) => void
     handleMethodChange: (assayId: string, methodId: string) => void
     onNext: () => void
     onBack: () => void
@@ -47,6 +48,7 @@ export function AccessionWizardStepTests({
     selected,
     onChange,
     toggleTestSelection,
+    toggleGroupSelection,
     handleMethodChange,
     onNext,
     onBack,
@@ -116,6 +118,7 @@ export function AccessionWizardStepTests({
                     groupedRows={groupedRows}
                     selected={selected}
                     toggleTestSelection={toggleTestSelection}
+                    toggleGroupSelection={toggleGroupSelection}
                     handleMethodChange={handleMethodChange}
                     disabledSet={disabledSet}
                     specialtiesMap={specialtiesMap}

@@ -39,6 +39,7 @@ describe('AccessionMobileTestList — real Accordion integration', () => {
                 groupedRows={groupedRows}
                 selected={[]}
                 toggleTestSelection={vi.fn()}
+                toggleGroupSelection={vi.fn()}
                 handleMethodChange={vi.fn()}
                 disabledSet={new Set()}
                 specialtiesMap={new Map([

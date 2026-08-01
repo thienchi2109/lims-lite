@@ -1,8 +1,9 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const useMediaQueryMock = vi.fn()
 const useTestAssignmentGridMock = vi.fn()
+const toggleGroupSelectionMock = vi.fn()
 
 vi.mock('@/hooks/use-media-query', () => ({
     useMediaQuery: (...args: unknown[]) => useMediaQueryMock(...args),
@@ -17,22 +18,37 @@ vi.mock('@/components/accession-mobile-test-list', () => ({
 }))
 
 vi.mock('@/components/accession-mobile-layout', () => ({
-    AccessionMobileLayout: () => <div data-testid="legacy-mobile-layout" />,
+    AccessionMobileLayout: ({
+        toggleGroupSelection,
+    }: {
+        toggleGroupSelection: (assays: []) => void
+    }) => (
+        <button type="button" onClick={() => toggleGroupSelection([])}>
+            Chọn nhóm mobile
+        </button>
+    ),
 }))
 
 vi.mock('@/components/accession-mobile-wizard', () => ({
     AccessionMobileWizard: ({
         isSaveDisabled,
+        toggleGroupSelection,
     }: {
         isSaveDisabled?: boolean
+        toggleGroupSelection: (assays: []) => void
     }) => (
-        <button
-            type="button"
-            data-testid="wizard-save-button"
-            disabled={isSaveDisabled}
-        >
-            Lưu wizard
-        </button>
+        <div>
+            <button
+                type="button"
+                data-testid="wizard-save-button"
+                disabled={isSaveDisabled}
+            >
+                Lưu wizard
+            </button>
+            <button type="button" onClick={() => toggleGroupSelection([])}>
+                Chọn nhóm wizard
+            </button>
+        </div>
     ),
 }))
 
@@ -68,7 +84,15 @@ vi.mock('@/components/ui/button', () => ({
 }))
 
 vi.mock('@/components/test-assignment/desktop-grid', () => ({
-    DesktopGrid: () => null,
+    DesktopGrid: ({
+        toggleGroupSelection,
+    }: {
+        toggleGroupSelection: (assays: []) => void
+    }) => (
+        <button type="button" onClick={() => toggleGroupSelection([])}>
+            Chọn nhóm desktop
+        </button>
+    ),
 }))
 
 vi.mock('@/components/test-assignment/selection-panel', () => ({
@@ -107,6 +131,7 @@ describe('TestAssignmentGrid', () => {
             disabledSet: new Set<string>(),
             specialtiesMap: new Map(),
             toggleTestSelection: vi.fn(),
+            toggleGroupSelection: toggleGroupSelectionMock,
             handleMethodChange: vi.fn(),
             selectedMethodId: 'all',
             setSelectedMethodId: vi.fn(),
@@ -114,6 +139,23 @@ describe('TestAssignmentGrid', () => {
             processedAssays: [],
             handleRemove: vi.fn(),
         })
+    })
+
+    it('passes group selection into the desktop catalog path', () => {
+        useMediaQueryMock.mockReturnValue(true)
+        render(<TestAssignmentGrid selected={[]} onChange={vi.fn()} />)
+
+        fireEvent.click(screen.getByRole('button', { name: 'Chọn nhóm desktop' }))
+
+        expect(toggleGroupSelectionMock).toHaveBeenCalledOnce()
+    })
+
+    it('passes group selection into the flat mobile path', () => {
+        render(<TestAssignmentGrid selected={[]} onChange={vi.fn()} />)
+
+        fireEvent.click(screen.getByRole('button', { name: 'Chọn nhóm mobile' }))
+
+        expect(toggleGroupSelectionMock).toHaveBeenCalledOnce()
     })
 
     it('passes isSaveDisabled into the mobile wizard path', () => {
@@ -150,5 +192,7 @@ describe('TestAssignmentGrid', () => {
         )
 
         expect((screen.getByTestId('wizard-save-button') as HTMLButtonElement).disabled).toBe(true)
+        fireEvent.click(screen.getByRole('button', { name: 'Chọn nhóm wizard' }))
+        expect(toggleGroupSelectionMock).toHaveBeenCalledOnce()
     })
 })

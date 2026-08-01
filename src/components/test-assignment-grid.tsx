@@ -61,6 +61,7 @@ export function TestAssignmentGrid({
                 selected={selected}
                 onChange={onChange}
                 toggleTestSelection={logic.toggleTestSelection}
+                toggleGroupSelection={logic.toggleGroupSelection}
                 handleMethodChange={logic.handleMethodChange}
                 onSave={onSave}
                 isSaving={isSaving}
@@ -118,6 +119,7 @@ export function TestAssignmentGrid({
                         specialtiesMap={logic.specialtiesMap}
                         selected={selected}
                         toggleTestSelection={logic.toggleTestSelection}
+                        toggleGroupSelection={logic.toggleGroupSelection}
                         handleMethodChange={logic.handleMethodChange}
                     />
                 </ResizablePanel>

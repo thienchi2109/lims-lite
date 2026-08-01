@@ -14,14 +14,17 @@ vi.mock('@/components/accession-mobile-test-list', () => ({
     AccessionMobileTestList: (props: any) => (
         <div data-testid="test-list" data-search={props.searchQuery}>
             <span data-testid="test-list-count">{props.groupedRows.length}</span>
+            <button type="button" onClick={() => props.toggleGroupSelection([])}>
+                Chọn nhóm mobile
+            </button>
         </div>
     ),
 }))
 
 // Mock Collapsible
 vi.mock('@/components/ui/collapsible', () => ({
-    Collapsible: ({ children, open, ...props }: any) => (
-        <div data-testid="context-collapsible" data-open={String(open)} {...props}>
+    Collapsible: ({ children, open }: any) => (
+        <div data-testid="context-collapsible" data-open={String(open)}>
             {children}
         </div>
     ),
@@ -88,6 +91,7 @@ describe('AccessionMobileLayout', () => {
     const mockSetSelectedSpecialtyId = vi.fn()
     const mockSetIsContextOpen = vi.fn()
     const mockToggleTestSelection = vi.fn()
+    const mockToggleGroupSelection = vi.fn()
     const customSaveLabel = 'Lưu & Chỉ định (3)'
 
     beforeEach(() => {
@@ -110,6 +114,7 @@ describe('AccessionMobileLayout', () => {
         selected: mockSelected,
         onChange: mockOnChange,
         toggleTestSelection: mockToggleTestSelection,
+        toggleGroupSelection: mockToggleGroupSelection,
         handleMethodChange: vi.fn(),
         onSave: mockOnSave,
         isSaving: false,
@@ -123,6 +128,14 @@ describe('AccessionMobileLayout', () => {
         expect(screen.getByTestId('context-collapsible')).toBeDefined()
         expect(screen.getByTestId('test-list')).toBeDefined()
         expect(screen.getByTestId('mock-context')).toBeDefined()
+    })
+
+    it('passes group selection through to the mobile test list', () => {
+        render(<AccessionMobileLayout {...defaultProps} />)
+
+        fireEvent.click(screen.getByRole('button', { name: 'Chọn nhóm mobile' }))
+
+        expect(mockToggleGroupSelection).toHaveBeenCalledOnce()
     })
 
     // Test #2: Bottom bar shows selected count

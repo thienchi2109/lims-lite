@@ -17,6 +17,7 @@ import {
     AccordionTrigger,
     AccordionContent,
 } from '@/components/ui/accordion'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Loader2 } from 'lucide-react'
 import type { AssayDefinitionWithMethods, SelectedTest } from '@/types'
 import type { GridRow } from '@/types/test-assignment'
@@ -28,6 +29,7 @@ export interface TestCatalogAccordionProps {
     groupedRows: GridRow[]
     selected: SelectedTest[]
     toggleTestSelection: (assay: AssayDefinitionWithMethods) => void
+    toggleGroupSelection: (assays: AssayDefinitionWithMethods[]) => void
     handleMethodChange: (assayId: string, methodId: string) => void
     disabledSet: Set<string>
     specialtiesMap: Map<string, { id: string; name: string; code: string }>
@@ -43,6 +45,7 @@ export function TestCatalogAccordion({
     groupedRows,
     selected,
     toggleTestSelection,
+    toggleGroupSelection,
     handleMethodChange,
     disabledSet,
     specialtiesMap,
@@ -105,6 +108,15 @@ export function TestCatalogAccordion({
                     <AccordionItem key={group.key} value={group.key}>
                         <AccordionTrigger
                             className="px-4 py-3 hover:no-underline"
+                            leadingAction={
+                                <GroupSelectionCheckbox
+                                    group={group}
+                                    selectedSet={selectedSet}
+                                    disabledSet={disabledSet}
+                                    onToggle={toggleGroupSelection}
+                                    className="ml-4"
+                                />
+                            }
                         >
                             <GroupHeader group={group} variant={variant} />
                         </AccordionTrigger>
@@ -142,6 +154,15 @@ export function TestCatalogAccordion({
                 <AccordionItem key={group.key} value={group.key}>
                     <AccordionTrigger
                         className="px-3 py-2.5 hover:no-underline"
+                        leadingAction={
+                            <GroupSelectionCheckbox
+                                group={group}
+                                selectedSet={selectedSet}
+                                disabledSet={disabledSet}
+                                onToggle={toggleGroupSelection}
+                                className="ml-3"
+                            />
+                        }
                     >
                         <GroupHeader group={group} variant={variant} />
                     </AccordionTrigger>
@@ -173,6 +194,38 @@ export function TestCatalogAccordion({
 }
 
 // ---------- Internal Components ----------
+
+function GroupSelectionCheckbox({
+    group,
+    selectedSet,
+    disabledSet,
+    onToggle,
+    className,
+}: {
+    group: GroupSection
+    selectedSet: Set<string>
+    disabledSet: Set<string>
+    onToggle: (assays: AssayDefinitionWithMethods[]) => void
+    className: string
+}) {
+    const eligibleAssays = group.assays.filter((assay) => !disabledSet.has(assay.id))
+    const selectedCount = eligibleAssays.filter((assay) => selectedSet.has(assay.id)).length
+    const checked = selectedCount === 0
+        ? false
+        : selectedCount === eligibleAssays.length
+            ? true
+            : 'indeterminate'
+
+    return (
+        <Checkbox
+            aria-label={`Chọn nhóm ${group.label}`}
+            checked={checked}
+            disabled={eligibleAssays.length === 0}
+            onCheckedChange={() => onToggle(group.assays)}
+            className={className}
+        />
+    )
+}
 
 function GroupHeader({
     group,

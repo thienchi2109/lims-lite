@@ -21,8 +21,11 @@ vi.mock('@/components/ui/accordion', () => ({
     AccordionItem: ({ children, value, ...props }: any) => (
         <div data-testid={`accordion-item-${value}`} {...props}>{children}</div>
     ),
-    AccordionTrigger: ({ children, ...props }: any) => (
-        <button data-testid="accordion-trigger" {...props}>{children}</button>
+    AccordionTrigger: ({ children, leadingAction, ...props }: any) => (
+        <div>
+            {leadingAction}
+            <button data-testid="accordion-trigger" {...props}>{children}</button>
+        </div>
     ),
     AccordionContent: ({ children, ...props }: any) => (
         <div data-testid="accordion-content" {...props}>{children}</div>
@@ -139,6 +142,7 @@ describe('AccessionMobileTestList', () => {
         groupedRows,
         selected: [] as SelectedTest[],
         toggleTestSelection: mockToggle,
+        toggleGroupSelection: vi.fn(),
         handleMethodChange: vi.fn(),
         disabledSet: emptyDisabledSet,
         specialtiesMap,
