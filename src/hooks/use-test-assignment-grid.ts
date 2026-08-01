@@ -12,6 +12,26 @@ interface UseTestAssignmentGridProps {
     specialties: LabSpecialty[]
 }
 
+function createSelectedTest(
+    assay: AssayDefinitionWithMethods,
+    selectedMethodId: string,
+): SelectedTest {
+    const filteredMethod = selectedMethodId !== 'all'
+        ? assay.methods.find((method) => method.method_id === selectedMethodId)
+        : undefined
+    const methodToSelect = filteredMethod
+        ?? assay.methods.find((method) => method.is_default)
+        ?? assay.methods[0]
+
+    return {
+        assayId: assay.id,
+        methodId: methodToSelect?.method_id ?? null,
+        assayName: assay.name,
+        methodName: methodToSelect?.name || getAssayDefinitionMethodName(assay) || 'Không có',
+        units: assay.units,
+    }
+}
+
 export function useTestAssignmentGrid({
     selected,
     onChange,
@@ -204,23 +224,28 @@ export function useTestAssignmentGrid({
             newSelected.splice(existingIndex, 1)
             onChange(newSelected)
         } else {
-            let methodToSelect = assay.methods.find(m => m.is_default) || assay.methods[0]
-
-            if (selectedMethodId !== 'all') {
-                const filteredMethod = assay.methods.find(m => m.method_id === selectedMethodId)
-                if (filteredMethod) {
-                    methodToSelect = filteredMethod
-                }
-            }
-
-            onChange([...selected, {
-                assayId: assay.id,
-                methodId: methodToSelect?.method_id ?? null,
-                assayName: assay.name,
-                methodName: methodToSelect?.name || getAssayDefinitionMethodName(assay) || 'Không có',
-                units: assay.units
-            }])
+            onChange([...selected, createSelectedTest(assay, selectedMethodId)])
         }
+    }
+
+    const toggleGroupSelection = (assays: AssayDefinitionWithMethods[]) => {
+        const selectableAssays = assays.filter((assay) => !disabledSet.has(assay.id))
+        if (selectableAssays.length === 0) return
+
+        const selectedIds = new Set(selected.map((test) => test.assayId))
+        const allSelectableSelected = selectableAssays.every((assay) => selectedIds.has(assay.id))
+
+        if (allSelectableSelected) {
+            const selectableIds = new Set(selectableAssays.map((assay) => assay.id))
+            onChange(selected.filter((test) => !selectableIds.has(test.assayId)))
+            return
+        }
+
+        const newSelections = selectableAssays
+            .filter((assay) => !selectedIds.has(assay.id))
+            .map((assay) => createSelectedTest(assay, selectedMethodId))
+
+        onChange([...selected, ...newSelections])
     }
 
     const handleMethodChange = (assayId: string, methodId: string) => {
@@ -266,6 +291,7 @@ export function useTestAssignmentGrid({
         // Handlers
         requestSort,
         toggleTestSelection,
+        toggleGroupSelection,
         handleMethodChange,
         handleRemove,
     }
