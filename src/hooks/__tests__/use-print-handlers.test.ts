@@ -174,6 +174,72 @@ describe('usePrintHandlers', () => {
             expect(toast.error).toHaveBeenCalledWith('Không thể mở tài liệu in')
         })
 
+        it('removes electronic signatures and stamp while preserving manual-signing fields', async () => {
+            vi.spyOn(global, 'fetch').mockResolvedValue({
+                ok: true,
+                text: () => Promise.resolve(`
+                    <!DOCTYPE html>
+                    <html>
+                        <head></head>
+                        <body>
+                            <div class="signatures">
+                                <div class="sig-col">
+                                    <div class="sig-title">Người thực hiện</div>
+                                    <img
+                                        src="data:image/png;base64,analyst-signature-data"
+                                        alt="Chữ ký người thực hiện"
+                                        class="signature-image"
+                                    />
+                                    <div class="sig-name">KTV. Nguyễn Phân Tích</div>
+                                </div>
+                                <div class="sig-col">
+                                    <div class="sig-date">Cần Thơ, ngày 01 tháng 08 năm 2026</div>
+                                    <div class="sig-title">Lãnh đạo khoa Xét nghiệm</div>
+                                    <div class="manager-signature-stack">
+                                        <img
+                                            src="data:image/png;base64,manager-signature-data"
+                                            alt="Chữ ký"
+                                            class="signature-image manager-signature-image"
+                                        />
+                                        <img
+                                            src="data:image/svg+xml;base64,manager-stamp-data"
+                                            alt="Con dấu"
+                                            class="manager-stamp-image"
+                                            data-coa-stamp="manager"
+                                        />
+                                    </div>
+                                    <div class="sig-name">Nguyễn Quản Lý</div>
+                                </div>
+                            </div>
+                        </body>
+                    </html>
+                `),
+            } as Response)
+
+            const { result } = renderHook(() => usePrintHandlers('sample-1', results))
+
+            await act(async () => { await result.current.handlePrintCoABody() })
+
+            const renderedHtml = mockPendingPrintDocument.render.mock.calls[0]?.[0] as string
+            const renderedDocument = new DOMParser().parseFromString(renderedHtml, 'text/html')
+
+            expect(renderedDocument.querySelector('.signature-image')).toBeNull()
+            expect(
+                renderedDocument.querySelector('.manager-stamp-image, [data-coa-stamp="manager"]'),
+            ).toBeNull()
+            expect(renderedHtml).not.toContain('analyst-signature-data')
+            expect(renderedHtml).not.toContain('manager-signature-data')
+            expect(renderedHtml).not.toContain('manager-stamp-data')
+            expect(renderedDocument.body.textContent).toContain('Người thực hiện')
+            expect(renderedDocument.body.textContent).toContain('KTV. Nguyễn Phân Tích')
+            expect(renderedDocument.body.textContent).toContain('Lãnh đạo khoa Xét nghiệm')
+            expect(renderedDocument.body.textContent).toContain('Nguyễn Quản Lý')
+            expect(renderedDocument.body.textContent).toContain(
+                'Cần Thơ, ngày 01 tháng 08 năm 2026',
+            )
+            expect(renderedDocument.querySelector('.manager-signature-stack')).not.toBeNull()
+        })
+
         it('closes the detached print shell when loading CoA HTML fails', async () => {
             const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
             vi.spyOn(global, 'fetch').mockResolvedValue({

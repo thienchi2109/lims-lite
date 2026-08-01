@@ -14,6 +14,7 @@ import { generatePrintTemplate } from '@/lib/print-template'
 import { DEFAULT_SAMPLE_LABEL_PRESET } from '@/lib/sample-label-template'
 import { printSampleBarcodeLabel } from '@/lib/sample-label-print-client'
 import { openPendingDetachedHtmlDocument } from '@/lib/detached-html-document'
+import { prepareCoABodyOnlyPrintHtml } from '@/lib/coa/body-only-print'
 import { toast } from 'sonner'
 import type { ResultWithAssay } from '@/types'
 
@@ -93,20 +94,7 @@ export function usePrintHandlers(
                 throw new Error('Không thể tải phiếu kết quả')
             }
 
-            let html = await response.text()
-
-            const bodyOnlyStyles = `<style>
-                .header { visibility: hidden !important; border-color: transparent !important; }
-                .absolute-footer { display: none !important; }
-                .watermark { display: none !important; }
-                .content { padding-bottom: 32px !important; }
-            </style>`
-
-            if (html.includes('</head>')) {
-                html = html.replace('</head>', `${bodyOnlyStyles}</head>`)
-            } else {
-                html = bodyOnlyStyles + html
-            }
+            const html = prepareCoABodyOnlyPrintHtml(await response.text())
 
             printDocument.render(html, { autoPrint: true })
         } catch (err) {
