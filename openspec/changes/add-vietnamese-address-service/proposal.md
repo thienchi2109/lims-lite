@@ -23,18 +23,19 @@ being duplicated inside LIMS.
   accent-insensitive and fuzzy search, legacy-name resolution, dataset metadata,
   liveness, and readiness. Search ranking, response compatibility, cache
   validators, input bounds, and PII-safe logging are part of the contract.
-- Deploy the service on the existing `khoa-xn-cdc` home server in a separate
-  Compose project. Same-host applications use a private Docker network; other
-  internal applications may use a port bound only to the server's Tailscale
-  address.
+- Deploy the service on the existing `khoa-xn-cdc` home server as a small
+  systemd-managed Go process built from an operator-selected tag or commit.
+  Host-native applications may use loopback; the containerized LIMS application
+  and other internal applications use a port bound only to the server's
+  Tailscale address.
 - Keep the service off the public Internet, Cloudflare Tunnel, and browser
   access. Do not require an application API key in the initial release; the
-  Docker/Tailscale network boundary is the trust boundary.
-- Automatically detect, validate, build, publish, and deploy new dataset
-  snapshots. Failed validation or failed rollout keeps the previous version;
-  no external alerting channel is introduced. Material semantic drift requires
-  a reviewed manifest or allow-list change, and the home server verifies the
-  trusted image identity, digest, and provenance before candidate startup.
+  host/Tailscale network boundary is the trust boundary.
+- Treat dataset refreshes as infrequent operator-initiated maintenance. A
+  maintainer reviews changed sources, regenerates and validates the snapshot,
+  tags an immutable revision, then the home server pulls that exact revision,
+  runs the Go checks, builds, restarts, and verifies health. Failed validation
+  or rollout keeps or restores the previous working revision.
 - Add a reusable LIMS address-autocomplete integration through the existing
   client-action and `api-client` boundary, with Vietnamese UI and a mandatory
   manual-entry fallback whenever the service is unavailable or no suggestion
@@ -90,21 +91,20 @@ being duplicated inside LIMS.
   identities, patient data, sample data, credentials, or application secrets.
 - **Security:** The service is read-only and internally reachable. It publishes
   no Internet-facing endpoint, accepts no browser-originated calls, and relies
-  on Docker/Tailscale network controls instead of an API key. LIMS remains an
+  on host firewall/Tailscale controls instead of an API key. LIMS remains an
   authenticated, role-authorized, rate-bounded proxy and sends only
   administrative search text, never a complete client or scanned address.
 - **Compliance:** Selecting or manually editing a client address remains a LIMS
-  client mutation and must remain auditable. Automated reference-data refreshes
-  are versioned by source identifiers, checksums, build evidence, and deployed
-  image digest.
+  client mutation and must remain auditable. Operator-initiated reference-data
+  refreshes are versioned by source identifiers, checksums, build evidence, and
+  the deployed service revision.
 - **Localization:** Address labels, fallback states, historical-name indicators,
   and validation messages in LIMS are Vietnamese.
-- **Operations:** Adds one independently deployable, resource-bounded container
-  and an automated pull-based update/rollback path on the home server. The
-  service uses no mutable SQLite volume and requires no database backup. The
-  deployment controller keeps protected desired/active/previous digest state,
-  verifies signed provenance, tests active-plus-candidate resource use, and
-  replaces the stable container only after dark candidate verification.
+- **Operations:** Adds one small resource-bounded Go process on the home server.
+  Updates are rare and manual: checkout an approved tag or commit, run
+  verification, build, restart, and health-check. The previous working revision
+  remains available for manual rollback. The immutable SQLite snapshot requires
+  no mutable database volume or database backup workflow.
 - **Availability:** Address suggestions are assistive. A service outage or stale
   dataset must never block client creation or sample accession.
 - **Scanner compatibility:** Existing QR/Web Serial CCCD parsing, duplicate

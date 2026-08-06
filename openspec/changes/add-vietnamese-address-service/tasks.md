@@ -10,7 +10,8 @@ Every numbered phase below is already a separate PR or operational gate. Do
 not recombine phases. Handwritten changes should remain materially below 1,000
 lines per PR and MUST be split again before 1,200 lines unless atomic SQL makes
 that less reviewable. Generated SQLite snapshots, dependency lockfiles,
-attestations, and atomic migration SQL SHALL be reported separately.
+retained raw-source bundles, and atomic migration SQL SHALL be reported
+separately.
 
 Every PostgreSQL apply, query, and verification task MUST connect through
 `ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42`, operate from
@@ -25,35 +26,35 @@ apply. Once executed, the migration remains byte-for-byte immutable.
 
 **Prerequisite:** This OpenSpec change is approved.
 
-**PR boundary:** Repository ownership, toolchain, module structure, and
-development CI only. Do not add production data, container deployment, search,
-or API behavior.
+**PR boundary:** Repository ownership, minimal Go toolchain, module structure,
+and local development verification only. Do not add production data, runtime
+deployment, search, or API behavior.
 
 - [x] 1.1 Create the independent `vietnamese-address-service` repository with ownership, support, versioning, compatibility, release, and OpenSpec documentation.
-- [x] 1.2 Pin Go, the approved CGO-free SQLite driver, formatter, linter, vulnerability scanner, contract tooling, and reproducible-build settings.
+- [x] 1.2 Pin Go, the approved CGO-free SQLite driver, and explicit reproducible CGO-free build settings.
 - [x] 1.3 Establish small packages for configuration, build metadata, dataset interfaces, HTTP transport, and graceful process lifecycle using `net/http`.
-- [x] 1.4 Add CI for formatting, unit and race tests, lint, vulnerability checks, license checks, and secret/PII scanning.
-- [x] 1.5 Add contributor commands and fixtures that allow ordinary tests to run without live upstream or home-server access.
-- [x] 1.6 Verify all foundation quality gates and prove the repository contains no LIMS code, data, credentials, or deployment secrets.
+- [x] 1.4 Add proportional local verification for formatting, `go vet`, unit tests, and CGO-free builds without hosted CI/CD or automated dependency updates.
+- [x] 1.5 Add contributor commands and local synthetic-test conventions so ordinary tests require no live upstream or home-server access.
+- [x] 1.6 Run the complete local foundation check and review the diff for LIMS code, data, credentials, private infrastructure, and deployment secrets.
 
 **Exit gate:** The repository has a stable development contract and can accept
 runtime work without coupling to LIMS.
 
-## 2. Phase S0b - Read-Only Runtime and Container (Service PR S0b)
+## 2. Phase S0b - Read-Only Runtime (Service PR S0b)
 
 **Prerequisite:** Service PR S0a is merged.
 
-**PR boundary:** Synthetic read-only runtime, health, container hardening, and
-resource budgets only. Do not add production ingestion or public `/v1` data
+**PR boundary:** Synthetic read-only runtime, health, and resource budgets only.
+Do not add production ingestion, deployment files, or public `/v1` data
 handlers.
 
 - [ ] 2.1 Add a minimal synthetic SQLite fixture and read-only repository implementation.
 - [ ] 2.2 Add startup validation that rejects missing, corrupt, incompatible, or unexpectedly writable snapshots before readiness.
 - [ ] 2.3 Implement `/health/live` and `/health/ready` with distinct process and dataset semantics and redacted failures.
 - [ ] 2.4 Add metadata-only request logging, request IDs, bounded server timeouts, graceful shutdown, and concurrency limits.
-- [ ] 2.5 Add a multi-stage image that runs as non-root with a read-only root filesystem, dropped capabilities, `no-new-privileges`, no writable SQLite volume, health checks, and bounded logs.
+- [ ] 2.5 Add a reproducible CGO-free Linux binary build and document the runtime files required beside the binary without adding home-server deployment configuration.
 - [ ] 2.6 Document CPU, memory, process, file-descriptor, disk, timeout, and concurrency budgets for idle and loaded operation.
-- [ ] 2.7 Verify startup failure cases, read-only enforcement, liveness/readiness, graceful shutdown, container security, idle use, and bounded load behavior.
+- [ ] 2.7 Verify startup failure cases, read-only enforcement, liveness/readiness, graceful shutdown, idle use, and bounded load behavior.
 
 **Exit gate:** A hardened dark service runs against synthetic immutable data
 within documented resource limits.
@@ -130,50 +131,51 @@ publication, home-server deployment, or LIMS code.
 - [ ] 6.6 Build ETags from API representation version, service version, dataset version, route, and canonical request parameters.
 - [ ] 6.7 Require consumers to validate known required fields while tolerating unknown additive fields; reserve breaking changes for a new major version.
 - [ ] 6.8 Add handler, contract, malformed-input, cancellation, concurrency, ETag, additive-field, error-redaction, PII-boundary, liveness, and readiness tests.
-- [ ] 6.9 Verify all Go quality gates, representative searches, bounded load, stable ordering, compatibility fixtures, and production-shaped container behavior.
+- [ ] 6.9 Verify the Go checks, representative searches, bounded load, stable ordering, compatibility fixtures, and production-shaped process behavior.
 
 **Exit gate:** Consumers have a stable, privacy-bounded API independent of the
 SQLite schema.
 
-## 7. Phase S4 - Automated Publication and Trusted Provenance (Service PR S4)
+## 7. Phase S4 - Manual Dataset Release (Service PR S4)
 
 **Prerequisite:** Service PR S3 is merged.
 
-**PR boundary:** Scheduled detection and immutable release publication only.
-CI SHALL NOT connect inbound to the home server or alter deployment state.
+**PR boundary:** Operator-initiated dataset refresh and immutable release
+evidence only. Do not access or alter the home server.
 
-- [ ] 7.1 Add a daily workflow that exits without rebuilding when retained source identifiers and checksums are unchanged.
-- [ ] 7.2 Run acquisition, semantic-drift policy, generation, integrity, lineage, search, contract, resource, security, and reproducibility gates when inputs change.
-- [ ] 7.3 Publish the raw-source bundle, manifest, checksums, row counts, parser/toolchain versions, source commit, SBOM, and generated snapshot as traceable release evidence.
-- [ ] 7.4 Publish only immutable image digests and sign them with the approved CI identity plus provenance attestation.
-- [ ] 7.5 Fail closed on unauthorized semantic drift, unsigned output, source failure, test failure, or publication failure without changing the active service.
-- [ ] 7.6 Retain workflow logs and failure evidence without external notifications and preserve active plus previous known-good release artifacts under bounded retention.
-- [ ] 7.7 Test unchanged inputs, disappeared upstream files, retained-source rebuild, structural drift, code reuse, disagreement, signature failure, regression failure, and successful release.
-- [ ] 7.8 Verify release reproducibility, trusted publisher identity, signature, attestation, image metadata, digest immutability, and absence of secrets or LIMS data.
+- [ ] 7.1 Document that a maintainer initiates refresh only when official administrative data actually changes.
+- [ ] 7.2 Run acquisition, semantic-drift policy, generation, integrity, lineage, search, contract, resource, security, and reproducibility checks manually.
+- [ ] 7.3 Retain the raw-source bundle, manifest, checksums, row counts, parser/toolchain versions, source commit, and generated snapshot as release evidence.
+- [ ] 7.4 Create an immutable service tag or record an exact commit SHA only after all checks pass.
+- [ ] 7.5 Fail closed on semantic drift, source failure, test failure, or incomplete evidence without changing the active service.
+- [ ] 7.6 Retain the current and previous known-good release revisions under bounded disk retention.
+- [ ] 7.7 Test disappeared upstream files, retained-source rebuild, structural drift, code reuse, disagreement, regression failure, and successful manual release preparation.
+- [ ] 7.8 Verify byte-for-byte reproducibility, revision immutability, checksums, and absence of secrets or LIMS data.
 
-**Exit gate:** Automatic updates publish only reproducible, signed candidates
-with complete provenance and no deployment authority.
+**Exit gate:** A maintainer can prepare a reproducible reviewed release revision
+without deployment authority or hosted automation.
 
-## 8. Phase S5 - Private Pull Controller and Rollback (Service PR S5)
+## 8. Phase S5 - Manual Home-Server Deployment and Rollback (Service PR S5)
 
-**Prerequisite:** Service PR S4 is merged and a signed candidate exists.
+**Prerequisite:** Service PR S4 is merged and an approved tag or commit exists.
 
-**PR boundary:** Service-side Compose, protected deployment state, pull
-controller, and runbooks only. Do not modify LIMS Compose or enable consumers.
+**PR boundary:** Home-server checkout, build, systemd service, private binding,
+health verification, and rollback runbook only. Do not modify LIMS runtime or
+enable consumers.
 
-- [ ] 8.1 Select the external Docker network name, Tailscale-only port, registry namespace, signing trust policy, protected deployment-state path, and retention limits.
-- [ ] 8.2 Add a separate Compose project using immutable digests, no writable SQLite volume, read-only root filesystem, non-root execution, dropped capabilities, health checks, bounded logs, and resource limits.
-- [ ] 8.3 Bind cross-host access only to `100.93.19.42` and reject wildcard, Internet, Cloudflare Tunnel/Funnel, and permissive browser CORS configurations.
-- [ ] 8.4 Store desired, active, previous known-good, and last-transition state atomically in a protected host path outside the container.
-- [ ] 8.5 Verify repository, digest, signing identity, signature, attestation, manifest, and checksums before starting an isolated candidate Compose project.
-- [ ] 8.6 Verify candidate health, integrity, metadata, representative searches, private reachability, expected digest, and combined active-plus-candidate resource budgets.
-- [ ] 8.7 Record transition intent, recreate the stable container at the verified digest, run post-switch checks, and restore the previous digest on failure.
-- [ ] 8.8 Reconcile interrupted transitions against actual container state without guessing and keep candidate overlap bounded.
-- [ ] 8.9 Document startup, stopped-container resource expectations, stale dataset inspection, state recovery, manual pinning, rollback, cleanup, and why no SQLite backup is required.
-- [ ] 8.10 Test candidate failure, signature failure, interrupted pull, interrupted switch, corrupt state, bad digest, registry outage, budget exceedance, rollback, and retention.
+- [ ] 8.1 Select the source checkout path, versioned binary/release paths, systemd unit name, loopback/Tailscale bind addresses, host port, service user, and retention limits.
+- [ ] 8.2 Add a minimal systemd unit that runs the binary as a dedicated non-root user with bounded logs, restart policy, resource limits, and read-only access to the SQLite snapshot.
+- [ ] 8.3 Bind same-host access to loopback and cross-host access only to `100.93.19.42`; reject wildcard, Internet, Cloudflare Tunnel/Funnel, and permissive browser CORS configurations.
+- [ ] 8.4 Add an operator runbook that fetches source, checks out an exact approved tag or commit, runs `make verify`, and builds the CGO-free binary on the home server.
+- [ ] 8.5 Verify source revision, manifest, snapshot checksums, and required runtime files before installing or restarting.
+- [ ] 8.6 Restart the service and verify health, integrity, metadata, representative searches, private reachability, expected revision, and resource budgets.
+- [ ] 8.7 Keep the previous checkout and binary until post-restart checks pass; restore them and restart on failure.
+- [ ] 8.8 Document recovery from an interrupted fetch, build, install, or restart using explicit active, selected, and previous revision checks.
+- [ ] 8.9 Document startup, stale dataset inspection, manual pinning, rollback, cleanup, and why no SQLite backup is required.
+- [ ] 8.10 Test bad revision, failed build, checksum mismatch, failed restart, private-binding error, budget exceedance, rollback, and release retention.
 
-**Exit gate:** The service can be deployed dark and recovered deterministically
-without inbound CI access or a permanent blue/green proxy.
+**Exit gate:** An operator can deploy and roll back an exact revision on the
+home server with a short documented manual procedure.
 
 ## 9. Phase L1a - Additive Structured Address Migration (LIMS PR L1a)
 
@@ -235,11 +237,11 @@ autocomplete consumer exists.
 documentation only. Rollout mode remains `off`; do not add address handlers or
 UI.
 
-- [ ] 12.1 Attach only the LIMS application service to the approved external private Docker network without publishing a new LIMS or address-service port.
+- [ ] 12.1 Configure only the LIMS application service with the server-only address-service URL through the approved home-server Tailscale endpoint without publishing a new LIMS or address-service port.
 - [ ] 12.2 Add server-only validation for service URL, connect/response timeouts, request bounds, and rollout mode `off | allowlist | on`.
 - [ ] 12.3 Add a protected principal allowlist contract that cannot be selected or disclosed by browser code.
-- [ ] 12.4 Keep the private Docker hostname, Tailscale endpoint, signing policy, and operational paths out of public environment variables and client bundles.
-- [ ] 12.5 Document deploy order, network lifecycle, private connectivity, public-denial checks, mode changes, rollback, and configuration ownership across repositories.
+- [ ] 12.4 Keep the Tailscale endpoint and operational paths out of public environment variables and client bundles.
+- [ ] 12.5 Document deploy order, endpoint lifecycle, private connectivity, public-denial checks, mode changes, rollback, and configuration ownership across repositories.
 - [ ] 12.6 Verify Compose rendering, feature-off startup, no new public exposure, and production build/typecheck with no user-visible behavior change.
 
 **Exit gate:** LIMS is ready to reach the service privately but cannot issue an
@@ -310,21 +312,21 @@ lookup cannot race newer state, and autocomplete is complete but disabled.
 ## 16. Gate R0 - Dark Deployment, Allowlisted Rollout, and Rollback (Operational, No PR)
 
 **Prerequisite:** Service PRs S0a-S5, LIMS PRs L1a-L3b, and gate G1 are
-complete; signed images and protected runtime configuration exist.
+complete; an exact service revision and protected runtime configuration exist.
 
 **Operational boundary:** Deploy, verify, enable, observe, and roll back only.
 Any correction returns to a focused PR or forward-only migration.
 
-- [ ] 16.1 Create or verify the approved private Docker network, Tailscale ACL/firewall, exact `100.93.19.42` bind, signing trust policy, protected deployment-state permissions, and absence of public/Cloudflare/Funnel reachability.
-- [ ] 16.2 Deploy the signed service image dark and verify trusted identity, digest, attestation, SQLite integrity, metadata, representative search, logs, idle resources, and stopped-container behavior.
-- [ ] 16.3 Exercise candidate overlap, failed candidate, interrupted transition, post-switch rollback, state reconciliation, and previous-digest recovery.
+- [ ] 16.1 Verify the Tailscale ACL/firewall, exact `100.93.19.42` bind, protected systemd configuration and install-path permissions, and absence of public/Cloudflare/Funnel reachability.
+- [ ] 16.2 Deploy the exact approved service revision dark and verify source revision, release checksums, local build, SQLite integrity, metadata, representative search, logs, idle resources, and stopped-service behavior.
+- [ ] 16.3 Exercise interrupted fetch, build, install, and restart plus failed post-restart checks, manual rollback, and previous-revision recovery.
 - [ ] 16.4 Deploy LIMS with mode `off` and verify QR/Web Serial scanning, immediate draft, duplicate lookup, client create/edit, manual entry, and accession remain unchanged with zero address calls.
 - [ ] 16.5 Enable `allowlist` for controlled authenticated principals and prove anonymous, unauthorized, and non-allowlisted callers make zero upstream requests.
 - [ ] 16.6 Verify scan success makes no address request, stale lookup/autocomplete cannot overwrite newer state, and explicit normalization preserves original scanned provenance.
 - [ ] 16.7 Verify outgoing requests and all logs contain no complete address, free-form detail, raw administrative query, client identity, or sample data.
 - [ ] 16.8 Verify current, unaccented, first-character typo, historical, reused-code, and ambiguous-successor flows plus structured persistence and audit evidence.
 - [ ] 16.9 Stop or isolate the service and prove scanner, duplicate lookup, manual client creation/editing, and sample accession continue without data loss.
-- [ ] 16.10 Switch to `on` only after allowlisted evidence passes, observe latency/errors/resources/dataset age, and record rollback to `off` plus previous service digest.
+- [ ] 16.10 Switch to `on` only after allowlisted evidence passes, observe latency/errors/resources/dataset age, and record rollback to `off` plus the previous service revision.
 
 **Exit gate:** Internal autocomplete is enabled, observable, privacy-bounded,
 scanner-first, independent of service health, and reversible without rewriting

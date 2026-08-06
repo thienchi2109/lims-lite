@@ -17,8 +17,8 @@ schema is not a complete temporal lineage model.
 
 The service is expected to support LIMS first and other internal applications
 later. The user has selected a separate repository, Go, SQLite, the existing
-home server, Docker-network and Tailscale access, no application API key,
-automatic updates, and no external update-failure notification.
+home server, loopback and Tailscale-only access, no application API key,
+operator-controlled updates, and no external update-failure notification.
 
 This OpenSpec change is the coordinated contract stored in `lims-lite`.
 Implementation of the service itself belongs in a new
@@ -38,8 +38,9 @@ production service.
 - Search Vietnamese names with and without diacritics, tolerate bounded typos,
   rank current canonical units before historical aliases, and preserve
   ambiguous old-to-new mappings.
-- Automatically build and deploy validated dataset updates while retaining the
-  previous healthy version on any failure.
+- Refresh and deploy the dataset only when an operator intentionally selects a
+  reviewed source revision, while retaining the previous healthy revision for
+  rollback.
 - Integrate LIMS through its existing server-side client-action boundary and
   preserve manual address entry during every failure mode.
 - Preserve successful CCCD scanning as the fastest and highest-priority
@@ -72,9 +73,10 @@ production service.
 ### Decision 1: Bootstrap an independently deployable repository
 
 The service SHALL live in a new `vietnamese-address-service` repository with
-its own OpenSpec configuration, Go module, CI, Docker image, releases, and
-operational runbooks. The LIMS repository SHALL contain only the coordinated
-consumer contract and LIMS-side implementation.
+its own OpenSpec configuration, Go module, releases, and operational runbooks.
+The repository SHALL use proportional local Go checks rather than hosted CI/CD.
+The LIMS repository SHALL contain only the coordinated consumer contract and
+LIMS-side implementation.
 
 This boundary prevents future applications from depending on LIMS deployment,
 database credentials, RLS, or internal schema. It also allows dataset releases
@@ -108,14 +110,14 @@ request timeouts, and shut down gracefully.
 - A CGO SQLite driver is mature but complicates cross-compilation and minimal
   container builds without a demonstrated requirement.
 
-### Decision 3: Package an immutable SQLite snapshot in every image
+### Decision 3: Package an immutable SQLite snapshot in every release
 
-The SQLite database SHALL be generated before image publication and copied into
-the service image. Production SHALL open it read-only and run with a read-only
-root filesystem. The container SHALL NOT mount a writable database volume or
-download data during startup.
+The SQLite database SHALL be generated before a release tag is selected and
+stored with the versioned service checkout or another immutable release path.
+Production SHALL open it read-only. The service SHALL NOT create a writable
+database copy or download data during startup.
 
-Each image SHALL identify:
+Each release SHALL identify:
 
 - service semantic version;
 - API representation version;
@@ -125,11 +127,10 @@ Each image SHALL identify:
 - source and generated-artifact SHA-256 checksums;
 - current and historical row counts;
 - build timestamp and source commit;
-- image digest;
-- trusted publisher identity and provenance-attestation reference.
+- source commit or tag.
 
-Because runtime state is reproducible and immutable, rollback is an image-digest
-rollback and no SQLite backup is required.
+Because runtime state is reproducible and immutable, rollback restores the
+previous checkout and snapshot; no SQLite backup is required.
 
 **Alternatives considered:**
 
@@ -164,10 +165,11 @@ An update SHALL fail closed when:
 
 Expected counts SHALL be versioned manifest evidence, not permanent constants.
 Dataset publication SHALL never infer that today's counts can never change.
-Ordinary source changes that remain within reviewed invariants MAY publish
-automatically. A new source schema, unexplained relationship class, code reuse,
-or material semantic disagreement SHALL fail closed until a manifest or
-allow-list change is reviewed in the service repository.
+Ordinary source changes that remain within reviewed invariants MAY be prepared
+for release only when a maintainer initiates the documented process. A new
+source schema, unexplained relationship class, code reuse, or material semantic
+disagreement SHALL fail closed until a manifest or allow-list change is reviewed
+in the service repository.
 
 ### Decision 5: Model current units, aliases, and lineage explicitly
 
@@ -266,14 +268,14 @@ the meaning or type of a required field requires a new API major version.
 Address search accepts administrative query text only. Consumers SHALL NOT send
 house numbers, street detail, organization names, complete client addresses, or
 complete CCCD-scanned addresses to the service. Raw query values SHALL NOT be
-recorded in LIMS, reverse-proxy, deployment-controller, or service logs.
+recorded in LIMS, reverse-proxy, or service logs.
 
 ### Decision 8: Trust private networking without an application API key
 
-Same-host consumers SHALL connect through an approved external private Docker
-network. Cross-host internal consumers SHALL connect to a host port bound only
-to the home server's Tailscale address. The service SHALL NOT bind a production
-host port on all interfaces and SHALL NOT receive a Cloudflare route.
+Host-native same-host consumers MAY connect through loopback. The containerized
+LIMS application and cross-host internal consumers SHALL connect to a host port
+bound only to the home server's Tailscale address. The service SHALL NOT bind a
+production host port on all interfaces and SHALL NOT receive a Cloudflare route.
 
 There is no initial API key because the service contains public reference data
 only and the user accepted the simpler network trust boundary. Compensating
@@ -290,44 +292,27 @@ controls SHALL include:
 This decision SHALL be revisited before exposing sensitive data, write
 operations, or untrusted network access.
 
-### Decision 9: Automate updates but keep deployment fail-closed
+### Decision 9: Use infrequent operator-controlled updates
 
-A scheduled service-repository workflow SHALL check sources daily, generate a
-candidate snapshot only when inputs change, run all validations and tests, and
-publish an immutable image only on success. The release SHALL include the raw
-source artifact bundle, generated manifest, checksums, SBOM, image signature,
-and provenance attestation. The signing identity and verification policy are
-deployment controls, not application API keys.
+The service SHALL NOT poll upstream sources or deploy automatically. When an
+administrative dataset update is actually needed, a maintainer SHALL:
 
-The home server SHALL use a pull-based scheduled deployment controller rather
-than accepting inbound CI deployment access. It SHALL:
+1. select and retain the reviewed source revisions;
+2. regenerate the snapshot and run deterministic dataset validation;
+3. run `make verify` and the phase-specific dataset/API checks;
+4. create an immutable tag or record an exact commit SHA;
+5. update the home-server checkout to that exact revision;
+6. build the CGO-free Go binary on the home server;
+7. restart the systemd service and verify readiness, metadata, SQLite integrity,
+   and representative searches.
 
-1. read a protected deployment-state record containing desired, active, and
-   previous known-good digests plus the last completed transition;
-2. compare the active and published candidate digests;
-3. verify repository, digest, trusted publisher identity, signature,
-   provenance attestation, and manifest checksums before candidate startup;
-4. pull and start the candidate in a temporary isolated Compose project that
-   consumers cannot reach;
-5. verify readiness, dataset metadata, representative searches, combined
-   active-plus-candidate resource bounds, SQLite integrity, and expected digest;
-6. atomically record the intended transition, recreate the stable service at
-   the verified digest, and record the new active and previous digests;
-7. restore the previous digest automatically if stable startup or post-switch
-   checks fail;
-8. recover deterministically after interruption by reconciling actual container
-   digest, protected state, and the last completed transition.
-
-The initial release SHALL replace the stable container rather than add a
-permanent blue/green reverse proxy. A brief interruption is acceptable because
-autocomplete is optional and manual entry remains available. Active and
-candidate containers run concurrently only during bounded verification.
-
-If source validation, image publication, candidate startup, or rollout fails,
-the current healthy image SHALL remain active. No email, GitHub Issue, Zalo, or
-other external alert is required. Failures SHALL remain visible in workflow,
-deployment, and service status logs. `/v1/meta/version` SHALL expose the active
-dataset age but not credentials or internal failure details.
+The previous working checkout and binary SHALL remain available until the new
+revision passes post-restart verification. On failure, the operator SHALL
+restore the previous revision and restart the service. A brief interruption is
+acceptable because autocomplete is optional and manual entry remains available.
+No scheduled updater or external failure notification is required.
+`/v1/meta/version` SHALL expose dataset age and revision without credentials or
+internal failure details.
 
 ### Decision 10: Keep autocomplete reusable and non-blocking
 
@@ -361,7 +346,7 @@ A shared address field SHALL separate:
 The field SHALL never derive a service query by forwarding the complete
 free-form or CCCD-scanned address. The user enters or confirms an
 administrative-only query, and raw query values remain excluded from LIMS,
-proxy, deployment-controller, and service logs.
+proxy, and service logs.
 
 The accession interaction SHALL preserve this source precedence:
 
@@ -464,23 +449,23 @@ lockfiles, and intentionally atomic migration SQL are reported separately, but
 do not justify combining unrelated production behavior.
 
 Repository bootstrap and runtime hardening, historical ingestion and search,
-deployment packaging and controller behavior, LIMS network wiring and adapter
-logic, and reusable field and accession integration SHALL be separate PRs from
-the outset. The LIMS migration PR SHALL merge before its committed SQL is
-applied to a persistent database, and the apply gate SHALL verify the exact
+manual release preparation and home-server deployment, LIMS network wiring and
+adapter logic, and reusable field and accession integration SHALL be separate
+PRs from the outset. The LIMS migration PR SHALL merge before its committed SQL
+is applied to a persistent database, and the apply gate SHALL verify the exact
 merged SHA before execution.
 
 ## Risks / Trade-offs
 
-- **Automatic upstream data can be wrong or structurally changed** → Validate
+- **Upstream data can be wrong or structurally changed** → Validate
   against official and secondary sources, retain immutable raw inputs, require
   deterministic invariants and regression fixtures, and require a reviewed
   manifest change for material semantic drift.
 - **No external alert can leave the active dataset stale** → Expose dataset age
-  through metadata, retain workflow/deployment logs, and document a periodic
+  through metadata, retain release and operations logs, and document a periodic
   operational check; this is an accepted user-selected trade-off.
-- **No API key trusts every permitted network peer** → Restrict Docker network,
-  Tailscale ACLs, firewall bindings, methods, request bounds, and CORS; add
+- **No API key trusts every permitted network peer** → Restrict loopback and
+  Tailscale access, firewall bindings, methods, request bounds, and CORS; add
   application authentication before widening the trust boundary.
 - **Historical conversion is sometimes ambiguous** → Preserve many-to-many
   relations and require consumer/user selection instead of guessing.
@@ -499,35 +484,35 @@ merged SHA before execution.
 - **Separate repositories create coordinated release work** → Version the HTTP
   contract, add consumer contract tests, and stage service changes before LIMS
   changes.
-- **Immutable image updates consume registry and disk space** → Use bounded image
-  retention while always keeping the active and previous known-good digests.
-- **A valid digest can still come from an unauthorized publisher** → Verify the
-  expected repository, trusted signing identity, signature, and provenance
-  attestation before candidate startup.
-- **Deployment interruption can lose rollback state** → Persist desired, active,
-  previous, and transition state and reconcile it against actual containers on
-  every controller run.
+- **A manual build can use the wrong revision** → Require a clean checkout at an
+  approved exact tag or commit, verify release evidence before build, and record
+  the installed revision.
+- **Deployment interruption can leave the active revision uncertain** → Keep the
+  previous checkout and binary until verification passes, then use the runbook
+  to finish the selected deployment or restore the previous revision.
 - **Structured client fields can drift from free text** → Compose both in one
   intent-discriminated audited mutation and test preserve, clear, CCCD,
   structured, rollback-disabled, and contradictory metadata cases.
-- **Tailscale binding may be misconfigured as public binding** → Add Compose and
-  deployment tests that reject wildcard host publication and Cloudflare routes.
+- **Tailscale binding may be misconfigured as public binding** → Add systemd
+  configuration and deployment checks that reject wildcard host publication and
+  Cloudflare routes.
 
 ## Migration Plan
 
 1. Approve this coordinated OpenSpec contract without changing runtime behavior.
-2. Bootstrap the separate service repository, then add runtime/container
-   hardening in a separate PR.
+2. Bootstrap the separate service repository, then add runtime hardening in a
+   separate PR.
 3. Add the deterministic current dataset builder and immutable raw-source
    evidence.
 4. Add historical revision/lineage ingestion, then deterministic search in a
    separate PR.
 5. Add the versioned API and consumer compatibility tests.
-6. Add signed image publication and provenance, then add the pull-based
-   home-server controller and protected deployment state in a separate PR.
+6. Add manual release preparation and retained evidence, then add the
+   home-server checkout, build, systemd, verification, and rollback runbook in a
+   separate PR.
 7. Deploy the service dark on the home server and verify private reachability,
-   trusted-image verification, active-plus-candidate resources, interruption
-   recovery, and rollback.
+   exact source revision, release checksums, service resources, interruption
+   recovery, and manual rollback.
 8. Add nullable structured client-address fields and intent semantics to LIMS
    in a forward-only migration PR without applying it to a persistent database.
 9. Merge the migration PR, update `/opt/lims-lite` to the exact merged SHA, apply
@@ -546,17 +531,14 @@ merged SHA before execution.
 
 Rollback never rewrites an applied LIMS migration. LIMS feature rollback disables
 autocomplete and retains manual entry plus nullable structured columns. Service
-rollback restores the previous image digest and immutable dataset snapshot.
+rollback restores the previous checkout, binary, and immutable dataset snapshot.
 
 ## Open Questions
 
-- Select and pin the supported Go version, SQLite driver version, and lint/tool
-  versions in the service repository foundation phase.
-- Select the exact Tailscale host port and approved external Docker network name
-  during home-server deployment preparation.
-- Select the container registry namespace and bounded image-retention policy.
-- Select the trusted image-signing identity, provenance policy, and protected
-  home-server deployment-state path.
+- Select the exact loopback and Tailscale bind addresses and host port during
+  home-server deployment preparation.
+- Select the systemd unit name, service user, install paths, and bounded release
+  retention policy.
 - Select the immutable raw-source artifact store and retention period.
 - Finalize the LIMS structured-address column names after reviewing all current
   client query and CoA projections.

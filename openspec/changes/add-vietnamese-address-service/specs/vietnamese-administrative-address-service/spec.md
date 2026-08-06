@@ -8,8 +8,8 @@ contract and SHALL NOT query its SQLite schema directly.
 
 #### Scenario: Service repository is independent from LIMS
 - **WHEN** the service foundation is initialized
-- **THEN** it SHALL have its own Go module, CI, Docker image, releases, OpenSpec artifacts, and operational documentation
-- **AND** no service implementation code SHALL be placed in the `lims-lite` application container
+- **THEN** it SHALL have its own Go module, releases, OpenSpec artifacts, local Go verification, and operational documentation
+- **AND** no service implementation code SHALL be placed in the `lims-lite` application runtime
 
 #### Scenario: Future application integrates
 - **WHEN** another internal application needs administrative-address data
@@ -17,11 +17,11 @@ contract and SHALL NOT query its SQLite schema directly.
 - **AND** it SHALL NOT require LIMS database access or LIMS deployment
 
 ### Requirement: Immutable versioned SQLite dataset
-Every published service image SHALL contain one generated SQLite snapshot that
-is opened read-only at runtime. The active dataset SHALL be identifiable and
-reproducible from versioned provenance.
+Every approved service release SHALL contain or reference one generated SQLite
+snapshot that is opened read-only at runtime. The active dataset SHALL be
+identifiable and reproducible from versioned provenance.
 
-#### Scenario: Container starts with a valid snapshot
+#### Scenario: Service starts with a valid snapshot
 - **WHEN** the service process starts
 - **THEN** it SHALL open the packaged SQLite database read-only
 - **AND** verify integrity and required dataset metadata before reporting ready
@@ -29,7 +29,7 @@ reproducible from versioned provenance.
 #### Scenario: Runtime attempts to mutate reference data
 - **WHEN** application code or a request attempts to modify the production SQLite dataset
 - **THEN** the operation SHALL fail
-- **AND** the service SHALL NOT create a writable database volume or replacement file
+- **AND** the service SHALL NOT create a writable replacement file
 
 #### Scenario: Dataset version is inspected
 - **WHEN** an internal consumer requests dataset metadata
@@ -48,7 +48,7 @@ pinned normalized community dataset as a secondary cross-check.
 
 #### Scenario: Required source is unavailable
 - **WHEN** a required source cannot be downloaded or parsed
-- **THEN** no new dataset image SHALL be published
+- **THEN** no new dataset release SHALL be prepared
 - **AND** the currently deployed dataset SHALL remain active
 
 #### Scenario: Sources materially disagree
@@ -63,8 +63,8 @@ pinned normalized community dataset as a secondary cross-check.
 
 #### Scenario: Material semantic drift is detected
 - **WHEN** a source introduces a new schema, unexplained relationship class, code reuse, or material disagreement outside reviewed policy
-- **THEN** automatic publication SHALL fail closed
-- **AND** publication SHALL require a reviewed manifest or allow-list change in the service repository
+- **THEN** release preparation SHALL fail closed
+- **AND** a new release SHALL require a reviewed manifest or allow-list change in the service repository
 
 ### Requirement: Temporal administrative-unit and lineage model
 The dataset SHALL represent current and historical administrative units,
@@ -160,13 +160,18 @@ resolution.
 - **AND** removing or changing a required field SHALL require a new API major version
 
 ### Requirement: Private network-only access without an API key
-The production service SHALL rely on the approved Docker and Tailscale network
+The production service SHALL rely on the approved loopback and Tailscale network
 boundary and SHALL not require an application API key in the initial release.
 
-#### Scenario: Same-host application connects
-- **WHEN** an approved application runs on the home server
-- **THEN** it SHALL reach the service through the approved external private Docker network
+#### Scenario: Host-native same-host application connects
+- **WHEN** an approved host-native application runs on the home server
+- **THEN** it MAY reach the service through loopback
 - **AND** no public host route SHALL be required
+
+#### Scenario: Containerized LIMS connects
+- **WHEN** the LIMS application runs in its home-server container
+- **THEN** it SHALL reach the service through the host's Tailscale-only endpoint
+- **AND** it SHALL NOT require a public route or address-service container
 
 #### Scenario: Tailscale application connects
 - **WHEN** an approved application runs on another tailnet machine
@@ -179,50 +184,51 @@ boundary and SHALL not require an application API key in the initial release.
 - **AND** applications SHALL proxy calls server-to-server
 
 #### Scenario: Public publication is configured
-- **WHEN** Compose or deployment configuration introduces a public host bind, Cloudflare route, or Funnel exposure
+- **WHEN** systemd environment or host configuration introduces a public host bind, Cloudflare route, or Funnel exposure
 - **THEN** configuration verification SHALL fail
 
-### Requirement: Automatic fail-closed dataset rollout
-The service repository SHALL automatically check for source changes, publish
-validated immutable images, and support pull-based automatic deployment and
-rollback on the home server.
+### Requirement: Infrequent operator-controlled dataset rollout
+The service SHALL update only when an operator selects an approved tag or exact
+commit. The home server SHALL pull that revision, run the documented Go checks,
+build locally, restart the service, and retain the previous working revision
+for rollback.
 
-#### Scenario: New image passes candidate verification
-- **WHEN** a new image passes trusted repository, digest, publisher identity, signature, provenance, manifest, dark health, integrity, metadata, representative search, and combined resource checks
-- **THEN** the controller SHALL record the intended transition and recreate the stable service at the verified digest
-- **AND** the previous known-good digest SHALL remain available for rollback
+#### Scenario: Approved revision passes verification
+- **WHEN** an approved tag or commit passes source, manifest, checksum, Go, build, health, integrity, metadata, and representative-search checks
+- **THEN** the operator SHALL restart the service at that exact revision
+- **AND** the previous working checkout and binary SHALL remain available until post-restart checks pass
 
-#### Scenario: Candidate verification fails
-- **WHEN** any pre-switch candidate check fails
+#### Scenario: Pre-restart verification fails
+- **WHEN** any source, checksum, test, or build check fails
 - **THEN** the current service SHALL remain active
-- **AND** the isolated candidate SHALL receive no consumer traffic
+- **AND** the operator SHALL NOT restart it
 
 #### Scenario: Post-switch verification fails
-- **WHEN** the recreated stable service fails required post-switch checks
-- **THEN** deployment SHALL automatically restore the previous known-good digest
+- **WHEN** the restarted service fails required post-restart checks
+- **THEN** the operator SHALL restore the previous checkout and binary and restart the service
 
-#### Scenario: Deployment controller is interrupted
-- **WHEN** the controller restarts during or after a digest transition
-- **THEN** it SHALL reconcile protected desired, active, previous, and last-transition state against the actual stable container digest
-- **AND** SHALL converge to either the verified candidate or previous known-good digest without guessing
+#### Scenario: Manual deployment is interrupted
+- **WHEN** fetch, build, install, or restart is interrupted
+- **THEN** the runbook SHALL identify the active revision and either finish the selected deployment or restore the previous revision
+- **AND** no automated controller SHALL be required
 
-#### Scenario: Automated update fails without alerting
-- **WHEN** source, build, publication, or deployment automation fails
-- **THEN** the failure SHALL be retained in workflow or deployment logs
-- **AND** no external notification channel is required
+#### Scenario: No update is requested
+- **WHEN** administrative sources have not changed or no maintainer initiates a refresh
+- **THEN** the active service SHALL continue using the current immutable dataset
+- **AND** metadata SHALL expose its version and age
 
 ### Requirement: Resource-bounded observable runtime
-The service SHALL run as a non-root, health-checked, resource-bounded container
-with a read-only filesystem and privacy-safe structured logs.
+The service SHALL run as a dedicated non-root, health-checked,
+resource-bounded systemd service with privacy-safe structured logs.
 
 #### Scenario: Service is idle
-- **WHEN** the container receives no requests
+- **WHEN** the process receives no requests
 - **THEN** it SHALL remain within the documented CPU, memory, process, and file-descriptor limits
 
-#### Scenario: Candidate and active containers overlap
-- **WHEN** a dark candidate runs concurrently with the active service
-- **THEN** their combined CPU, memory, process, file-descriptor, and disk use SHALL remain within documented home-server budgets
-- **AND** candidate verification SHALL fail before switching if the combined budget is exceeded
+#### Scenario: Home-server build runs
+- **WHEN** the operator builds a selected revision while the current service remains active
+- **THEN** combined build and service CPU, memory, process, file-descriptor, and disk use SHALL remain within documented home-server budgets
+- **AND** the operator SHALL stop the deployment if the budget is exceeded
 
 #### Scenario: Readiness dependency fails
 - **WHEN** the process is alive but SQLite integrity or required metadata is unavailable
@@ -248,6 +254,6 @@ service release metadata only.
 - **THEN** it SHALL send administrative query text only
 - **AND** SHALL NOT send house number, street detail, organization name, complete client address, or complete CCCD-scanned address
 
-#### Scenario: Image and repository are inspected
-- **WHEN** release artifacts are scanned
+#### Scenario: Release checkout and repository are inspected
+- **WHEN** release files are reviewed
 - **THEN** they SHALL contain no SSH private key, Tunnel token, LIMS secret, API key, database password, or age identity
