@@ -48,13 +48,13 @@ runtime work without coupling to LIMS.
 Do not add production ingestion, deployment files, or public `/v1` data
 handlers.
 
-- [ ] 2.1 Add a minimal synthetic SQLite fixture and read-only repository implementation.
-- [ ] 2.2 Add startup validation that rejects missing, corrupt, incompatible, or unexpectedly writable snapshots before readiness.
-- [ ] 2.3 Implement `/health/live` and `/health/ready` with distinct process and dataset semantics and redacted failures.
-- [ ] 2.4 Add metadata-only request logging, request IDs, bounded server timeouts, graceful shutdown, and concurrency limits.
-- [ ] 2.5 Add a reproducible CGO-free Linux binary build and document the runtime files required beside the binary without adding home-server deployment configuration.
-- [ ] 2.6 Document CPU, memory, process, file-descriptor, disk, timeout, and concurrency budgets for idle and loaded operation.
-- [ ] 2.7 Verify startup failure cases, read-only enforcement, liveness/readiness, graceful shutdown, idle use, and bounded load behavior.
+- [x] 2.1 Add a minimal synthetic SQLite fixture and read-only repository implementation.
+- [x] 2.2 Add startup validation that rejects missing, corrupt, incompatible, or unexpectedly writable snapshots before readiness.
+- [x] 2.3 Implement `/health/live` and `/health/ready` with distinct process and dataset semantics and redacted failures.
+- [x] 2.4 Add metadata-only request logging, request IDs, bounded server timeouts, graceful shutdown, and concurrency limits.
+- [x] 2.5 Add a reproducible CGO-free Linux binary build and document the runtime files required beside the binary without adding home-server deployment configuration.
+- [x] 2.6 Document CPU, memory, process, file-descriptor, disk, timeout, and concurrency budgets for idle and loaded operation.
+- [x] 2.7 Verify startup failure cases, read-only enforcement, liveness/readiness, graceful shutdown, idle use, and bounded load behavior.
 
 **Exit gate:** A hardened dark service runs against synthetic immutable data
 within documented resource limits.
