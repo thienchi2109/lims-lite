@@ -29,12 +29,12 @@ apply. Once executed, the migration remains byte-for-byte immutable.
 development CI only. Do not add production data, container deployment, search,
 or API behavior.
 
-- [ ] 1.1 Create the independent `vietnamese-address-service` repository with ownership, support, versioning, compatibility, release, and OpenSpec documentation.
-- [ ] 1.2 Pin Go, the approved CGO-free SQLite driver, formatter, linter, vulnerability scanner, contract tooling, and reproducible-build settings.
-- [ ] 1.3 Establish small packages for configuration, build metadata, dataset interfaces, HTTP transport, and graceful process lifecycle using `net/http`.
-- [ ] 1.4 Add CI for formatting, unit and race tests, lint, vulnerability checks, license checks, and secret/PII scanning.
-- [ ] 1.5 Add contributor commands and fixtures that allow ordinary tests to run without live upstream or home-server access.
-- [ ] 1.6 Verify all foundation quality gates and prove the repository contains no LIMS code, data, credentials, or deployment secrets.
+- [x] 1.1 Create the independent `vietnamese-address-service` repository with ownership, support, versioning, compatibility, release, and OpenSpec documentation.
+- [x] 1.2 Pin Go, the approved CGO-free SQLite driver, formatter, linter, vulnerability scanner, contract tooling, and reproducible-build settings.
+- [x] 1.3 Establish small packages for configuration, build metadata, dataset interfaces, HTTP transport, and graceful process lifecycle using `net/http`.
+- [x] 1.4 Add CI for formatting, unit and race tests, lint, vulnerability checks, license checks, and secret/PII scanning.
+- [x] 1.5 Add contributor commands and fixtures that allow ordinary tests to run without live upstream or home-server access.
+- [x] 1.6 Verify all foundation quality gates and prove the repository contains no LIMS code, data, credentials, or deployment secrets.
 
 **Exit gate:** The repository has a stable development contract and can accept
 runtime work without coupling to LIMS.
