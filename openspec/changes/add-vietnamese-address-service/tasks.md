@@ -58,19 +58,19 @@ pinned artifact.
 
 **Boundary:** Current metadata, lookup, and simple search only.
 
-- [ ] 4.1 Define small JSON contracts for metadata, provinces, communes, search,
+- [x] 4.1 Define small JSON contracts for metadata, provinces, communes, search,
   and stable errors.
-- [ ] 4.2 Add `/v1/meta`, `/v1/provinces`, and
+- [x] 4.2 Add `/v1/meta`, `/v1/provinces`, and
   `/v1/provinces/{code}/communes`.
-- [ ] 4.3 Add bounded current-name search with case, whitespace, diacritic, and
+- [x] 4.3 Add bounded current-name search with case, whitespace, diacritic, and
   `đ`/`d` normalization, exact/prefix priority, and lightweight edit-distance
   typo tolerance.
-- [ ] 4.4 Enforce method, query length, result limit, timeout, concurrency, and
+- [x] 4.4 Enforce method, query length, result limit, timeout, concurrency, and
   response-size bounds.
-- [ ] 4.5 Keep logs metadata-only and reject unsupported PII-bearing fields.
-- [ ] 4.6 Add focused handler, ordering, cancellation, error-redaction, and
+- [x] 4.5 Keep logs metadata-only and reject unsupported PII-bearing fields.
+- [x] 4.6 Add focused handler, ordering, cancellation, error-redaction, and
   representative search tests.
-- [ ] 4.7 Verify local Go checks and production-shaped process behavior.
+- [x] 4.7 Verify local Go checks and production-shaped process behavior.
 
 **Exit gate:** Internal consumers can query current address references through
 a stable bounded read-only API.
