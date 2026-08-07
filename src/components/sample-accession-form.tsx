@@ -13,13 +13,13 @@ import {
     type SampleType,
     type SelectedTest,
 } from '@/types'
-import { accessionAndAssignTestsClient, createSampleClient, findClientByIdentityClient } from '@/lib/api-client'
+import { accessionAndAssignTestsClient, createSampleClient } from '@/lib/api-client'
 import { printSampleBarcodeLabel } from '@/lib/sample-label-print-client'
 import type { SampleLabelPreset } from '@/lib/sample-label-template'
 import {
     parseClientIdentityQr,
-    type ParsedClientIdentityQr,
 } from '@/lib/qr/parse-client-identity-qr'
+import { useClientIdentityScan } from '@/hooks/use-client-identity-scan'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -194,35 +194,26 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
         toast.error('Mã QR không hợp lệ. Vui lòng thử lại hoặc nhập thủ công.')
     }, [])
 
-    const handleParsedIdentityScan = useCallback(async (parsed: ParsedClientIdentityQr) => {
-        setShowQRScanner(false)
-        const { idCardNum, name, dateOfBirth, gender } = parsed
-        const address = parsed.address
-
-        try {
-            const result = await findClientByIdentityClient(name, dateOfBirth)
-
-            if (result.data) {
-                setSelectedClient(result.data)
-                toast.success(`Đã tìm thấy khách hàng: ${result.data.name}`)
-                return
-            }
-        } catch (error) {
+    const {
+        handleIdentityScan: handleParsedIdentityScan,
+        invalidateIdentityScan,
+    } = useClientIdentityScan({
+        onDraft: (draft) => {
+            setShowQRScanner(false)
+            setSelectedClient(null)
+            setClientFormData(draft)
+            setShowClientForm(true)
+        },
+        onExistingClient: (client) => {
+            setSelectedClient(client)
+            setClientFormData(undefined)
+            setShowClientForm(false)
+            toast.success(`Đã tìm thấy khách hàng: ${client.name}`)
+        },
+        onLookupError: (error) => {
             console.error('Error searching client', error)
-        }
-
-        const formData = {
-            name,
-            id_card_num: idCardNum || '',
-            date_of_birth: dateOfBirth,
-            gender,
-            phone: '', // Required
-            address: address || '',
-        }
-
-        setClientFormData(formData)
-        setShowClientForm(true)
-    }, [])
+        },
+    })
 
     const handleQRScan = useCallback(async (decodedText: string) => {
         const parsed = parseClientIdentityQr(decodedText)
@@ -235,6 +226,7 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
     }, [handleInvalidQRScan, handleParsedIdentityScan])
 
     const handleResetForm = useCallback(() => {
+        invalidateIdentityScan()
         reset()
         setSelectedTests([])
         setSelectedClient(null)
@@ -244,7 +236,7 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
         setSubmitSuccess(null)
         setSubmitError(null)
         setCreatedSampleId(null)
-    }, [reset])
+    }, [invalidateIdentityScan, reset])
 
     const handlePrintBarcodeLabel = useCallback(() => {
         if (!createdSampleId) return

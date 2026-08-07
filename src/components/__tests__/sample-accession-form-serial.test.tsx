@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 class ResizeObserverMock {
@@ -22,6 +22,13 @@ const serialMocks = vi.hoisted(() => ({
         dateOfBirth: '1994-09-21',
         gender: 'Nam' as const,
         address: 'Ha Noi',
+    },
+    newerIdentity: {
+        idCardNum: '048096001234',
+        name: 'Tran Thi B',
+        dateOfBirth: '1996-02-03',
+        gender: 'Nữ' as const,
+        address: 'Da Nang',
     },
 }))
 
@@ -79,7 +86,9 @@ vi.mock('@/components/client-qr-scanner-dialog', () => ({
         onInvalidScan,
     }: {
         open: boolean
-        onIdentityScan?: (identity: typeof serialMocks.identity) => void | Promise<void>
+        onIdentityScan?: (
+            identity: typeof serialMocks.identity | typeof serialMocks.newerIdentity
+        ) => void | Promise<void>
         onInvalidScan?: () => void
     }) =>
         open ? (
@@ -89,6 +98,12 @@ vi.mock('@/components/client-qr-scanner-dialog', () => ({
                     onClick={() => void onIdentityScan?.(serialMocks.identity)}
                 >
                     Phát sự kiện CCCD serial
+                </button>
+                <button
+                    type="button"
+                    onClick={() => void onIdentityScan?.(serialMocks.newerIdentity)}
+                >
+                    Phát sự kiện CCCD serial mới
                 </button>
                 <button type="button" onClick={() => onInvalidScan?.()}>
                     Phát sự kiện serial không hợp lệ
@@ -127,6 +142,54 @@ describe('SampleAccessionForm dispatcher CCCD integration', () => {
         expect(screen.queryByTestId('client-qr-scanner-dialog')).toBeNull()
         expect(screen.getByTestId('client-name').textContent).toBe('Nguyen Van A')
         expect(screen.getByTestId('client-address').textContent).toBe('Ha Noi')
+    })
+
+    it('lets a successful scan own the draft before duplicate lookup completes', async () => {
+        let resolveLookup!: (value: { data: null }) => void
+        serialMocks.findClientByIdentityClient.mockReturnValueOnce(
+            new Promise((resolve) => {
+                resolveLookup = resolve
+            }),
+        )
+        render(<SampleAccessionForm specialties={[]} />)
+
+        fireEvent.click(screen.getByRole('button', { name: /Quét mã QR trên CCCD/i }))
+        fireEvent.click(screen.getByRole('button', { name: 'Phát sự kiện CCCD serial' }))
+
+        expect(screen.getByTestId('client-name').textContent).toBe('Nguyen Van A')
+        expect(screen.getByTestId('client-address').textContent).toBe('Ha Noi')
+
+        await act(async () => {
+            resolveLookup({ data: null })
+            await Promise.resolve()
+        })
+    })
+
+    it('ignores an older duplicate lookup after a newer scan owns the draft', async () => {
+        let resolveOlderLookup!: (value: { data: { name: string } }) => void
+        serialMocks.findClientByIdentityClient
+            .mockReturnValueOnce(new Promise((resolve) => {
+                resolveOlderLookup = resolve
+            }))
+            .mockResolvedValueOnce({ data: null })
+        render(<SampleAccessionForm specialties={[]} />)
+
+        fireEvent.click(screen.getByRole('button', { name: /Quét mã QR trên CCCD/i }))
+        fireEvent.click(screen.getByRole('button', { name: 'Phát sự kiện CCCD serial' }))
+        fireEvent.click(screen.getByRole('button', { name: /Quét mã QR trên CCCD/i }))
+        fireEvent.click(screen.getByRole('button', { name: 'Phát sự kiện CCCD serial mới' }))
+
+        await waitFor(() => {
+            expect(screen.getByTestId('client-name').textContent).toBe('Tran Thi B')
+        })
+
+        await act(async () => {
+            resolveOlderLookup({ data: { name: 'Khách hàng từ scan cũ' } })
+            await Promise.resolve()
+        })
+
+        expect(screen.getByTestId('client-name').textContent).toBe('Tran Thi B')
+        expect(screen.getByTestId('client-address').textContent).toBe('Da Nang')
     })
 
     it('closes the dialog and preserves invalid-QR feedback for an unknown serial event', async () => {

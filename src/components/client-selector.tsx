@@ -12,11 +12,11 @@ import {
 import { Input } from '@/components/ui/input'
 import { ClientQrScannerDialog } from '@/components/client-qr-scanner-dialog'
 import { ClientForm } from '@/components/client-form'
-import { fetchClientsClient, findClientByIdentityClient } from '@/lib/api-client'
+import { fetchClientsClient } from '@/lib/api-client'
 import {
     parseClientIdentityQr,
-    type ParsedClientIdentityQr,
 } from '@/lib/qr/parse-client-identity-qr'
+import { useClientIdentityScan } from '@/hooks/use-client-identity-scan'
 import { Client, CreateClient } from '@/types'
 import { toast } from 'sonner'
 
@@ -99,33 +99,25 @@ export function ClientSelector({
         toast.error('Mã QR không hợp lệ. Vui lòng thử lại hoặc nhập thủ công.')
     }
 
-    const handleParsedIdentityScan = async (parsed: ParsedClientIdentityQr) => {
-        setShowQRScanner(false)
-        const { idCardNum, name, dateOfBirth, gender } = parsed
-        const address = parsed.address
-
-        try {
-            const result = await findClientByIdentityClient(name, dateOfBirth)
-
-            if (result.data) {
-                onSelect(result.data)
-                return
-            }
-        } catch (error) {
-            const message = error instanceof Error ? error.message : 'Không thể tìm khách hàng'
+    const { handleIdentityScan: handleParsedIdentityScan } = useClientIdentityScan({
+        onDraft: (draft) => {
+            setShowQRScanner(false)
+            onSelect(null)
+            setClientFormData(draft)
+            setShowClientForm(true)
+        },
+        onExistingClient: (client) => {
+            onSelect(client)
+            setClientFormData(undefined)
+            setShowClientForm(false)
+        },
+        onLookupError: (error) => {
+            const message = error instanceof Error
+                ? error.message
+                : 'Không thể tìm khách hàng'
             toast.error(message)
-        }
-
-        setClientFormData({
-            name,
-            id_card_num: idCardNum || '',
-            date_of_birth: dateOfBirth,
-            gender,
-            phone: '', // Required
-            address: address || '',
-        })
-        setShowClientForm(true)
-    }
+        },
+    })
 
     const handleQRScan = async (decodedText: string) => {
         const parsed = parseClientIdentityQr(decodedText)

@@ -8,6 +8,7 @@ import { updateClientClient, upsertClientClient } from '@/lib/api-client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { CurrentAddressAutocomplete } from '@/components/current-address-autocomplete'
 import {
     Select,
     SelectContent,
@@ -224,11 +225,21 @@ export function ClientForm({
                     <Label htmlFor="address" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                         Địa chỉ
                     </Label>
-                    <Input
-                        id="address"
-                        {...register('address')}
-                        placeholder="Nhập địa chỉ liên hệ"
-                        className="shadow-sm h-9"
+                    <Controller
+                        name="address"
+                        control={control}
+                        render={({ field }) => (
+                            <CurrentAddressAutocomplete
+                                id="address"
+                                value={field.value ?? ''}
+                                onChange={field.onChange}
+                                onBlur={field.onBlur}
+                                name={field.name}
+                                ref={field.ref}
+                                placeholder="Nhập địa chỉ liên hệ"
+                                className="shadow-sm h-9"
+                            />
+                        )}
                     />
                 </div>
 

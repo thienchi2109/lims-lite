@@ -79,21 +79,21 @@ a stable bounded read-only API.
 
 **Boundary:** Application integration only. No LIMS database migration.
 
-- [ ] 5.1 Add server-only Tailscale service URL and timeout configuration with
+- [x] 5.1 Add server-only Tailscale service URL and timeout configuration with
   autocomplete disabled by default when configuration is absent.
-- [ ] 5.2 Add an authenticated, role-authorized LIMS server adapter for
+- [x] 5.2 Add an authenticated, role-authorized LIMS server adapter for
   metadata, provinces, communes, and search.
-- [ ] 5.3 Add a reusable current-address autocomplete to the existing client
+- [x] 5.3 Add a reusable current-address autocomplete to the existing client
   address input.
-- [ ] 5.4 Format a selected commune and province into the existing address
+- [x] 5.4 Format a selected commune and province into the existing address
   string and persist it through the existing client mutation.
-- [ ] 5.5 Preserve manual entry whenever the service is unavailable or no result
+- [x] 5.5 Preserve manual entry whenever the service is unavailable or no result
   is suitable.
-- [ ] 5.6 Preserve CCCD-first ownership and ignore stale autocomplete responses
+- [x] 5.6 Preserve CCCD-first ownership and ignore stale autocomplete responses
   after a newer scan or user edit.
-- [ ] 5.7 Add focused authorization, timeout, fallback, stale-response,
+- [x] 5.7 Add focused authorization, timeout, fallback, stale-response,
   scanner-first, and manual-entry tests.
-- [ ] 5.8 Verify typecheck, lint, tests, and a production build.
+- [x] 5.8 Verify typecheck, lint, tests, and a production build.
 
 **Exit gate:** LIMS can use current suggestions without a database migration or
 availability dependency.
