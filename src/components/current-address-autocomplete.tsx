@@ -50,8 +50,10 @@ export function CurrentAddressAutocomplete({
     const [isOpen, setIsOpen] = useState(false)
     const [loadingValue, setLoadingValue] = useState<string | null>(null)
     const [isAvailable, setIsAvailable] = useState(true)
+    const [userQueryValue, setUserQueryValue] = useState<string | null>(null)
     const suggestions = (
         isAvailable && suggestionState.value === value
+        && userQueryValue === value
     )
         ? suggestionState.suggestions
         : []
@@ -59,8 +61,10 @@ export function CurrentAddressAutocomplete({
 
     useEffect(() => {
         const requestVersion = ++requestVersionRef.current
-        const query = normalizeAdministrativeAddressQuery(value)
         const controller = new AbortController()
+        const query = userQueryValue === value
+            ? normalizeAdministrativeAddressQuery(userQueryValue)
+            : null
 
         if (!query || !isAvailable || disabled) {
             return () => controller.abort()
@@ -91,10 +95,11 @@ export function CurrentAddressAutocomplete({
             clearTimeout(timer)
             controller.abort()
         }
-    }, [disabled, isAvailable, value])
+    }, [disabled, isAvailable, userQueryValue, value])
 
     const selectSuggestion = (suggestion: VietnameseAddressSuggestion) => {
         requestVersionRef.current += 1
+        setUserQueryValue(null)
         setSuggestionState({ value: '', suggestions: [] })
         setActiveIndex(-1)
         setIsOpen(false)
@@ -139,10 +144,12 @@ export function CurrentAddressAutocomplete({
                 aria-controls={isOpen ? listboxId : undefined}
                 aria-expanded={isOpen && suggestions.length > 0}
                 onChange={(event) => {
+                    const nextValue = event.target.value
                     requestVersionRef.current += 1
+                    setUserQueryValue(nextValue)
                     setIsOpen(true)
                     setActiveIndex(-1)
-                    onChange(event.target.value)
+                    onChange(nextValue)
                 }}
                 onFocus={(event) => {
                     setIsOpen(true)

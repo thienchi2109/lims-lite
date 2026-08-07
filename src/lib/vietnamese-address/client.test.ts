@@ -16,6 +16,20 @@ afterEach(() => {
 })
 
 describe('Vietnamese address browser client', () => {
+    it.each([
+        'Văn Miếu - Quốc Tử Giám',
+        "Ea H'Leo",
+        'Ea H’Leo',
+    ])('accepts punctuation used by administrative names: %s', async (query) => {
+        const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+            errorResponse('timeout'),
+        )
+
+        await searchVietnameseAddressClient(query)
+
+        expect(fetchSpy).toHaveBeenCalledTimes(1)
+    })
+
     it('keeps transient failures retryable', async () => {
         vi.spyOn(globalThis, 'fetch').mockResolvedValue(
             errorResponse('timeout'),

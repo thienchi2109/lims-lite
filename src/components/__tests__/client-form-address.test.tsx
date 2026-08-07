@@ -100,4 +100,32 @@ describe('ClientForm current address integration', () => {
             }),
         )
     })
+
+    it('does not submit when Enter selects the active address suggestion', async () => {
+        render(
+            <ClientForm
+                onSuccess={vi.fn()}
+                onCancel={vi.fn()}
+            />,
+        )
+        fillRequiredFields()
+
+        const address = screen.getByPlaceholderText('Nhập địa chỉ liên hệ')
+        fireEvent.change(address, { target: { value: 'Ba Dinh' } })
+        await act(async () => {
+            vi.advanceTimersByTime(350)
+            await Promise.resolve()
+        })
+
+        fireEvent.keyDown(address, { key: 'ArrowDown' })
+        await act(async () => {
+            fireEvent.keyDown(address, { key: 'Enter' })
+            await Promise.resolve()
+        })
+
+        expect((address as HTMLInputElement).value).toBe(
+            'Phường Ba Đình, Thành phố Hà Nội',
+        )
+        expect(mocks.upsertClient).not.toHaveBeenCalled()
+    })
 })

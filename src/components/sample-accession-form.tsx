@@ -189,11 +189,6 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
         setIsSubmitting(false)
     }
 
-    const handleInvalidQRScan = useCallback(() => {
-        setShowQRScanner(false)
-        toast.error('Mã QR không hợp lệ. Vui lòng thử lại hoặc nhập thủ công.')
-    }, [])
-
     const {
         handleIdentityScan: handleParsedIdentityScan,
         invalidateIdentityScan,
@@ -214,6 +209,16 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
             console.error('Error searching client', error)
         },
     })
+
+    const handleDraftOwnershipChange = useCallback(() => {
+        invalidateIdentityScan()
+    }, [invalidateIdentityScan])
+
+    const handleInvalidQRScan = useCallback(() => {
+        handleDraftOwnershipChange()
+        setShowQRScanner(false)
+        toast.error('Mã QR không hợp lệ. Vui lòng thử lại hoặc nhập thủ công.')
+    }, [handleDraftOwnershipChange])
 
     const handleQRScan = useCallback(async (decodedText: string) => {
         const parsed = parseClientIdentityQr(decodedText)
@@ -260,6 +265,7 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
             onOpenClientFormChange={setShowClientForm}
             clientFormData={clientFormData}
             onClientFormDataChange={setClientFormData}
+            onDraftOwnershipChange={handleDraftOwnershipChange}
             selectedSampleType={selectedSampleType}
             onSampleTypeChange={setSelectedSampleType}
             sampleQuality={sampleQuality}
@@ -289,6 +295,7 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
         onOpenFormChange: setShowClientForm,
         clientFormData,
         onFormDataChange: setClientFormData,
+        onDraftOwnershipChange: handleDraftOwnershipChange,
         showQRScanner,
         onShowQRScanner: setShowQRScanner,
         onQRScan: handleQRScan,
@@ -306,6 +313,7 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
     }), [
         selectedClient, showClientForm, clientFormData,
         showQRScanner, handleQRScan, handleParsedIdentityScan, handleInvalidQRScan,
+        handleDraftOwnershipChange,
         selectedSampleType, sampleQuality, register, receivedAtWatched,
         submitError, submitSuccess, handleResetForm,
     ])

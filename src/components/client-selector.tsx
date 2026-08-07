@@ -28,6 +28,7 @@ interface ClientSelectorProps {
     onOpenFormChange?: (open: boolean) => void
     formData?: Partial<CreateClient>
     onFormDataChange?: (data: Partial<CreateClient> | undefined) => void
+    onDraftOwnershipChange?: () => void
     hideQRButton?: boolean
 }
 
@@ -38,6 +39,7 @@ export function ClientSelector({
     onOpenFormChange,
     formData,
     onFormDataChange,
+    onDraftOwnershipChange,
     hideQRButton = false
 }: ClientSelectorProps) {
     const [open, setOpen] = useState(false)
@@ -94,19 +96,19 @@ export function ClientSelector({
         }
     }
 
-    const handleInvalidQRScan = () => {
-        setShowQRScanner(false)
-        toast.error('Mã QR không hợp lệ. Vui lòng thử lại hoặc nhập thủ công.')
-    }
-
-    const { handleIdentityScan: handleParsedIdentityScan } = useClientIdentityScan({
+    const {
+        handleIdentityScan: handleParsedIdentityScan,
+        invalidateIdentityScan,
+    } = useClientIdentityScan({
         onDraft: (draft) => {
+            onDraftOwnershipChange?.()
             setShowQRScanner(false)
             onSelect(null)
             setClientFormData(draft)
             setShowClientForm(true)
         },
         onExistingClient: (client) => {
+            onDraftOwnershipChange?.()
             onSelect(client)
             setClientFormData(undefined)
             setShowClientForm(false)
@@ -118,6 +120,17 @@ export function ClientSelector({
             toast.error(message)
         },
     })
+
+    const claimDraftOwnership = () => {
+        invalidateIdentityScan()
+        onDraftOwnershipChange?.()
+    }
+
+    const handleInvalidQRScan = () => {
+        claimDraftOwnership()
+        setShowQRScanner(false)
+        toast.error('Mã QR không hợp lệ. Vui lòng thử lại hoặc nhập thủ công.')
+    }
 
     const handleQRScan = async (decodedText: string) => {
         const parsed = parseClientIdentityQr(decodedText)
@@ -152,6 +165,7 @@ export function ClientSelector({
                         size="sm"
                         className="h-6 w-6 p-0"
                         onClick={() => {
+                            claimDraftOwnership()
                             setShowClientForm(false)
                             setClientFormData(undefined)
                         }}
@@ -162,12 +176,15 @@ export function ClientSelector({
                 <ClientForm
                     key={clientFormData?.id_card_num || clientFormData?.name || 'new'}
                     initialData={clientFormData}
+                    onUserEdit={claimDraftOwnership}
                     onSuccess={(client) => {
+                        claimDraftOwnership()
                         onSelect(client)
                         setShowClientForm(false)
                         setClientFormData(undefined)
                     }}
                     onCancel={() => {
+                        claimDraftOwnership()
                         setShowClientForm(false)
                         setClientFormData(undefined)
                     }}
@@ -190,6 +207,7 @@ export function ClientSelector({
                                 size="icon"
                                 className="h-6 w-6 text-sky-600 hover:text-sky-700 hover:bg-sky-100"
                                 onClick={() => {
+                                    claimDraftOwnership()
                                     setClientFormData({
                                         name: selectedClient.name,
                                         id_card_num: selectedClient.id_card_num,
@@ -209,7 +227,10 @@ export function ClientSelector({
                                 variant="ghost"
                                 size="icon"
                                 className="h-6 w-6 text-slate-400 hover:text-red-600 hover:bg-red-50"
-                                onClick={() => onSelect(null)}
+                                onClick={() => {
+                                    claimDraftOwnership()
+                                    onSelect(null)
+                                }}
                             >
                                 <X className="h-3 w-3" />
                             </Button>
@@ -273,6 +294,7 @@ export function ClientSelector({
                                                     variant="link"
                                                     className="mt-2 h-auto p-0 text-sky-600"
                                                     onClick={() => {
+                                                        claimDraftOwnership()
                                                         setClientFormData({ name: searchQuery })
                                                         setShowClientForm(true)
                                                         setOpen(false)
@@ -292,6 +314,7 @@ export function ClientSelector({
                                                     key={client.id}
                                                     className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
                                                     onClick={() => {
+                                                        claimDraftOwnership()
                                                         onSelect(client)
                                                         setOpen(false)
                                                     }}
@@ -329,6 +352,7 @@ export function ClientSelector({
                         variant="ghost"
                         className="w-full justify-start text-sky-600 hover:text-sky-700 hover:bg-sky-50 h-8 px-2 text-xs"
                         onClick={() => {
+                            claimDraftOwnership()
                             setClientFormData(undefined)
                             setShowClientForm(true)
                         }}

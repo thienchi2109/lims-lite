@@ -25,6 +25,7 @@ interface ClientFormProps {
     initialData?: Partial<CreateClient>
     onSuccess: (client: Client) => void
     onCancel: () => void
+    onUserEdit?: () => void
     className?: string
 }
 
@@ -34,6 +35,7 @@ export function ClientForm({
     initialData,
     onSuccess,
     onCancel,
+    onUserEdit,
     className
 }: ClientFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -104,7 +106,7 @@ export function ClientForm({
     }
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' && !e.defaultPrevented) {
             e.preventDefault()
             e.stopPropagation()
             handleSubmit(onSubmit)()
@@ -114,6 +116,7 @@ export function ClientForm({
     return (
         <div
             className={cn("w-full min-w-0 space-y-4", className)}
+            onChangeCapture={onUserEdit}
             onKeyDown={handleKeyDown}
         >
             {/* Error Message */}
@@ -169,7 +172,10 @@ export function ClientForm({
                             render={({ field }) => (
                                 <Select
                                     value={field.value}
-                                    onValueChange={(value) => field.onChange(value as Gender)}
+                                    onValueChange={(value) => {
+                                        onUserEdit?.()
+                                        field.onChange(value as Gender)
+                                    }}
                                 >
                                     <SelectTrigger className="shadow-sm h-9">
                                         <SelectValue placeholder="Chọn" />

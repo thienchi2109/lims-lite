@@ -27,6 +27,7 @@ export interface AccessionMobileWizardProps {
     onOpenFormChange: (open: boolean) => void
     clientFormData: Partial<CreateClient> | undefined
     onFormDataChange: (data: Partial<CreateClient> | undefined) => void
+    onDraftOwnershipChange: () => void
     showQRScanner: boolean
     onShowQRScanner: (show: boolean) => void
     onQRScan: (decodedText: string) => void | Promise<void>
@@ -113,6 +114,7 @@ export function AccessionMobileWizard(props: AccessionMobileWizardProps) {
                         onOpenFormChange={props.onOpenFormChange}
                         clientFormData={props.clientFormData}
                         onFormDataChange={props.onFormDataChange}
+                        onDraftOwnershipChange={props.onDraftOwnershipChange}
                         showQRScanner={props.showQRScanner}
                         onShowQRScanner={props.onShowQRScanner}
                         onQRScan={props.onQRScan}

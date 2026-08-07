@@ -4,14 +4,25 @@ export const ADDRESS_SEARCH_LIMIT = 8
 export const ADDRESS_SEARCH_MAX_LIMIT = 10
 export const ADDRESS_SEARCH_DEBOUNCE_MS = 300
 
-const VietnameseAddressUnitSchema = z.object({
+const VietnameseAddressUnitBaseSchema = z.object({
     code: z.string().min(1),
     name: z.string().min(1),
     full_name: z.string().min(1),
     kind: z.string().min(1),
-    level: z.enum(['province', 'commune']).optional(),
-    province_code: z.string().regex(/^\d{2}$/).optional(),
 }).strict()
+
+const VietnameseAddressProvinceSchema = VietnameseAddressUnitBaseSchema
+const VietnameseAddressCommuneSchema = VietnameseAddressUnitBaseSchema.extend({
+    province_code: z.string().regex(/^\d{2}$/),
+}).strict()
+const VietnameseAddressSearchResultSchema = z.discriminatedUnion('level', [
+    VietnameseAddressProvinceSchema.extend({
+        level: z.literal('province'),
+    }).strict(),
+    VietnameseAddressCommuneSchema.extend({
+        level: z.literal('commune'),
+    }).strict(),
+])
 
 export const VietnameseAddressMetadataSchema = z.object({
     service_version: z.string().min(1),
@@ -26,29 +37,36 @@ export const VietnameseAddressMetadataSchema = z.object({
 
 export const VietnameseAddressProvinceListSchema = z.object({
     dataset_version: z.string().min(1),
-    provinces: z.array(VietnameseAddressUnitSchema),
+    provinces: z.array(VietnameseAddressProvinceSchema),
 }).strict()
 
 export const VietnameseAddressCommuneListSchema = z.object({
     dataset_version: z.string().min(1),
-    province: VietnameseAddressUnitSchema,
-    communes: z.array(VietnameseAddressUnitSchema),
+    province: VietnameseAddressProvinceSchema,
+    communes: z.array(VietnameseAddressCommuneSchema),
 }).strict()
 
 export const VietnameseAddressSearchSchema = z.object({
     dataset_version: z.string().min(1),
     result_count: z.number().int().nonnegative(),
-    results: z.array(VietnameseAddressUnitSchema),
+    results: z.array(VietnameseAddressSearchResultSchema)
+        .max(ADDRESS_SEARCH_MAX_LIMIT),
 }).strict().refine(
     (value) => value.result_count === value.results.length,
     { message: 'Search result count does not match results' },
 )
 
-export const VietnameseAddressSuggestionSchema = VietnameseAddressUnitSchema.extend({
-    level: z.enum(['province', 'commune']),
-    province_full_name: z.string().min(1).optional(),
-    formatted_address: z.string().min(1),
-}).strict()
+export const VietnameseAddressSuggestionSchema = z.discriminatedUnion('level', [
+    VietnameseAddressProvinceSchema.extend({
+        level: z.literal('province'),
+        formatted_address: z.string().min(1),
+    }).strict(),
+    VietnameseAddressCommuneSchema.extend({
+        level: z.literal('commune'),
+        province_full_name: z.string().min(1),
+        formatted_address: z.string().min(1),
+    }).strict(),
+])
 
 export const VietnameseAddressSuggestionResponseSchema = z.object({
     dataset_version: z.string().min(1),
@@ -85,7 +103,7 @@ export function normalizeAdministrativeAddressQuery(value: string) {
         || [...query].length > 64
         || byteLength > 128
         || tokens.length > 8
-        || !/^[\p{L}\p{M}\s]+$/u.test(query)
+        || !/^[\p{L}\p{M}\s'’-]+$/u.test(query)
     ) {
         return null
     }

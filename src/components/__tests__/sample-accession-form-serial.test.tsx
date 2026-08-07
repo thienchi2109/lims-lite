@@ -62,15 +62,20 @@ vi.mock('@/components/client-selector', () => ({
     ClientSelector: ({
         selectedClient,
         formData,
+        onDraftOwnershipChange,
     }: {
         selectedClient?: { name?: string } | null
         formData?: { name?: string; address?: string }
+        onDraftOwnershipChange?: () => void
     }) => (
         <div data-testid="client-selector">
             <span data-testid="client-name">
                 {selectedClient?.name ?? formData?.name ?? ''}
             </span>
             <span data-testid="client-address">{formData?.address ?? ''}</span>
+            <button type="button" onClick={onDraftOwnershipChange}>
+                Người dùng sửa draft
+            </button>
         </div>
     ),
 }))
@@ -190,6 +195,28 @@ describe('SampleAccessionForm dispatcher CCCD integration', () => {
 
         expect(screen.getByTestId('client-name').textContent).toBe('Tran Thi B')
         expect(screen.getByTestId('client-address').textContent).toBe('Da Nang')
+    })
+
+    it('ignores a pending duplicate lookup after the user owns the draft', async () => {
+        let resolveLookup!: (value: { data: { name: string } }) => void
+        serialMocks.findClientByIdentityClient.mockReturnValueOnce(
+            new Promise((resolve) => {
+                resolveLookup = resolve
+            }),
+        )
+        render(<SampleAccessionForm specialties={[]} />)
+
+        fireEvent.click(screen.getByRole('button', { name: /Quét mã QR trên CCCD/i }))
+        fireEvent.click(screen.getByRole('button', { name: 'Phát sự kiện CCCD serial' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Người dùng sửa draft' }))
+
+        await act(async () => {
+            resolveLookup({ data: { name: 'Khách hàng từ lookup cũ' } })
+            await Promise.resolve()
+        })
+
+        expect(screen.getByTestId('client-name').textContent).toBe('Nguyen Van A')
+        expect(screen.getByTestId('client-address').textContent).toBe('Ha Noi')
     })
 
     it('closes the dialog and preserves invalid-QR feedback for an unknown serial event', async () => {

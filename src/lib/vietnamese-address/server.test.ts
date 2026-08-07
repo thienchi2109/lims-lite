@@ -178,4 +178,80 @@ describe('Vietnamese address server adapter', () => {
             code: 'invalid_response',
         })
     })
+
+    it('cancels an oversized chunked response before buffering the full body', async () => {
+        vi.stubEnv('VIETNAMESE_ADDRESS_SERVICE_URL', SERVICE_URL)
+        vi.spyOn(console, 'info').mockImplementation(() => undefined)
+        const cancel = vi.fn()
+        const body = new ReadableStream<Uint8Array>({
+            start(controller) {
+                controller.enqueue(new TextEncoder().encode('x'.repeat(65 * 1024)))
+            },
+            cancel,
+        })
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(body))
+
+        await expect(getVietnameseAddressMetadata()).rejects.toMatchObject({
+            code: 'invalid_response',
+        })
+        expect(cancel).toHaveBeenCalledTimes(1)
+    })
+
+    it('rejects search results without an explicit administrative level', async () => {
+        vi.stubEnv('VIETNAMESE_ADDRESS_SERVICE_URL', SERVICE_URL)
+        vi.spyOn(console, 'info').mockImplementation(() => undefined)
+        vi.spyOn(globalThis, 'fetch')
+            .mockResolvedValueOnce(jsonResponse({
+                dataset_version: '2026-07',
+                result_count: 1,
+                results: [{
+                    code: '00001',
+                    name: 'Ba Đình',
+                    full_name: 'Phường Ba Đình',
+                    kind: 'ward',
+                }],
+            }))
+            .mockResolvedValueOnce(jsonResponse({
+                dataset_version: '2026-07',
+                provinces: [],
+            }))
+
+        await expect(
+            searchVietnameseAddressSuggestions('Ba Dinh', undefined, 8),
+        ).rejects.toMatchObject({ code: 'invalid_response' })
+    })
+
+    it('rejects search responses that exceed the requested result limit', async () => {
+        vi.stubEnv('VIETNAMESE_ADDRESS_SERVICE_URL', SERVICE_URL)
+        vi.spyOn(console, 'info').mockImplementation(() => undefined)
+        vi.spyOn(globalThis, 'fetch')
+            .mockResolvedValueOnce(jsonResponse({
+                dataset_version: '2026-07',
+                result_count: 2,
+                results: [
+                    {
+                        code: '01',
+                        name: 'Hà Nội',
+                        full_name: 'Thành phố Hà Nội',
+                        kind: 'municipality',
+                        level: 'province',
+                    },
+                    {
+                        code: '79',
+                        name: 'Hồ Chí Minh',
+                        full_name: 'Thành phố Hồ Chí Minh',
+                        kind: 'municipality',
+                        level: 'province',
+                    },
+                ],
+            }))
+            .mockResolvedValueOnce(jsonResponse({
+                dataset_version: '2026-07',
+                provinces: [],
+            }))
+
+        await expect(
+            searchVietnameseAddressSuggestions('Thanh pho', undefined, 1),
+        ).rejects.toMatchObject({ code: 'invalid_response' })
+    })
 })

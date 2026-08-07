@@ -22,6 +22,7 @@ interface SampleAccessionContextProps {
     onOpenClientFormChange: (open: boolean) => void
     clientFormData: Partial<CreateClient> | undefined
     onClientFormDataChange: (data: Partial<CreateClient> | undefined) => void
+    onDraftOwnershipChange: () => void
     selectedSampleType: SampleType
     onSampleTypeChange: (type: SampleType) => void
     sampleQuality: boolean | null
@@ -50,6 +51,7 @@ export function SampleAccessionContext({
     onOpenClientFormChange,
     clientFormData,
     onClientFormDataChange,
+    onDraftOwnershipChange,
     selectedSampleType,
     onSampleTypeChange,
     sampleQuality,
@@ -113,6 +115,7 @@ export function SampleAccessionContext({
                         onOpenFormChange={onOpenClientFormChange}
                         formData={clientFormData}
                         onFormDataChange={onClientFormDataChange}
+                        onDraftOwnershipChange={onDraftOwnershipChange}
                         hideQRButton
                     />
                 </div>

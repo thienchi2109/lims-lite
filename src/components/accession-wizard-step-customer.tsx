@@ -29,6 +29,7 @@ interface StepCustomerProps {
     onOpenFormChange: (open: boolean) => void
     clientFormData: Partial<CreateClient> | undefined
     onFormDataChange: (data: Partial<CreateClient> | undefined) => void
+    onDraftOwnershipChange: () => void
     /* QR state */
     showQRScanner: boolean
     onShowQRScanner: (show: boolean) => void
@@ -53,6 +54,7 @@ export function AccessionWizardStepCustomer({
     onOpenFormChange,
     clientFormData,
     onFormDataChange,
+    onDraftOwnershipChange,
     showQRScanner,
     onShowQRScanner,
     onQRScan,
@@ -123,6 +125,7 @@ export function AccessionWizardStepCustomer({
                             onOpenFormChange={onOpenFormChange}
                             formData={clientFormData}
                             onFormDataChange={onFormDataChange}
+                            onDraftOwnershipChange={onDraftOwnershipChange}
                             hideQRButton={true}
                         />
                     </div>

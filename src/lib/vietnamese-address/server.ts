@@ -34,6 +34,59 @@ interface AdapterRequestOptions<T> {
     resultCount?: (value: T) => number
 }
 
+function responseTooLarge() {
+    return new VietnameseAddressAdapterError(
+        'invalid_response',
+        'Vietnamese address service response is too large',
+    )
+}
+
+async function readBoundedResponseBody(response: Response) {
+    const declaredLength = response.headers.get('content-length')
+    if (
+        declaredLength !== null
+        && Number.isFinite(Number(declaredLength))
+        && Number(declaredLength) > MAX_RESPONSE_BYTES
+    ) {
+        await response.body?.cancel()
+        throw responseTooLarge()
+    }
+
+    if (!response.body) {
+        return ''
+    }
+
+    const reader = response.body.getReader()
+    const chunks: Uint8Array[] = []
+    let totalBytes = 0
+
+    try {
+        while (true) {
+            const { done, value } = await reader.read()
+            if (done) {
+                break
+            }
+
+            totalBytes += value.byteLength
+            if (totalBytes > MAX_RESPONSE_BYTES) {
+                await reader.cancel()
+                throw responseTooLarge()
+            }
+            chunks.push(value)
+        }
+    } finally {
+        reader.releaseLock()
+    }
+
+    const body = new Uint8Array(totalBytes)
+    let offset = 0
+    for (const chunk of chunks) {
+        body.set(chunk, offset)
+        offset += chunk.byteLength
+    }
+    return new TextDecoder().decode(body)
+}
+
 export class VietnameseAddressAdapterError extends Error {
     constructor(
         public readonly code: AdapterErrorCode,
@@ -130,13 +183,7 @@ async function requestAddressService<T>(
             )
         }
 
-        const body = await response.text()
-        if (new TextEncoder().encode(body).byteLength > MAX_RESPONSE_BYTES) {
-            throw new VietnameseAddressAdapterError(
-                'invalid_response',
-                'Vietnamese address service response is too large',
-            )
-        }
+        const body = await readBoundedResponseBody(response)
 
         let parsedJson: unknown
         try {
@@ -228,11 +275,18 @@ async function searchVietnameseAddresses(
         params.set('province_code', provinceCode)
     }
 
-    return requestAddressService(`/v1/search?${params.toString()}`, {
+    const search = await requestAddressService(`/v1/search?${params.toString()}`, {
         route: 'search',
         schema: VietnameseAddressSearchSchema,
         resultCount: (value) => value.results.length,
     })
+    if (search.results.length > limit) {
+        throw new VietnameseAddressAdapterError(
+            'invalid_response',
+            'Vietnamese address service returned too many results',
+        )
+    }
+    return search
 }
 
 export async function searchVietnameseAddressSuggestions(
@@ -256,7 +310,7 @@ export async function searchVietnameseAddressSuggestions(
         provinces.provinces.map((province) => [province.code, province.full_name]),
     )
     const suggestions = search.results.map((result): VietnameseAddressSuggestion => {
-        const level = result.level ?? 'province'
+        const level = result.level
         if (level === 'province') {
             return {
                 ...result,
