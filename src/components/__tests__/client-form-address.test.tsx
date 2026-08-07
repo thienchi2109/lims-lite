@@ -18,6 +18,14 @@ vi.mock('@/lib/api-client', () => ({
 
 import { ClientForm } from '../client-form'
 
+function deferred<T>() {
+    let resolve!: (value: T) => void
+    const promise = new Promise<T>((resolver) => {
+        resolve = resolver
+    })
+    return { promise, resolve }
+}
+
 function fillRequiredFields() {
     fireEvent.change(document.querySelector('#name')!, {
         target: { value: 'Nguyễn Văn A' },
@@ -135,6 +143,80 @@ describe('ClientForm current address integration', () => {
 
         expect((address as HTMLInputElement).value).toBe('Đà Nẵng')
         expect(mocks.search).not.toHaveBeenCalled()
+    })
+
+    it('invalidates pending suggestions when a scan owns the same address text', async () => {
+        const pendingSearch = deferred<{
+            data: {
+                dataset_version: string
+                suggestions: Array<{
+                    code: string
+                    name: string
+                    full_name: string
+                    kind: string
+                    level: 'commune'
+                    province_code: string
+                    province_full_name: string
+                    formatted_address: string
+                }>
+            }
+        }>()
+        mocks.search.mockReturnValueOnce(pendingSearch.promise)
+        const props = {
+            onSuccess: vi.fn(),
+            onCancel: vi.fn(),
+        }
+        const { rerender } = render(
+            <ClientForm
+                {...props}
+                {...{ addressSeedVersion: 0 }}
+            />,
+        )
+
+        const address = screen.getByPlaceholderText('Nhập địa chỉ liên hệ')
+        fireEvent.change(address, { target: { value: 'Ha Noi' } })
+        await act(async () => {
+            vi.advanceTimersByTime(350)
+            await Promise.resolve()
+        })
+        expect(mocks.search).toHaveBeenCalledTimes(1)
+
+        rerender(
+            <ClientForm
+                {...props}
+                {...{ addressSeedVersion: 1 }}
+                initialData={{
+                    name: 'Nguyễn Văn A',
+                    id_card_num: '012345678901',
+                    date_of_birth: '1990-01-02',
+                    address: 'Ha Noi',
+                }}
+            />,
+        )
+
+        await act(async () => {
+            pendingSearch.resolve({
+                data: {
+                    dataset_version: '2026-07',
+                    suggestions: [{
+                        code: '00001',
+                        name: 'Ba Đình',
+                        full_name: 'Phường Ba Đình',
+                        kind: 'ward',
+                        level: 'commune',
+                        province_code: '01',
+                        province_full_name: 'Thành phố Hà Nội',
+                        formatted_address: 'Phường Ba Đình, Thành phố Hà Nội',
+                    }],
+                },
+            })
+            await Promise.resolve()
+        })
+
+        expect(screen.queryByRole('option')).toBeNull()
+        expect((
+            screen.getByPlaceholderText('Nhập địa chỉ liên hệ') as HTMLInputElement
+        ).value).toBe('Ha Noi')
     })
 
     it('does not submit when Enter selects the active address suggestion', async () => {

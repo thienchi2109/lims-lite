@@ -26,6 +26,7 @@ interface ClientFormProps {
     onSuccess: (client: Client) => void
     onCancel: () => void
     onUserEdit?: () => void
+    addressSeedVersion?: number
     className?: string
 }
 
@@ -36,6 +37,7 @@ export function ClientForm({
     onSuccess,
     onCancel,
     onUserEdit,
+    addressSeedVersion,
     className
 }: ClientFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -242,6 +244,7 @@ export function ClientForm({
                         control={control}
                         render={({ field }) => (
                             <CurrentAddressAutocomplete
+                                key={addressSeedVersion}
                                 id="address"
                                 value={field.value ?? ''}
                                 onChange={field.onChange}

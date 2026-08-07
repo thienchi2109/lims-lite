@@ -98,6 +98,32 @@ describe('Vietnamese address API route', () => {
         expect(mocks.searchSuggestions).not.toHaveBeenCalled()
     })
 
+    it('rejects word-only complete addresses before contacting the service', async () => {
+        mocks.searchSuggestions.mockResolvedValue({ suggestions: [] })
+
+        const response = await GET(request(
+            '?operation=search&q=So%20Muoi%20Hai%20Nguyen%20Trai%20Ha%20Noi',
+        ))
+
+        expect(response.status).toBe(400)
+        expect(mocks.searchSuggestions).not.toHaveBeenCalled()
+    })
+
+    it('accepts long names with an explicit administrative prefix', async () => {
+        mocks.searchSuggestions.mockResolvedValue({ suggestions: [] })
+
+        const response = await GET(request(
+            '?operation=search&q=Thanh%20pho%20Ho%20Chi%20Minh',
+        ))
+
+        expect(response.status).toBe(200)
+        expect(mocks.searchSuggestions).toHaveBeenCalledWith(
+            'Thanh pho Ho Chi Minh',
+            undefined,
+            8,
+        )
+    })
+
     it('preserves the redacted adapter error code for client fallback policy', async () => {
         mocks.searchSuggestions.mockRejectedValue(new Error('private upstream error'))
         mocks.toHttpError.mockReturnValue({

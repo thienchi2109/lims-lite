@@ -176,6 +176,16 @@ describe('CurrentAddressAutocomplete', () => {
 
         expect((input as HTMLInputElement).value).toBe('12 Nguyễn Trãi, Hà Nội')
         expect(mocks.search).toHaveBeenCalledTimes(1)
+
+        fireEvent.change(input, {
+            target: { value: 'Số Mười Hai Nguyễn Trãi Hà Nội' },
+        })
+        await flushDebounce()
+
+        expect((input as HTMLInputElement).value).toBe(
+            'Số Mười Hai Nguyễn Trãi Hà Nội',
+        )
+        expect(mocks.search).toHaveBeenCalledTimes(1)
     })
 
     it('retries after a transient service failure', async () => {

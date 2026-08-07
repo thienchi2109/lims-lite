@@ -47,6 +47,7 @@ export function ClientSelector({
     const [clients, setClients] = useState<Client[]>([])
     const [loading, setLoading] = useState(false)
     const [showQRScanner, setShowQRScanner] = useState(false)
+    const [addressSeedVersion, setAddressSeedVersion] = useState(0)
 
     // Internal state for uncontrolled mode
     const [internalShowClientForm, setInternalShowClientForm] = useState(false)
@@ -102,6 +103,7 @@ export function ClientSelector({
     } = useClientIdentityScan({
         onDraft: (draft) => {
             onDraftOwnershipChange?.()
+            setAddressSeedVersion((version) => version + 1)
             setShowQRScanner(false)
             onSelect(null)
             setClientFormData(draft)
@@ -177,6 +179,7 @@ export function ClientSelector({
                     key={clientFormData?.id_card_num || clientFormData?.name || 'new'}
                     initialData={clientFormData}
                     onUserEdit={claimDraftOwnership}
+                    addressSeedVersion={addressSeedVersion}
                     onSuccess={(client) => {
                         claimDraftOwnership()
                         onSelect(client)

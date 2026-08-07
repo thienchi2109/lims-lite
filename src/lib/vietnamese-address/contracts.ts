@@ -3,6 +3,9 @@ import { z } from 'zod'
 export const ADDRESS_SEARCH_LIMIT = 8
 export const ADDRESS_SEARCH_MAX_LIMIT = 10
 export const ADDRESS_SEARCH_DEBOUNCE_MS = 300
+const MAX_UNPREFIXED_ADMINISTRATIVE_TOKENS = 6
+const ADMINISTRATIVE_PREFIX_PATTERN = /^(?:tinh|thanh pho|phuong|xa|dac khu)\b/
+const ADDRESS_DETAIL_PATTERN = /(?:^|\s)(?:so|duong|ngo|ngach|hem|kiet|thon|xom|ap|khu pho|chung cu|can ho)(?:\s|$)/
 
 const VietnameseAddressUnitBaseSchema = z.object({
     code: z.string().min(1),
@@ -93,10 +96,21 @@ export type VietnameseAddressSuggestionResponse = z.infer<
     typeof VietnameseAddressSuggestionResponseSchema
 >
 
+function foldVietnameseQuery(value: string) {
+    return value
+        .normalize('NFD')
+        .replace(/\p{M}/gu, '')
+        .replace(/đ/g, 'd')
+        .replace(/Đ/g, 'D')
+        .toLowerCase()
+}
+
 export function normalizeAdministrativeAddressQuery(value: string) {
     const query = value.trim().replace(/\s+/g, ' ')
     const tokens = query.split(' ').filter(Boolean)
     const byteLength = new TextEncoder().encode(query).byteLength
+    const foldedQuery = foldVietnameseQuery(query)
+    const hasAdministrativePrefix = ADMINISTRATIVE_PREFIX_PATTERN.test(foldedQuery)
 
     if (
         query.length < 2
@@ -104,6 +118,13 @@ export function normalizeAdministrativeAddressQuery(value: string) {
         || byteLength > 128
         || tokens.length > 8
         || !/^[\p{L}\p{M}\s'’-]+$/u.test(query)
+        || (
+            !hasAdministrativePrefix
+            && (
+                tokens.length > MAX_UNPREFIXED_ADMINISTRATIVE_TOKENS
+                || ADDRESS_DETAIL_PATTERN.test(foldedQuery)
+            )
+        )
     ) {
         return null
     }
