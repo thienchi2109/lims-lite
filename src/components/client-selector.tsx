@@ -352,6 +352,7 @@ export function ClientSelector({
 
                     {/* Quick Create Button (Mobile friendly) */}
                     <Button
+                        type="button"
                         variant="ghost"
                         className="w-full justify-start text-sky-600 hover:text-sky-700 hover:bg-sky-50 h-8 px-2 text-xs"
                         onClick={() => {
