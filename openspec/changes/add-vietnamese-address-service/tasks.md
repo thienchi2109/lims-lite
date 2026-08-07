@@ -100,15 +100,15 @@ availability dependency.
 
 ## 6. Gate R0 - Manual Home-Server Rollout
 
-- [ ] 6.1 Run the service as a dedicated host-native process on the home server.
-- [ ] 6.2 Bind only to the configured private Tailscale interface and port.
-- [ ] 6.3 Keep the service off public Internet routes, Cloudflare Tunnel/Funnel,
+- [x] 6.1 Run the service as a dedicated host-native process on the home server.
+- [x] 6.2 Bind only to the configured private Tailscale interface and port.
+- [x] 6.3 Keep the service off public Internet routes, Cloudflare Tunnel/Funnel,
   and browser CORS.
-- [ ] 6.4 Deploy an exact verified revision and immutable SQLite snapshot.
-- [ ] 6.5 Configure LIMS to call the private Tailscale service URL.
-- [ ] 6.6 Verify health, province/commune lookup, search, LIMS manual fallback,
+- [x] 6.4 Deploy an exact verified revision and immutable SQLite snapshot.
+- [x] 6.5 Configure LIMS to call the private Tailscale service URL.
+- [x] 6.6 Verify health, province/commune lookup, search, LIMS manual fallback,
   and CCCD-first behavior.
-- [ ] 6.7 Retain and rehearse rollback to the previous working revision.
+- [x] 6.7 Retain and rehearse rollback to the previous working revision.
 
 **Exit gate:** The private service and LIMS integration operate on the home
 server with manual rollback available.
