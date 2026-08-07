@@ -179,6 +179,26 @@ describe('Vietnamese address server adapter', () => {
         })
     })
 
+    it('cancels a rejected upstream response body', async () => {
+        vi.stubEnv('VIETNAMESE_ADDRESS_SERVICE_URL', SERVICE_URL)
+        vi.spyOn(console, 'info').mockImplementation(() => undefined)
+        const cancel = vi.fn()
+        const body = new ReadableStream<Uint8Array>({
+            start(controller) {
+                controller.enqueue(new TextEncoder().encode('upstream failure'))
+            },
+            cancel,
+        })
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+            new Response(body, { status: 503 }),
+        )
+
+        await expect(getVietnameseAddressMetadata()).rejects.toMatchObject({
+            code: 'upstream_rejected',
+        })
+        expect(cancel).toHaveBeenCalledTimes(1)
+    })
+
     it('cancels an oversized chunked response before buffering the full body', async () => {
         vi.stubEnv('VIETNAMESE_ADDRESS_SERVICE_URL', SERVICE_URL)
         vi.spyOn(console, 'info').mockImplementation(() => undefined)
@@ -195,6 +215,31 @@ describe('Vietnamese address server adapter', () => {
             code: 'invalid_response',
         })
         expect(cancel).toHaveBeenCalledTimes(1)
+    })
+
+    it('rejects commune lists owned by a different province', async () => {
+        vi.stubEnv('VIETNAMESE_ADDRESS_SERVICE_URL', SERVICE_URL)
+        vi.spyOn(console, 'info').mockImplementation(() => undefined)
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({
+            dataset_version: '2026-07',
+            province: {
+                code: '79',
+                name: 'Hồ Chí Minh',
+                full_name: 'Thành phố Hồ Chí Minh',
+                kind: 'municipality',
+            },
+            communes: [{
+                code: '26734',
+                name: 'Bến Nghé',
+                full_name: 'Phường Bến Nghé',
+                kind: 'ward',
+                province_code: '79',
+            }],
+        }))
+
+        await expect(
+            listVietnameseAddressCommunes('01'),
+        ).rejects.toMatchObject({ code: 'invalid_response' })
     })
 
     it('rejects search results without an explicit administrative level', async () => {
@@ -252,6 +297,37 @@ describe('Vietnamese address server adapter', () => {
 
         await expect(
             searchVietnameseAddressSuggestions('Thanh pho', undefined, 1),
+        ).rejects.toMatchObject({ code: 'invalid_response' })
+    })
+
+    it('rejects filtered search results owned by another province', async () => {
+        vi.stubEnv('VIETNAMESE_ADDRESS_SERVICE_URL', SERVICE_URL)
+        vi.spyOn(console, 'info').mockImplementation(() => undefined)
+        vi.spyOn(globalThis, 'fetch')
+            .mockResolvedValueOnce(jsonResponse({
+                dataset_version: '2026-07',
+                result_count: 1,
+                results: [{
+                    code: '26734',
+                    name: 'Bến Nghé',
+                    full_name: 'Phường Bến Nghé',
+                    kind: 'ward',
+                    level: 'commune',
+                    province_code: '79',
+                }],
+            }))
+            .mockResolvedValueOnce(jsonResponse({
+                dataset_version: '2026-07',
+                provinces: [{
+                    code: '79',
+                    name: 'Hồ Chí Minh',
+                    full_name: 'Thành phố Hồ Chí Minh',
+                    kind: 'municipality',
+                }],
+            }))
+
+        await expect(
+            searchVietnameseAddressSuggestions('Ben Nghe', '01', 8),
         ).rejects.toMatchObject({ code: 'invalid_response' })
     })
 })

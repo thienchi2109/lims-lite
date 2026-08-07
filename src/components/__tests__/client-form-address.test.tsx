@@ -101,6 +101,42 @@ describe('ClientForm current address integration', () => {
         )
     })
 
+    it('refreshes a CCCD draft when the same identity is scanned again', () => {
+        const props = {
+            onSuccess: vi.fn(),
+            onCancel: vi.fn(),
+        }
+        const { rerender } = render(
+            <ClientForm
+                {...props}
+                initialData={{
+                    name: 'Nguyễn Văn A',
+                    id_card_num: '012345678901',
+                    date_of_birth: '1990-01-02',
+                    address: 'Hà Nội',
+                }}
+            />,
+        )
+
+        const address = screen.getByPlaceholderText('Nhập địa chỉ liên hệ')
+        expect((address as HTMLInputElement).value).toBe('Hà Nội')
+
+        rerender(
+            <ClientForm
+                {...props}
+                initialData={{
+                    name: 'Nguyễn Văn A',
+                    id_card_num: '012345678901',
+                    date_of_birth: '1990-01-02',
+                    address: 'Đà Nẵng',
+                }}
+            />,
+        )
+
+        expect((address as HTMLInputElement).value).toBe('Đà Nẵng')
+        expect(mocks.search).not.toHaveBeenCalled()
+    })
+
     it('does not submit when Enter selects the active address suggestion', async () => {
         render(
             <ClientForm

@@ -177,6 +177,7 @@ async function requestAddressService<T>(
         status = response.status
 
         if (!response.ok) {
+            await response.body?.cancel()
             throw new VietnameseAddressAdapterError(
                 'upstream_rejected',
                 'Vietnamese address service rejected the request',
@@ -252,10 +253,10 @@ export function listVietnameseAddressProvinces(): Promise<
     })
 }
 
-export function listVietnameseAddressCommunes(
+export async function listVietnameseAddressCommunes(
     provinceCode: string,
 ): Promise<VietnameseAddressCommuneList> {
-    return requestAddressService(
+    const communeList = await requestAddressService(
         `/v1/provinces/${encodeURIComponent(provinceCode)}/communes`,
         {
             route: 'communes',
@@ -263,6 +264,20 @@ export function listVietnameseAddressCommunes(
             resultCount: (value) => value.communes.length,
         },
     )
+
+    if (
+        communeList.province.code !== provinceCode
+        || communeList.communes.some(
+            (commune) => commune.province_code !== provinceCode,
+        )
+    ) {
+        throw new VietnameseAddressAdapterError(
+            'invalid_response',
+            'Vietnamese address communes do not match the requested province',
+        )
+    }
+
+    return communeList
 }
 
 async function searchVietnameseAddresses(
@@ -284,6 +299,19 @@ async function searchVietnameseAddresses(
         throw new VietnameseAddressAdapterError(
             'invalid_response',
             'Vietnamese address service returned too many results',
+        )
+    }
+    if (
+        provinceCode
+        && search.results.some((result) => (
+            result.level === 'province'
+                ? result.code !== provinceCode
+                : result.province_code !== provinceCode
+        ))
+    ) {
+        throw new VietnameseAddressAdapterError(
+            'invalid_response',
+            'Vietnamese address results do not match the requested province',
         )
     }
     return search

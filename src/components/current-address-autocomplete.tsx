@@ -39,6 +39,9 @@ export function CurrentAddressAutocomplete({
     const generatedId = useId()
     const listboxId = `${generatedId}-suggestions`
     const requestVersionRef = useRef(0)
+    const pendingUserValueRef = useRef<string | null>(null)
+    const previousValueRef = useRef(value)
+    const externallySeededRef = useRef(value.length > 0)
     const [suggestionState, setSuggestionState] = useState<{
         value: string
         suggestions: VietnameseAddressSuggestion[]
@@ -60,9 +63,19 @@ export function CurrentAddressAutocomplete({
     const isLoading = loadingValue === value
 
     useEffect(() => {
+        if (value !== previousValueRef.current) {
+            const isUserValue = pendingUserValueRef.current === value
+            pendingUserValueRef.current = null
+            previousValueRef.current = value
+
+            if (!isUserValue) {
+                externallySeededRef.current = value.length > 0
+            }
+        }
+
         const requestVersion = ++requestVersionRef.current
         const controller = new AbortController()
-        const query = userQueryValue === value
+        const query = !externallySeededRef.current && userQueryValue === value
             ? normalizeAdministrativeAddressQuery(userQueryValue)
             : null
 
@@ -99,6 +112,7 @@ export function CurrentAddressAutocomplete({
 
     const selectSuggestion = (suggestion: VietnameseAddressSuggestion) => {
         requestVersionRef.current += 1
+        pendingUserValueRef.current = suggestion.formatted_address
         setUserQueryValue(null)
         setSuggestionState({ value: '', suggestions: [] })
         setActiveIndex(-1)
@@ -146,7 +160,15 @@ export function CurrentAddressAutocomplete({
                 onChange={(event) => {
                     const nextValue = event.target.value
                     requestVersionRef.current += 1
-                    setUserQueryValue(nextValue)
+                    pendingUserValueRef.current = nextValue
+                    if (externallySeededRef.current) {
+                        if (nextValue.length === 0) {
+                            externallySeededRef.current = false
+                        }
+                        setUserQueryValue(null)
+                    } else {
+                        setUserQueryValue(nextValue)
+                    }
                     setIsOpen(true)
                     setActiveIndex(-1)
                     onChange(nextValue)

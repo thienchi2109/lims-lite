@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { CreateClientSchema, type CreateClient, type Client, Gender } from '@/types'
@@ -49,34 +49,40 @@ export function ClientForm({
         return parseResult.success ? parseResult.data : 'Khác'
     })()
 
+    const defaultValues = useMemo<CreateClient>(() => ({
+        name: initialData?.name || '',
+        id_card_num: initialData?.id_card_num || '',
+        date_of_birth: initialData?.date_of_birth || '',
+        gender: safeGender,
+        phone: initialData?.phone || '',
+        address: initialData?.address || '',
+        health_insurance_num: initialData?.health_insurance_num || '',
+        expiry_date: initialData?.expiry_date || '',
+    }), [
+        initialData?.address,
+        initialData?.date_of_birth,
+        initialData?.expiry_date,
+        initialData?.health_insurance_num,
+        initialData?.id_card_num,
+        initialData?.name,
+        initialData?.phone,
+        safeGender,
+    ])
+
     const {
         register,
         handleSubmit,
         formState: { errors },
         control,
+        reset,
     } = useForm<CreateClient>({
         resolver: zodResolver(CreateClientSchema),
-        // Use defaultValues with initialData - key prop forces remount
-        defaultValues: initialData ? {
-            name: initialData.name || '',
-            id_card_num: initialData.id_card_num || '',
-            date_of_birth: initialData.date_of_birth || '',
-            gender: safeGender,
-            phone: initialData.phone || '',
-            address: initialData.address || '',
-            health_insurance_num: initialData.health_insurance_num || '',
-            expiry_date: initialData.expiry_date || '',
-        } : {
-            name: '',
-            id_card_num: '',
-            date_of_birth: '',
-            gender: 'Khác',
-            phone: '',
-            address: '',
-            health_insurance_num: '',
-            expiry_date: '',
-        },
+        defaultValues,
     })
+
+    useEffect(() => {
+        reset(defaultValues)
+    }, [defaultValues, reset])
 
     const onSubmit = async (data: CreateClient) => {
         setIsSubmitting(true)

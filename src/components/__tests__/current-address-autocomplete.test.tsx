@@ -105,6 +105,38 @@ describe('CurrentAddressAutocomplete', () => {
         )
     })
 
+    it('does not search edits derived from a CCCD address until it is cleared', async () => {
+        mocks.search.mockResolvedValue({
+            data: {
+                dataset_version: '2026-07',
+                suggestions: [hanoiSuggestion],
+            },
+        } satisfies SearchResponse)
+        render(<Harness initialValue="Phường Ba Đình Thành phố Hà Nội" />)
+
+        const input = screen.getByRole('combobox')
+        fireEvent.change(input, {
+            target: { value: 'Phường Ba Đình Thành phố Hà Nội A' },
+        })
+        await flushDebounce()
+        fireEvent.change(input, {
+            target: { value: 'Phường Ba Đình Thành phố Hà Nộ' },
+        })
+        await flushDebounce()
+
+        expect(mocks.search).not.toHaveBeenCalled()
+
+        fireEvent.change(input, { target: { value: '' } })
+        fireEvent.change(input, { target: { value: 'Ba Dinh' } })
+        await flushDebounce()
+
+        expect(mocks.search).toHaveBeenCalledTimes(1)
+        expect(mocks.search).toHaveBeenCalledWith(
+            'Ba Dinh',
+            expect.objectContaining({ signal: expect.any(AbortSignal) }),
+        )
+    })
+
     it('formats a selected commune and province into the controlled address', async () => {
         mocks.search.mockResolvedValue({
             data: {
