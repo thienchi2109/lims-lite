@@ -351,6 +351,8 @@ services:
       SUPABASE_INTERNAL_URL: http://kong:8000
       # Internal URL for on-demand CoA PDF conversion
       GOTENBERG_URL: ${GOTENBERG_URL:-http://pdf-gateway:8080}
+      VIETNAMESE_ADDRESS_SERVICE_URL: "${VIETNAMESE_ADDRESS_SERVICE_URL:-}"
+      VIETNAMESE_ADDRESS_SERVICE_TIMEOUT_MS: "${VIETNAMESE_ADDRESS_SERVICE_TIMEOUT_MS:-1500}"
       PDF_GATEWAY_TOKEN_FILE: /run/secrets/pdf_gateway_lims_token
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${ANON_KEY:?ANON_KEY is required}
       # Service role key for admin operations (session invalidation, etc.)
