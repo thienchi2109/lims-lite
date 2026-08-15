@@ -72,6 +72,18 @@
 | Use `cat`, `head`, `tail` | Use `Read` tool |
 | Edit, rename, delete, reorder, squash, or re-run an applied migration | Add a new next-numbered forward-only migration |
 
+## `grill-with-docs` (USER-INVOKED)
+
+- Use when the user explicitly wants to stress-test a repo-scoped plan or
+  design before implementation, especially when domain terms should be
+  clarified in `CONTEXT.md` or durable trade-offs may need ADRs.
+- Load and follow both `grilling` and `domain-modeling`; investigate code and
+  environmental facts instead of asking the user to retrieve them.
+- Use plain `grilling` when repository docs are unnecessary, and use
+  `wayfinder` when the work is too large to settle in one agent session.
+- Do not start implementation until the decision frontier is empty and the
+  user explicitly confirms shared understanding.
+
 ## 🐛 DEBUGGING & PROBLEM-SOLVING (AUTO-INVOKE SKILLS)
 
 > **These skills are NOT optional when triggers are detected.**
