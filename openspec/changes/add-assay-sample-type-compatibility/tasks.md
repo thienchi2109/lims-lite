@@ -1,11 +1,11 @@
 ## 1. Phase 1 - Sample-Type Master Data (PR/Session 1)
 
-- [ ] 1.1 Rebase từ `main`, xác minh migration number mới nhất và query read-only home-server baseline mà không đọc dữ liệu định danh.
-- [ ] 1.2 Viết regression tests đỏ cho mã `LM-NNNNNN`, blank/collision abort, code immutability, soft delete, `compatibility_generation`, grants/RLS và exact audit trigger binding.
-- [ ] 1.3 Tạo migration forward-only thêm sequence, `sample_types`, `samples.sample_type_id`, constraints/indexes và projection `samples.type`; không thay assignment RPC.
-- [ ] 1.4 Backfill loại mẫu/liên kết mẫu theo ánh xạ xác định; abort nguyên transaction nếu blank, collision hoặc hậu điều kiện không đạt.
-- [ ] 1.5 Chạy focused migration/SQL/security tests, typecheck nếu contracts đổi và OpenSpec strict validation.
-- [ ] 1.6 Hoàn tất phase chỉ khi migration chưa apply persistent DB, file cũ giữ nguyên và assignment production chưa đổi hành vi.
+- [x] 1.1 Rebase từ `main`, xác minh migration number mới nhất và query read-only home-server baseline mà không đọc dữ liệu định danh.
+- [x] 1.2 Viết regression tests đỏ cho mã `LM-NNNNNN`, blank/collision abort, code immutability, soft delete, `compatibility_generation`, grants/RLS và exact audit trigger binding.
+- [x] 1.3 Tạo migration forward-only thêm sequence, `sample_types`, `samples.sample_type_id`, constraints/indexes và projection `samples.type`; không thay assignment RPC.
+- [x] 1.4 Backfill loại mẫu/liên kết mẫu theo ánh xạ xác định; abort nguyên transaction nếu blank, collision hoặc hậu điều kiện không đạt.
+- [x] 1.5 Chạy focused migration/SQL/security tests, typecheck nếu contracts đổi và OpenSpec strict validation.
+- [x] 1.6 Hoàn tất phase chỉ khi migration chưa apply persistent DB, file cũ giữ nguyên và assignment production chưa đổi hành vi.
 
 ## 2. Phase 2 - Compatibility Revision Core (PR/Session 2)
 
