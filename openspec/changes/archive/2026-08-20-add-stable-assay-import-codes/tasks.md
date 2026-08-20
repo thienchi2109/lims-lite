@@ -28,10 +28,18 @@
 
 ## 4. Phase 4 - Deployment And Runtime Verification (Session 4)
 
-- [ ] 4.1 Xác nhận ba PR triển khai đã merge theo thứ tự, `main` sạch, các migration có số thứ tự duy nhất và chưa file nào từng áp dụng bị thay đổi.
-- [ ] 4.2 Đồng bộ checkout `/opt/lims-lite` trên home server, áp dụng lần lượt các migration đã commit bằng `sudo -n docker exec ... lims-postgres psql -v ON_ERROR_STOP=1`.
-- [ ] 4.3 Chạy SQL regression tests liên quan và `SELECT * FROM run_security_tests();`; lưu bằng chứng rằng mọi security check đều đạt.
-- [ ] 4.4 Xác minh runtime: toàn bộ chỉ tiêu cũ, mới và đã xóa mềm có mã hợp lệ; sửa/xóa mềm không đổi mã; cập nhật trực tiếp mã bị từ chối; mã đã nghỉ dùng không được tái sử dụng.
-- [ ] 4.5 Triển khai ứng dụng, chạy health check và smoke test trang quản lý chỉ tiêu để xác nhận list/detail/create đều trả hoặc hiển thị đúng mã.
-- [ ] 4.6 Chạy quality gates cuối cho blast radius gồm focused tests, `npm run typecheck`, lint phù hợp và OpenSpec strict validation.
-- [ ] 4.7 Cập nhật Issue #109 và Wayfinder #107 bằng bằng chứng triển khai, archive change `add-stable-assay-import-codes`, commit/push artifact archive và chỉ chuyển sang OpenSpec tiếp theo khi mọi điều kiện thoát đã đạt.
+- [x] 4.1 Xác nhận ba PR triển khai đã merge theo thứ tự, `main` sạch, các migration có số thứ tự duy nhất và chưa file nào từng áp dụng bị thay đổi.
+- [x] 4.2 Đồng bộ checkout `/opt/lims-lite` trên home server, áp dụng lần lượt các migration đã commit bằng `sudo -n docker exec ... lims-postgres psql -v ON_ERROR_STOP=1`.
+- [x] 4.3 Chạy SQL regression tests liên quan và `SELECT * FROM run_security_tests();`; lưu bằng chứng rằng mọi security check đều đạt.
+- [x] 4.4 Xác minh runtime: toàn bộ chỉ tiêu cũ, mới và đã xóa mềm có mã hợp lệ; sửa/xóa mềm không đổi mã; cập nhật trực tiếp mã bị từ chối; mã đã nghỉ dùng không được tái sử dụng.
+- [x] 4.5 Triển khai ứng dụng, chạy health check và smoke test trang quản lý chỉ tiêu để xác nhận list/detail/create đều trả hoặc hiển thị đúng mã.
+- [x] 4.6 Chạy quality gates cuối cho blast radius gồm focused tests, `npm run typecheck`, lint phù hợp và OpenSpec strict validation.
+- [x] 4.7 Cập nhật Issue #109 và Wayfinder #107 bằng bằng chứng triển khai, archive change `add-stable-assay-import-codes`, commit/push artifact archive và chỉ chuyển sang OpenSpec tiếp theo khi mọi điều kiện thoát đã đạt.
+
+### Phase 4 verification note
+
+- Migration 201 giữ nguyên SHA-256 `31ebccd438cb0c55b615257dfca01fe5c80504cb68c3be5ea2cd99f059111791`; migration 202 giữ nguyên SHA-256 `f9f5913dcd0fee6e1519255a1f319642d0ebf5be2e4647fe9f802b5b6036f493`.
+- Lần chạy migration 201 trên PostgreSQL 15 bị rollback nguyên transaction vì phép so sánh `pg_sequences.data_type` thiếu cast `regtype`. Migration 203 forward-only, được khóa bằng regression test và review độc lập, phục hồi nguyên contract của 201 với correction duy nhất `data_type = 'integer'::REGTYPE`; sau đó migration 202 được áp dụng thành công.
+- Runtime có 290/290 mã hợp lệ và duy nhất từ `CT-000001` đến `CT-000290`, gồm 206 row đã xóa mềm; 34/34 security tests đạt và các API role không có quyền sequence.
+- Transactional drill xác nhận rename/soft-delete giữ mã, direct update và mã do client cung cấp bị từ chối, mã đã cấp không được tái sử dụng, và RPC list/detail trả đúng mã.
+- Deploy script hoàn tất tại commit `a0ebdf7`; public root, Auth, REST và CoA health đều trả HTTP 200. Browser smoke xác nhận session manager hợp lệ và production OTP fail-closed tại `/otp`; không bypass 2FA. Focused UI tests xác nhận list/detail/create hiển thị hoặc giữ mã read-only.
