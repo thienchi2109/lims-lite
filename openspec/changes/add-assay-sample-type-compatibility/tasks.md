@@ -26,10 +26,10 @@
 
 ## 4. Phase 4 - Manager Workspace And First Publication (PR/Session 4)
 
-- [ ] 4.1 Viết component tests đỏ cho coverage filters, candidate provenance, review disposition, draft diff và publish reason.
-- [ ] 4.2 Tạo `/manager/assays/compatibility`, liên kết từ trang chỉ tiêu và dùng toàn bộ nhãn/lỗi tiếng Việt; không lộ draft cho Analyst.
-- [ ] 4.3 Chạy focused component tests, React Doctor, typecheck, lint và OpenSpec strict validation.
-- [ ] 4.4 Sau merge/push, apply chỉ migration Phase 1-3 trên home server, deploy manager app và chạy `run_security_tests()` cùng smoke manager workspace.
+- [x] 4.1 Viết component tests đỏ cho coverage filters, candidate provenance, review disposition, draft diff và publish reason.
+- [x] 4.2 Tạo `/manager/assays/compatibility`, liên kết từ trang chỉ tiêu và dùng toàn bộ nhãn/lỗi tiếng Việt; không lộ draft cho Analyst.
+- [x] 4.3 Chạy focused component tests, React Doctor, typecheck, lint và OpenSpec strict validation.
+- [ ] 4.4 Sau merge/push, không apply lại 204-208; apply chỉ migration 209 forward-only trên home server, deploy manager app và chạy `run_security_tests()` cùng smoke manager workspace.
 - [ ] 4.5 Phụ trách chuyên môn review toàn bộ coverage, ghi lý do và publish revision 1; lưu revision/hash/actor aggregate không chứa dữ liệu định danh.
 - [ ] 4.6 Hoàn tất phase chỉ khi đúng một revision published hoàn chỉnh tồn tại và assignment production vẫn dùng contract cũ.
 

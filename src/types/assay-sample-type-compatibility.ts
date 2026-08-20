@@ -137,6 +137,8 @@ const CatalogAssaySchema = z.object({
   specialtyId: UuidSchema.nullable(),
   compatibilityGeneration: z.number().int().positive(),
   isActive: z.boolean(),
+  isStale: z.boolean(),
+  reviewCompatibilityGeneration: z.number().int().positive().nullable(),
   disposition: AssaySampleTypeReviewDispositionSchema.nullable(),
   reviewReason: z.string().nullable(),
   compatibilities: z.array(CatalogCompatibilitySchema),

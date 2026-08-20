@@ -71,6 +71,8 @@ describe('assay sample-type compatibility contracts', () => {
         specialtyId: null,
         compatibilityGeneration: 3,
         isActive: false,
+        isStale: true,
+        reviewCompatibilityGeneration: 2,
         disposition: 'not_assignable',
         reviewReason: 'Chỉ tiêu đã ngưng hoạt động',
         compatibilities: [],

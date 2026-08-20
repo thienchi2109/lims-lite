@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Workflow } from 'lucide-react'
 import { getAssayDefinitions } from '@/app/actions/assay-queries'
 import { getSpecialties } from '@/app/actions/assay-lookups'
 import { AssayDefinitionsTable } from '@/components/assay-definitions-table'
@@ -71,13 +71,19 @@ export default async function AssaysPage({
 
                 <Card>
                     <CardHeader>
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
                             <div>
                                 <CardTitle>Danh sách chỉ tiêu xét nghiệm</CardTitle>
                                 <CardDescription>
                                     Quản lý các chỉ tiêu xét nghiệm/kiểm nghiệm trong hệ thống
                                 </CardDescription>
                             </div>
+                            <Button asChild variant="outline">
+                                <Link href="/manager/assays/compatibility">
+                                    <Workflow className="h-4 w-4" />
+                                    Tương thích loại mẫu
+                                </Link>
+                            </Button>
                         </div>
                     </CardHeader>
                     <CardContent>
