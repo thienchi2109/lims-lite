@@ -9,12 +9,12 @@
 
 ## 2. Phase 2 - Compatibility Revision Core (PR/Session 2)
 
-- [ ] 2.1 Viết tests đỏ cho revision/review/pair schema, published immutability, một-draft/một-published invariants và lifecycle generation snapshot.
-- [ ] 2.2 Tạo migration forward-only thêm revision, review, allowlist và candidate provenance tables cùng constraints/indexes/audit.
-- [ ] 2.3 Bootstrap revision 1 draft với `source_revision_id = NULL`, system/migration actor và candidate lịch sử trong một transaction; candidate chưa review không có authority.
-- [ ] 2.4 Thêm tests cho bootstrap atomicity, content integrity, candidate non-authority, assay/sample-type retire/restore generation và rollback khi baseline sai.
-- [ ] 2.5 Chạy focused migration/SQL/security tests và OpenSpec strict validation.
-- [ ] 2.6 Hoàn tất phase chỉ khi có foundation để review nhưng chưa có resolver/assignment enforcement.
+- [x] 2.1 Viết tests đỏ cho revision/review/pair schema, published immutability, một-draft/một-published invariants và lifecycle generation snapshot.
+- [x] 2.2 Tạo migration forward-only thêm revision, review, allowlist và candidate provenance tables cùng constraints/indexes/audit.
+- [x] 2.3 Bootstrap revision 1 draft với `source_revision_id = NULL`, system/migration actor và candidate lịch sử trong một transaction; candidate chưa review không có authority.
+- [x] 2.4 Thêm tests cho bootstrap atomicity, content integrity, candidate non-authority, assay/sample-type retire/restore generation và rollback khi baseline sai.
+- [x] 2.5 Chạy focused migration/SQL/security tests và OpenSpec strict validation.
+- [x] 2.6 Hoàn tất phase chỉ khi có foundation để review nhưng chưa có resolver/assignment enforcement.
 
 ## 3. Phase 3 - Catalog RPC And Application Contracts (PR/Session 3)
 
