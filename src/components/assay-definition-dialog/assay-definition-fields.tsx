@@ -91,6 +91,7 @@ function ReadOnlyAssayFields({
 }) {
   return (
     <div className="space-y-4 py-4">
+      <ReadOnlyRow label="Mã chỉ tiêu" value={assay?.import_code || '-'} />
       <ReadOnlyRow label="Tên chỉ tiêu" value={assay?.name || '-'} />
       <ReadOnlyRow label="Nhóm kỹ thuật" value={getSpecialtyName(assay, specialties)} />
       <ReadOnlyRow label="Phương pháp" value={getAssayDefinitionMethodName(assay) || '-'} />
@@ -118,6 +119,10 @@ export function AssayDefinitionFields({
 
   return (
     <div className="space-y-4 py-4">
+      {mode === 'edit' && (
+        <ReadOnlyRow label="Mã chỉ tiêu" value={assay?.import_code || '-'} />
+      )}
+
       <div className="space-y-2">
         <Label htmlFor="name">
           Tên chỉ tiêu <span className="text-red-500">*</span>

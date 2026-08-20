@@ -153,9 +153,10 @@ export function AssayDefinitionsTable({
             ) : (
                 <>
                     <Card className="overflow-hidden border shadow-sm bg-white dark:bg-slate-900">
-                        <Table>
+                        <Table className="min-w-[1080px]">
                             <TableHeader>
                                 <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                                    <TableHead className="w-[132px] min-w-[132px] max-w-[132px] font-semibold text-slate-700 dark:text-slate-300">Mã chỉ tiêu</TableHead>
                                     <TableHead className="w-[250px] font-semibold text-slate-700 dark:text-slate-300">Tên chỉ tiêu</TableHead>
                                     <TableHead className="w-[180px] font-semibold text-slate-700 dark:text-slate-300">Nhóm kỹ thuật</TableHead>
                                     <TableHead className="w-[200px] font-semibold text-slate-700 dark:text-slate-300">Phương pháp/Thiết bị</TableHead>
@@ -167,6 +168,9 @@ export function AssayDefinitionsTable({
                             <TableBody>
                                 {localAssays.map((assay) => (
                                     <TableRow key={assay.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                        <TableCell className="w-[132px] min-w-[132px] max-w-[132px] font-mono text-sm tabular-nums text-slate-700 dark:text-slate-300">
+                                            {assay.import_code}
+                                        </TableCell>
                                         <TableCell className="font-medium">
                                             {assay.name}
                                         </TableCell>

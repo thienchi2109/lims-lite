@@ -82,6 +82,7 @@ const specialty: LabSpecialty = {
 
 const assay: AssayDefinition = {
   id: 'assay-1',
+  import_code: 'CT-000123',
   name: 'HIV Ag/Ab',
   specialty_id: specialty.id,
   method_name: 'ELISA',
@@ -128,6 +129,8 @@ describe('AssayDefinitionDialog detail mode', () => {
     expect(dialog.className).toContain('overflow-y-auto')
 
     expect(screen.getByText('Chi tiết chỉ tiêu xét nghiệm')).toBeDefined()
+    expect(screen.getByText('Mã chỉ tiêu')).toBeDefined()
+    expect(screen.getByText('CT-000123')).toBeDefined()
     expect(screen.getByText('HIV Ag/Ab')).toBeDefined()
     expect(screen.getByText('Miễn dịch')).toBeDefined()
     expect(screen.getByText('ELISA')).toBeDefined()
@@ -137,6 +140,7 @@ describe('AssayDefinitionDialog detail mode', () => {
     expect(screen.getAllByText('Có').length).toBeGreaterThan(0)
     expect(screen.getByText('Số (Numeric)')).toBeDefined()
     expect(screen.queryByLabelText(/Phương pháp/i)).toBeNull()
+    expect(screen.queryByLabelText('Mã chỉ tiêu')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Tạo' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Cập nhật' })).toBeNull()
   })
@@ -163,6 +167,7 @@ describe('AssayDefinitionDialog method entry', () => {
     expect(await screen.findByText('ELISA')).toBeDefined()
     expect(screen.getByText('CLIA')).toBeDefined()
     expect(screen.queryByText('Phương pháp ban đầu')).toBeNull()
+    expect(screen.queryByText('Mã chỉ tiêu')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Dùng gợi ý phương pháp CLIA' }))
     expect((screen.getByRole('textbox', { name: /Phương pháp/i }) as HTMLInputElement).value).toBe('CLIA')
 
@@ -188,6 +193,7 @@ describe('AssayDefinitionDialog method entry', () => {
       )
     })
     expect(mocks.createAssayDefinitionClient.mock.calls[0][0]).not.toHaveProperty('methodId')
+    expect(mocks.createAssayDefinitionClient.mock.calls[0][0]).not.toHaveProperty('import_code')
   })
 
   it('updates assay-owned Phương pháp text without showing catalog method management', async () => {
@@ -205,6 +211,9 @@ describe('AssayDefinitionDialog method entry', () => {
 
     const methodInput = screen.getByRole('textbox', { name: /Phương pháp/i })
     expect((methodInput as HTMLInputElement).value).toBe('Western blot')
+    expect(screen.getByText('Mã chỉ tiêu')).toBeDefined()
+    expect(screen.getByText('CT-000123')).toBeDefined()
+    expect(screen.queryByLabelText('Mã chỉ tiêu')).toBeNull()
     fireEvent.change(methodInput, {
       target: { value: 'ELISA cải tiến' },
     })
@@ -218,6 +227,7 @@ describe('AssayDefinitionDialog method entry', () => {
         }),
       )
     })
+    expect(mocks.updateAssayDefinitionClient.mock.calls[0][0]).not.toHaveProperty('import_code')
   })
 
   it('shows the approved reference range placeholder and submits multiline text', async () => {

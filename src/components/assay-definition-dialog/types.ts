@@ -58,6 +58,7 @@ export type RawValidationRules = {
 
 export type AssayDefinition = {
   id: string
+  import_code: string
   name: string
   specialty_id?: string | null
   method_name?: string | null

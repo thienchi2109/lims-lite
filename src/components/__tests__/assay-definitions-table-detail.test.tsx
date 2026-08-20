@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AssayDefinitionsTable } from '../assay-definitions-table'
 import type { AssayDefinition } from '../assay-definition-dialog/types'
@@ -40,6 +40,31 @@ vi.mock('@/app/actions/lab-specialties', () => ({
   createLabSpecialty: (...args: unknown[]) => mocks.createLabSpecialty(...args),
 }))
 
+vi.mock('../assay-definition-dialog/specialty-field', () => ({
+  SpecialtyField: ({
+    form,
+    specialties,
+  }: {
+    form: { watch: (name: 'specialtyId') => string; setValue: (name: 'specialtyId', value: string) => void }
+    specialties: LabSpecialty[]
+  }) => (
+    <label>
+      Nhóm kỹ thuật
+      <select
+        value={form.watch('specialtyId')}
+        onChange={(event) => form.setValue('specialtyId', event.target.value)}
+      >
+        <option value="">Chọn Nhóm kỹ thuật</option>
+        {specialties.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  ),
+}))
+
 global.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
@@ -59,6 +84,7 @@ const specialty: LabSpecialty = {
 
 const assay: AssayDefinition = {
   id: 'assay-1',
+  import_code: 'CT-000123',
   name: 'HIV Ag/Ab',
   specialty_id: specialty.id,
   method_name: 'RT-PCR',
@@ -116,5 +142,104 @@ describe('AssayDefinitionsTable detail action', () => {
 
     expect(screen.getByText('Phương pháp/Thiết bị')).toBeDefined()
     expect(screen.getByText('RT-PCR')).toBeDefined()
+  })
+
+  it('shows the server-provided assay code in a stable, horizontally scrollable column', () => {
+    render(
+      <AssayDefinitionsTable
+        assays={[assay]}
+        page={1}
+        pageSize={10}
+        totalPages={1}
+        totalCount={1}
+        specialties={[specialty]}
+      />,
+    )
+
+    const codeHeader = screen.getByRole('columnheader', { name: 'Mã chỉ tiêu' })
+    expect(codeHeader.className).toContain('w-[132px]')
+    expect(codeHeader.className).toContain('min-w-[132px]')
+    expect(codeHeader.className).toContain('max-w-[132px]')
+
+    const codeCell = screen.getByText('CT-000123').closest('td')
+    expect(codeCell?.className).toContain('font-mono')
+    expect(codeCell?.className).toContain('tabular-nums')
+    expect(document.querySelector('[data-slot="table-container"]')?.className).toContain('overflow-x-auto')
+    expect(screen.getByText('Trang 1 / 1')).toBeDefined()
+  })
+
+  it('keeps the returned import code in local table state after creating an assay', async () => {
+    const createdAssay: AssayDefinition = {
+      ...assay,
+      id: 'assay-2',
+      import_code: 'CT-000124',
+      name: 'HIV RNA',
+      method_name: 'RT-PCR',
+    }
+    mocks.createAssayDefinitionClient.mockResolvedValue({ data: createdAssay })
+
+    render(
+      <AssayDefinitionsTable
+        assays={[assay]}
+        page={1}
+        pageSize={10}
+        totalPages={1}
+        totalCount={1}
+        specialties={[specialty]}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Thêm mới' }))
+    expect(screen.queryByLabelText('Mã chỉ tiêu')).toBeNull()
+    fireEvent.change(screen.getByLabelText(/Tên chỉ tiêu/i), {
+      target: { value: createdAssay.name },
+    })
+    fireEvent.change(screen.getByLabelText(/Nhóm kỹ thuật/i), {
+      target: { value: specialty.id },
+    })
+    fireEvent.change(screen.getByRole('textbox', { name: /Phương pháp/i }), {
+      target: { value: createdAssay.method_name },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('CT-000124')).toBeDefined()
+    })
+    expect(mocks.createAssayDefinitionClient.mock.calls[0][0]).not.toHaveProperty('import_code')
+  })
+
+  it('preserves the import code in local table state after updating an assay', async () => {
+    const updatedAssay: AssayDefinition = {
+      ...assay,
+      name: 'HIV Ag/Ab thế hệ 4',
+    }
+    mocks.updateAssayDefinitionClient.mockResolvedValue({ data: updatedAssay })
+
+    render(
+      <AssayDefinitionsTable
+        assays={[assay]}
+        page={1}
+        pageSize={10}
+        totalPages={1}
+        totalCount={1}
+        specialties={[specialty]}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sửa chỉ tiêu' }))
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByText('Mã chỉ tiêu')).toBeDefined()
+    expect(within(dialog).getByText('CT-000123')).toBeDefined()
+    expect(within(dialog).queryByLabelText('Mã chỉ tiêu')).toBeNull()
+    fireEvent.change(screen.getByLabelText(/Tên chỉ tiêu/i), {
+      target: { value: updatedAssay.name },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Cập nhật' }))
+
+    await waitFor(() => {
+      expect(screen.getByText(updatedAssay.name)).toBeDefined()
+      expect(screen.getByText('CT-000123')).toBeDefined()
+    })
+    expect(mocks.updateAssayDefinitionClient.mock.calls[0][0]).not.toHaveProperty('import_code')
   })
 })

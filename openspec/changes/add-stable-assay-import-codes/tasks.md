@@ -19,12 +19,12 @@
 
 ## 3. Phase 3 - Manager Read-Only UI (PR/Session 3)
 
-- [ ] 3.1 Viết component test trước cho bảng và chế độ xem chi tiết, yêu cầu hiển thị nhãn tiếng Việt `Mã chỉ tiêu` và giá trị do server trả về.
-- [ ] 3.2 Hiển thị mã trong bảng quản lý chỉ tiêu với kích thước cột ổn định, nội dung dễ quét và không làm hỏng phân trang hoặc bộ lọc hiện có.
-- [ ] 3.3 Hiển thị mã trong chế độ xem/sửa ở trạng thái chỉ đọc; hộp thoại tạo không có control nhập mã và mọi submit payload tiếp tục loại bỏ `import_code`.
-- [ ] 3.4 Giữ `import_code` trong local table state sau callback tạo/cập nhật để không cần tải lại trang mới thấy mã.
-- [ ] 3.5 Chạy focused component tests, `npm run typecheck` và lint cho vùng thay đổi; kiểm tra nội dung tiếng Việt có dấu và không có regression responsive.
-- [ ] 3.6 Hoàn tất PR/session 3 chỉ khi quản lý xem được mã nhưng không có đường UI hoặc payload nào sửa được mã.
+- [x] 3.1 Viết component test trước cho bảng và chế độ xem chi tiết, yêu cầu hiển thị nhãn tiếng Việt `Mã chỉ tiêu` và giá trị do server trả về.
+- [x] 3.2 Hiển thị mã trong bảng quản lý chỉ tiêu với kích thước cột ổn định, nội dung dễ quét và không làm hỏng phân trang hoặc bộ lọc hiện có.
+- [x] 3.3 Hiển thị mã trong chế độ xem/sửa ở trạng thái chỉ đọc; hộp thoại tạo không có control nhập mã và mọi submit payload tiếp tục loại bỏ `import_code`.
+- [x] 3.4 Giữ `import_code` trong local table state sau callback tạo/cập nhật để không cần tải lại trang mới thấy mã.
+- [x] 3.5 Chạy focused component tests, `npm run typecheck` và lint cho vùng thay đổi; kiểm tra nội dung tiếng Việt có dấu và không có regression responsive.
+- [x] 3.6 Hoàn tất PR/session 3 chỉ khi quản lý xem được mã nhưng không có đường UI hoặc payload nào sửa được mã.
 
 ## 4. Phase 4 - Deployment And Runtime Verification (Session 4)
 
