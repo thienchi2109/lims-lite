@@ -30,8 +30,8 @@
 - [x] 4.2 Tạo `/manager/assays/compatibility`, liên kết từ trang chỉ tiêu và dùng toàn bộ nhãn/lỗi tiếng Việt; không lộ draft cho Analyst.
 - [x] 4.3 Chạy focused component tests, React Doctor, typecheck, lint và OpenSpec strict validation.
 - [x] 4.4 Sau merge/push, không apply lại 204-209; apply migration 209 và correction 210 forward-only trên home server, deploy manager app và chạy `run_security_tests()` cùng smoke manager workspace.
-- [ ] 4.5 Phụ trách chuyên môn review toàn bộ coverage, ghi lý do và publish revision 1; lưu revision/hash/actor aggregate không chứa dữ liệu định danh.
-- [ ] 4.6 Hoàn tất phase chỉ khi đúng một revision published hoàn chỉnh tồn tại và assignment production vẫn dùng contract cũ.
+- [x] 4.5 Phụ trách chuyên môn review toàn bộ coverage, ghi lý do và publish revision 1; lưu revision/hash/actor aggregate không chứa dữ liệu định danh.
+- [x] 4.6 Hoàn tất phase chỉ khi đúng một revision published hoàn chỉnh tồn tại và assignment production vẫn dùng contract cũ.
 
 ## 5. Phase 5 - Additive Resolver And Assignment V2 (PR/Session 5)
 
