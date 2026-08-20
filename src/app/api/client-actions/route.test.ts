@@ -327,6 +327,7 @@ describe('client action role guard', () => {
         const response = await POST(buildRequest('createAssayDefinition', {
             name: 'Anti HCV',
             methodName: 'CLIA',
+            importCode: 'CT-999999',
         }))
 
         expect(response.status).toBe(200)
@@ -334,6 +335,7 @@ describe('client action role guard', () => {
         const formData = mocks.createAssayDefinition.mock.calls[0][0] as FormData
         expect(formData.get('method_name')).toBe('CLIA')
         expect(formData.has('method_id')).toBe(false)
+        expect(formData.has('import_code')).toBe(false)
     })
 
     it('passes manager assay reference range as normal_range form data', async () => {
@@ -357,12 +359,14 @@ describe('client action role guard', () => {
             id: '11111111-1111-4111-8111-111111111111',
             name: 'Anti HCV',
             methodName: 'ELISA',
+            importCode: 'CT-999999',
         }))
 
         expect(response.status).toBe(200)
         expect(mocks.updateAssayDefinition).toHaveBeenCalledTimes(1)
         const formData = mocks.updateAssayDefinition.mock.calls[0][0] as FormData
         expect(formData.get('method_name')).toBe('ELISA')
+        expect(formData.has('import_code')).toBe(false)
     })
 
     it('passes blank manager assay update reference range so the server can clear it', async () => {

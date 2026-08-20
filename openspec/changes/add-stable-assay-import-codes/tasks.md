@@ -9,13 +9,13 @@
 
 ## 2. Phase 2 - RPC And Application Contracts (PR/Session 2)
 
-- [ ] 2.1 Rebase và đọc định nghĩa mới nhất của `get_assay_definitions`, `get_assay_definition_by_id`, `create_assay_definition` và `update_assay_definition`, đặc biệt sau mọi change liên quan đến phương pháp.
-- [ ] 2.2 Viết regression test trước cho row shape của RPC: các hợp đồng đọc/tìm kiếm/tạo trả `import_code`, còn hợp đồng tạo/cập nhật không nhận mã từ client.
-- [ ] 2.3 Tạo migration forward-only riêng để mở rộng RPC, giữ nguyên `SECURITY DEFINER`, `search_path`, grant/revoke, phân trang, bộ lọc và toàn bộ field assay đang tồn tại.
-- [ ] 2.4 Bổ sung `import_code` vào read schema/type trong `src/types/lab.ts`, nhưng không thêm vào `CreateAssayDefinitionSchema` hoặc payload cập nhật.
-- [ ] 2.5 Cập nhật assay queries, mutations và API client để giữ mã trong kết quả tạo/đọc mà không cho phép gửi mã lên server.
-- [ ] 2.6 Chạy focused RPC, schema và server-action tests cùng `npm run typecheck`; xác minh không khôi phục `method_id` hoặc làm mất `method_name`.
-- [ ] 2.7 Hoàn tất PR/session 2 chỉ khi database contract tương thích ngược với ứng dụng cũ và application contract sẵn sàng cho UI mới.
+- [x] 2.1 Rebase và đọc định nghĩa mới nhất của `get_assay_definitions`, `get_assay_definition_by_id`, `create_assay_definition` và `update_assay_definition`, đặc biệt sau mọi change liên quan đến phương pháp.
+- [x] 2.2 Viết regression test trước cho row shape của RPC: các hợp đồng đọc/tìm kiếm/tạo trả `import_code`, còn hợp đồng tạo/cập nhật không nhận mã từ client.
+- [x] 2.3 Tạo migration forward-only riêng để mở rộng RPC, giữ nguyên `SECURITY DEFINER`, `search_path`, grant/revoke, phân trang, bộ lọc và toàn bộ field assay đang tồn tại.
+- [x] 2.4 Bổ sung `import_code` vào read schema/type trong `src/types/lab.ts`, nhưng không thêm vào `CreateAssayDefinitionSchema` hoặc payload cập nhật.
+- [x] 2.5 Cập nhật assay queries, mutations và API client để giữ mã trong kết quả tạo/đọc mà không cho phép gửi mã lên server.
+- [x] 2.6 Chạy focused RPC, schema và server-action tests cùng `npm run typecheck`; xác minh không khôi phục `method_id` hoặc làm mất `method_name`.
+- [x] 2.7 Hoàn tất PR/session 2 chỉ khi database contract tương thích ngược với ứng dụng cũ và application contract sẵn sàng cho UI mới.
 
 ## 3. Phase 3 - Manager Read-Only UI (PR/Session 3)
 

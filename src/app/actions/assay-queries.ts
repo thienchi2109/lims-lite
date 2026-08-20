@@ -12,6 +12,7 @@ interface AssayMethod {
 
 interface AssayDefinition {
     id: string
+    import_code: string
     name: string
     specialty_id: string | null
     specialty_name: string | null
@@ -86,6 +87,7 @@ export async function getAssayDefinitions(params?: GetAssayDefinitionsParams) {
         const totalCount = Number(rows[0].total_count)
         const transformedData: AssayDefinition[] = rows.map((row) => ({
             id: row.id,
+            import_code: row.import_code,
             name: row.name,
             specialty_id: row.specialty_id,
             specialty_name: row.specialty_name,
@@ -147,6 +149,7 @@ export async function getAssayDefinitionById(id: string) {
         return {
             data: {
                 id: row.id,
+                import_code: row.import_code,
                 name: row.name,
                 specialty_id: row.specialty_id,
                 units: row.units,

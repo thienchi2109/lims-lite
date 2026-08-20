@@ -81,6 +81,7 @@ export type CreateAssayMethod = z.infer<typeof CreateAssayMethodSchema>
 
 export const AssayDefinitionSchema = z.object({
     id: z.string().uuid(),
+    import_code: z.string().regex(/^CT-[0-9]{6}$/),
     name: z.string().min(1).max(200),
     specialty_id: z.string().uuid().nullable().optional(),
     units: z.string().nullable(),

@@ -46,6 +46,7 @@ describe('assay mutation method text persistence', () => {
     it('creates an assay definition with assay-owned method_name without requiring assay_methods', async () => {
         const insertChain = createInsertChain({
             id: '11111111-1111-4111-8111-111111111111',
+            import_code: 'CT-000001',
             name: 'Anti HCV',
             method_name: 'CLIA',
         })
@@ -55,16 +56,21 @@ describe('assay mutation method text persistence', () => {
         const formData = new FormData()
         formData.set('name', 'Anti HCV')
         formData.set('method_name', 'CLIA')
+        formData.set('import_code', 'CT-999999')
 
         const result = await createAssayDefinition(formData)
 
         expect(result).toEqual({
             success: true,
-            data: expect.objectContaining({ method_name: 'CLIA' }),
+            data: expect.objectContaining({
+                import_code: 'CT-000001',
+                method_name: 'CLIA',
+            }),
         })
         expect(from).toHaveBeenCalledTimes(1)
         expect(from).toHaveBeenCalledWith('assay_definitions')
         expect(insertChain.insert).toHaveBeenCalledWith(expect.objectContaining({ method_name: 'CLIA' }))
+        expect(insertChain.insert.mock.calls[0][0]).not.toHaveProperty('import_code')
     })
 
     it('creates an assay definition with reference range text', async () => {
@@ -97,6 +103,7 @@ describe('assay mutation method text persistence', () => {
     it('updates assay-owned method_name on assay_definitions', async () => {
         const updateChain = createUpdateChain({
             id: '11111111-1111-4111-8111-111111111111',
+            import_code: 'CT-000001',
             name: 'Anti HCV',
             method_name: 'ELISA',
         })
@@ -106,14 +113,19 @@ describe('assay mutation method text persistence', () => {
         formData.set('id', '11111111-1111-4111-8111-111111111111')
         formData.set('name', 'Anti HCV')
         formData.set('method_name', 'ELISA')
+        formData.set('import_code', 'CT-999999')
 
         const result = await updateAssayDefinition(formData)
 
         expect(result).toEqual({
             success: true,
-            data: expect.objectContaining({ method_name: 'ELISA' }),
+            data: expect.objectContaining({
+                import_code: 'CT-000001',
+                method_name: 'ELISA',
+            }),
         })
         expect(updateChain.update).toHaveBeenCalledWith(expect.objectContaining({ method_name: 'ELISA' }))
+        expect(updateChain.update.mock.calls[0][0]).not.toHaveProperty('import_code')
     })
 
     it('updates reference range text on assay_definitions', async () => {

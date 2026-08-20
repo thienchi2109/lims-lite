@@ -18,6 +18,7 @@ import type {
     CreateClient,
     CoAManualInputs,
     SampleSubmissionReview,
+    AssayDefinition,
 } from '@/types'
 import type { SubmitResultReview } from '@/types'
 import type { ClientActionName } from '@/lib/client-actions/types'
@@ -59,6 +60,12 @@ type ClientActionErrorObject = {
 
 interface CallClientActionOptions {
     signal?: AbortSignal
+}
+
+type AssayDefinitionMutationResult = {
+    success?: boolean
+    data?: AssayDefinition
+    error?: unknown
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -231,11 +238,11 @@ export function removeMethodFromAssayClient(assayMethodId: string) {
 }
 
 export function createAssayDefinitionClient(payload: { name: string; specialty_id?: string; methodId?: string; methodName?: string; units?: string; normalRange?: string; validationRules?: Record<string, unknown>; is_confidential?: boolean }) {
-    return callClientAction('createAssayDefinition', payload)
+    return callClientAction<AssayDefinitionMutationResult>('createAssayDefinition', payload)
 }
 
 export function updateAssayDefinitionClient(payload: { id: string; name: string; specialty_id?: string; methodName?: string; units?: string; normalRange?: string; validationRules?: Record<string, unknown>; is_confidential?: boolean }) {
-    return callClientAction('updateAssayDefinition', payload)
+    return callClientAction<AssayDefinitionMutationResult>('updateAssayDefinition', payload)
 }
 
 export function deleteAssayDefinitionClient(id: string) {

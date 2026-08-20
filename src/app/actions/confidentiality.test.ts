@@ -65,6 +65,7 @@ describe('confidentiality schemas', () => {
         expect(() =>
             AssayDefinitionSchema.parse({
                 id: '11111111-1111-4111-8111-111111111111',
+                import_code: 'CT-000001',
                 name: 'HIV Ag/Ab',
                 specialty_id: null,
                 units: null,
@@ -76,6 +77,7 @@ describe('confidentiality schemas', () => {
         ).toThrow()
         const assay = AssayDefinitionSchema.parse({
             id: '11111111-1111-4111-8111-111111111111',
+            import_code: 'CT-000001',
             name: 'HIV Ag/Ab',
             specialty_id: null,
             units: null,

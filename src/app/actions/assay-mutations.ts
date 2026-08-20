@@ -6,6 +6,9 @@ import { z } from 'zod'
 import { CreateAssayDefinitionSchema } from '@/types'
 import { requireRole, isAuthError } from '@/lib/auth-helpers'
 
+const ASSAY_MUTATION_RETURN_COLUMNS =
+    'id, import_code, name, specialty_id, units, method_name, normal_range, validation_rules, is_confidential, created_at, updated_at, deleted_at' as const
+
 const UpdateAssayDefinitionSchema = z.object({
     id: z.string().uuid(),
     name: z.string().min(1).max(200),
@@ -76,7 +79,7 @@ export async function createAssayDefinition(formData: FormData) {
                 validation_rules: result.data.validation_rules || {},
                 is_confidential: result.data.is_confidential ?? false,
             })
-            .select()
+            .select(ASSAY_MUTATION_RETURN_COLUMNS)
             .single()
 
         if (assayError) {
@@ -167,7 +170,7 @@ export async function updateAssayDefinition(formData: FormData) {
             })
             .eq('id', result.data.id)
             .is('deleted_at', null)
-            .select()
+            .select(ASSAY_MUTATION_RETURN_COLUMNS)
             .single()
 
         if (error) {
