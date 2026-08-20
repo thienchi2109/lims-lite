@@ -1,11 +1,11 @@
 ## 1. Phase 1 - Database Core (PR/Session 1)
 
-- [ ] 1.1 Rebase trên `main`, đọc định nghĩa `assay_definitions` và migration mới nhất, rồi đối chiếu read-only với database trên home server qua SSH; xác nhận chưa có `import_code` và không có migration cạnh tranh chưa được xử lý.
-- [ ] 1.2 Viết regression test trước cho contract schema: sequence toàn cục `NO CYCLE`, định dạng `^CT-[0-9]{6}$`, backfill cả row đang hoạt động và đã xóa mềm, `NOT NULL`, uniqueness và trigger bất biến.
-- [ ] 1.3 Tạo một migration forward-only mới chỉ sở hữu database core: sequence có `MAXVALUE 999999`, column, backfill xác định theo `created_at` rồi UUID, default, constraints và bảo vệ cập nhật mã.
-- [ ] 1.4 Thêm security-impact comments và kiểm tra quyền sequence để client không nhận thêm quyền cấp mã trực tiếp; không thay đổi RLS hoặc quyền quản lý chỉ tiêu hiện có.
-- [ ] 1.5 Chạy focused migration tests và xác minh migration không sửa RPC, UI, mô hình phương pháp hoặc migration lịch sử.
-- [ ] 1.6 Hoàn tất PR/session 1 chỉ khi diff database core nhỏ, test đạt và migration chưa từng được áp dụng hoặc chỉnh sửa sau khi áp dụng.
+- [x] 1.1 Rebase trên `main`, đọc định nghĩa `assay_definitions` và migration mới nhất, rồi đối chiếu read-only với database trên home server qua SSH; xác nhận chưa có `import_code` và không có migration cạnh tranh chưa được xử lý.
+- [x] 1.2 Viết regression test trước cho contract schema: sequence toàn cục `NO CYCLE`, định dạng `^CT-[0-9]{6}$`, backfill cả row đang hoạt động và đã xóa mềm, `NOT NULL`, uniqueness và trigger bất biến.
+- [x] 1.3 Tạo một migration forward-only mới chỉ sở hữu database core: sequence có `MAXVALUE 999999`, column, backfill xác định theo `created_at` rồi UUID, default, constraints và bảo vệ cập nhật mã.
+- [x] 1.4 Thêm security-impact comments và kiểm tra quyền sequence để client không nhận thêm quyền cấp mã trực tiếp; không thay đổi RLS hoặc quyền quản lý chỉ tiêu hiện có.
+- [x] 1.5 Chạy focused migration tests và xác minh migration không sửa RPC, UI, mô hình phương pháp hoặc migration lịch sử.
+- [x] 1.6 Hoàn tất PR/session 1 chỉ khi diff database core nhỏ, test đạt và migration chưa từng được áp dụng hoặc chỉnh sửa sau khi áp dụng.
 
 ## 2. Phase 2 - RPC And Application Contracts (PR/Session 2)
 
