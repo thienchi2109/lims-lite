@@ -5,6 +5,13 @@ import { decodeJwtPayload } from '@/lib/jwt'
 
 const DOCTOR_ALLOWED_ACTIONS = new Set<ClientActionName>(['getSamples'])
 const MANAGER_FORBIDDEN_ACTIONS = new Set<ClientActionName>(['createSample', 'accessionAndAssignTests'])
+const MANAGER_ONLY_ACTIONS = new Set<ClientActionName>([
+    'getAssaySampleTypeCatalogManager',
+    'cloneAssaySampleTypeCatalogRevision',
+    'updateAssaySampleTypeCatalogReview',
+    'reviewAssaySampleTypeCatalogRevision',
+    'publishAssaySampleTypeCatalogRevision',
+])
 export const CLIENT_ACTION_FORBIDDEN_ERROR = 'Bạn không có quyền thực hiện thao tác này'
 
 function createCookieReader(request?: Request) {
@@ -76,6 +83,16 @@ export async function getClientActionDenial(action: ClientActionName, request?: 
             return null
         }
 
+        return {
+            error: CLIENT_ACTION_FORBIDDEN_ERROR,
+            status: 403,
+        }
+    }
+
+    if (
+        userData?.role !== 'manager'
+        && MANAGER_ONLY_ACTIONS.has(action)
+    ) {
         return {
             error: CLIENT_ACTION_FORBIDDEN_ERROR,
             status: 403,

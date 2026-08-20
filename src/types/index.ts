@@ -15,6 +15,9 @@ export * from './approval-batch'
 // Result review types: manual assessments and submission payloads
 export * from './result-review'
 
+// Assay/sample-type compatibility catalog contracts
+export * from './assay-sample-type-compatibility'
+
 // Analytics types: search, reports, dashboard
 export * from './analytics'
 

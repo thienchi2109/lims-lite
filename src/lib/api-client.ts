@@ -19,6 +19,14 @@ import type {
     CoAManualInputs,
     SampleSubmissionReview,
     AssayDefinition,
+    AssaySampleTypeCatalogManager,
+    CloneAssaySampleTypeCatalogRevision,
+    GetAssaySampleTypeCatalogManager,
+    GetPublishedAssaySampleTypeCatalog,
+    PublishAssaySampleTypeCatalogRevision,
+    PublishedAssaySampleTypeCatalog,
+    ReviewAssaySampleTypeCatalogRevision,
+    UpdateAssaySampleTypeCatalogReview,
 } from '@/types'
 import type { SubmitResultReview } from '@/types'
 import type { ClientActionName } from '@/lib/client-actions/types'
@@ -247,6 +255,48 @@ export function updateAssayDefinitionClient(payload: { id: string; name: string;
 
 export function deleteAssayDefinitionClient(id: string) {
     return callClientAction('deleteAssayDefinition', { id })
+}
+
+export function getAssaySampleTypeCatalogManagerClient(
+    payload: GetAssaySampleTypeCatalogManager = {},
+) {
+    return callClientAction<{ data?: AssaySampleTypeCatalogManager; error?: unknown }>(
+        'getAssaySampleTypeCatalogManager',
+        payload,
+    )
+}
+
+export function getPublishedAssaySampleTypeCatalogClient(
+    payload: GetPublishedAssaySampleTypeCatalog = {},
+) {
+    return callClientAction<{ data?: PublishedAssaySampleTypeCatalog; error?: unknown }>(
+        'getPublishedAssaySampleTypeCatalog',
+        payload,
+    )
+}
+
+export function cloneAssaySampleTypeCatalogRevisionClient(
+    payload: CloneAssaySampleTypeCatalogRevision,
+) {
+    return callClientAction('cloneAssaySampleTypeCatalogRevision', payload)
+}
+
+export function updateAssaySampleTypeCatalogReviewClient(
+    payload: UpdateAssaySampleTypeCatalogReview,
+) {
+    return callClientAction('updateAssaySampleTypeCatalogReview', payload)
+}
+
+export function reviewAssaySampleTypeCatalogRevisionClient(
+    payload: ReviewAssaySampleTypeCatalogRevision,
+) {
+    return callClientAction('reviewAssaySampleTypeCatalogRevision', payload)
+}
+
+export function publishAssaySampleTypeCatalogRevisionClient(
+    payload: PublishAssaySampleTypeCatalogRevision,
+) {
+    return callClientAction('publishAssaySampleTypeCatalogRevision', payload)
 }
 
 export function approveResultsClient(data: ApproveResults) {

@@ -18,11 +18,11 @@
 
 ## 3. Phase 3 - Catalog RPC And Application Contracts (PR/Session 3)
 
-- [ ] 3.1 Viết tests đỏ cho manager-only clone/update/review/publish, full coverage, same-manager publication, optimistic concurrency, content hash và audit actor/reason.
-- [ ] 3.2 Tạo migration forward-only cho catalog RPCs với `SECURITY DEFINER`, fixed `search_path`, explicit revoke/grant; Analyst chỉ đọc published catalog tối thiểu.
-- [ ] 3.3 Thêm Zod/TypeScript contracts và API client actions; client không gửi code, actor, hash hoặc publication state tùy ý.
-- [ ] 3.4 Chạy focused SQL/action/API tests, typecheck, lint và OpenSpec strict validation.
-- [ ] 3.5 Hoàn tất phase chỉ khi manager contracts đủ để quản trị catalog, Analyst không đọc draft và assignment RPC cũ vẫn nguyên trạng.
+- [x] 3.1 Viết tests đỏ cho manager-only clone/update/review/publish, full coverage, same-manager publication, optimistic concurrency, content hash và audit actor/reason.
+- [x] 3.2 Tạo migration forward-only cho catalog RPCs với `SECURITY DEFINER`, fixed `search_path`, explicit revoke/grant; Analyst chỉ đọc published catalog tối thiểu.
+- [x] 3.3 Thêm Zod/TypeScript contracts và API client actions; client không gửi code, actor, hash hoặc publication state tùy ý.
+- [x] 3.4 Chạy focused SQL/action/API tests, typecheck, lint và OpenSpec strict validation.
+- [x] 3.5 Hoàn tất phase chỉ khi manager contracts đủ để quản trị catalog, Analyst không đọc draft và assignment RPC cũ vẫn nguyên trạng.
 
 ## 4. Phase 4 - Manager Workspace And First Publication (PR/Session 4)
 

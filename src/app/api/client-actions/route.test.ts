@@ -12,6 +12,12 @@ const mocks = vi.hoisted(() => ({
     createAssayDefinition: vi.fn(),
     updateAssayDefinition: vi.fn(),
     getMethodNameSuggestions: vi.fn(),
+    getAssaySampleTypeCatalogManager: vi.fn(),
+    getPublishedAssaySampleTypeCatalog: vi.fn(),
+    cloneAssaySampleTypeCatalogRevision: vi.fn(),
+    updateAssaySampleTypeCatalogReview: vi.fn(),
+    reviewAssaySampleTypeCatalogRevision: vi.fn(),
+    publishAssaySampleTypeCatalogRevision: vi.fn(),
     createClient: vi.fn(),
     updateUser: vi.fn(),
     getSampleSubmissionReview: vi.fn(),
@@ -72,6 +78,21 @@ vi.mock('@/app/actions/assay-mutations', () => ({
     createAssayDefinition: (...args: unknown[]) => mocks.createAssayDefinition(...args),
     updateAssayDefinition: (...args: unknown[]) => mocks.updateAssayDefinition(...args),
     deleteAssayDefinition: vi.fn(),
+}))
+
+vi.mock('@/app/actions/assay-sample-type-compatibility', () => ({
+    getAssaySampleTypeCatalogManager: (...args: unknown[]) =>
+        mocks.getAssaySampleTypeCatalogManager(...args),
+    getPublishedAssaySampleTypeCatalog: (...args: unknown[]) =>
+        mocks.getPublishedAssaySampleTypeCatalog(...args),
+    cloneAssaySampleTypeCatalogRevision: (...args: unknown[]) =>
+        mocks.cloneAssaySampleTypeCatalogRevision(...args),
+    updateAssaySampleTypeCatalogReview: (...args: unknown[]) =>
+        mocks.updateAssaySampleTypeCatalogReview(...args),
+    reviewAssaySampleTypeCatalogRevision: (...args: unknown[]) =>
+        mocks.reviewAssaySampleTypeCatalogRevision(...args),
+    publishAssaySampleTypeCatalogRevision: (...args: unknown[]) =>
+        mocks.publishAssaySampleTypeCatalogRevision(...args),
 }))
 
 vi.mock('@/app/actions/assay-methods', () => ({
@@ -336,6 +357,62 @@ describe('client action role guard', () => {
         expect(formData.get('method_name')).toBe('CLIA')
         expect(formData.has('method_id')).toBe(false)
         expect(formData.has('import_code')).toBe(false)
+    })
+
+    it('dispatches manager compatibility review without derived publication fields', async () => {
+        mockRole('manager')
+        mocks.updateAssaySampleTypeCatalogReview.mockResolvedValue({ success: true })
+
+        const payload = {
+            revisionId: '11111111-1111-4111-8111-111111111111',
+            assayDefinitionId: '22222222-2222-4222-8222-222222222222',
+            disposition: 'configured',
+            reviewReason: 'Đã đối chiếu SOP',
+            sampleTypeIds: ['33333333-3333-4333-8333-333333333333'],
+            candidateDecisions: [],
+            expectedRevisionUpdatedAt: '2026-08-20T08:00:00.000Z',
+        }
+        const response = await POST(buildRequest(
+            'updateAssaySampleTypeCatalogReview',
+            payload,
+        ))
+
+        expect(response.status).toBe(200)
+        expect(mocks.updateAssaySampleTypeCatalogReview).toHaveBeenCalledWith(payload)
+    })
+
+    it('denies analyst access to manager compatibility actions', async () => {
+        mockRole('analyst')
+
+        const response = await POST(buildRequest(
+            'cloneAssaySampleTypeCatalogRevision',
+            {
+                sourceRevisionNumber: 1,
+                creationReason: 'Chuẩn bị revision hiệu chỉnh',
+            },
+        ))
+
+        expect(response.status).toBe(403)
+        expect(mocks.cloneAssaySampleTypeCatalogRevision).not.toHaveBeenCalled()
+    })
+
+    it('allows analysts to read the published compatibility catalog', async () => {
+        mockRole('analyst')
+        mocks.getPublishedAssaySampleTypeCatalog.mockResolvedValue({
+            data: {
+                revisionNumber: null,
+                sampleTypeId: null,
+                assays: [],
+            },
+        })
+
+        const response = await POST(buildRequest(
+            'getPublishedAssaySampleTypeCatalog',
+            {},
+        ))
+
+        expect(response.status).toBe(200)
+        expect(mocks.getPublishedAssaySampleTypeCatalog).toHaveBeenCalledWith({})
     })
 
     it('passes manager assay reference range as normal_range form data', async () => {

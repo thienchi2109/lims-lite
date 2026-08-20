@@ -22,6 +22,14 @@ import {
     deleteAssayDefinition,
 } from '@/app/actions/assay-mutations'
 import {
+    cloneAssaySampleTypeCatalogRevision,
+    getAssaySampleTypeCatalogManager,
+    getPublishedAssaySampleTypeCatalog,
+    publishAssaySampleTypeCatalogRevision,
+    reviewAssaySampleTypeCatalogRevision,
+    updateAssaySampleTypeCatalogReview,
+} from '@/app/actions/assay-sample-type-compatibility'
+import {
     addMethodToAssay,
     setDefaultMethod,
     removeMethodFromAssay,
@@ -198,6 +206,18 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
         }
         return deleteAssayDefinition(payload.id)
     },
+    getAssaySampleTypeCatalogManager: async (payload) =>
+        getAssaySampleTypeCatalogManager(payload),
+    getPublishedAssaySampleTypeCatalog: async (payload) =>
+        getPublishedAssaySampleTypeCatalog(payload),
+    cloneAssaySampleTypeCatalogRevision: async (payload) =>
+        cloneAssaySampleTypeCatalogRevision(payload),
+    updateAssaySampleTypeCatalogReview: async (payload) =>
+        updateAssaySampleTypeCatalogReview(payload),
+    reviewAssaySampleTypeCatalogRevision: async (payload) =>
+        reviewAssaySampleTypeCatalogRevision(payload),
+    publishAssaySampleTypeCatalogRevision: async (payload) =>
+        publishAssaySampleTypeCatalogRevision(payload),
     approveResults: async (payload) => approveResults(payload),
     cancelApproval: async (payload) => cancelApproval(payload),
     createUser: async (payload) => createUser(payload),
