@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 const migrationPath = join(
   process.cwd(),
-  'supabase/migrations/205_add_assay_sample_type_compatibility_revision_core.sql',
+  'supabase/migrations/206_add_assay_sample_type_compatibility_revision_core.sql',
 )
 
 function readMigration() {

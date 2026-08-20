@@ -1,4 +1,4 @@
--- Migration 205: Add assay/sample-type compatibility revision core.
+-- Migration 206: Add assay/sample-type compatibility revision core.
 --
 -- Security impact:
 -- - Adds four RLS-enabled internal catalog tables with no authenticated access.
@@ -21,24 +21,24 @@ DO $table_baseline$
 BEGIN
     IF to_regclass('public.assay_definitions') IS NULL THEN
         RAISE EXCEPTION
-            'Migration 205 requires public.assay_definitions';
+            'Migration 206 requires public.assay_definitions';
     END IF;
 
     IF to_regclass('public.sample_types') IS NULL THEN
         RAISE EXCEPTION
-            'Migration 205 requires public.sample_types from migration 204';
+            'Migration 206 requires public.sample_types from migration 205';
     END IF;
 
     IF to_regclass('public.samples') IS NULL THEN
-        RAISE EXCEPTION 'Migration 205 requires public.samples';
+        RAISE EXCEPTION 'Migration 206 requires public.samples';
     END IF;
 
     IF to_regclass('public.results') IS NULL THEN
-        RAISE EXCEPTION 'Migration 205 requires public.results';
+        RAISE EXCEPTION 'Migration 206 requires public.results';
     END IF;
 
     IF to_regclass('public.audit_logs') IS NULL THEN
-        RAISE EXCEPTION 'Migration 205 requires public.audit_logs';
+        RAISE EXCEPTION 'Migration 206 requires public.audit_logs';
     END IF;
 
     IF to_regclass(
@@ -55,7 +55,7 @@ BEGIN
        ) IS NOT NULL
     THEN
         RAISE EXCEPTION
-            'Migration 205 expected compatibility catalog tables to be absent';
+            'Migration 206 expected compatibility catalog tables to be absent';
     END IF;
 END;
 $table_baseline$;
@@ -74,7 +74,7 @@ BEGIN
           AND column_name = 'compatibility_generation'
     ) THEN
         RAISE EXCEPTION
-            'Migration 205 expected assay compatibility generation to be absent';
+            'Migration 206 expected assay compatibility generation to be absent';
     END IF;
 
     IF NOT EXISTS (
@@ -158,7 +158,7 @@ BEGIN
        )
     THEN
         RAISE EXCEPTION
-            'Migration 205 found an incompatible Phase 1 schema baseline';
+            'Migration 206 found an incompatible Phase 1 schema baseline';
     END IF;
 
     IF to_regprocedure(
@@ -169,7 +169,7 @@ BEGIN
        ) IS NULL
     THEN
         RAISE EXCEPTION
-            'Migration 205 requires timestamp and audit trigger functions';
+            'Migration 206 requires timestamp and audit trigger functions';
     END IF;
 
     IF to_regprocedure(
@@ -183,7 +183,7 @@ BEGIN
        ) IS NOT NULL
     THEN
         RAISE EXCEPTION
-            'Migration 205 found a partial compatibility function contract';
+            'Migration 206 found a partial compatibility function contract';
     END IF;
 
     IF NOT EXISTS (
@@ -216,7 +216,7 @@ BEGIN
        )
     THEN
         RAISE EXCEPTION
-            'Migration 205 requires enabled audit and sample-type lifecycle triggers';
+            'Migration 206 requires enabled audit and sample-type lifecycle triggers';
     END IF;
 END;
 $schema_baseline$;
@@ -240,7 +240,7 @@ BEGIN
 
     IF v_orphan_result_count <> 0 THEN
         RAISE EXCEPTION
-            'Migration 205 found % historical results without canonical assay/sample-type references',
+            'Migration 206 found % historical results without canonical assay/sample-type references',
             v_orphan_result_count;
     END IF;
 END;
@@ -1142,14 +1142,14 @@ BEGIN
        ) <> 1
     THEN
         RAISE EXCEPTION
-            'Migration 205 revision bootstrap verification failed';
+            'Migration 206 revision bootstrap verification failed';
     END IF;
 
     IF v_candidate_count <> v_expected_candidate_count
        OR v_candidate_difference_count <> 0
     THEN
         RAISE EXCEPTION
-            'Migration 205 candidate bootstrap verification failed: actual %, expected %, differences %',
+            'Migration 206 candidate bootstrap verification failed: actual %, expected %, differences %',
             v_candidate_count,
             v_expected_candidate_count,
             v_candidate_difference_count;
@@ -1159,19 +1159,19 @@ BEGIN
        OR v_compatibility_count <> 0
     THEN
         RAISE EXCEPTION
-            'Migration 205 candidates unexpectedly gained authority';
+            'Migration 206 candidates unexpectedly gained authority';
     END IF;
 
     IF v_invalid_generation_count <> 0 THEN
         RAISE EXCEPTION
-            'Migration 205 assay generation verification failed';
+            'Migration 206 assay generation verification failed';
     END IF;
 
     IF v_revision_audit_count <> 1
        OR v_candidate_audit_count <> v_candidate_count
     THEN
         RAISE EXCEPTION
-            'Migration 205 bootstrap audit verification failed';
+            'Migration 206 bootstrap audit verification failed';
     END IF;
 
     IF v_audit_trigger_count <> 4
@@ -1179,7 +1179,7 @@ BEGIN
        OR v_timestamp_trigger_count <> 4
     THEN
         RAISE EXCEPTION
-            'Migration 205 trigger binding verification failed';
+            'Migration 206 trigger binding verification failed';
     END IF;
 
     IF has_table_privilege(
@@ -1204,7 +1204,7 @@ BEGIN
        )
     THEN
         RAISE EXCEPTION
-            'Migration 205 catalog privilege verification failed';
+            'Migration 206 catalog privilege verification failed';
     END IF;
 END;
 $verification$;
