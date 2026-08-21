@@ -44,11 +44,11 @@
 
 ## 6. Phase 6 - Server And API Adoption (PR/Session 6)
 
-- [ ] 6.1 Viết action/API tests đỏ cho sample-type id/code, expected revision, RPC v2 selection và mapping error code sang thông báo tiếng Việt an toàn.
-- [ ] 6.2 Cập nhật Zod/types, `api-client` route và server actions dùng RPC v2; không fallback text tự do, raw DB error hoặc RPC cũ.
-- [ ] 6.3 Tạm thời chấp nhận legacy request shape chỉ để trả lỗi tiếng Việt yêu cầu tải lại; không thực hiện assignment và không fallback sang RPC cũ.
-- [ ] 6.4 Chạy focused action/API tests, typecheck, lint và OpenSpec strict validation.
-- [ ] 6.5 Hoàn tất phase sau merge/push nhưng chưa deploy app; release production phải chờ Phase 7 UI merge để không tạo trạng thái server/UI lệch contract.
+- [x] 6.1 Viết action/API tests đỏ cho sample-type id/code, expected revision, RPC v2 selection và mapping error code sang thông báo tiếng Việt an toàn.
+- [x] 6.2 Cập nhật Zod/types, `api-client` route và server actions dùng RPC v2; không fallback text tự do, raw DB error hoặc RPC cũ.
+- [x] 6.3 Tạm thời chấp nhận legacy request shape chỉ để trả lỗi tiếng Việt yêu cầu tải lại; không thực hiện assignment và không fallback sang RPC cũ.
+- [x] 6.4 Chạy focused action/API tests, typecheck, lint và OpenSpec strict validation.
+- [x] 6.5 Hoàn tất phase sau merge/push nhưng chưa deploy app; release production phải chờ Phase 7 UI merge để không tạo trạng thái server/UI lệch contract.
 
 ## 7. Phase 7 - Accession And Assignment UI (PR/Session 7)
 

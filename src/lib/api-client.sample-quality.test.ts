@@ -22,6 +22,9 @@ describe('sample quality client-action contract', () => {
             client_id: '11111111-1111-4111-8111-111111111111',
             client_name: 'Nguyen Van A',
             type: 'Máu',
+            sampleTypeId: '33333333-3333-4333-8333-333333333333',
+            sampleTypeCode: 'LM-000001',
+            expectedRevisionNumber: 7,
             sample_quality: true,
         } as Parameters<typeof createSampleClient>[0]
 
@@ -39,6 +42,9 @@ describe('sample quality client-action contract', () => {
             client_id: '11111111-1111-4111-8111-111111111111',
             client_name: 'Nguyen Van A',
             type: 'Máu',
+            sampleTypeId: '33333333-3333-4333-8333-333333333333',
+            sampleTypeCode: 'LM-000001',
+            expectedRevisionNumber: 7,
             sample_quality: false,
             tests: [{
                 assayId: '22222222-2222-4222-8222-222222222222',

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
     CreateSampleSchema,
+    CreateSampleV2Schema,
     CreateSampleWithAssignmentsSchema,
+    CreateSampleWithAssignmentsV2Schema,
     ResultWithAssaySchema,
     SampleDataSchema,
     SampleSchema,
@@ -29,6 +31,12 @@ const createSample = {
     client_id: '22222222-2222-4222-8222-222222222222',
     client_name: 'Nguyen Van A',
     type: 'Máu',
+}
+
+const sampleTypeSelection = {
+    sampleTypeId: '55555555-5555-4555-8555-555555555555',
+    sampleTypeCode: 'LM-000001',
+    expectedRevisionNumber: 7,
 }
 
 describe('sample quality domain contract', () => {
@@ -61,6 +69,28 @@ describe('sample quality domain contract', () => {
 
     it('keeps quality outside the generic sample update contract', () => {
         expect(UpdateSampleSchema.shape).not.toHaveProperty('sample_quality')
+    })
+
+    it.each([
+        ['CreateSampleV2Schema', CreateSampleV2Schema, createSample],
+        [
+            'CreateSampleWithAssignmentsV2Schema',
+            CreateSampleWithAssignmentsV2Schema,
+            {
+                ...createSample,
+                tests: [{
+                    assayId: '44444444-4444-4444-8444-444444444444',
+                    methodId: null,
+                }],
+            },
+        ],
+    ])('%s requires the sample-type selection and expected revision', (_name, schema, payload) => {
+        expect(schema.safeParse({ ...payload, sample_quality: true }).success).toBe(false)
+        expect(schema.safeParse({
+            ...payload,
+            ...sampleTypeSelection,
+            sample_quality: true,
+        }).success).toBe(true)
     })
 
     it.each([

@@ -8,8 +8,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { requireRole, isAuthError } from '@/lib/auth-helpers'
-import { AssignTestsSchema, type AssignTests, type ResultStatus } from '@/types'
+import { AssignTestsSchema, AssignTestsV2Schema, type AssignTests, type ResultStatus } from '@/types'
 import { getAssayDefinitionMethodName } from '@/lib/assay-method-name'
+import {
+    createLegacyAssignmentRequestError,
+    hasAssignmentV2Fields,
+    mapAssignmentV2ActionError,
+    mapAssignmentV2RpcError,
+} from './sample-assignment-v2-errors'
 
 /**
  * Raw result with joined assay and method for getSampleTests query
@@ -39,17 +45,23 @@ export async function assignTests(data: AssignTests) {
         const auth = await requireRole(['analyst', 'manager'])
         if (isAuthError(auth)) return { error: 'Không có quyền chỉ định xét nghiệm' }
 
-        const supabase = await createClient()
-        const validatedData = AssignTestsSchema.parse(data)
+        if (!hasAssignmentV2Fields(data)) {
+            return createLegacyAssignmentRequestError()
+        }
 
-        const { data: rpcResult, error: rpcError } = await supabase.rpc('assign_tests_to_sample', {
+        const supabase = await createClient()
+        const validatedData = AssignTestsV2Schema.parse(data)
+
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('assign_tests_to_sample_v2', {
             p_sample_id: validatedData.sampleId,
+            p_sample_type_id: validatedData.sampleTypeId,
             p_tests: validatedData.tests,
+            p_expected_revision_number: validatedData.expectedRevisionNumber,
         })
 
         if (rpcError) {
-            console.error('Error in assign_tests_to_sample RPC:', rpcError)
-            return { error: rpcError.message }
+            console.error('Error in assign_tests_to_sample_v2 RPC:', rpcError)
+            return { error: mapAssignmentV2RpcError(rpcError) }
         }
 
         if (!rpcResult) {
@@ -65,7 +77,7 @@ export async function assignTests(data: AssignTests) {
         return { success: true, data: rpcResult }
     } catch (error) {
         console.error('Error in assignTests:', error)
-        return { error: error instanceof Error ? error.message : 'Failed to assign tests' }
+        return { error: mapAssignmentV2ActionError(error) }
     }
 }
 

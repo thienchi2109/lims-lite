@@ -10,14 +10,20 @@ import { revalidatePath } from 'next/cache'
 import { requireAuth, requireRole, isAuthError } from '@/lib/auth-helpers'
 import { z } from 'zod'
 import {
-    CreateSampleSchema,
-    CreateSampleWithAssignmentsSchema,
+    CreateSampleV2Schema,
+    CreateSampleWithAssignmentsV2Schema,
     UpdateSampleSchema,
     type CreateSample,
     type CreateSampleWithAssignments,
     type UpdateSample,
     type SampleListParams,
 } from '@/types'
+import {
+    createLegacyAssignmentRequestError,
+    hasAssignmentV2Fields,
+    mapAssignmentV2ActionError,
+    mapAssignmentV2RpcError,
+} from './sample-assignment-v2-errors'
 import { enrichSampleReceiverNames, fetchSamples } from '@/lib/data/samples'
 import {
     isConfidentialAssociatedSample,
@@ -48,21 +54,26 @@ export async function createSample(data: CreateSample) {
         const auth = await requireRole('analyst')
         if (isAuthError(auth)) return auth
 
-        const supabase = await createClient()
-        const validatedData = CreateSampleSchema.parse(data)
+        if (!hasAssignmentV2Fields(data)) {
+            return createLegacyAssignmentRequestError()
+        }
 
-        const { data: sample, error } = await supabase.rpc('create_sample_atomic', {
+        const supabase = await createClient()
+        const validatedData = CreateSampleV2Schema.parse(data)
+
+        const { data: sample, error } = await supabase.rpc('create_sample_atomic_v2', {
             p_client_id: validatedData.client_id,
             p_client_name: validatedData.client_name || null,
-            p_type: validatedData.type,
             p_received_at: validatedData.received_at || null,
             p_received_by: auth.id,
+            p_sample_type_id: validatedData.sampleTypeId,
             p_sample_quality: validatedData.sample_quality,
+            p_expected_revision_number: validatedData.expectedRevisionNumber,
         })
 
         if (error) {
-            console.error('Error creating sample:', error)
-            return { error: error.message }
+            console.error('Error in create_sample_atomic_v2 RPC:', error)
+            return { error: mapAssignmentV2RpcError(error) }
         }
 
         revalidatePath('/analyst/samples')
@@ -73,7 +84,7 @@ export async function createSample(data: CreateSample) {
         return { data: sample }
     } catch (error) {
         console.error('Error in createSample:', error)
-        return { error: error instanceof Error ? error.message : 'Failed to create sample' }
+        return { error: mapAssignmentV2ActionError(error) }
     }
 }
 
@@ -85,21 +96,26 @@ export async function accessionAndAssignTests(data: CreateSampleWithAssignments)
         const auth = await requireRole('analyst')
         if (isAuthError(auth)) return auth
 
-        const supabase = await createClient()
-        const validatedData = CreateSampleWithAssignmentsSchema.parse(data)
+        if (!hasAssignmentV2Fields(data)) {
+            return createLegacyAssignmentRequestError()
+        }
 
-        const { data: rpcResult, error } = await supabase.rpc('accession_and_assign_tests', {
+        const supabase = await createClient()
+        const validatedData = CreateSampleWithAssignmentsV2Schema.parse(data)
+
+        const { data: rpcResult, error } = await supabase.rpc('accession_and_assign_tests_v2', {
             p_client_id: validatedData.client_id,
             p_client_name: validatedData.client_name,
-            p_type: validatedData.type,
             p_received_at: validatedData.received_at || null,
             p_tests: validatedData.tests,
+            p_sample_type_id: validatedData.sampleTypeId,
             p_sample_quality: validatedData.sample_quality,
+            p_expected_revision_number: validatedData.expectedRevisionNumber,
         })
 
         if (error) {
-            console.error('Error in accession_and_assign_tests RPC:', error)
-            return { error: error.message }
+            console.error('Error in accession_and_assign_tests_v2 RPC:', error)
+            return { error: mapAssignmentV2RpcError(error) }
         }
 
         revalidatePath('/analyst/samples')
@@ -110,7 +126,7 @@ export async function accessionAndAssignTests(data: CreateSampleWithAssignments)
         return { data: rpcResult }
     } catch (error) {
         console.error('Error in accessionAndAssignTests:', error)
-        return { error: error instanceof Error ? error.message : 'Failed to accession sample' }
+        return { error: mapAssignmentV2ActionError(error) }
     }
 }
 

@@ -7,6 +7,18 @@ import { z } from 'zod'
 import { PaginationSchema, SampleStatus, SampleType } from './core'
 import { UUID_REGEX } from '@/lib/utils-lims'
 
+const SampleTypeSelectionSchema = z.object({
+    sampleTypeId: z.string().uuid(),
+    sampleTypeCode: z.string().regex(/^LM-[0-9]{6}$/),
+    expectedRevisionNumber: z.number().int().positive(),
+})
+
+const OptionalSampleTypeSelectionSchema = z.object({
+    sampleTypeId: z.string().uuid().optional(),
+    sampleTypeCode: z.string().regex(/^LM-[0-9]{6}$/).optional(),
+    expectedRevisionNumber: z.number().int().positive().optional(),
+})
+
 export const SampleSchema = z.object({
     id: z.string().uuid(),
     sample_id: z.string().min(1).max(100),
@@ -27,7 +39,7 @@ export const SampleSchema = z.object({
 
 export type Sample = z.infer<typeof SampleSchema>
 
-export const CreateSampleSchema = z.object({
+const CreateSampleBaseSchema = z.object({
     sample_id: z.string().min(1).max(100).optional(),
     client_id: z.string().uuid(),
     client_name: z.string().min(1).max(200).optional(),
@@ -36,9 +48,12 @@ export const CreateSampleSchema = z.object({
     received_at: z.string().datetime().optional(),
 })
 
+export const CreateSampleSchema = CreateSampleBaseSchema.merge(OptionalSampleTypeSelectionSchema)
+export const CreateSampleV2Schema = CreateSampleBaseSchema.merge(SampleTypeSelectionSchema)
+
 export type CreateSample = z.infer<typeof CreateSampleSchema>
 
-export const CreateSampleWithAssignmentsSchema = z.object({
+const CreateSampleWithAssignmentsBaseSchema = z.object({
     client_id: z.string().uuid(),
     client_name: z.string().min(1).max(200),
     type: SampleType,
@@ -49,6 +64,11 @@ export const CreateSampleWithAssignmentsSchema = z.object({
         methodId: z.string().nullable(),
     })).min(1, 'At least one test must be selected'),
 })
+
+export const CreateSampleWithAssignmentsSchema =
+    CreateSampleWithAssignmentsBaseSchema.merge(OptionalSampleTypeSelectionSchema)
+export const CreateSampleWithAssignmentsV2Schema =
+    CreateSampleWithAssignmentsBaseSchema.merge(SampleTypeSelectionSchema)
 
 export type CreateSampleWithAssignments = z.infer<typeof CreateSampleWithAssignmentsSchema>
 
@@ -63,13 +83,16 @@ export const UpdateSampleSchema = z.object({
 
 export type UpdateSample = z.infer<typeof UpdateSampleSchema>
 
-export const AssignTestsSchema = z.object({
+const AssignTestsBaseSchema = z.object({
     sampleId: z.string().uuid(),
     tests: z.array(z.object({
         assayId: z.string().uuid(),
         methodId: z.string().nullable(),
     })).min(1, 'At least one test must be selected'),
 })
+
+export const AssignTestsSchema = AssignTestsBaseSchema.merge(OptionalSampleTypeSelectionSchema)
+export const AssignTestsV2Schema = AssignTestsBaseSchema.merge(SampleTypeSelectionSchema)
 
 export type AssignTests = z.infer<typeof AssignTestsSchema>
 

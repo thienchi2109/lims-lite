@@ -31,6 +31,9 @@ function createSamplePayload(sampleQuality?: boolean) {
         client_id: '22222222-2222-4222-8222-222222222222',
         client_name: 'Nguyen Van A',
         type: 'Máu',
+        sampleTypeId: '55555555-5555-4555-8555-555555555555',
+        sampleTypeCode: 'LM-000001',
+        expectedRevisionNumber: 7,
         received_at: '2026-07-20T08:30:00.000Z',
         ...(sampleQuality === undefined ? {} : { sample_quality: sampleQuality }),
     } as Parameters<typeof createSample>[0]
@@ -41,6 +44,9 @@ function createAssignedPayload(sampleQuality?: boolean) {
         client_id: '22222222-2222-4222-8222-222222222222',
         client_name: 'Nguyen Van A',
         type: 'Máu',
+        sampleTypeId: '55555555-5555-4555-8555-555555555555',
+        sampleTypeCode: 'LM-000001',
+        expectedRevisionNumber: 7,
         received_at: '2026-07-20T08:30:00.000Z',
         tests: [{
             assayId: '33333333-3333-4333-8333-333333333333',
@@ -64,34 +70,74 @@ describe('sample quality Server Action contract', () => {
         vi.restoreAllMocks()
     })
 
-    it('passes acceptable quality to create_sample_atomic with the exact RPC contract', async () => {
+    it('passes acceptable quality to create_sample_atomic_v2 with the exact RPC contract', async () => {
         await createSample(createSamplePayload(true))
 
         expect(mockRequireRole).toHaveBeenCalledWith('analyst')
-        expect(mockRpc).toHaveBeenCalledWith('create_sample_atomic', {
+        expect(mockRpc).toHaveBeenCalledWith('create_sample_atomic_v2', {
             p_client_id: '22222222-2222-4222-8222-222222222222',
             p_client_name: 'Nguyen Van A',
-            p_type: 'Máu',
             p_received_at: '2026-07-20T08:30:00.000Z',
             p_received_by: analyst.id,
+            p_sample_type_id: '55555555-5555-4555-8555-555555555555',
             p_sample_quality: true,
+            p_expected_revision_number: 7,
         })
     })
 
-    it('passes unacceptable quality to accession_and_assign_tests with the exact RPC contract', async () => {
+    it('passes unacceptable quality to accession_and_assign_tests_v2 with the exact RPC contract', async () => {
         await accessionAndAssignTests(createAssignedPayload(false))
 
         expect(mockRequireRole).toHaveBeenCalledWith('analyst')
-        expect(mockRpc).toHaveBeenCalledWith('accession_and_assign_tests', {
+        expect(mockRpc).toHaveBeenCalledWith('accession_and_assign_tests_v2', {
             p_client_id: '22222222-2222-4222-8222-222222222222',
             p_client_name: 'Nguyen Van A',
-            p_type: 'Máu',
             p_received_at: '2026-07-20T08:30:00.000Z',
             p_tests: [{
                 assayId: '33333333-3333-4333-8333-333333333333',
                 methodId: '44444444-4444-4444-8444-444444444444',
             }],
+            p_sample_type_id: '55555555-5555-4555-8555-555555555555',
             p_sample_quality: false,
+            p_expected_revision_number: 7,
+        })
+    })
+
+    it('rejects legacy accession payloads with a reload instruction before any RPC call', async () => {
+        const legacyPayload = {
+            client_id: '22222222-2222-4222-8222-222222222222',
+            client_name: 'Nguyen Van A',
+            type: 'Máu',
+            received_at: '2026-07-20T08:30:00.000Z',
+            sample_quality: true,
+            tests: [{
+                assayId: '33333333-3333-4333-8333-333333333333',
+                methodId: '44444444-4444-4444-8444-444444444444',
+            }],
+        }
+
+        const result = await accessionAndAssignTests(legacyPayload as never)
+
+        expect(result).toEqual({
+            error: 'Dữ liệu chỉ định đã cũ. Vui lòng tải lại trang và chọn lại loại mẫu.',
+        })
+        expect(mockRpc).not.toHaveBeenCalled()
+    })
+
+    it('maps assignment v2 SQLSTATE errors to safe Vietnamese messages', async () => {
+        mockRpc.mockResolvedValueOnce({
+            data: null,
+            error: {
+                code: 'P1105',
+                message: 'Assay and sample type are incompatible',
+                details: 'assay_id=hidden sample_type_id=hidden',
+            },
+        })
+
+        const result = await accessionAndAssignTests(createAssignedPayload(true))
+
+        expect(result).toEqual({
+            error: 'Chỉ tiêu đã chọn không tương thích với loại mẫu. Vui lòng chọn lại.',
         })
     })
 
