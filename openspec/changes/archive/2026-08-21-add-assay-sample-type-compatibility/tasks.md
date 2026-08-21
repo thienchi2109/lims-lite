@@ -69,9 +69,9 @@
 
 ## 9. Phase 9 - Final Deployment And Runtime Verification (Session 9)
 
-- [ ] 9.1 Xác nhận các PR đã merge/push theo thứ tự, source và `/opt/lims-lite` up-to-date, migration numbers duy nhất và file đã apply giữ nguyên byte-for-byte.
-- [ ] 9.2 Query preconditions: đúng một published revision hoàn chỉnh, không blank/collision, mọi assay active có disposition và mọi configured assay có pair active không stale.
-- [ ] 9.3 Apply migration enforcement bằng `sudo -n docker exec ... psql -v ON_ERROR_STOP=1`; nếu lỗi, dừng và sửa bằng migration forward-only.
-- [ ] 9.4 Chạy `run_security_tests()`, SQL regression suite và transactional drills cho valid/incompatible/stale/method-change/restore/direct-insert; không persist fixture.
-- [ ] 9.5 Chạy app health checks, production smoke manager catalog và accession desktop/mobile; chạy focused tests, typecheck, lint và `openspec validate --all --strict`.
-- [ ] 9.6 Cập nhật #107 và bổ sung runtime evidence vào #110 đã đóng, xác nhận contract revision sẵn sàng cho #112, archive change, commit/push archive và kiểm tra repo up-to-date với origin.
+- [x] 9.1 Xác nhận các PR đã merge/push theo thứ tự, source và `/opt/lims-lite` up-to-date, migration numbers duy nhất và file đã apply giữ nguyên byte-for-byte.
+- [x] 9.2 Query preconditions: đúng một published revision hoàn chỉnh, không blank/collision, mọi assay active có disposition và mọi configured assay có pair active không stale.
+- [x] 9.3 Apply migration enforcement bằng `sudo -n docker exec ... psql -v ON_ERROR_STOP=1`; nếu lỗi, dừng và sửa bằng migration forward-only.
+- [x] 9.4 Chạy `run_security_tests()`, SQL regression suite và transactional drills cho valid/incompatible/stale/method-change/restore/direct-insert; không persist fixture.
+- [x] 9.5 Chạy app health checks, production smoke manager catalog và accession desktop/mobile; chạy focused tests, typecheck, lint và `openspec validate --all --strict`.
+- [x] 9.6 Cập nhật #107 và bổ sung runtime evidence vào #110 đã đóng, xác nhận contract revision sẵn sàng cho #112, archive change, commit/push archive và kiểm tra repo up-to-date với origin.
