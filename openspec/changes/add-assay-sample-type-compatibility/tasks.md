@@ -61,11 +61,11 @@
 
 ## 8. Phase 8 - Database Enforcement (PR/Session 8)
 
-- [ ] 8.1 Viết tests đỏ cho direct `results` INSERT trigger, sample-type immutability sau result đầu tiên và precondition telemetry không còn assignment thành công qua contract cũ.
-- [ ] 8.2 Tạo migration enforcement forward-only: xác minh published revision hoàn chỉnh, retire/revoke RPC cũ, bật result trigger và khóa thay đổi loại mẫu sau assignment.
-- [ ] 8.3 Thêm tests chứng minh result lịch sử giữ nguyên, pair bị bỏ chỉ chặn INSERT mới và sửa loại mẫu trước result vẫn được audit.
-- [ ] 8.4 Chạy focused migration/SQL/security tests, review exact function/trigger/grant bindings và OpenSpec strict validation.
-- [ ] 8.5 Hoàn tất phase chỉ khi migration chưa apply production và rollback strategy là forward-only correction, không sửa file đã apply.
+- [x] 8.1 Viết tests đỏ cho direct `results` INSERT trigger, sample-type immutability sau result đầu tiên và precondition telemetry không còn assignment thành công qua contract cũ.
+- [x] 8.2 Tạo migration enforcement forward-only: xác minh published revision hoàn chỉnh, retire/revoke RPC cũ, bật result trigger và khóa thay đổi loại mẫu sau assignment.
+- [x] 8.3 Thêm tests chứng minh result lịch sử giữ nguyên, pair bị bỏ chỉ chặn INSERT mới và sửa loại mẫu trước result vẫn được audit.
+- [x] 8.4 Chạy focused migration/SQL/security tests, review exact function/trigger/grant bindings và OpenSpec strict validation.
+- [x] 8.5 Hoàn tất phase chỉ khi migration chưa apply production và rollback strategy là forward-only correction, không sửa file đã apply.
 
 ## 9. Phase 9 - Final Deployment And Runtime Verification (Session 9)
 
