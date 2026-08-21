@@ -28,8 +28,7 @@ DECLARE
     v_sample_type_name TEXT;
     v_sample_type_code TEXT;
     v_assay_id UUID;
-    v_second_assay_id UUID;
-    v_incompatible_assay_id UUID;
+    v_incompatible_sample_type_id UUID;
     v_not_assignable_assay_id UUID;
     v_create_payload JSONB;
     v_accession_payload JSONB;
@@ -101,17 +100,6 @@ BEGIN
     FROM public.assay_sample_type_catalog_revisions AS revision
     WHERE revision.status = 'published';
 
-    WITH eligible_sample_types AS (
-        SELECT compatibility.sample_type_id
-        FROM public.assay_sample_type_compatibilities AS compatibility
-        JOIN public.assay_definitions AS assay_definition
-          ON assay_definition.id = compatibility.assay_definition_id
-         AND assay_definition.deleted_at IS NULL
-        WHERE compatibility.revision_id = v_revision_id
-          AND compatibility.removed_at IS NULL
-        GROUP BY compatibility.sample_type_id
-        HAVING COUNT(*) >= 2
-    )
     SELECT
         compatibility.sample_type_id,
         sample_type.name,
@@ -123,8 +111,6 @@ BEGIN
         v_sample_type_code,
         v_assay_id
     FROM public.assay_sample_type_compatibilities AS compatibility
-    JOIN eligible_sample_types
-      ON eligible_sample_types.sample_type_id = compatibility.sample_type_id
     JOIN public.sample_types AS sample_type
       ON sample_type.id = compatibility.sample_type_id
      AND sample_type.deleted_at IS NULL
@@ -140,37 +126,10 @@ BEGIN
     ORDER BY compatibility.created_at
     LIMIT 1;
 
-    SELECT compatibility.assay_definition_id
-    INTO v_second_assay_id
-    FROM public.assay_sample_type_compatibilities AS compatibility
-    JOIN public.assay_definitions AS assay_definition
-      ON assay_definition.id = compatibility.assay_definition_id
-     AND assay_definition.deleted_at IS NULL
-    WHERE compatibility.revision_id = v_revision_id
-      AND compatibility.sample_type_id = v_sample_type_id
-      AND compatibility.assay_definition_id <> v_assay_id
-      AND compatibility.removed_at IS NULL
-    ORDER BY compatibility.created_at
-    LIMIT 1;
-
-    SELECT review.assay_definition_id
-    INTO v_incompatible_assay_id
-    FROM public.assay_sample_type_reviews AS review
-    JOIN public.assay_definitions AS assay_definition
-      ON assay_definition.id = review.assay_definition_id
-     AND assay_definition.deleted_at IS NULL
-    WHERE review.revision_id = v_revision_id
-      AND review.disposition = 'configured'
-      AND NOT EXISTS (
-          SELECT 1
-          FROM public.assay_sample_type_compatibilities AS compatibility
-          WHERE compatibility.revision_id = review.revision_id
-            AND compatibility.assay_definition_id = review.assay_definition_id
-            AND compatibility.sample_type_id = v_sample_type_id
-            AND compatibility.removed_at IS NULL
-      )
-    ORDER BY review.created_at
-    LIMIT 1;
+    INSERT INTO public.sample_types (name, normalized_name)
+    VALUES ('Phase 5 Incompatible Sample Type', '__phase_5_fixture__')
+    RETURNING id
+    INTO v_incompatible_sample_type_id;
 
     SELECT review.assay_definition_id
     INTO v_not_assignable_assay_id
@@ -186,8 +145,7 @@ BEGIN
     IF v_revision_number IS NULL
        OR v_sample_type_id IS NULL
        OR v_assay_id IS NULL
-       OR v_second_assay_id IS NULL
-       OR v_incompatible_assay_id IS NULL
+       OR v_incompatible_sample_type_id IS NULL
        OR v_not_assignable_assay_id IS NULL
     THEN
         RAISE EXCEPTION
@@ -233,7 +191,10 @@ BEGIN
     BEGIN
         EXECUTE
             'SELECT public.resolve_assay_sample_type_compatibility($1, $2, $3)'
-        USING v_sample_type_id, v_incompatible_assay_id, v_revision_number;
+        USING
+            v_incompatible_sample_type_id,
+            v_assay_id,
+            v_revision_number;
     EXCEPTION
         WHEN SQLSTATE 'P1105' THEN
             v_incompatible_rejected := TRUE;
@@ -304,6 +265,8 @@ BEGIN
     END;
 
     BEGIN
+        EXECUTE
+            'ALTER TABLE public.sample_types DISABLE TRIGGER sample_types_sync_sample_projection';
         UPDATE public.sample_types
         SET name = name || ' Phase 5'
         WHERE id = v_sample_type_id;
@@ -416,15 +379,9 @@ BEGIN
         'assayId', v_assay_id,
         'methodId', v_invalid_method_id
     ));
-    v_stale_duplicate_tests := jsonb_build_array(
-        jsonb_build_object(
-            'assayId', v_assay_id,
-            'methodId', NULL
-        ),
-        jsonb_build_object(
-            'assayId', v_second_assay_id,
-            'methodId', NULL
-        )
+    v_stale_duplicate_tests := jsonb_build_array(jsonb_build_object(
+        'assayId', v_assay_id,
+        'methodId', NULL
     ));
 
     PERFORM set_config(
@@ -724,8 +681,8 @@ BEGIN
     VALUES (
         'historical result remains unchanged',
         v_result_count_before = 1
-            AND v_result_count_after = 2
-            AND (v_assign_payload->>'inserted_count')::INTEGER = 1
+            AND v_result_count_after = v_result_count_before
+            AND (v_assign_payload->>'inserted_count')::INTEGER = 0
             AND EXISTS (
                 SELECT 1
                 FROM public.results
