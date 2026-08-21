@@ -348,6 +348,15 @@ describe('assay sample-type database enforcement migration', () => {
       'public.assign_tests_to_sample_v2',
     )
     expect(concurrencySql).toContain(
+      'sample_type_id=\\$(psql',
+    )
+    expect(concurrencySql).toContain(
+      'assay_id=\\$(psql',
+    )
+    expect(concurrencySql).toContain(
+      'revision_number=\\$(psql',
+    )
+    expect(concurrencySql).toContain(
       "! grep -Eq 'deadlock detected|40P01'",
     )
     expect(normalized).toMatch(
