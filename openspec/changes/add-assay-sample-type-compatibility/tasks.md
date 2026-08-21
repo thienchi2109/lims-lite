@@ -35,11 +35,11 @@
 
 ## 5. Phase 5 - Additive Resolver And Assignment V2 (PR/Session 5)
 
-- [ ] 5.1 Viết tests đỏ cho resolver success, missing catalog/pair, stale expected revision, inactive entity và generation mismatch sau method/rename/retire/restore.
-- [ ] 5.2 Viết transaction tests đỏ cho RPC v2, yêu cầu một pair lỗi rollback toàn bộ sample/result/audit và result lịch sử không bị diễn giải lại.
-- [ ] 5.3 Tạo migration additive cho resolver và RPC create/accession/assign v2 nhận `sample_type_id`/`expected_revision_number`; giữ nguyên RPC cũ.
-- [ ] 5.4 Preserve auth, sample status, method, sample quality, duplicate và audit behavior hiện tại; response v2 trả revision đã dùng và stable SQLSTATE.
-- [ ] 5.5 Chạy focused migration/SQL/security tests và OpenSpec strict validation.
+- [x] 5.1 Viết tests đỏ cho resolver success, missing catalog/pair, stale expected revision, inactive entity và generation mismatch sau method/rename/retire/restore.
+- [x] 5.2 Viết transaction tests đỏ cho RPC v2, yêu cầu một pair lỗi rollback toàn bộ sample/result/audit và result lịch sử không bị diễn giải lại.
+- [x] 5.3 Tạo migration additive cho resolver và RPC create/accession/assign v2 nhận `sample_type_id`/`expected_revision_number`; giữ nguyên RPC cũ.
+- [x] 5.4 Preserve auth, sample status, method, sample quality, duplicate và audit behavior hiện tại; response v2 trả revision đã dùng và stable SQLSTATE.
+- [x] 5.5 Chạy focused migration/SQL/security tests và OpenSpec strict validation.
 - [ ] 5.6 Sau merge/push, apply migration v2 trên home server và smoke app cũ để chứng minh additive compatibility.
 
 ## 6. Phase 6 - Server And API Adoption (PR/Session 6)
