@@ -7,6 +7,10 @@ const migrationPath = join(
   process.cwd(),
   'supabase/migrations/213_enforce_assay_sample_type_compatibility.sql',
 )
+const correctionMigrationPath = join(
+  process.cwd(),
+  'supabase/migrations/214_allow_internal_sample_projection_updates.sql',
+)
 const runtimeTestPath = join(
   process.cwd(),
   'tests/assay-sample-type-enforcement.test.sql',
@@ -26,6 +30,7 @@ const immutableMigrationHashes = new Map([
   ['210_allow_reviewed_compatibility_draft_hash.sql', '11f6dc8bb8d05c20b6b1456ca6c51cfb29508941a558ae271ff119305b2eeb42'],
   ['211_add_assay_sample_type_assignment_v2.sql', '221eedf69644e5c42749b35c029c6936a9cf777c2843a4e48db7e90fc03394a0'],
   ['212_recover_assay_sample_type_assignment_v2.sql', '489365236c355498c46ef8d7e72076c83f07ef08bbf160da3c7012de8d8791e3'],
+  ['213_enforce_assay_sample_type_compatibility.sql', '5b37a7422d2a69a99e1bf7dd7eaa5e68fd9ce4467b1551babdd30594abdf2269'],
 ])
 
 const legacySignatures = [
@@ -42,6 +47,12 @@ const v2Signatures = [
 
 function readMigration() {
   return existsSync(migrationPath) ? readFileSync(migrationPath, 'utf8') : ''
+}
+
+function readCorrectionMigration() {
+  return existsSync(correctionMigrationPath)
+    ? readFileSync(correctionMigrationPath, 'utf8')
+    : ''
 }
 
 function normalizeSql(sql: string) {
@@ -65,7 +76,7 @@ function extractFunction(sql: string, name: string) {
 }
 
 describe('assay sample-type database enforcement migration', () => {
-  it('adds only migration 213 and preserves applied compatibility migrations', () => {
+  it('preserves applied compatibility migrations byte-for-byte', () => {
     expect(existsSync(migrationPath)).toBe(true)
 
     for (const [fileName, expectedHash] of immutableMigrationHashes) {
@@ -77,6 +88,34 @@ describe('assay sample-type database enforcement migration', () => {
         fileName,
       ).toBe(expectedHash)
     }
+  })
+
+  it('adds a forward-only correction for unchanged historical receivers', () => {
+    expect(existsSync(correctionMigrationPath)).toBe(true)
+
+    const normalized = normalizeSql(readCorrectionMigration())
+    const receiverGuard = extractFunction(
+      readCorrectionMigration(),
+      'enforce_analyst_sample_receiver',
+    )
+
+    expect(normalized).toContain(
+      "to_regprocedure('public.test_assay_sample_type_enforcement()')",
+    )
+    expect(normalized).toContain(
+      "tgname = 'samples_enforce_analyst_receiver'",
+    )
+    expect(receiverGuard).toBeDefined()
+    expect(receiverGuard).toMatch(
+      /IF TG_OP = 'UPDATE' THEN IF NEW\.received_by IS DISTINCT FROM OLD\.received_by THEN RAISE EXCEPTION 'Sample receiver cannot be changed after accession'[\s\S]*END IF; RETURN NEW; END IF;/i,
+    )
+    expect(receiverGuard).toMatch(
+      /IF NEW\.received_by IS NULL THEN RETURN NEW; END IF;[\s\S]*v_receiver_role <> 'analyst'/i,
+    )
+    expect(normalized).toContain(
+      'Migration 214 preserves analyst-only INSERT validation and receiver immutability',
+    )
+    expect(normalized).toContain('COMMIT')
   })
 
   it('pins the reviewed Phase 7 telemetry precondition', () => {
