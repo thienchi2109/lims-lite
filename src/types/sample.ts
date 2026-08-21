@@ -24,6 +24,7 @@ export const SampleSchema = z.object({
     sample_id: z.string().min(1).max(100),
     client_id: z.string().uuid().nullable(),
     client_name: z.string().nullable(),
+    sample_type_id: z.string().uuid().nullable().optional(),
     type: SampleType.nullable().optional(),
     status: SampleStatus,
     sample_quality: z.boolean().nullable(),

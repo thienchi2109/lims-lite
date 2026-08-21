@@ -144,6 +144,31 @@ describe('AssayDefinitionsTable detail action', () => {
     expect(screen.getByText('RT-PCR')).toBeDefined()
   })
 
+  it('shows the published compatibility status in the manager read table', () => {
+    render(
+      <AssayDefinitionsTable
+        assays={[assay]}
+        page={1}
+        pageSize={10}
+        totalPages={1}
+        totalCount={1}
+        specialties={[specialty]}
+        compatibilityByAssayId={{
+          [assay.id]: {
+            disposition: 'configured',
+            isStale: false,
+            compatibleSampleTypeCount: 2,
+          },
+        }}
+        compatibilityRevisionNumber={7}
+      />,
+    )
+
+    expect(screen.getByRole('columnheader', { name: 'Tương thích loại mẫu' })).toBeDefined()
+    expect(screen.getByText('2 loại mẫu')).toBeDefined()
+    expect(screen.getByText(/Phiên bản 7/)).toBeDefined()
+  })
+
   it('shows the server-provided assay code in a stable, horizontally scrollable column', () => {
     render(
       <AssayDefinitionsTable

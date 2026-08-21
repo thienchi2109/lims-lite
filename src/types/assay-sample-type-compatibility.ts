@@ -156,6 +156,12 @@ export const AssaySampleTypeCatalogManagerSchema = z.object({
   assays: z.array(CatalogAssaySchema),
 }).strict()
 
+export const PublishedCatalogSampleTypeSchema = z.object({
+  id: UuidSchema,
+  importCode: z.string().regex(/^LM-[0-9]{6}$/),
+  name: z.string().trim().min(1),
+}).strict()
+
 const PublishedCatalogAssaySchema = z.object({
   sampleTypeId: UuidSchema,
   assayDefinitionId: UuidSchema,
@@ -168,6 +174,7 @@ const PublishedCatalogAssaySchema = z.object({
 export const PublishedAssaySampleTypeCatalogSchema = z.object({
   revisionNumber: z.number().int().positive().nullable(),
   sampleTypeId: UuidSchema.nullable(),
+  sampleTypes: z.array(PublishedCatalogSampleTypeSchema).default([]),
   assays: z.array(PublishedCatalogAssaySchema),
 }).strict()
 
@@ -194,4 +201,7 @@ export type AssaySampleTypeCatalogManager = z.infer<
 >
 export type PublishedAssaySampleTypeCatalog = z.infer<
   typeof PublishedAssaySampleTypeCatalogSchema
+>
+export type PublishedCatalogSampleType = z.infer<
+  typeof PublishedCatalogSampleTypeSchema
 >

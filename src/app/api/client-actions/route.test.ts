@@ -398,13 +398,19 @@ describe('client action role guard', () => {
 
     it('allows analysts to read the published compatibility catalog', async () => {
         mockRole('analyst')
-        mocks.getPublishedAssaySampleTypeCatalog.mockResolvedValue({
+        const catalogResponse = {
             data: {
-                revisionNumber: null,
+                revisionNumber: 7,
                 sampleTypeId: null,
+                sampleTypes: [{
+                    id: '11111111-1111-4111-8111-111111111111',
+                    importCode: 'LM-000001',
+                    name: 'Máu',
+                }],
                 assays: [],
             },
-        })
+        }
+        mocks.getPublishedAssaySampleTypeCatalog.mockResolvedValue(catalogResponse)
 
         const response = await POST(buildRequest(
             'getPublishedAssaySampleTypeCatalog',
@@ -413,6 +419,7 @@ describe('client action role guard', () => {
 
         expect(response.status).toBe(200)
         expect(mocks.getPublishedAssaySampleTypeCatalog).toHaveBeenCalledWith({})
+        await expect(response.json()).resolves.toEqual(catalogResponse)
     })
 
     it('passes manager assay reference range as normal_range form data', async () => {

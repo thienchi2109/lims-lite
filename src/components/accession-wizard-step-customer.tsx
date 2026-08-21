@@ -8,7 +8,7 @@
  * Extracted from contextContent in sample-accession-form.tsx.
  */
 
-import type { Client, SampleType, CreateClient } from '@/types'
+import type { Client, CreateClient, PublishedCatalogSampleType } from '@/types'
 import { ClientSelector } from '@/components/client-selector'
 import { SampleTypeSelector } from '@/components/sample-type-selector'
 import { ClientQrScannerDialog } from '@/components/client-qr-scanner-dialog'
@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import { SampleQualityField } from '@/components/sample-quality-field'
-import { Scan, Calendar, ArrowRight } from 'lucide-react'
+import { Scan, Calendar, ArrowRight, RefreshCw } from 'lucide-react'
 import type { ParsedClientIdentityQr } from '@/lib/qr/parse-client-identity-qr'
 import type { UseFormRegisterReturn } from 'react-hook-form'
 
@@ -37,8 +37,14 @@ interface StepCustomerProps {
     onIdentityScan: (identity: ParsedClientIdentityQr) => void | Promise<void>
     onInvalidScan: () => void
     /* Sample info */
-    selectedSampleType: SampleType
-    onSampleTypeChange: (type: SampleType) => void
+    sampleTypes: PublishedCatalogSampleType[]
+    selectedSampleTypeId: string | null
+    selectedSampleType: string
+    onSampleTypeChange: (sampleTypeId: string) => void
+    compatibilityLoading: boolean
+    compatibilityError: string | null
+    revisionNumber: number | null
+    onReloadCompatibility: () => void
     sampleQuality: boolean | null
     onSampleQualityChange: (value: boolean | null) => void
     receivedAtRegister: UseFormRegisterReturn<'received_at'>
@@ -60,8 +66,13 @@ export function AccessionWizardStepCustomer({
     onQRScan,
     onIdentityScan,
     onInvalidScan,
-    selectedSampleType,
+    sampleTypes,
+    selectedSampleTypeId,
     onSampleTypeChange,
+    compatibilityLoading,
+    compatibilityError,
+    revisionNumber,
+    onReloadCompatibility,
     sampleQuality,
     onSampleQualityChange,
     receivedAtRegister,
@@ -136,9 +147,27 @@ export function AccessionWizardStepCustomer({
                             Loại mẫu *
                         </Label>
                         <SampleTypeSelector
-                            value={selectedSampleType}
+                            value={selectedSampleTypeId}
+                            options={sampleTypes}
                             onChange={onSampleTypeChange}
+                            disabled={compatibilityLoading || sampleTypes.length === 0}
                         />
+                        <div className="mt-1 flex min-h-7 items-center justify-between gap-2">
+                            <span className="text-[10px] text-muted-foreground">
+                                {revisionNumber ? `Catalog phiên bản ${revisionNumber}` : compatibilityError}
+                            </span>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 shrink-0"
+                                onClick={onReloadCompatibility}
+                                disabled={compatibilityLoading}
+                                title="Tải lại catalog tương thích"
+                            >
+                                <RefreshCw className={`h-3.5 w-3.5 ${compatibilityLoading ? 'animate-spin' : ''}`} />
+                            </Button>
+                        </div>
                     </div>
 
                     <SampleQualityField

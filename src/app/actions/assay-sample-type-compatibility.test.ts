@@ -7,6 +7,10 @@ const mocks = vi.hoisted(() => ({
   requireRole: vi.fn(),
   revalidatePath: vi.fn(),
   rpc: vi.fn(),
+  from: vi.fn(),
+  select: vi.fn(),
+  is: vi.fn(),
+  order: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -52,7 +56,11 @@ describe('assay sample-type compatibility actions', () => {
       role: 'manager',
     })
     mocks.rpc.mockResolvedValue({ data: { ok: true }, error: null })
-    mocks.createClient.mockResolvedValue({ rpc: mocks.rpc })
+    mocks.order.mockResolvedValue({ data: [], error: null })
+    mocks.is.mockReturnValue({ order: mocks.order })
+    mocks.select.mockReturnValue({ is: mocks.is })
+    mocks.from.mockReturnValue({ select: mocks.select })
+    mocks.createClient.mockResolvedValue({ rpc: mocks.rpc, from: mocks.from })
   })
 
   it('forwards only manager-owned clone input to the RPC', async () => {
@@ -183,5 +191,46 @@ describe('assay sample-type compatibility actions', () => {
         p_sample_type_id: '33333333-3333-4333-8333-333333333333',
       },
     )
+  })
+
+  it('enriches the published catalog with active sample-type picker metadata', async () => {
+    const actions = await loadActions()
+    if (!actions) return
+
+    mocks.rpc.mockResolvedValueOnce({
+      data: {
+        revisionNumber: 7,
+        sampleTypeId: null,
+        assays: [],
+      },
+      error: null,
+    })
+    mocks.order.mockResolvedValueOnce({
+      data: [{
+        id: '33333333-3333-4333-8333-333333333333',
+        import_code: 'LM-000001',
+        name: 'Máu',
+      }],
+      error: null,
+    })
+
+    const result = await actions.getPublishedAssaySampleTypeCatalog({})
+
+    expect(mocks.from).toHaveBeenCalledWith('sample_types')
+    expect(mocks.select).toHaveBeenCalledWith('id, import_code, name')
+    expect(mocks.is).toHaveBeenCalledWith('deleted_at', null)
+    expect(mocks.order).toHaveBeenCalledWith('name')
+    expect(result).toEqual({
+      data: {
+        revisionNumber: 7,
+        sampleTypeId: null,
+        sampleTypes: [{
+          id: '33333333-3333-4333-8333-333333333333',
+          importCode: 'LM-000001',
+          name: 'Máu',
+        }],
+        assays: [],
+      },
+    })
   })
 })

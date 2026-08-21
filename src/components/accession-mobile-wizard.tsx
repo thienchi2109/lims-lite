@@ -9,7 +9,13 @@
  */
 
 import { useState, useCallback } from 'react'
-import type { Client, SampleType, SelectedTest, CreateClient, AssayDefinitionWithMethods } from '@/types'
+import type {
+    AssayDefinitionWithMethods,
+    Client,
+    CreateClient,
+    PublishedCatalogSampleType,
+    SelectedTest,
+} from '@/types'
 import type { GridRow } from '@/types/test-assignment'
 import type { ParsedClientIdentityQr } from '@/lib/qr/parse-client-identity-qr'
 import type { UseFormRegisterReturn } from 'react-hook-form'
@@ -33,8 +39,14 @@ export interface AccessionMobileWizardProps {
     onQRScan: (decodedText: string) => void | Promise<void>
     onIdentityScan: (identity: ParsedClientIdentityQr) => void | Promise<void>
     onInvalidScan: () => void
-    selectedSampleType: SampleType
-    onSampleTypeChange: (type: SampleType) => void
+    sampleTypes: PublishedCatalogSampleType[]
+    selectedSampleTypeId: string | null
+    selectedSampleType: string
+    onSampleTypeChange: (sampleTypeId: string) => void
+    compatibilityLoading: boolean
+    compatibilityError: string | null
+    revisionNumber: number | null
+    onReloadCompatibility: () => void
     sampleQuality: boolean | null
     onSampleQualityChange: (value: boolean | null) => void
     receivedAtRegister: UseFormRegisterReturn<'received_at'>
@@ -120,8 +132,14 @@ export function AccessionMobileWizard(props: AccessionMobileWizardProps) {
                         onQRScan={props.onQRScan}
                         onIdentityScan={props.onIdentityScan}
                         onInvalidScan={props.onInvalidScan}
+                        sampleTypes={props.sampleTypes}
+                        selectedSampleTypeId={props.selectedSampleTypeId}
                         selectedSampleType={props.selectedSampleType}
                         onSampleTypeChange={props.onSampleTypeChange}
+                        compatibilityLoading={props.compatibilityLoading}
+                        compatibilityError={props.compatibilityError}
+                        revisionNumber={props.revisionNumber}
+                        onReloadCompatibility={props.onReloadCompatibility}
                         sampleQuality={props.sampleQuality}
                         onSampleQualityChange={props.onSampleQualityChange}
                         receivedAtRegister={props.receivedAtRegister}

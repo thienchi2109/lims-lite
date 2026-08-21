@@ -1,10 +1,10 @@
 'use client'
 
 import type { UseFormRegisterReturn } from 'react-hook-form'
-import type { Client, CreateClient, SampleType } from '@/types'
+import type { Client, CreateClient, PublishedCatalogSampleType } from '@/types'
 import type { SampleLabelPreset } from '@/lib/sample-label-template'
 import type { ParsedClientIdentityQr } from '@/lib/qr/parse-client-identity-qr'
-import { AlertCircle, Barcode, Calendar, CheckCircle2, Eye, QrCode, Scan } from 'lucide-react'
+import { AlertCircle, Barcode, Calendar, CheckCircle2, Eye, QrCode, RefreshCw, Scan } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,8 +23,13 @@ interface SampleAccessionContextProps {
     clientFormData: Partial<CreateClient> | undefined
     onClientFormDataChange: (data: Partial<CreateClient> | undefined) => void
     onDraftOwnershipChange: () => void
-    selectedSampleType: SampleType
-    onSampleTypeChange: (type: SampleType) => void
+    sampleTypes: PublishedCatalogSampleType[]
+    selectedSampleTypeId: string | null
+    onSampleTypeChange: (sampleTypeId: string) => void
+    compatibilityLoading: boolean
+    compatibilityError: string | null
+    revisionNumber: number | null
+    onReloadCompatibility: () => void
     sampleQuality: boolean | null
     onSampleQualityChange: (value: boolean | null) => void
     receivedAtRegister: UseFormRegisterReturn<'received_at'>
@@ -52,8 +57,13 @@ export function SampleAccessionContext({
     clientFormData,
     onClientFormDataChange,
     onDraftOwnershipChange,
-    selectedSampleType,
+    sampleTypes,
+    selectedSampleTypeId,
     onSampleTypeChange,
+    compatibilityLoading,
+    compatibilityError,
+    revisionNumber,
+    onReloadCompatibility,
     sampleQuality,
     onSampleQualityChange,
     receivedAtRegister,
@@ -125,9 +135,27 @@ export function SampleAccessionContext({
                         Loại mẫu *
                     </Label>
                     <SampleTypeSelector
-                        value={selectedSampleType}
+                        value={selectedSampleTypeId}
+                        options={sampleTypes}
                         onChange={onSampleTypeChange}
+                        disabled={compatibilityLoading || sampleTypes.length === 0}
                     />
+                    <div className="flex min-h-6 items-center justify-between gap-2">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                            {revisionNumber ? `Catalog phiên bản ${revisionNumber}` : compatibilityError}
+                        </span>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 shrink-0"
+                            onClick={onReloadCompatibility}
+                            disabled={compatibilityLoading}
+                            title="Tải lại catalog tương thích"
+                        >
+                            <RefreshCw className={`h-3.5 w-3.5 ${compatibilityLoading ? 'animate-spin' : ''}`} />
+                        </Button>
+                    </div>
                 </div>
 
                 <SampleQualityField

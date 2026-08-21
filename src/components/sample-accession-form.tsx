@@ -10,7 +10,6 @@ import {
     type CreateSample,
     type CreateSampleWithAssignments,
     type LabSpecialty,
-    type SampleType,
     type SelectedTest,
 } from '@/types'
 import { accessionAndAssignTestsClient, createSampleClient } from '@/lib/api-client'
@@ -20,6 +19,7 @@ import {
     parseClientIdentityQr,
 } from '@/lib/qr/parse-client-identity-qr'
 import { useClientIdentityScan } from '@/hooks/use-client-identity-scan'
+import { usePublishedAssignmentCatalog } from '@/hooks/use-published-assignment-catalog'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -35,6 +35,9 @@ import { SampleAccessionContext } from '@/components/sample-accession-context'
 import { toast } from 'sonner'
 
 const EMPTY_SPECIALTIES: LabSpecialty[] = []
+const RELOAD_ASSIGNMENT_MESSAGE =
+    'Dữ liệu chỉ định đã cũ. Vui lòng tải lại trang và chọn lại loại mẫu.'
+
 interface SampleAccessionFormProps {
     specialties?: LabSpecialty[]
 }
@@ -49,10 +52,38 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
     const [showConfirmation, setShowConfirmation] = useState(false)
     const [showLabelPrintDialog, setShowLabelPrintDialog] = useState(false)
 
-    // New state for Client and Sample Type
     const [selectedClient, setSelectedClient] = useState<Client | null>(null)
+    const [selectedSampleTypeId, setSelectedSampleTypeId] = useState<string | null>(null)
+    const [selectionRevisionNumber, setSelectionRevisionNumber] =
+        useState<number | null>(null)
+    const {
+        catalog,
+        error: compatibilityError,
+        isLoading: compatibilityLoading,
+        reload: reloadCompatibility,
+    } = usePublishedAssignmentCatalog()
+    const sampleTypes = useMemo(() => catalog?.sampleTypes ?? [], [catalog])
+    const selectedSampleType = useMemo(
+        () => sampleTypes.find((sampleType) => sampleType.id === selectedSampleTypeId)
+            ?? sampleTypes[0]
+            ?? null,
+        [sampleTypes, selectedSampleTypeId],
+    )
+    const effectiveSampleTypeId = selectedSampleType?.id ?? null
+    const allowedAssayIds = useMemo(
+        () => catalog?.assays
+            .filter((assay) => assay.sampleTypeId === effectiveSampleTypeId)
+            .map((assay) => assay.assayDefinitionId) ?? [],
+        [catalog, effectiveSampleTypeId],
+    )
 
-    const [selectedSampleType, setSelectedSampleType] = useState<SampleType>('Máu')
+    const revisionNumber = catalog?.revisionNumber ?? null
+    if (revisionNumber !== null && revisionNumber !== selectionRevisionNumber) {
+        setSelectionRevisionNumber(revisionNumber)
+        if (selectionRevisionNumber !== null) {
+            setSelectedTests([])
+        }
+    }
 
     // QR & Client Form State (Lifted for Mobile UI)
     const [showQRScanner, setShowQRScanner] = useState(false)
@@ -102,6 +133,27 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
         name: 'received_at',
     })
 
+    const handleSampleTypeChange = useCallback((sampleTypeId: string) => {
+        if (sampleTypeId === effectiveSampleTypeId) return
+        if (selectedTests.length > 0) {
+            toast.info('Danh sách chỉ tiêu đã được cập nhật theo loại mẫu đã chọn.')
+        }
+        setSelectedSampleTypeId(sampleTypeId)
+        setSelectedTests([])
+        setSubmitError(null)
+    }, [effectiveSampleTypeId, selectedTests.length])
+
+    const handleAssignmentError = useCallback((error: unknown) => {
+        const message = error instanceof Error && error.message.trim()
+            ? error.message
+            : typeof error === 'string' && error.trim()
+                ? error
+                : RELOAD_ASSIGNMENT_MESSAGE
+        setSubmitError(message)
+        setSelectedTests([])
+        reloadCompatibility()
+    }, [reloadCompatibility])
+
     const onSubmit = async (data: FormData) => {
         if (submitSuccess) {
             return
@@ -115,6 +167,11 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
 
         if (sampleQuality === null) {
             setSubmitError('Vui lòng chọn chất lượng mẫu')
+            return
+        }
+
+        if (!selectedSampleType || !catalog?.revisionNumber) {
+            setSubmitError(RELOAD_ASSIGNMENT_MESSAGE)
             return
         }
 
@@ -135,16 +192,19 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
                 // Create sample WITHOUT tests (new flow)
                 const payload: CreateSample = {
                     client_id: selectedClient.id,
-                    type: selectedSampleType,
+                    type: selectedSampleType.name,
                     sample_quality: sampleQuality,
                     client_name: selectedClient.name, // Snapshot
                     received_at: data.received_at ? new Date(data.received_at).toISOString() : undefined,
+                    sampleTypeId: selectedSampleType.id,
+                    sampleTypeCode: selectedSampleType.importCode,
+                    expectedRevisionNumber: catalog.revisionNumber,
                 }
 
                 const result = await createSampleClient(payload)
 
                 if (result.error) {
-                    setSubmitError(result.error)
+                    handleAssignmentError(result.error)
                 } else {
                     const sampleData = result.data
                     const sampleCode = sampleData?.sample_id
@@ -158,19 +218,22 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
                 const payload: CreateSampleWithAssignments = {
                     client_id: selectedClient.id,
                     client_name: selectedClient.name, // Snapshot
-                    type: selectedSampleType,
+                    type: selectedSampleType.name,
                     sample_quality: sampleQuality,
                     received_at: data.received_at ? new Date(data.received_at).toISOString() : undefined,
                     tests: selectedTests.map((t) => ({
                         assayId: t.assayId,
                         methodId: t.methodId,
                     })),
+                    sampleTypeId: selectedSampleType.id,
+                    sampleTypeCode: selectedSampleType.importCode,
+                    expectedRevisionNumber: catalog.revisionNumber,
                 }
 
                 const result = await accessionAndAssignTestsClient(payload)
 
                 if (result.error) {
-                    setSubmitError(result.error)
+                    handleAssignmentError(result.error)
                 } else {
                     const payload = Array.isArray(result.data) ? result.data[0] : result.data
                     const sampleData = payload?.sample
@@ -182,8 +245,8 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
                     toast.success(successMessage)
                 }
             }
-        } catch {
-            setSubmitError('Đã có lỗi xảy ra')
+        } catch (error) {
+            handleAssignmentError(error)
         }
 
         setIsSubmitting(false)
@@ -235,13 +298,13 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
         reset()
         setSelectedTests([])
         setSelectedClient(null)
-        setSelectedSampleType('Máu')
+        setSelectedSampleTypeId(sampleTypes[0]?.id ?? null)
         setSampleQuality(null)
         setClientFormData(undefined)
         setSubmitSuccess(null)
         setSubmitError(null)
         setCreatedSampleId(null)
-    }, [invalidateIdentityScan, reset])
+    }, [invalidateIdentityScan, reset, sampleTypes])
 
     const handlePrintBarcodeLabel = useCallback(() => {
         if (!createdSampleId) return
@@ -266,8 +329,13 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
             clientFormData={clientFormData}
             onClientFormDataChange={setClientFormData}
             onDraftOwnershipChange={handleDraftOwnershipChange}
-            selectedSampleType={selectedSampleType}
-            onSampleTypeChange={setSelectedSampleType}
+            sampleTypes={sampleTypes}
+            selectedSampleTypeId={effectiveSampleTypeId}
+            onSampleTypeChange={handleSampleTypeChange}
+            compatibilityLoading={compatibilityLoading}
+            compatibilityError={compatibilityError}
+            revisionNumber={catalog?.revisionNumber ?? null}
+            onReloadCompatibility={reloadCompatibility}
             sampleQuality={sampleQuality}
             onSampleQualityChange={setSampleQuality}
             receivedAtRegister={register('received_at')}
@@ -300,9 +368,15 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
         onShowQRScanner: setShowQRScanner,
         onQRScan: handleQRScan,
         onIdentityScan: handleParsedIdentityScan,
-        onInvalidScan: handleInvalidQRScan,
-        selectedSampleType,
-        onSampleTypeChange: setSelectedSampleType,
+            onInvalidScan: handleInvalidQRScan,
+            sampleTypes,
+            selectedSampleTypeId: effectiveSampleTypeId,
+            selectedSampleType: selectedSampleType?.name ?? '',
+            onSampleTypeChange: handleSampleTypeChange,
+        compatibilityLoading,
+        compatibilityError,
+        revisionNumber: catalog?.revisionNumber ?? null,
+        onReloadCompatibility: reloadCompatibility,
         sampleQuality,
         onSampleQualityChange: setSampleQuality,
         receivedAtRegister: register('received_at'),
@@ -314,7 +388,10 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
         selectedClient, showClientForm, clientFormData,
         showQRScanner, handleQRScan, handleParsedIdentityScan, handleInvalidQRScan,
         handleDraftOwnershipChange,
-        selectedSampleType, sampleQuality, register, receivedAtWatched,
+        sampleTypes, effectiveSampleTypeId, selectedSampleType,
+        handleSampleTypeChange, compatibilityLoading, compatibilityError,
+        catalog?.revisionNumber, reloadCompatibility,
+        sampleQuality, register, receivedAtWatched,
         submitError, submitSuccess, handleResetForm,
     ])
 
@@ -325,10 +402,18 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
                     <TestAssignmentGrid
                     selected={selectedTests}
                     onChange={setSelectedTests}
+                    allowedAssayIds={allowedAssayIds}
                     specialties={specialties}
                     context={contextContent}
                     isSaving={isSubmitting}
-                    isSaveDisabled={!!submitSuccess || sampleQuality === null}
+                    isSaveDisabled={
+                        !!submitSuccess
+                        || sampleQuality === null
+                        || compatibilityLoading
+                        || !!compatibilityError
+                        || !selectedSampleType
+                        || !catalog?.revisionNumber
+                    }
                     onSave={handleSubmit(onSubmit)}
                     saveLabel={selectedTests.length > 0
                         ? `Lưu & Chỉ định (${selectedTests.length})`

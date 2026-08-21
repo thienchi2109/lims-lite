@@ -7,7 +7,7 @@
  * and selected tests. Allows jumping back to specific steps to edit.
  */
 
-import type { Client, SelectedTest, SampleType } from '@/types'
+import type { Client, SelectedTest } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -27,7 +27,7 @@ import {
 
 interface StepReviewProps {
     selectedClient: Client | null
-    selectedSampleType: SampleType
+    selectedSampleType: string
     sampleQuality: boolean | null
     receivedAt: string
     selected: SelectedTest[]

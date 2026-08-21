@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback, useTransition } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { sampleKeys, invalidateSampleQueries } from '@/types/query-keys'
+import { invalidateSampleQueries } from '@/types/query-keys'
 import {
     Search,
     FlaskConical,
@@ -34,8 +34,11 @@ import {
     prepareAssignmentData,
     type AssayWithMethods,
 } from '@/lib/test-assignment-logic'
+import { usePublishedAssignmentCatalog } from '@/hooks/use-published-assignment-catalog'
 
 const EMPTY_SPECIALTIES: LabSpecialty[] = []
+const RELOAD_ASSIGNMENT_MESSAGE =
+    'Dữ liệu chỉ định đã cũ. Vui lòng tải lại trang và chọn lại loại mẫu.'
 
 type AssayDefinitionClientRow = {
     id: string
@@ -80,6 +83,7 @@ function normalizeAssayDefinitionRow(value: unknown): AssayDefinitionClientRow |
 
 interface TestAssignmentModuleProps {
     sampleId: string
+    sampleTypeId: string | null
     sampleStatus?: SampleStatus | null
     onClose: () => void
     onSuccess: () => void
@@ -87,36 +91,59 @@ interface TestAssignmentModuleProps {
     specialties?: LabSpecialty[]
 }
 
-export function TestAssignmentModule({ sampleId, sampleStatus, onClose, onSuccess, onRefocus, specialties = EMPTY_SPECIALTIES }: TestAssignmentModuleProps) {
+export function TestAssignmentModule({
+    sampleId,
+    sampleTypeId,
+    sampleStatus,
+    onClose,
+    onSuccess,
+    onRefocus,
+    specialties = EMPTY_SPECIALTIES,
+}: TestAssignmentModuleProps) {
     const queryClient = useQueryClient()
     const [assays, setAssays] = useState<AssayWithMethods[]>([])
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedSpecialtyId, setSelectedSpecialtyId] = useState('all')
-    const [selectedAssayIds, setSelectedAssayIds] = useState<Set<string>>(new Set())
     const [isPending, startTransition] = useTransition()
+    const {
+        catalog,
+        error: compatibilityError,
+        isLoading: compatibilityLoading,
+        reload: reloadCompatibility,
+    } = usePublishedAssignmentCatalog()
 
     const specialtiesMap = useMemo(() => new Map(specialties.map((s) => [s.id, s])), [specialties])
+    const selectedSampleType = useMemo(
+        () => catalog?.sampleTypes.find((sampleType) => sampleType.id === sampleTypeId) ?? null,
+        [catalog, sampleTypeId],
+    )
+    const compatibleAssayIds = useMemo(
+        () => new Set(
+            catalog?.assays
+                .filter((assay) => assay.sampleTypeId === sampleTypeId)
+                .map((assay) => assay.assayDefinitionId) ?? [],
+        ),
+        [catalog, sampleTypeId],
+    )
+    const visibleAssays = useMemo(
+        () => assays.filter((assay) => compatibleAssayIds.has(assay.id)),
+        [assays, compatibleAssayIds],
+    )
+    const canLoadAssays = Boolean(
+        sampleTypeId
+        && selectedSampleType
+        && catalog?.revisionNumber
+        && !compatibilityError,
+    )
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            fetchAssays(searchQuery)
-        }, 300)
-
-        return () => clearTimeout(timer)
-    }, [searchQuery])
-
-    useEffect(() => {
-        fetchAssays(searchQuery)
-    }, [selectedSpecialtyId])
-
-    async function fetchAssays(search: string) {
+    const fetchAssays = useCallback(async (search: string) => {
         setLoading(true)
         try {
             const { data, error } = await fetchAssayDefinitionsClient({
                 search,
-                pageSize: 100,
+                pageSize: 2000,
                 specialtyId: selectedSpecialtyId,
             })
             if (error) {
@@ -158,16 +185,21 @@ export function TestAssignmentModule({ sampleId, sampleStatus, onClose, onSucces
         } finally {
             setLoading(false)
         }
-    }
+    }, [selectedSpecialtyId])
 
-    const selectedAssaysList = useMemo(() => {
-        // Only filter from currently loaded assays (which might be incomplete if searched)
-        // Ideally, we should keep a separate list of selected assays to persist them across searches
-        // For now, we assume the user selects from the current view
-        // But to be safe, we should probably keep selected items in a separate map or fetch them if missing
-        // However, simple implementation:
-        return assays.filter((a) => selectedAssayIds.has(a.id))
-    }, [assays, selectedAssayIds])
+    useEffect(() => {
+        if (!canLoadAssays) {
+            setAssays([])
+            setLoading(false)
+            return
+        }
+
+        const timer = setTimeout(() => {
+            void fetchAssays(searchQuery)
+        }, 300)
+
+        return () => clearTimeout(timer)
+    }, [canLoadAssays, catalog?.revisionNumber, fetchAssays, searchQuery])
 
     // To persist selected items across searches, we need to store the full assay object when selected
     const [selectedAssayObjects, setSelectedAssayObjects] = useState<Map<string, AssayWithMethods>>(new Map())
@@ -178,29 +210,20 @@ export function TestAssignmentModule({ sampleId, sampleStatus, onClose, onSucces
                 const next = new Map(prev)
                 if (next.has(assay.id)) {
                     next.delete(assay.id)
-                    setSelectedAssayIds(prevIds => {
-                        const nextIds = new Set(prevIds)
-                        nextIds.delete(assay.id)
-                        return nextIds
-                    })
                 } else {
                     next.set(assay.id, assay)
-                    setSelectedAssayIds(prevIds => {
-                        const nextIds = new Set(prevIds)
-                        nextIds.add(assay.id)
-                        return nextIds
-                    })
                 }
                 return next
             })
         })
     }, [])
 
-    // Update selectedAssayIds to be in sync (actually we can derive it, but let's keep the set for O(1) lookup)
-    // Actually, let's simplify. Just use selectedAssayObjects map.
-
     const handleConfirm = async () => {
         if (selectedAssayObjects.size === 0) return
+        if (!sampleTypeId || !selectedSampleType || !catalog?.revisionNumber) {
+            toast.error(RELOAD_ASSIGNMENT_MESSAGE)
+            return
+        }
 
         setSubmitting(true)
         try {
@@ -243,11 +266,16 @@ export function TestAssignmentModule({ sampleId, sampleStatus, onClose, onSucces
 
             const result = await assignTestsClient({
                 sampleId,
-                tests: testsToAssign
+                sampleTypeId,
+                sampleTypeCode: selectedSampleType.importCode,
+                expectedRevisionNumber: catalog.revisionNumber,
+                tests: testsToAssign,
             })
 
             if (result.error) {
                 toast.error(result.error)
+                setSelectedAssayObjects(new Map())
+                reloadCompatibility()
                 return
             }
 
@@ -276,10 +304,42 @@ export function TestAssignmentModule({ sampleId, sampleStatus, onClose, onSucces
             }
         } catch (error) {
             console.error(error)
-            toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra')
+            const message = error instanceof Error && error.message.trim()
+                ? error.message
+                : RELOAD_ASSIGNMENT_MESSAGE
+            toast.error(message)
+            setSelectedAssayObjects(new Map())
+            reloadCompatibility()
         } finally {
             setSubmitting(false)
         }
+    }
+
+    if (!sampleTypeId) {
+        return (
+            <div className="flex min-h-64 items-center justify-center rounded-lg border border-amber-200 bg-amber-50 p-6 text-center text-sm text-amber-800">
+                {RELOAD_ASSIGNMENT_MESSAGE}
+            </div>
+        )
+    }
+
+    if (compatibilityLoading) {
+        return (
+            <div className="flex min-h-64 items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+            </div>
+        )
+    }
+
+    if (compatibilityError || !selectedSampleType || !catalog?.revisionNumber) {
+        return (
+            <div className="flex min-h-64 flex-col items-center justify-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-6 text-center text-sm text-amber-800">
+                <p>{compatibilityError ?? RELOAD_ASSIGNMENT_MESSAGE}</p>
+                <Button type="button" variant="outline" onClick={reloadCompatibility}>
+                    Tải lại catalog
+                </Button>
+            </div>
+        )
     }
 
     return (
@@ -323,14 +383,14 @@ export function TestAssignmentModule({ sampleId, sampleStatus, onClose, onSucces
                         <div className="flex h-full items-center justify-center">
                             <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
                         </div>
-                    ) : assays.length === 0 ? (
+                    ) : visibleAssays.length === 0 ? (
                         <div className="flex h-full flex-col items-center justify-center text-slate-500">
                             <Search className="mb-2 h-8 w-8 opacity-20" />
                             <p>Không tìm thấy xét nghiệm phù hợp</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 gap-3" style={{ willChange: isPending ? 'contents' : 'auto' }}>
-                            {assays.map((assay) => {
+                            {visibleAssays.map((assay) => {
                                 const isSelected = selectedAssayObjects.has(assay.id)
                                 const specialty = assay.specialty_id ? specialtiesMap.get(assay.specialty_id) : null
                                 return (

@@ -32,6 +32,13 @@ type Props = {
     pageSize: number
     totalPages: number
     totalCount: number
+    compatibilityByAssayId?: Record<string, {
+        disposition: 'configured' | 'not_assignable' | null
+        isStale: boolean
+        compatibleSampleTypeCount: number
+    }>
+    compatibilityRevisionNumber?: number | null
+    compatibilityUnavailable?: boolean
 }
 
 export function AssayDefinitionsTable({
@@ -40,6 +47,9 @@ export function AssayDefinitionsTable({
     pageSize,
     totalPages,
     totalCount,
+    compatibilityByAssayId = {},
+    compatibilityRevisionNumber = null,
+    compatibilityUnavailable = false,
     specialties = EMPTY_SPECIALTIES,
 }: Props & { specialties?: LabSpecialty[] }) {
     const [editingAssay, setEditingAssay] = useState<AssayDefinition | null>(null)
@@ -133,6 +143,11 @@ export function AssayDefinitionsTable({
                 onSpecialtyFilter={handleSpecialtyFilter}
                 onAdd={() => setIsAddDialogOpen(true)}
             />
+            {compatibilityRevisionNumber && (
+                <p className="text-xs text-muted-foreground">
+                    Catalog tương thích: Phiên bản {compatibilityRevisionNumber}
+                </p>
+            )}
 
             {localAssays.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-slate-900 rounded-lg border border-dashed">
@@ -160,6 +175,7 @@ export function AssayDefinitionsTable({
                                     <TableHead className="w-[250px] font-semibold text-slate-700 dark:text-slate-300">Tên chỉ tiêu</TableHead>
                                     <TableHead className="w-[180px] font-semibold text-slate-700 dark:text-slate-300">Nhóm kỹ thuật</TableHead>
                                     <TableHead className="w-[200px] font-semibold text-slate-700 dark:text-slate-300">Phương pháp/Thiết bị</TableHead>
+                                    <TableHead className="w-[170px] font-semibold text-slate-700 dark:text-slate-300">Tương thích loại mẫu</TableHead>
                                     <TableHead className="w-[100px] font-semibold text-slate-700 dark:text-slate-300">Đơn vị</TableHead>
                                     <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Quy tắc xác thực</TableHead>
                                     <TableHead className="w-[100px] text-right font-semibold text-slate-700 dark:text-slate-300">Thao tác</TableHead>
@@ -217,6 +233,35 @@ export function AssayDefinitionsTable({
                                                     Chưa chỉ định
                                                 </span>
                                             )}
+                                        </TableCell>
+                                        <TableCell>
+                                            {(() => {
+                                                if (compatibilityUnavailable) {
+                                                    return (
+                                                        <Badge variant="destructive">
+                                                            Không thể tải
+                                                        </Badge>
+                                                    )
+                                                }
+                                                const status = compatibilityByAssayId[assay.id]
+                                                if (!status) {
+                                                    return <Badge variant="outline">Chưa rà soát</Badge>
+                                                }
+                                                if (status.isStale) {
+                                                    return <Badge variant="destructive">Cần rà soát</Badge>
+                                                }
+                                                if (status.disposition === 'not_assignable') {
+                                                    return <Badge variant="secondary">Không chỉ định</Badge>
+                                                }
+                                                if (status.compatibleSampleTypeCount > 0) {
+                                                    return (
+                                                        <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
+                                                            {status.compatibleSampleTypeCount} loại mẫu
+                                                        </Badge>
+                                                    )
+                                                }
+                                                return <Badge variant="outline">Chưa cấu hình</Badge>
+                                            })()}
                                         </TableCell>
                                         <TableCell>
                                             {assay.units || (

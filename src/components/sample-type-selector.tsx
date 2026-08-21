@@ -7,39 +7,34 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { SampleType } from '@/types'
+import type { PublishedCatalogSampleType } from '@/types'
 
 interface SampleTypeSelectorProps {
-    value: SampleType
-    onChange: (value: SampleType) => void
+    value: string | null
+    options: PublishedCatalogSampleType[]
+    onChange: (sampleTypeId: string) => void
     disabled?: boolean
 }
 
-const SAMPLE_TYPES: SampleType[] = [
-    'Máu',
-    'Dịch niệu đạo/âm đạo',
-    'Nước tiểu',
-    'Phết tế bào âm đạo',
-    'Ngoáy trực tràng/hậu môn',
-    'Phân',
-    'Nước',
-    'Thực phẩm'
-]
-
-export function SampleTypeSelector({ value, onChange, disabled }: SampleTypeSelectorProps) {
+export function SampleTypeSelector({
+    value,
+    options,
+    onChange,
+    disabled,
+}: SampleTypeSelectorProps) {
     return (
         <Select
-            value={value}
-            onValueChange={(val) => onChange(val as SampleType)}
+            value={value ?? undefined}
+            onValueChange={onChange}
             disabled={disabled}
         >
             <SelectTrigger className="w-full shadow-sm border-slate-200 dark:border-slate-800">
                 <SelectValue placeholder="Chọn loại mẫu" />
             </SelectTrigger>
             <SelectContent>
-                {SAMPLE_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                        {type}
+                {options.map((sampleType) => (
+                    <SelectItem key={sampleType.id} value={sampleType.id}>
+                        {sampleType.name} ({sampleType.importCode})
                     </SelectItem>
                 ))}
             </SelectContent>

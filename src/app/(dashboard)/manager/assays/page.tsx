@@ -6,8 +6,10 @@ import Link from 'next/link'
 import { ArrowLeft, Workflow } from 'lucide-react'
 import { getAssayDefinitions } from '@/app/actions/assay-queries'
 import { getSpecialties } from '@/app/actions/assay-lookups'
+import { getAssaySampleTypeCatalogManager } from '@/app/actions/assay-sample-type-compatibility'
 import { AssayDefinitionsTable } from '@/components/assay-definitions-table'
 import { DashboardHeader } from '@/components/dashboard-header'
+import type { AssaySampleTypeCatalogManager } from '@/types'
 
 export default async function AssaysPage({
     searchParams,
@@ -43,14 +45,32 @@ export default async function AssaysPage({
     const search = params?.search || ''
     const specialtyId = params?.specialtyId
 
-    const { data: assays, totalCount, totalPages, error } = await getAssayDefinitions({
-        page,
-        pageSize,
-        search,
-        specialtyId,
-    })
-
-    const { data: specialties } = await getSpecialties()
+    const [assayResult, specialtyResult, catalogResult] = await Promise.all([
+        getAssayDefinitions({
+            page,
+            pageSize,
+            search,
+            specialtyId,
+        }),
+        getSpecialties(),
+        getAssaySampleTypeCatalogManager(),
+    ])
+    const { data: assays, totalCount, totalPages, error } = assayResult
+    const { data: specialties } = specialtyResult
+    const catalog = 'data' in catalogResult ? catalogResult.data : null
+    const compatibilityUnavailable = 'error' in catalogResult
+    const compatibilityByAssayId = Object.fromEntries(
+        (catalog?.assays ?? []).map((
+            assay: AssaySampleTypeCatalogManager['assays'][number],
+        ) => [
+            assay.assayDefinitionId,
+            {
+                disposition: assay.disposition,
+                isStale: assay.isStale,
+                compatibleSampleTypeCount: assay.compatibilities.length,
+            },
+        ]),
+    )
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -99,6 +119,9 @@ export default async function AssaysPage({
                                 totalPages={totalPages || 1}
                                 totalCount={totalCount || 0}
                                 specialties={specialties || []}
+                                compatibilityByAssayId={compatibilityByAssayId}
+                                compatibilityRevisionNumber={catalog?.revision?.revisionNumber ?? null}
+                                compatibilityUnavailable={compatibilityUnavailable}
                             />
                         )}
                     </CardContent>

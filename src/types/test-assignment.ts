@@ -13,6 +13,7 @@ export interface TestAssignmentGridProps {
     onChange: (tests: SelectedTest[]) => void
     context?: React.ReactNode
     disabledAssayIds?: string[]
+    allowedAssayIds?: string[]
     specialties?: LabSpecialty[]
     onSave?: () => void
     isSaving?: boolean

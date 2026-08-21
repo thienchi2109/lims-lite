@@ -129,6 +129,7 @@ export function SampleInspectorColumn({
                             ) : displayedSample ? (
                                 <AssignedTestsPanel
                                     sampleId={displayedSample.id}
+                                    sampleTypeId={displayedSample.sample_type_id ?? null}
                                     specialties={specialties}
                                     userRole={userRole === 'doctor' ? undefined : userRole}
                                     initialResults={displayedResults}

@@ -4,7 +4,6 @@ import React, { useState } from 'react'
 import { useMediaQuery } from '@/hooks/use-media-query'
 import { useTestAssignmentGrid } from '@/hooks/use-test-assignment-grid'
 import type { TestAssignmentGridProps } from '@/types/test-assignment'
-import { CheckCircle2 } from 'lucide-react'
 import { FlaskConical } from 'lucide-react'
 import {
     ResizablePanelGroup,
@@ -23,22 +22,22 @@ export function TestAssignmentGrid({
     onChange,
     context,
     disabledAssayIds = EMPTY_DISABLED_IDS,
+    allowedAssayIds,
     specialties = EMPTY_SPECIALTIES,
     onSave = () => { },
     isSaving = false,
     isSaveDisabled = false,
     saveLabel = 'Lưu thay đổi',
-    summaryInfo,
     wizardProps,
 }: TestAssignmentGridProps) {
     const isDesktop = useMediaQuery("(min-width: 1280px)")
     const [isContextOpen, setIsContextOpen] = useState(true)
-    const [showToast, setShowToast] = useState(false)
 
     const logic = useTestAssignmentGrid({
         selected,
         onChange,
         disabledAssayIds,
+        allowedAssayIds,
         specialties
     })
 
@@ -142,11 +141,6 @@ export function TestAssignmentGrid({
                 </ResizablePanel>
             </ResizablePanelGroup>
 
-            {/* Toast Notification */}
-            <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded shadow-lg flex items-center gap-3 transition-all duration-300 z-50 ${showToast ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
-                <CheckCircle2 size={18} className="text-green-400" />
-                <span className="text-sm font-medium">Đã lưu thay đổi</span>
-            </div>
         </div>
     )
 }

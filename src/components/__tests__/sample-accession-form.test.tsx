@@ -13,6 +13,7 @@ const accessionFormMocks = vi.hoisted(() => {
     const createSampleClient = vi.fn()
     const accessionAndAssignTestsClient = vi.fn()
     const findClientByIdentityClient = vi.fn()
+    const getPublishedCatalogClient = vi.fn()
     const printSampleBarcodeLabel = vi.fn()
     const toastSuccess = vi.fn()
 
@@ -20,6 +21,7 @@ const accessionFormMocks = vi.hoisted(() => {
         createSampleClient,
         accessionAndAssignTestsClient,
         findClientByIdentityClient,
+        getPublishedCatalogClient,
         printSampleBarcodeLabel,
         toastSuccess,
         mockClient: {
@@ -49,6 +51,7 @@ vi.mock('@/lib/api-client', () => ({
     createSampleClient: accessionFormMocks.createSampleClient,
     accessionAndAssignTestsClient: accessionFormMocks.accessionAndAssignTestsClient,
     findClientByIdentityClient: accessionFormMocks.findClientByIdentityClient,
+    getPublishedAssaySampleTypeCatalogClient: accessionFormMocks.getPublishedCatalogClient,
 }))
 
 vi.mock('@/lib/sample-label-print-client', () => ({
@@ -131,14 +134,21 @@ vi.mock('@/components/client-selector', () => ({
 vi.mock('@/components/sample-type-selector', () => ({
     SampleTypeSelector: ({
         value,
+        options,
         onChange,
     }: {
-        value: string
-        onChange: (value: 'Nước tiểu') => void
+        value: string | null
+        options: Array<{ id: string; name: string }>
+        onChange: (sampleTypeId: string) => void
     }) => (
         <div>
-            <div data-testid="sample-type-value">{value}</div>
-            <button type="button" onClick={() => onChange('Nước tiểu')}>
+            <div data-testid="sample-type-value">
+                {options.find((sampleType) => sampleType.id === value)?.name ?? ''}
+            </div>
+            <button
+                type="button"
+                onClick={() => onChange('22222222-2222-4222-8222-222222222222')}
+            >
                 Chọn Nước tiểu
             </button>
         </div>
@@ -190,10 +200,42 @@ function selectAcceptableQuality() {
     fireEvent.click(screen.getByRole('checkbox', { name: 'Đạt' }))
 }
 
+async function waitForCompatibilityCatalog() {
+    await waitFor(() => {
+        expect(screen.getByTestId('sample-type-value').textContent).toBe('Máu')
+    })
+}
+
 describe('SampleAccessionForm', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         accessionFormMocks.findClientByIdentityClient.mockResolvedValue({ data: null })
+        accessionFormMocks.getPublishedCatalogClient.mockResolvedValue({
+            data: {
+                revisionNumber: 7,
+                sampleTypeId: null,
+                sampleTypes: [
+                    {
+                        id: '11111111-1111-4111-8111-111111111111',
+                        importCode: 'LM-000001',
+                        name: 'Máu',
+                    },
+                    {
+                        id: '22222222-2222-4222-8222-222222222222',
+                        importCode: 'LM-000002',
+                        name: 'Nước tiểu',
+                    },
+                ],
+                assays: [{
+                    sampleTypeId: '22222222-2222-4222-8222-222222222222',
+                    assayDefinitionId: 'assay-1',
+                    importCode: 'CT-000001',
+                    name: 'ALT',
+                    methodName: 'Máy tự động',
+                    specialtyId: null,
+                }],
+            },
+        })
         accessionFormMocks.createSampleClient.mockResolvedValue({
             data: { id: 'sample-created-1', sample_id: 'SMP-001' },
         })
@@ -224,11 +266,12 @@ describe('SampleAccessionForm', () => {
     })
 
     it('passes submit errors into wizard props for the mobile review flow', async () => {
-        accessionFormMocks.accessionAndAssignTestsClient.mockResolvedValueOnce({
-            error: 'Không thể lưu mẫu',
-        })
+        accessionFormMocks.accessionAndAssignTestsClient.mockRejectedValueOnce(
+            new Error('Không thể lưu mẫu'),
+        )
 
         render(<SampleAccessionForm specialties={[]} />)
+        await waitForCompatibilityCatalog()
 
         fireEvent.click(screen.getByRole('button', { name: 'Chọn khách hàng' }))
         fireEvent.click(screen.getByRole('button', { name: 'Chọn Nước tiểu' }))
@@ -243,6 +286,7 @@ describe('SampleAccessionForm', () => {
 
     it('preserves submitted state after creating a sample with assigned tests', async () => {
         render(<SampleAccessionForm specialties={[]} />)
+        await waitForCompatibilityCatalog()
 
         fireEvent.click(screen.getByRole('button', { name: 'Chọn khách hàng' }))
         fireEvent.click(screen.getByRole('button', { name: 'Chọn Nước tiểu' }))
@@ -269,6 +313,7 @@ describe('SampleAccessionForm', () => {
 
     it('preserves submitted state after creating a sample without assigned tests', async () => {
         render(<SampleAccessionForm specialties={[]} />)
+        await waitForCompatibilityCatalog()
 
         fireEvent.click(screen.getByRole('button', { name: 'Chọn khách hàng' }))
         fireEvent.click(screen.getByRole('button', { name: 'Chọn Nước tiểu' }))
@@ -296,6 +341,7 @@ describe('SampleAccessionForm', () => {
 
     it('offers barcode label printing after creating a sample', async () => {
         render(<SampleAccessionForm specialties={[]} />)
+        await waitForCompatibilityCatalog()
 
         fireEvent.click(screen.getByRole('button', { name: 'Chọn khách hàng' }))
         fireEvent.click(screen.getByRole('button', { name: 'Chọn Nước tiểu' }))
@@ -338,6 +384,7 @@ describe('SampleAccessionForm', () => {
 
     it('requires an explicit desktop reset before another save after success', async () => {
         render(<SampleAccessionForm specialties={[]} />)
+        await waitForCompatibilityCatalog()
 
         fireEvent.click(screen.getByRole('button', { name: 'Chọn khách hàng' }))
         fireEvent.click(screen.getByRole('button', { name: 'Chọn Nước tiểu' }))
@@ -366,6 +413,7 @@ describe('SampleAccessionForm', () => {
 
     it('clears the client draft data when starting a new accession', async () => {
         render(<SampleAccessionForm specialties={[]} />)
+        await waitForCompatibilityCatalog()
 
         fireEvent.click(screen.getByRole('button', { name: 'Điền nháp khách hàng' }))
         expect(screen.getByTestId('client-form-draft-name').textContent).toBe('Khách hàng nháp')

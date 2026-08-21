@@ -47,6 +47,7 @@ import type { ResultWithAssay } from '@/types'
 
 interface AssignedTestsPanelProps {
     sampleId: string
+    sampleTypeId?: string | null
     specialties?: LabSpecialty[]
     userRole?: 'analyst' | 'manager'
     initialResults?: ResultWithAssay[]
@@ -58,6 +59,7 @@ const TEST_ORDER_PREVIEW_TITLE = 'Phiếu chỉ định xét nghiệm'
 
 export function AssignedTestsPanel({
     sampleId,
+    sampleTypeId = null,
     specialties = DEFAULT_SPECIALTIES,
     userRole,
     initialResults,
@@ -288,6 +290,7 @@ export function AssignedTestsPanel({
                     <DialogDescription className="sr-only">Chọn các xét nghiệm cần chỉ định cho mẫu này</DialogDescription>
                     <TestAssignmentModule
                         sampleId={sampleId}
+                        sampleTypeId={sampleTypeId}
                         sampleStatus={sampleStatus}
                         onClose={() => setShowAssignmentDialog(false)}
                         onSuccess={fetchTests}

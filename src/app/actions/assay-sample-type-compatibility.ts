@@ -76,7 +76,37 @@ export async function getPublishedAssaySampleTypeCatalog(payload?: unknown) {
   if ('error' in result) return result
 
   const catalog = PublishedAssaySampleTypeCatalogSchema.safeParse(result.data)
-  return catalog.success ? { data: catalog.data } : validationError()
+  if (!catalog.success) return validationError()
+
+  try {
+    const supabase = await createClient()
+    const { data: sampleTypes, error } = await supabase
+      .from('sample_types')
+      .select('id, import_code, name')
+      .is('deleted_at', null)
+      .order('name')
+
+    if (error) {
+      console.error('Active sample types query failed:', error)
+      return validationError()
+    }
+
+    const enrichedCatalog = PublishedAssaySampleTypeCatalogSchema.safeParse({
+      ...catalog.data,
+      sampleTypes: (sampleTypes ?? []).map((sampleType) => ({
+        id: sampleType.id,
+        importCode: sampleType.import_code,
+        name: sampleType.name,
+      })),
+    })
+
+    return enrichedCatalog.success
+      ? { data: enrichedCatalog.data }
+      : validationError()
+  } catch (error) {
+    console.error('Active sample types query failed:', error)
+    return validationError()
+  }
 }
 
 export async function cloneAssaySampleTypeCatalogRevision(payload: unknown) {

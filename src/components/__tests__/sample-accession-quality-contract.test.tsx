@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
     createSampleClient: vi.fn(),
     accessionAndAssignTestsClient: vi.fn(),
     findClientByIdentityClient: vi.fn(),
+    getPublishedCatalogClient: vi.fn(),
     printSampleBarcodeLabel: vi.fn(),
     toastSuccess: vi.fn(),
     client: {
@@ -42,6 +43,7 @@ vi.mock('@/lib/api-client', () => ({
     createSampleClient: mocks.createSampleClient,
     accessionAndAssignTestsClient: mocks.accessionAndAssignTestsClient,
     findClientByIdentityClient: mocks.findClientByIdentityClient,
+    getPublishedAssaySampleTypeCatalogClient: mocks.getPublishedCatalogClient,
 }))
 
 vi.mock('@/lib/sample-label-print-client', () => ({
@@ -90,8 +92,16 @@ vi.mock('@/components/client-selector', () => ({
 }))
 
 vi.mock('@/components/sample-type-selector', () => ({
-    SampleTypeSelector: ({ value }: { value: string }) => (
-        <div data-testid="sample-type-value">{value}</div>
+    SampleTypeSelector: ({
+        value,
+        options,
+    }: {
+        value: string | null
+        options: Array<{ id: string; name: string }>
+    }) => (
+        <div data-testid="sample-type-value">
+            {options.find((sampleType) => sampleType.id === value)?.name ?? ''}
+        </div>
     ),
 }))
 
@@ -140,10 +150,35 @@ function getQualityCheckbox(name: 'Đạt' | 'Không đạt') {
     return screen.getByRole('checkbox', { name })
 }
 
+async function waitForCompatibilityCatalog() {
+    await waitFor(() => {
+        expect(screen.getByTestId('sample-type-value').textContent).toBe('Máu')
+    })
+}
+
 describe('desktop sample quality accession contract', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mocks.findClientByIdentityClient.mockResolvedValue({ data: null })
+        mocks.getPublishedCatalogClient.mockResolvedValue({
+            data: {
+                revisionNumber: 7,
+                sampleTypeId: null,
+                sampleTypes: [{
+                    id: '11111111-1111-4111-8111-111111111111',
+                    importCode: 'LM-000001',
+                    name: 'Máu',
+                }],
+                assays: [{
+                    sampleTypeId: '11111111-1111-4111-8111-111111111111',
+                    assayDefinitionId: 'assay-1',
+                    importCode: 'CT-000001',
+                    name: 'ALT',
+                    methodName: 'Máy tự động',
+                    specialtyId: null,
+                }],
+            },
+        })
         mocks.createSampleClient.mockResolvedValue({
             data: { id: 'sample-created-1', sample_id: 'SMP-001' },
         })
@@ -208,6 +243,7 @@ describe('desktop sample quality accession contract', () => {
 
     it('preserves unacceptable quality through no-test confirmation and clears it on reset', async () => {
         render(<SampleAccessionForm specialties={[]} />)
+        await waitForCompatibilityCatalog()
 
         fireEvent.click(screen.getByRole('button', { name: 'Chọn khách hàng' }))
         fireEvent.click(getQualityCheckbox('Không đạt'))
@@ -234,6 +270,7 @@ describe('desktop sample quality accession contract', () => {
 
     it('includes acceptable quality in the assigned-tests payload', async () => {
         render(<SampleAccessionForm specialties={[]} />)
+        await waitForCompatibilityCatalog()
 
         fireEvent.click(screen.getByRole('button', { name: 'Chọn khách hàng' }))
         fireEvent.click(getQualityCheckbox('Đạt'))

@@ -52,10 +52,10 @@
 
 ## 7. Phase 7 - Accession And Assignment UI (PR/Session 7)
 
-- [ ] 7.1 Viết component/integration tests đỏ cho desktop/mobile picker theo loại mẫu, incompatible/stale hiding, revision reload và selection reset khi đổi loại mẫu.
-- [ ] 7.2 Cập nhật accession wizard, test-assignment module và gán bổ sung dùng published catalog; giữ specialty filter, pagination và responsive behavior.
-- [ ] 7.3 Hiển thị compatibility status cần thiết trong assay manager read views nhưng không thêm workbook parser hoặc draft controls cho Analyst.
-- [ ] 7.4 Chạy focused component/integration tests, React Doctor, typecheck, lint và OpenSpec strict validation.
+- [x] 7.1 Viết component/integration tests đỏ cho desktop/mobile picker theo loại mẫu, incompatible/stale hiding, revision reload và selection reset khi đổi loại mẫu.
+- [x] 7.2 Cập nhật accession wizard, test-assignment module và gán bổ sung dùng published catalog; giữ specialty filter, pagination và responsive behavior.
+- [x] 7.3 Hiển thị compatibility status cần thiết trong assay manager read views nhưng không thêm workbook parser hoặc draft controls cho Analyst.
+- [x] 7.4 Chạy focused component/integration tests, React Doctor, typecheck, lint và OpenSpec strict validation.
 - [ ] 7.5 Sau merge/push cả Phase 6-7, deploy server/API/UI trong cùng một release và smoke desktop/mobile; browser tab cũ SHALL nhận lỗi tải lại, không tạo assignment legacy.
 - [ ] 7.6 Theo dõi log/telemetry qua cửa sổ vận hành đã định, xác minh mọi assignment thành công dùng v2 trong khi RPC cũ chỉ còn rollback path.
 

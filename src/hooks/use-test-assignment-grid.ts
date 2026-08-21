@@ -9,6 +9,7 @@ interface UseTestAssignmentGridProps {
     selected: SelectedTest[]
     onChange: (tests: SelectedTest[]) => void
     disabledAssayIds: string[]
+    allowedAssayIds?: string[]
     specialties: LabSpecialty[]
 }
 
@@ -36,6 +37,7 @@ export function useTestAssignmentGrid({
     selected,
     onChange,
     disabledAssayIds,
+    allowedAssayIds,
     specialties
 }: UseTestAssignmentGridProps) {
     // State
@@ -125,9 +127,16 @@ export function useTestAssignmentGrid({
     }
 
     // Derived State
-    const processedAssays = useMemo(() => {
-        return [...availableAssays]
-    }, [availableAssays])
+    const allowedSet = useMemo(
+        () => allowedAssayIds ? new Set(allowedAssayIds) : null,
+        [allowedAssayIds],
+    )
+    const processedAssays = useMemo(
+        () => allowedSet
+            ? availableAssays.filter((assay) => allowedSet.has(assay.id))
+            : [...availableAssays],
+        [allowedSet, availableAssays],
+    )
 
     const disabledSet = useMemo(() => new Set(disabledAssayIds), [disabledAssayIds])
     const specialtiesMap = useMemo(() => {

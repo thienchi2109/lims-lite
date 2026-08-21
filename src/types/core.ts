@@ -16,16 +16,7 @@ export type ResultStatus = z.infer<typeof ResultStatus>
 export const Gender = z.enum(['Nam', 'Nữ', 'Khác'])
 export type Gender = z.infer<typeof Gender>
 
-export const SampleType = z.enum([
-    'Máu',
-    'Dịch niệu đạo/âm đạo',
-    'Nước tiểu',
-    'Phết tế bào âm đạo',
-    'Ngoáy trực tràng/hậu môn',
-    'Phân',
-    'Nước',
-    'Thực phẩm'
-])
+export const SampleType = z.string().trim().min(1)
 export type SampleType = z.infer<typeof SampleType>
 
 // ============================================================================
