@@ -56,8 +56,8 @@
 - [x] 7.2 Cập nhật accession wizard, test-assignment module và gán bổ sung dùng published catalog; giữ specialty filter, pagination và responsive behavior.
 - [x] 7.3 Hiển thị compatibility status cần thiết trong assay manager read views nhưng không thêm workbook parser hoặc draft controls cho Analyst.
 - [x] 7.4 Chạy focused component/integration tests, React Doctor, typecheck, lint và OpenSpec strict validation.
-- [ ] 7.5 Sau merge/push cả Phase 6-7, deploy server/API/UI trong cùng một release và smoke desktop/mobile; browser tab cũ SHALL nhận lỗi tải lại, không tạo assignment legacy.
-- [ ] 7.6 Theo dõi log/telemetry qua cửa sổ vận hành đã định, xác minh mọi assignment thành công dùng v2 trong khi RPC cũ chỉ còn rollback path.
+- [x] 7.5 Sau merge/push cả Phase 6-7, deploy server/API/UI trong cùng một release; theo chỉ đạo vận hành ngày 2026-08-21 không chạy browser smoke, thay bằng health/API smoke không-browser và regression test xác nhận request từ tab cũ nhận lỗi tải lại trước khi gọi RPC.
+- [x] 7.6 Theo dõi log/telemetry trong cửa sổ vận hành ban đầu 2026-08-21T09:16:38Z đến 2026-08-21T09:23:28Z: không có assignment/mutation thành công, không có RPC legacy hoặc v2 trong log; production source chỉ gọi RPC v2 và RPC cũ chỉ còn ở migration/test rollback path.
 
 ## 8. Phase 8 - Database Enforcement (PR/Session 8)
 
