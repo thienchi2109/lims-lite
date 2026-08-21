@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 const migrationPath = join(
   process.cwd(),
-  'supabase/migrations/211_add_assay_sample_type_assignment_v2.sql',
+  'supabase/migrations/212_recover_assay_sample_type_assignment_v2.sql',
 )
 const runtimeTestPath = join(
   process.cwd(),
@@ -19,6 +19,7 @@ const immutableMigrationHashes = new Map([
   ['208_add_assay_sample_type_catalog_rpcs.sql', 'd187066f5484875b2336de4e62b15c59c459076b22172f99e6c9c7e25bc08cd0'],
   ['209_expose_compatibility_catalog_stale_state.sql', 'f567ef736755cba2b1354827f04a8c0e7018f17720dfa55a7920d323894785e9'],
   ['210_allow_reviewed_compatibility_draft_hash.sql', '11f6dc8bb8d05c20b6b1456ca6c51cfb29508941a558ae271ff119305b2eeb42'],
+  ['211_add_assay_sample_type_assignment_v2.sql', '221eedf69644e5c42749b35c029c6936a9cf777c2843a4e48db7e90fc03394a0'],
 ])
 
 function readMigration() {
@@ -45,7 +46,7 @@ function extractFunction(sql: string, name: string) {
 }
 
 describe('assay sample-type assignment v2 migration', () => {
-  it('adds only migration 211 and preserves the applied compatibility history', async () => {
+  it('adds only migration 212 and preserves the executed migration history', async () => {
     expect(existsSync(migrationPath)).toBe(true)
     const { createHash } = await import('node:crypto')
 
