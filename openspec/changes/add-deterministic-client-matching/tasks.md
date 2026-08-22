@@ -87,38 +87,38 @@ No caller selects v2 yet; existing successful workflows remain unchanged, while
 unsafe duplicate trusted IDs fail closed through the localized compatibility
 contract instead of leaking PostgreSQL errors.
 
-- [ ] 4.1 Add failing SQL tests for typed CCCD/CMND precedence, unknown strong
+- [x] 4.1 Add failing SQL tests for typed CCCD/CMND precedence, unknown strong
   identities, lifecycle, accent-only names, phone guards, duplicates, cross-key
   disagreement, restricted candidates, missing identity, and all four outcomes.
-- [ ] 4.2 Add resolver/RPC v2 returning `matched`, `not_found`, `ambiguous`, or
+- [x] 4.2 Add resolver/RPC v2 returning `matched`, `not_found`, `ambiguous`, or
   `conflict`, accepting raw validated values, normalizing only in PostgreSQL,
   and returning stable reason codes plus only minimal authorized identifiers.
-- [ ] 4.3 Add transactional resolve-and-create behavior where only `not_found`
+- [x] 4.3 Add transactional resolve-and-create behavior where only `not_found`
   may create. Acquire a sorted lock set for every applicable government-ID,
   name/DOB, and real-phone key, re-resolve under lock, and re-resolve any trusted
   uniqueness violation.
-- [ ] 4.4 Enforce analyst/manager authorization, confidentiality filtering, RLS,
+- [x] 4.4 Enforce analyst/manager authorization, confidentiality filtering, RLS,
   fixed `search_path`, minimal grants, audit behavior, and PII-minimized failures.
-- [ ] 4.5 Return a non-disclosing `conflict` reason with no client identifier for
+- [x] 4.5 Return a non-disclosing `conflict` reason with no client identifier for
   confidential/restricted candidates; prohibit creation and test
   confidential-only and mixed-visibility candidate sets.
-- [ ] 4.6 Add strict Zod/TypeScript contracts and centralized Vietnamese labels:
+- [x] 4.6 Add strict Zod/TypeScript contracts and centralized Vietnamese labels:
   `Đã khớp`, `Không tìm thấy khách hàng`,
   `Không thể xác định duy nhất`, and `Xung đột thông tin`.
-- [ ] 4.7 Add actionable Vietnamese reason mapping with optional
+- [x] 4.7 Add actionable Vietnamese reason mapping with optional
   sheet/row/temporary-reference context and prove raw DB errors and unnecessary
   PII are never returned.
-- [ ] 4.8 Gate A: add server-only and `src/lib/api-client.ts` adapter boundaries
+- [x] 4.8 Gate A: add server-only and `src/lib/api-client.ts` adapter boundaries
   without direct client imports from `src/app/actions/*`; wire sanitized
   trusted-identity conflict handling into existing routes while preserving all
   compatible success responses.
-- [ ] 4.9 Gate A: deploy the compatibility layer and pass focused contract tests,
+- [x] 4.9 Gate A: deploy the compatibility layer and pass focused contract tests,
   typecheck, lint, browser smoke, and legacy caller regressions before database
   uniqueness is enabled.
-- [ ] 4.10 Gate B: reconcile canonical projections, apply the committed
+- [x] 4.10 Gate B: reconcile canonical projections, apply the committed
   resolver/trusted typed CCCD/CMND uniqueness migration after the Phase 3 clean
   checkpoint, reload schema cache, and add concurrency/cross-key regressions.
-- [ ] 4.11 Gate B: run SQL rollback suites, `run_security_tests()`, production
+- [x] 4.11 Gate B: run SQL rollback suites, `run_security_tests()`, production
   health checks, localized legacy collision smoke, and verify v2 remains
   unselected by all callers.
 
