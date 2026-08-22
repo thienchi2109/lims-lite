@@ -276,6 +276,40 @@ describe('legacy client upsert characterization', () => {
         expect(mocks.revalidatePath).not.toHaveBeenCalled()
     })
 
+    it('sanitizes trusted government identity uniqueness conflicts', async () => {
+        const phoneQuery = createQuery({
+            data: null,
+            error: {
+                code: 'PGRST116',
+            },
+        })
+        const upsertQuery = createQuery({
+            data: null,
+            error: {
+                code: '23505',
+                message:
+                    'duplicate key value violates unique constraint "clients_unique_trusted_government_identity"',
+                details:
+                    'Key (government_identity_value)=(086094006827) already exists',
+            },
+        })
+        const from = vi.fn()
+            .mockReturnValueOnce(phoneQuery)
+            .mockReturnValueOnce(upsertQuery)
+        mockAuthenticatedClient(from)
+
+        const result = await upsertClient(CLIENT_INPUT)
+
+        expect(result).toEqual({
+            error:
+                'Xung đột thông tin: CCCD/CMND đã được sử dụng bởi khách hàng khác. Vui lòng kiểm tra lại hoặc nhờ quản lý xử lý.',
+        })
+        expect(JSON.stringify(result)).not.toMatch(
+            /duplicate key|clients_unique|086094006827/i,
+        )
+        expect(mocks.revalidatePath).not.toHaveBeenCalled()
+    })
+
     it('rejects unauthenticated upserts before database access', async () => {
         const from = vi.fn()
         mocks.createClient.mockResolvedValue({

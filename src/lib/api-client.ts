@@ -37,6 +37,9 @@ import type {
     GetClientLifecycleDetail,
     GetClientLifecycleManager,
     RestoreClient,
+    ClientResolutionInput,
+    ClientResolutionResult,
+    ResolveOrCreateClientInput,
 } from '@/types'
 import type { SubmitResultReview } from '@/types'
 import type { ClientActionName } from '@/lib/client-actions/types'
@@ -351,6 +354,24 @@ export function upsertClientClient(data: CreateClient) {
 
 export function findClientByIdentityClient(name: string, dateOfBirth: string) {
     return callClientAction('findClientByIdentity', { name, dateOfBirth })
+}
+
+export function resolveClientIdentityClient(
+    data: ClientResolutionInput,
+): Promise<{ data: ClientResolutionResult }> {
+    return callClientAction<{ data: ClientResolutionResult }>(
+        'resolveClientIdentityV2',
+        data,
+    )
+}
+
+export function resolveOrCreateClientClient(
+    data: ResolveOrCreateClientInput,
+): Promise<{ data: ClientResolutionResult }> {
+    return callClientAction<{ data: ClientResolutionResult }>(
+        'resolveOrCreateClientV2',
+        data,
+    )
 }
 
 export function getClientClient(id: string) {

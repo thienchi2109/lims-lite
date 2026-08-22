@@ -22,6 +22,8 @@ const mocks = vi.hoisted(() => ({
     updateUser: vi.fn(),
     getSampleSubmissionReview: vi.fn(),
     approveResults: vi.fn(),
+    resolveClientIdentityV2: vi.fn(),
+    resolveOrCreateClientV2: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -120,6 +122,13 @@ vi.mock('@/app/actions/clients', () => ({
     updateClient: vi.fn(),
 }))
 
+vi.mock('@/lib/client-resolution/server', () => ({
+    resolveClientIdentityV2: (...args: unknown[]) =>
+        mocks.resolveClientIdentityV2(...args),
+    resolveOrCreateClientV2: (...args: unknown[]) =>
+        mocks.resolveOrCreateClientV2(...args),
+}))
+
 vi.mock('@/app/actions/signatures', () => ({
     uploadSignature: vi.fn(),
     uploadManagerSignature: vi.fn(),
@@ -175,6 +184,17 @@ function mockRole(role: string) {
         from: (table: string) => {
             expect(table).toBe('users')
             return usersQuery
+        },
+    })
+}
+
+function mockUnauthenticated() {
+    mocks.createClient.mockResolvedValue({
+        auth: {
+            getUser: vi.fn().mockResolvedValue({
+                data: { user: null },
+                error: null,
+            }),
         },
     })
 }
@@ -266,6 +286,55 @@ describe('client action role guard', () => {
         })
         expect(mocks.updateSample).not.toHaveBeenCalled()
     })
+
+    it.each([
+        'resolveClientIdentityV2',
+        'resolveOrCreateClientV2',
+    ] as const)(
+        'denies unauthenticated %s requests before the resolver runs',
+        async (action) => {
+            mockUnauthenticated()
+
+            const response = await POST(buildRequest(action, {}))
+
+            expect(response.status).toBe(403)
+            await expect(response.json()).resolves.toEqual({
+                error: 'Bạn không có quyền thực hiện thao tác này',
+            })
+            expect(mocks[action]).not.toHaveBeenCalled()
+        },
+    )
+
+    it.each([
+        'resolveClientIdentityV2',
+        'resolveOrCreateClientV2',
+    ] as const)(
+        'denies doctor %s requests before the resolver runs',
+        async (action) => {
+            mockRole('doctor')
+
+            const response = await POST(buildRequest(action, {}))
+
+            expect(response.status).toBe(403)
+            expect(mocks[action]).not.toHaveBeenCalled()
+        },
+    )
+
+    it.each([
+        ['analyst', 'resolveClientIdentityV2'],
+        ['manager', 'resolveOrCreateClientV2'],
+    ] as const)(
+        'allows %s to dispatch %s',
+        async (role, action) => {
+            mockRole(role)
+            mocks[action].mockResolvedValue({ data: { outcome: 'not_found' } })
+
+            const response = await POST(buildRequest(action, {}))
+
+            expect(response.status).toBe(200)
+            expect(mocks[action]).toHaveBeenCalledWith({})
+        },
+    )
 
     it('denies approveResults before the privileged handler when manager OTP is missing', async () => {
         vi.stubEnv('MANAGER_EMAIL_OTP_ENABLED', 'TRUE')

@@ -103,6 +103,21 @@ export async function upsertClient(data: CreateClient) {
             .select()
             .single()
         if (error) {
+            const trustedIdentityConflict = [
+                error.message,
+                error.details,
+                error.hint,
+            ].some((value) =>
+                value?.includes(
+                    'clients_unique_trusted_government_identity',
+                ),
+            )
+            if (error.code === '23505' && trustedIdentityConflict) {
+                return {
+                    error:
+                        'Xung đột thông tin: CCCD/CMND đã được sử dụng bởi khách hàng khác. Vui lòng kiểm tra lại hoặc nhờ quản lý xử lý.',
+                }
+            }
             console.error('Error upserting client:', error)
             if (error.code === '23505' && error.message.includes('phone')) {
                 return { error: 'Số điện thoại này đã được sử dụng bởi khách hàng khác' }

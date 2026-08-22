@@ -5,6 +5,10 @@ import { decodeJwtPayload } from '@/lib/jwt'
 
 const DOCTOR_ALLOWED_ACTIONS = new Set<ClientActionName>(['getSamples'])
 const MANAGER_FORBIDDEN_ACTIONS = new Set<ClientActionName>(['createSample', 'accessionAndAssignTests'])
+const ANALYST_OR_MANAGER_ACTIONS = new Set<ClientActionName>([
+    'resolveClientIdentityV2',
+    'resolveOrCreateClientV2',
+])
 const MANAGER_ONLY_ACTIONS = new Set<ClientActionName>([
     'getAssaySampleTypeCatalogManager',
     'cloneAssaySampleTypeCatalogRevision',
@@ -68,6 +72,13 @@ export async function getClientActionDenial(action: ClientActionName, request?: 
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
+        if (ANALYST_OR_MANAGER_ACTIONS.has(action)) {
+            return {
+                error: CLIENT_ACTION_FORBIDDEN_ERROR,
+                status: 403,
+            }
+        }
+
         return null
     }
 
@@ -89,6 +100,17 @@ export async function getClientActionDenial(action: ClientActionName, request?: 
             return null
         }
 
+        return {
+            error: CLIENT_ACTION_FORBIDDEN_ERROR,
+            status: 403,
+        }
+    }
+
+    if (
+        ANALYST_OR_MANAGER_ACTIONS.has(action)
+        && userData?.role !== 'analyst'
+        && userData?.role !== 'manager'
+    ) {
         return {
             error: CLIENT_ACTION_FORBIDDEN_ERROR,
             status: 403,

@@ -39,6 +39,8 @@ export type ClientActionName =
     | 'getRejectedSamplesCount'
     | 'upsertClient'
     | 'findClientByIdentity'
+    | 'resolveClientIdentityV2'
+    | 'resolveOrCreateClientV2'
     | 'getClient'
     | 'getClients'
     | 'updateClient'

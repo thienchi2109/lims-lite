@@ -21,6 +21,9 @@ export * from './assay-sample-type-compatibility'
 // Audited client lifecycle and manager adjudication contracts
 export * from './client-lifecycle'
 
+// Deterministic client resolver v2 contracts
+export * from './client-resolution'
+
 // Analytics types: search, reports, dashboard
 export * from './analytics'
 

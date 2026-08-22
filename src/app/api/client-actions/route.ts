@@ -52,6 +52,10 @@ import {
     restoreClient,
 } from '@/app/actions/client-lifecycle'
 import {
+    resolveClientIdentityV2,
+    resolveOrCreateClientV2,
+} from '@/lib/client-resolution/server'
+import {
     uploadSignature,
     getActiveSignature,
     getSignatureHistory,
@@ -271,6 +275,10 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
         if (!isIsoDateString(dateOfBirth)) return { error: 'Ngày sinh không hợp lệ' }
         return findClientByIdentity(name, dateOfBirth)
     },
+    resolveClientIdentityV2: async (payload) =>
+        resolveClientIdentityV2(payload),
+    resolveOrCreateClientV2: async (payload) =>
+        resolveOrCreateClientV2(payload),
     getClient: async (payload) => {
         if (!payload?.id) {
             return { error: 'Client ID là bắt buộc' }
