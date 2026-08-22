@@ -15,6 +15,10 @@ const checkpointPath = join(
   process.cwd(),
   'tests/client-identity-cleanup-checkpoint.sql',
 )
+const adjudicationPath = join(
+  process.cwd(),
+  'tests/issue-111-phase3-adjudicate-legacy-client-collisions.sql',
+)
 
 const immutableMigrations = [
   [
@@ -218,5 +222,38 @@ describe('legacy client identity classification migration', () => {
     expect(normalized).not.toMatch(/array_agg\s*\([^)]*\bid\b/i)
     expect(normalized).not.toMatch(/jsonb_agg\s*\([^)]*\bid\b/i)
     expect(normalized).not.toMatch(/\b(email|address|full_name)\b/i)
+  })
+
+  it('uses the Phase 2 RPC for the bounded legacy adjudication', () => {
+    const adjudication = readFile(adjudicationPath)
+    const normalized = normalizeSql(adjudication)
+
+    expect(existsSync(adjudicationPath)).toBe(true)
+    expect(normalized).toContain('BEGIN;')
+    expect(normalized).toMatch(/COMMIT;$/i)
+    expect(normalized).toContain('expected_group_count <> 2')
+    expect(normalized).toContain('expected_pair_count <> 4')
+    expect(normalized).toContain('expected_group_sizes')
+    expect(normalized).toContain(
+      'public.adjudicate_client_collision_v1(',
+    )
+    expect(normalized).toContain("'government_identity'")
+    expect(normalized).toContain("'confirmed_distinct'")
+    expect(normalized).toContain("'sub', v_manager_id")
+    expect(normalized).toContain("'role', 'authenticated'")
+    expect(normalized).toContain('client UUID set changed')
+    expect(normalized).toContain('client raw evidence changed')
+    expect(normalized).toContain('sample history links changed')
+    expect(normalized).toContain('adjudication audit coverage is incomplete')
+    expect(normalized).not.toMatch(
+      /INSERT INTO public\.client_collision_adjudications/i,
+    )
+    expect(normalized).not.toMatch(/UPDATE public\.(?:clients|samples|results)/i)
+    expect(normalized).not.toMatch(
+      /DELETE FROM public\.(?:clients|samples|results)/i,
+    )
+    expect(adjudication).toContain("'adjudicated_groups'")
+    expect(adjudication).toContain("'adjudicated_pairs'")
+    expect(adjudication).toContain("'remaining_unresolved_pairs'")
   })
 })
