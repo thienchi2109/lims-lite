@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 const migration = readFileSync(
-  'supabase/migrations/218_guard_client_lifecycle_mutations.sql',
+  'supabase/migrations/219_guard_client_lifecycle_mutations.sql',
   'utf8',
 )
 const normalized = migration.replace(/--.*$/gm, ' ').replace(/\s+/g, ' ')
@@ -24,6 +24,15 @@ describe('client lifecycle guard migration', () => {
         )
         .digest('hex'),
     ).toBe('bd8c268568d4c936d67be73e86c7130881cf14fb4c71cd899ee6b83af3bce965')
+    expect(
+      createHash('sha256')
+        .update(
+          readFileSync(
+            'supabase/migrations/218_guard_client_lifecycle_mutations.sql',
+          ),
+        )
+        .digest('hex'),
+    ).toBe('114c3d16ec0cc81e8bc2fc0877011b522429ca8740fa32989d01b79d4d8bee3c')
   })
 
   it('removes destructive and broad update privileges', () => {
@@ -43,10 +52,9 @@ describe('client lifecycle guard migration', () => {
       'deleted_at',
       'deleted_by',
       'deletion_reason',
-      'identity_trust_level',
-      'identity_verified_at',
-      'identity_verified_by',
-      'canonical_source_updated_at',
+      'government_identity_type',
+      'government_identity_value',
+      'government_identity_trusted',
     ]) {
       expect(normalized).toContain(`'${field}'`)
     }
