@@ -72,8 +72,9 @@ DECLARE
         '95110000-0000-0000-0000-000000000019';
     v_restricted_sample_id UUID :=
         '95110000-0000-0000-0000-000000000020';
-    v_confidential_assay_id UUID :=
-        '95110000-0000-0000-0000-000000000021';
+    v_confidential_assay_id UUID;
+    v_restricted_sample_type_id UUID;
+    v_restricted_sample_type_name TEXT;
     v_restricted_result_id UUID :=
         '95110000-0000-0000-0000-000000000022';
     v_client_updated_at TIMESTAMPTZ;
@@ -322,7 +323,7 @@ BEGIN
     PERFORM pg_temp.assert_client_lifecycle(
         v_manager_data #>> '{clients,0,id}' = v_client_id::TEXT
             AND v_manager_data #>> '{clients,0,maskedIdentity}'
-                = '*************************TION'
+                = '*********************SION'
             AND v_manager_data #>> '{clients,0,maskedPhone}'
                 = '******1001'
             AND (v_manager_data #> '{clients,0,collisionReasons}')
@@ -335,7 +336,7 @@ BEGIN
                 = 'legacy_identity'
             AND v_manager_data #>>
                 '{clients,0,collisionCandidates,0,maskedIdentity}'
-                = '*************************TION',
+                = '*********************SION',
         'manager list must mask PII and expose collision category only'
     );
 
@@ -436,9 +437,9 @@ BEGIN
                       GREATEST(v_client_id, v_collision_id)
                   AND collision_type = 'government_identity'
                   AND disposition = 'confirmed_distinct'
-                  AND adjudicated_by = v_manager_id
-                  AND evidence #>> '{client,maskedIdentity}'
-                      = '*************************TION'
+                   AND adjudicated_by = v_manager_id
+                   AND evidence #>> '{client,maskedIdentity}'
+                       = '*********************SION'
                   AND evidence::TEXT NOT LIKE '%0951101001%'
             )
             AND EXISTS (
@@ -536,7 +537,7 @@ BEGIN
     BEGIN
         PERFORM public.restore_client_v1(
             v_client_id,
-            v_client_updated_at,
+            v_after_deactivate - INTERVAL '1 microsecond',
             'Khôi phục bằng phiên bản cũ'
         );
     EXCEPTION
@@ -614,7 +615,7 @@ BEGIN
         'Issue 111 Phase Two Conflict',
         DATE '1982-01-11',
         'Khác',
-        '0951101001',
+        '+84951101001',
         'Rollback fixture'
     );
 
@@ -792,7 +793,7 @@ BEGIN
             'Issue 111 Phase Two Restricted Visible',
             DATE '1987-01-11',
             'Nam',
-            '0951101060',
+            '+84951101060',
             'Rollback fixture'
         ),
         (
@@ -805,21 +806,41 @@ BEGIN
             'Rollback fixture'
         );
 
-    INSERT INTO public.assay_definitions (
-        id,
-        name,
-        units,
-        is_confidential,
-        normal_range,
-        method_name
-    )
-    VALUES (
+    SELECT
+        compatibility.assay_definition_id,
+        compatibility.sample_type_id,
+        sample_type.name
+    INTO
         v_confidential_assay_id,
-        'Issue 111 Phase Two Confidential Assay',
-        'unit',
-        TRUE,
-        '0-10',
-        'Issue 111 Method'
+        v_restricted_sample_type_id,
+        v_restricted_sample_type_name
+    FROM public.assay_sample_type_compatibilities AS compatibility
+    JOIN public.assay_sample_type_catalog_revisions AS revision
+      ON revision.id = compatibility.revision_id
+     AND revision.status = 'published'
+    JOIN public.assay_sample_type_reviews AS review
+      ON review.revision_id = compatibility.revision_id
+     AND review.assay_definition_id = compatibility.assay_definition_id
+     AND review.disposition = 'configured'
+    JOIN public.assay_definitions AS assay_definition
+      ON assay_definition.id = compatibility.assay_definition_id
+     AND assay_definition.deleted_at IS NULL
+     AND NOT assay_definition.is_confidential
+    JOIN public.sample_types AS sample_type
+      ON sample_type.id = compatibility.sample_type_id
+     AND sample_type.deleted_at IS NULL
+    WHERE compatibility.removed_at IS NULL
+      AND compatibility.assay_compatibility_generation =
+          assay_definition.compatibility_generation
+      AND compatibility.sample_type_compatibility_generation =
+          sample_type.compatibility_generation
+    ORDER BY compatibility.created_at
+    LIMIT 1;
+
+    PERFORM pg_temp.assert_client_lifecycle(
+        v_confidential_assay_id IS NOT NULL
+            AND v_restricted_sample_type_id IS NOT NULL,
+        'restricted evidence fixture requires one current configured pair'
     );
 
     INSERT INTO public.samples (
@@ -829,6 +850,7 @@ BEGIN
         client_name,
         status,
         received_by,
+        sample_type_id,
         type,
         sample_quality
     )
@@ -839,7 +861,8 @@ BEGIN
         'Issue 111 Phase Two Restricted Hidden',
         'review',
         v_analyst_id,
-        'Máu',
+        v_restricted_sample_type_id,
+        v_restricted_sample_type_name,
         TRUE
     );
 
@@ -861,6 +884,10 @@ BEGIN
         v_analyst_id,
         clock_timestamp()
     );
+
+    UPDATE public.assay_definitions
+    SET is_confidential = TRUE
+    WHERE id = v_confidential_assay_id;
 
     UPDATE public.users
     SET can_access_confidential = FALSE
