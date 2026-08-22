@@ -49,12 +49,23 @@ BEGIN
     )
     ON CONFLICT (id) DO NOTHING;
 
-    INSERT INTO public.users (id, email, role, full_name)
+    INSERT INTO public.users (
+        id,
+        username,
+        email,
+        role,
+        full_name,
+        can_access_confidential,
+        deleted_at
+    )
     VALUES (
         v_actor_id,
+        'phase5_shadow_analyst',
         'phase5-shadow@example.test',
         'analyst',
-        'Phase 5 Shadow Actor'
+        'Phase 5 Shadow Actor',
+        FALSE,
+        NULL
     )
     ON CONFLICT (id) DO UPDATE
     SET role = EXCLUDED.role;
