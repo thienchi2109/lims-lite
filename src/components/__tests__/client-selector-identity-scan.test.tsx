@@ -4,7 +4,7 @@ import { vi } from 'vitest'
 import type { CreateClient } from '@/types'
 
 const mocks = vi.hoisted(() => ({
-    findClientByIdentityClient: vi.fn(async () => ({ data: null })),
+    findClientByIdentityQrClient: vi.fn(async () => ({ data: null })),
 }))
 
 vi.mock('@/components/client-form', () => ({
@@ -43,7 +43,7 @@ vi.mock('@/components/client-qr-scanner-dialog', () => ({
 
 vi.mock('@/lib/api-client', () => ({
     fetchClientsClient: vi.fn(async () => ({ data: [] })),
-    findClientByIdentityClient: mocks.findClientByIdentityClient,
+    findClientByIdentityQrClient: mocks.findClientByIdentityQrClient,
 }))
 
 import { ClientSelector } from '../client-selector'
@@ -66,9 +66,10 @@ describe('ClientSelector identity scan', () => {
         expect(screen.getByText('1994-09-21')).not.toBeNull()
         expect(screen.getByText('Cần Thơ')).not.toBeNull()
         expect(onSelect).toHaveBeenCalledWith(null)
-        expect(mocks.findClientByIdentityClient).toHaveBeenCalledWith(
-            'Nguyễn Thiện Chí',
-            '1994-09-21',
-        )
+        expect(mocks.findClientByIdentityQrClient).toHaveBeenCalledWith({
+            governmentIdentityValue: '086094006827',
+            name: 'Nguyễn Thiện Chí',
+            dateOfBirth: '1994-09-21',
+        })
     })
 })

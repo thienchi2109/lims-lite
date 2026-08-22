@@ -24,6 +24,8 @@ const mocks = vi.hoisted(() => ({
     approveResults: vi.fn(),
     resolveClientIdentityV2: vi.fn(),
     resolveOrCreateClientV2: vi.fn(),
+    findClientByIdentityWithShadow: vi.fn(),
+    upsertClientWithShadow: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -120,6 +122,13 @@ vi.mock('@/app/actions/clients', () => ({
     getClient: vi.fn(),
     getClients: vi.fn(),
     updateClient: vi.fn(),
+}))
+
+vi.mock('./client-resolution-shadow-handlers', () => ({
+    findClientByIdentityWithShadow: (...args: unknown[]) =>
+        mocks.findClientByIdentityWithShadow(...args),
+    upsertClientWithShadow: (...args: unknown[]) =>
+        mocks.upsertClientWithShadow(...args),
 }))
 
 vi.mock('@/lib/client-resolution/server', () => ({
