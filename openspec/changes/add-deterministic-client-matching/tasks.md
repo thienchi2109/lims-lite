@@ -49,10 +49,10 @@ remain unchanged.
   and confirmation summaries.
 - [x] 2.5 Expose only the minimum conflict evidence needed for adjudication; map
   backend failures to sanitized Vietnamese errors without PII-rich logs or URLs.
-- [ ] 2.6 Run focused SQL/UI tests, `run_security_tests()`, typecheck, lint,
+- [x] 2.6 Run focused SQL/UI tests, `run_security_tests()`, typecheck, lint,
   React Doctor, manager/analyst browser smoke, and existing accession regression
   checks before additive deployment of the replacement workflow.
-- [ ] 2.7 After production smoke proves the replacement path, apply a separate
+- [x] 2.7 After production smoke proves the replacement path, apply a separate
   committed forward-only guard migration that revokes hard DELETE and broad
   direct lifecycle-field UPDATE, preserves legacy identity updates plus allowed
   profile edits until Phase 6, reruns security/regression suites, and retains a
