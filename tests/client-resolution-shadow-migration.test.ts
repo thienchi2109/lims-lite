@@ -1,13 +1,26 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 
 const migrationPath = path.join(
+  process.cwd(),
+  'supabase/migrations/225_add_client_resolution_shadow_telemetry.sql',
+)
+const immutableMigration224Path = path.join(
   process.cwd(),
   'supabase/migrations/224_add_client_resolution_shadow_telemetry.sql',
 )
 
 describe('client resolution shadow telemetry migration', () => {
+  it('keeps failed rehearsal migration 224 byte-for-byte immutable', () => {
+    const migration = fs.readFileSync(immutableMigration224Path)
+
+    expect(createHash('sha256').update(migration).digest('hex')).toBe(
+      '1e5a5f619d39b6cd07bcaa458cc97bfe6727c970152759d80a6813d3132c1cf0',
+    )
+  })
+
   it('creates a PII-free, retention-bounded telemetry store', () => {
     const migration = fs.readFileSync(migrationPath, 'utf8')
     const tableDefinition = migration.match(
