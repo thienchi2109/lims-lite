@@ -64,17 +64,17 @@ Boundary: forward-only cleanup and explicit manager decisions. Resolver callers,
 uniqueness guards, direct-mutation guards, and legacy-path retirement remain
 disabled.
 
-- [ ] 3.1 Add a forward-only classification migration that maps invalid,
+- [x] 3.1 Add a forward-only classification migration that maps invalid,
   `BACKFILL-*`, and placeholder values to nullable/untrusted canonical state
   without inventing replacement identities.
-- [ ] 3.2 Commit and apply only that classification migration through the
+- [x] 3.2 Commit and apply only that classification migration through the
   approved home-server path, then run rollback-only SQL,
   `run_security_tests()`, and projection reconciliation checks.
-- [ ] 3.3 Add checkpoint assertions and aggregate reports for every unresolved
+- [x] 3.3 Add checkpoint assertions and aggregate reports for every unresolved
   canonical government identity, phone, name/DOB, and inactive-history conflict.
-- [ ] 3.4 Use the Phase 2 workflow to adjudicate the two known duplicate
+- [x] 3.4 Use the Phase 2 workflow to adjudicate the two known duplicate
   untrusted identifier groups without automatic merge or sample relinking.
-- [ ] 3.5 Re-run the zero-blocker checkpoint after adjudication, archive only
+- [x] 3.5 Re-run the zero-blocker checkpoint after adjudication, archive only
   non-PII aggregate evidence, and verify existing app health, client
   maintenance, allowed profile edits, and accession smoke.
 
