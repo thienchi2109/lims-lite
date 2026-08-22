@@ -7,6 +7,9 @@ BEGIN;
 \set ON_ERROR_STOP on
 
 SET LOCAL search_path TO public, extensions;
+SET LOCAL statement_timeout = '30s';
+SET LOCAL temp_file_limit = '64MB';
+SET LOCAL max_parallel_workers_per_gather = 0;
 
 CREATE TEMP TABLE expected_client_policy_contract (
     policy_name TEXT PRIMARY KEY,
@@ -293,37 +296,51 @@ DECLARE
     v_phone TEXT;
     v_plus84_phone TEXT;
     v_identity TEXT;
+    v_candidate_phone TEXT;
+    v_candidate_identity TEXT;
+    v_attempt INTEGER;
     v_name TEXT := '  PHASE   ONE   Nguyễn ' || v_client_id::TEXT;
     v_update_name TEXT :=
         normalize('  PHASE   ONE   NGUYỄN ', NFD) || v_client_id::TEXT;
     v_row public.clients%ROWTYPE;
     v_audit_count BIGINT;
 BEGIN
-    SELECT '0' || candidate::TEXT
-    INTO v_phone
-    FROM generate_series(990000000, 999999999) AS candidate
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM public.clients
-        WHERE phone IN (
-            '0' || candidate::TEXT,
-            '+84' || candidate::TEXT
-        )
-    )
-    LIMIT 1;
+    FOR v_attempt IN 1..100 LOOP
+        v_candidate_phone :=
+            '09' || lpad(
+                floor(random() * 100000000)::BIGINT::TEXT,
+                8,
+                '0'
+            );
 
-    SELECT candidate::TEXT
-    INTO v_identity
-    FROM generate_series(
-        990000000000::BIGINT,
-        999999999999::BIGINT
-    ) AS candidate
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM public.clients
-        WHERE id_card_num = candidate::TEXT
-    )
-    LIMIT 1;
+        IF NOT EXISTS (
+            SELECT 1
+            FROM public.clients
+            WHERE phone IN (
+                v_candidate_phone,
+                '+84' || substring(v_candidate_phone FROM 2)
+            )
+        ) THEN
+            v_phone := v_candidate_phone;
+            EXIT;
+        END IF;
+    END LOOP;
+
+    FOR v_attempt IN 1..100 LOOP
+        v_candidate_identity := (
+            900000000000::BIGINT
+            + floor(random() * 100000000000)::BIGINT
+        )::TEXT;
+
+        IF NOT EXISTS (
+            SELECT 1
+            FROM public.clients
+            WHERE id_card_num = v_candidate_identity
+        ) THEN
+            v_identity := v_candidate_identity;
+            EXIT;
+        END IF;
+    END LOOP;
 
     IF v_phone IS NULL OR v_identity IS NULL THEN
         RAISE EXCEPTION 'Could not allocate rollback-only client fixtures';
@@ -417,8 +434,11 @@ DECLARE
     v_manager_id UUID := gen_random_uuid();
     v_analyst_client_id UUID := gen_random_uuid();
     v_manager_client_id UUID := gen_random_uuid();
-    v_phones TEXT[];
-    v_identities TEXT[];
+    v_phones TEXT[] := ARRAY[]::TEXT[];
+    v_identities TEXT[] := ARRAY[]::TEXT[];
+    v_candidate_phone TEXT;
+    v_candidate_identity TEXT;
+    v_attempt INTEGER;
     v_analyst_name TEXT :=
         'Phase 1 Analyst Client ' || v_analyst_client_id::TEXT;
     v_manager_name TEXT :=
@@ -436,37 +456,49 @@ BEGIN
             'Existing confidentiality caller is unavailable';
     END IF;
 
-    SELECT array_agg(phone ORDER BY phone)
-    INTO v_phones
-    FROM (
-        SELECT '0' || candidate::TEXT AS phone
-        FROM generate_series(
-            970000000::BIGINT,
-            979999999::BIGINT
-        ) AS candidate
-        WHERE NOT EXISTS (
-            SELECT 1
-            FROM public.clients
-            WHERE clients.phone = '0' || candidate::TEXT
-        )
-        LIMIT 2
-    ) AS available_phones;
+    FOR v_attempt IN 1..100 LOOP
+        v_candidate_phone :=
+            '09' || lpad(
+                floor(random() * 100000000)::BIGINT::TEXT,
+                8,
+                '0'
+            );
 
-    SELECT array_agg(identity_value ORDER BY identity_value)
-    INTO v_identities
-    FROM (
-        SELECT candidate::TEXT AS identity_value
-        FROM generate_series(
-            970000000000::BIGINT,
-            979999999999::BIGINT
-        ) AS candidate
-        WHERE NOT EXISTS (
+        IF NOT (v_candidate_phone = ANY(v_phones))
+           AND NOT EXISTS (
             SELECT 1
             FROM public.clients
-            WHERE id_card_num = candidate::TEXT
-        )
-        LIMIT 2
-    ) AS available_identities;
+            WHERE phone IN (
+                v_candidate_phone,
+                '+84' || substring(v_candidate_phone FROM 2)
+            )
+        ) THEN
+            v_phones := array_append(v_phones, v_candidate_phone);
+        END IF;
+
+        EXIT WHEN cardinality(v_phones) = 2;
+    END LOOP;
+
+    FOR v_attempt IN 1..100 LOOP
+        v_candidate_identity := (
+            900000000000::BIGINT
+            + floor(random() * 100000000000)::BIGINT
+        )::TEXT;
+
+        IF NOT (v_candidate_identity = ANY(v_identities))
+           AND NOT EXISTS (
+            SELECT 1
+            FROM public.clients
+            WHERE id_card_num = v_candidate_identity
+        ) THEN
+            v_identities := array_append(
+                v_identities,
+                v_candidate_identity
+            );
+        END IF;
+
+        EXIT WHEN cardinality(v_identities) = 2;
+    END LOOP;
 
     IF coalesce(array_length(v_phones, 1), 0) <> 2
        OR coalesce(array_length(v_identities, 1), 0) <> 2
