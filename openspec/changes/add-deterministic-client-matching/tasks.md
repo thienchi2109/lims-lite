@@ -128,17 +128,17 @@ Boundary: v2 is evaluated but never controls responses or mutations. Shadow mode
 is server-controlled, deploy-safe, and independently disabled without rolling
 back schema.
 
-- [ ] 5.1 Add a server-controlled shadow switch for eligible manual, QR, and
+- [x] 5.1 Add a server-controlled shadow switch for eligible manual, QR, and
   upsert requests; browser input cannot enable or configure it.
-- [ ] 5.2 Compare non-mutating legacy and v2 evaluators against the same
+- [x] 5.2 Compare non-mutating legacy and v2 evaluators against the same
   pre-mutation snapshot, with zero response or mutation influence.
-- [ ] 5.3 Persist only caller category, machine outcome/reason, a random
+- [x] 5.3 Persist only caller category, machine outcome/reason, a random
   request-scoped correlation ID, and timestamps under a bounded retention
   policy; exclude client UUIDs, names, phones, government IDs, DOB, hashes,
   fingerprints, source coordinates, and payloads.
-- [ ] 5.4 Add tests for shadow isolation, failure containment, authorization,
+- [x] 5.4 Add tests for shadow isolation, failure containment, authorization,
   performance budgets, and zero mutation side effects.
-- [ ] 5.5 Deploy shadow mode, observe an agreed evidence window, review every
+- [x] 5.5 Deploy shadow mode, observe an agreed evidence window, review every
   discrepancy category, and block Phase 6 until acceptance criteria pass.
 
 ## 6. Phase 6 - Cut Over Existing Callers Behind Rollback Controls
