@@ -27,9 +27,8 @@ BEGIN
 
     FOREACH v_protected IN ARRAY ARRAY[
         'deleted_at', 'deleted_by', 'deletion_reason',
-        'identity_trust_level', 'identity_verified_at',
-        'identity_verified_by', 'canonical_source_updated_at',
-        'normalized_government_identity', 'normalized_name', 'normalized_phone'
+        'government_identity_type', 'government_identity_value',
+        'government_identity_trusted', 'normalized_name', 'normalized_phone'
     ]
     LOOP
         IF has_column_privilege(
