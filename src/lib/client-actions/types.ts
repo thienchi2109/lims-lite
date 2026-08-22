@@ -42,6 +42,12 @@ export type ClientActionName =
     | 'getClient'
     | 'getClients'
     | 'updateClient'
+    | 'getClientLifecycleManager'
+    | 'getClientLifecycleDetailManager'
+    | 'deactivateClient'
+    | 'restoreClient'
+    | 'correctClientIdentity'
+    | 'adjudicateClientCollision'
     | 'uploadManagerSignature'    // @deprecated - use uploadSignature
     | 'uploadSignature'           // New generic action for both roles
     | 'getActiveSignature'

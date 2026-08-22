@@ -82,6 +82,28 @@ describe('client action authorization characterization', () => {
         )
     })
 
+    it('allows only managers to use client lifecycle actions', async () => {
+        const lifecycleActions = [
+            'getClientLifecycleManager',
+            'getClientLifecycleDetailManager',
+            'deactivateClient',
+            'restoreClient',
+            'correctClientIdentity',
+            'adjudicateClientCollision',
+        ] as const
+
+        for (const action of lifecycleActions) {
+            mockRole('analyst')
+            await expect(getClientActionDenial(action)).resolves.toEqual({
+                error: CLIENT_ACTION_FORBIDDEN_ERROR,
+                status: 403,
+            })
+
+            mockRole('manager')
+            await expect(getClientActionDenial(action)).resolves.toBeNull()
+        }
+    })
+
     it('keeps analyst client upsert authorized by the bridge guard', async () => {
         mockRole('analyst')
 

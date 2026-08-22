@@ -36,18 +36,18 @@ temporarily authoritative legacy identity updates and compatible analyst access
 to explicitly allowed non-identity profile edits. Existing accession screens
 remain unchanged.
 
-- [ ] 2.1 Add failing SQL/application tests for manager deactivation,
+- [x] 2.1 Add failing SQL/application tests for manager deactivation,
   restoration, correction, collision adjudication, required reasons, stale
   requests, audit failure, and active-identity conflicts.
-- [ ] 2.2 Add SECURITY DEFINER lifecycle and adjudication RPCs with explicit
+- [x] 2.2 Add SECURITY DEFINER lifecycle and adjudication RPCs with explicit
   manager role checks, fixed `search_path`, minimal grants, stable SQLSTATEs, and
   atomic audit persistence.
-- [ ] 2.3 Ensure restoration keeps the same UUID, never rewrites sample/result
+- [x] 2.3 Ensure restoration keeps the same UUID, never rewrites sample/result
   links, never auto-merges identities, and fails closed on active conflicts.
-- [ ] 2.4 Add Vietnamese manager views for active/inactive state, correction,
+- [x] 2.4 Add Vietnamese manager views for active/inactive state, correction,
   deactivation, restoration, and unresolved collisions with explicit reasons
   and confirmation summaries.
-- [ ] 2.5 Expose only the minimum conflict evidence needed for adjudication; map
+- [x] 2.5 Expose only the minimum conflict evidence needed for adjudication; map
   backend failures to sanitized Vietnamese errors without PII-rich logs or URLs.
 - [ ] 2.6 Run focused SQL/UI tests, `run_security_tests()`, typecheck, lint,
   React Doctor, manager/analyst browser smoke, and existing accession regression

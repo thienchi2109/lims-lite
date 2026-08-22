@@ -18,6 +18,9 @@ export * from './result-review'
 // Assay/sample-type compatibility catalog contracts
 export * from './assay-sample-type-compatibility'
 
+// Audited client lifecycle and manager adjudication contracts
+export * from './client-lifecycle'
+
 // Analytics types: search, reports, dashboard
 export * from './analytics'
 
