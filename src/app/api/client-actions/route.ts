@@ -37,12 +37,14 @@ import {
 import { createUser, updateUser, deleteUser } from '@/app/actions/users'
 import { configureManagerOtpEmail, getMaskedManagerOtpEmail } from '@/app/actions/users-manager-otp'
 import {
-    upsertClient,
-    findClientByIdentity,
     getClient,
     getClients,
     updateClient,
 } from '@/app/actions/clients'
+import {
+    findClientByIdentityWithShadow,
+    upsertClientWithShadow,
+} from './client-resolution-shadow-handlers'
 import {
     adjudicateClientCollision,
     correctClientIdentity,
@@ -266,14 +268,35 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
     },
     rejectSample: async (payload) => rejectSample(payload),
     discardSample: async (payload) => discardSample(payload),
-    upsertClient: async (payload) => upsertClient(payload),
+    upsertClient: async (payload) => upsertClientWithShadow(payload),
     findClientByIdentity: async (payload) => {
         const name = typeof payload?.name === 'string' ? payload.name.trim() : ''
         const dateOfBirth = typeof payload?.dateOfBirth === 'string' ? payload.dateOfBirth.trim() : ''
         if (!name) return { error: 'Tên là bắt buộc' }
         if (!dateOfBirth) return { error: 'Ngày sinh là bắt buộc' }
         if (!isIsoDateString(dateOfBirth)) return { error: 'Ngày sinh không hợp lệ' }
-        return findClientByIdentity(name, dateOfBirth)
+        return findClientByIdentityWithShadow({
+            category: 'manual',
+            name,
+            dateOfBirth,
+        })
+    },
+    findClientByIdentityQr: async (payload) => {
+        const name = typeof payload?.name === 'string' ? payload.name.trim() : ''
+        const dateOfBirth = typeof payload?.dateOfBirth === 'string' ? payload.dateOfBirth.trim() : ''
+        const governmentIdentityValue =
+            typeof payload?.governmentIdentityValue === 'string'
+                ? payload.governmentIdentityValue.trim()
+                : null
+        if (!name) return { error: 'Tên là bắt buộc' }
+        if (!dateOfBirth) return { error: 'Ngày sinh là bắt buộc' }
+        if (!isIsoDateString(dateOfBirth)) return { error: 'Ngày sinh không hợp lệ' }
+        return findClientByIdentityWithShadow({
+            category: 'qr',
+            governmentIdentityValue,
+            name,
+            dateOfBirth,
+        })
     },
     resolveClientIdentityV2: async (payload) =>
         resolveClientIdentityV2(payload),

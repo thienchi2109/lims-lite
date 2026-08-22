@@ -1,0 +1,85 @@
+import fs from 'node:fs'
+import path from 'node:path'
+import { describe, expect, it } from 'vitest'
+
+const migrationPath = path.join(
+  process.cwd(),
+  'supabase/migrations/224_add_client_resolution_shadow_telemetry.sql',
+)
+
+describe('client resolution shadow telemetry migration', () => {
+  it('creates a PII-free, retention-bounded telemetry store', () => {
+    const migration = fs.readFileSync(migrationPath, 'utf8')
+    const tableDefinition = migration.match(
+      /CREATE TABLE public\.client_resolution_shadow_events \(([\s\S]*?)\n\);/,
+    )?.[1]
+
+    expect(tableDefinition).toBeDefined()
+    expect(tableDefinition).toContain('caller_category')
+    expect(tableDefinition).toContain('legacy_outcome')
+    expect(tableDefinition).toContain('legacy_reason_code')
+    expect(tableDefinition).toContain('v2_outcome')
+    expect(tableDefinition).toContain('v2_reason_code')
+    expect(tableDefinition).toContain('correlation_id')
+    expect(tableDefinition).toContain('observed_at')
+    expect(tableDefinition).toContain('expires_at')
+    expect(tableDefinition).toContain("INTERVAL '30 days'")
+    expect(tableDefinition).not.toMatch(
+      /\b(client_id|actor_id|name|phone|government_identity|date_of_birth|hash|fingerprint|source|payload|jsonb)\b/i,
+    )
+    expect(migration).toContain(
+      'DELETE FROM public.client_resolution_shadow_events',
+    )
+    expect(migration).toContain('WHERE expires_at <= clock_timestamp()')
+  })
+
+  it('keeps direct access denied and records only through a service-role RPC', () => {
+    const migration = fs.readFileSync(migrationPath, 'utf8')
+
+    expect(migration).toContain(
+      'ALTER TABLE public.client_resolution_shadow_events ENABLE ROW LEVEL SECURITY',
+    )
+    expect(migration).toContain(
+      'ALTER TABLE public.client_resolution_shadow_events FORCE ROW LEVEL SECURITY',
+    )
+    expect(migration).toContain(
+      'DROP POLICY IF EXISTS "Deny direct shadow telemetry access"',
+    )
+    expect(migration).toContain(
+      'CREATE POLICY "Deny direct shadow telemetry access"',
+    )
+    expect(migration).toMatch(
+      /get_user_role\(\).*IN \('analyst', 'manager'\)[\s\S]*FALSE/i,
+    )
+    expect(migration).toContain(
+      'GRANT EXECUTE ON FUNCTION public.record_client_resolution_shadow_v1',
+    )
+    expect(migration).toContain('TO service_role')
+    expect(migration).toMatch(
+      /REVOKE ALL ON FUNCTION public\.record_client_resolution_shadow_v1[\s\S]*FROM authenticated/,
+    )
+  })
+
+  it('evaluates legacy and v2 before inserting one aggregate event', () => {
+    const migration = fs.readFileSync(migrationPath, 'utf8')
+    const functionBody = migration.match(
+      /CREATE FUNCTION public\.record_client_resolution_shadow_v1[\s\S]*?AS \$\$([\s\S]*?)\$\$;/,
+    )?.[1]
+
+    expect(functionBody).toBeDefined()
+    expect(functionBody).toContain(
+      'public.resolve_client_identity_internal_v2(',
+    )
+    expect(functionBody).toContain(
+      'INSERT INTO public.client_resolution_shadow_events',
+    )
+    expect(functionBody?.indexOf('resolve_client_identity_internal_v2')).toBeLessThan(
+      functionBody?.indexOf(
+        'INSERT INTO public.client_resolution_shadow_events',
+      ) ?? -1,
+    )
+    expect(functionBody).not.toMatch(
+      /\b(INSERT INTO|UPDATE|DELETE FROM) public\.(clients|samples)\b/i,
+    )
+  })
+})

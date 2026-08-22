@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useRef } from 'react'
-import { findClientByIdentityClient } from '@/lib/api-client'
+import { findClientByIdentityQrClient } from '@/lib/api-client'
 import type { Client, CreateClient } from '@/types'
 import type { ParsedClientIdentityQr } from '@/lib/qr/parse-client-identity-qr'
 
@@ -34,7 +34,11 @@ export function useClientIdentityScan({
         })
 
         try {
-            const result = await findClientByIdentityClient(name, dateOfBirth)
+            const result = await findClientByIdentityQrClient({
+                governmentIdentityValue: idCardNum,
+                name,
+                dateOfBirth,
+            })
             if (
                 scanGeneration === scanGenerationRef.current
                 && result.data

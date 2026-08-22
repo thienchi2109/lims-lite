@@ -356,6 +356,14 @@ export function findClientByIdentityClient(name: string, dateOfBirth: string) {
     return callClientAction('findClientByIdentity', { name, dateOfBirth })
 }
 
+export function findClientByIdentityQrClient(data: {
+    governmentIdentityValue?: string
+    name: string
+    dateOfBirth: string
+}) {
+    return callClientAction('findClientByIdentityQr', data)
+}
+
 export function resolveClientIdentityClient(
     data: ClientResolutionInput,
 ): Promise<{ data: ClientResolutionResult }> {
