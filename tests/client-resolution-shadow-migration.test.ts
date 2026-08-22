@@ -5,11 +5,15 @@ import { describe, expect, it } from 'vitest'
 
 const migrationPath = path.join(
   process.cwd(),
-  'supabase/migrations/225_add_client_resolution_shadow_telemetry.sql',
+  'supabase/migrations/226_add_client_resolution_shadow_telemetry.sql',
 )
 const immutableMigration224Path = path.join(
   process.cwd(),
   'supabase/migrations/224_add_client_resolution_shadow_telemetry.sql',
+)
+const immutableMigration225Path = path.join(
+  process.cwd(),
+  'supabase/migrations/225_add_client_resolution_shadow_telemetry.sql',
 )
 
 describe('client resolution shadow telemetry migration', () => {
@@ -18,6 +22,14 @@ describe('client resolution shadow telemetry migration', () => {
 
     expect(createHash('sha256').update(migration).digest('hex')).toBe(
       '1e5a5f619d39b6cd07bcaa458cc97bfe6727c970152759d80a6813d3132c1cf0',
+    )
+  })
+
+  it('keeps failed rehearsal migration 225 byte-for-byte immutable', () => {
+    const migration = fs.readFileSync(immutableMigration225Path)
+
+    expect(createHash('sha256').update(migration).digest('hex')).toBe(
+      '78fec17a15f11e404c3957a38ef37d54e4a650082132f1ff096560d09125f395',
     )
   })
 
@@ -35,8 +47,8 @@ describe('client resolution shadow telemetry migration', () => {
     expect(tableDefinition).toContain('v2_reason_code')
     expect(tableDefinition).toContain('correlation_id')
     expect(tableDefinition).toContain('observed_at')
-    expect(tableDefinition).toContain('expires_at')
-    expect(tableDefinition).toContain("INTERVAL '30 days'")
+    expect(tableDefinition).toContain('expires_at TIMESTAMPTZ NOT NULL')
+    expect(migration).toContain("v_observed_at + INTERVAL '30 days'")
     expect(tableDefinition).not.toMatch(
       /\b(client_id|actor_id|name|phone|government_identity|date_of_birth|hash|fingerprint|source|payload|jsonb)\b/i,
     )

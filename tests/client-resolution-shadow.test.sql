@@ -126,7 +126,8 @@ BEGIN
         v2_outcome,
         v2_reason_code,
         correlation_id,
-        observed_at
+        observed_at,
+        expires_at
     )
     VALUES (
         'manual',
@@ -135,7 +136,8 @@ BEGIN
         'not_found',
         'no_candidate',
         '91000000-0000-4000-8000-000000000004',
-        now() - INTERVAL '31 days'
+        now() - INTERVAL '31 days',
+        now() - INTERVAL '1 day'
     );
 
     PERFORM set_config(
