@@ -5,20 +5,20 @@ Existing columns, policies, RPCs, routes, response shapes, and callers remain
 usable. No cleanup, canonical enforcement, hard-delete revocation, or
 user-visible matching change occurs in this phase.
 
-- [ ] 1.1 Add passing characterization tests that lock current raw name/DOB,
+- [x] 1.1 Add passing characterization tests that lock current raw name/DOB,
   phone, QR, upsert, authorization, confidentiality, audit, and Vietnamese error
   contracts; add failing target tests only in the phase that implements each
   intentional behavior change.
-- [ ] 1.2 Add read-only aggregate SQL for client counts, placeholders, invalid
+- [x] 1.2 Add read-only aggregate SQL for client counts, placeholders, invalid
   identities, collisions, audit evidence, and sample links without selecting
   row-level PII; record the production baseline through the approved SSH path.
-- [ ] 1.3 Add a next-numbered migration with baseline assertions and nullable
+- [x] 1.3 Add a next-numbered migration with baseline assertions and nullable
   canonical government-identity, normalized name/phone, trust, and soft-delete
   audit fields.
-- [ ] 1.4 Lock the PostgreSQL 15.1 normalization algorithm and versioned
+- [x] 1.4 Lock the PostgreSQL 15.1 normalization algorithm and versioned
   Vietnamese fixtures: NFC, trim, whitespace collapse, and
   `lower(... COLLATE "und-x-icu")` with diacritics preserved.
-- [ ] 1.5 Add database triggers that derive canonical projections on every
+- [x] 1.5 Add database triggers that derive canonical projections on every
   legacy or v2 INSERT/UPDATE; preserve existing RLS, audit triggers, grants,
   fixed `search_path`, and behavior while adding non-unique candidate indexes.
 - [ ] 1.6 Add rollback-only SQL tests for normalization, lifecycle defaults,
