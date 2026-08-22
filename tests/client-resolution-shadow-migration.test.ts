@@ -7,6 +7,10 @@ const migrationPath = path.join(
   process.cwd(),
   'supabase/migrations/226_add_client_resolution_shadow_telemetry.sql',
 )
+const correctionMigrationPath = path.join(
+  process.cwd(),
+  'supabase/migrations/227_fix_client_resolution_shadow_expiry_pruning.sql',
+)
 const immutableMigration224Path = path.join(
   process.cwd(),
   'supabase/migrations/224_add_client_resolution_shadow_telemetry.sql',
@@ -15,6 +19,7 @@ const immutableMigration225Path = path.join(
   process.cwd(),
   'supabase/migrations/225_add_client_resolution_shadow_telemetry.sql',
 )
+const immutableMigration226Path = migrationPath
 
 describe('client resolution shadow telemetry migration', () => {
   it('keeps failed rehearsal migration 224 byte-for-byte immutable', () => {
@@ -30,6 +35,34 @@ describe('client resolution shadow telemetry migration', () => {
 
     expect(createHash('sha256').update(migration).digest('hex')).toBe(
       '78fec17a15f11e404c3957a38ef37d54e4a650082132f1ff096560d09125f395',
+    )
+  })
+
+  it('keeps applied rehearsal migration 226 byte-for-byte immutable', () => {
+    const migration = fs.readFileSync(immutableMigration226Path)
+
+    expect(createHash('sha256').update(migration).digest('hex')).toBe(
+      '71a91358705a80975e651fb193e28c5dcc43aac65c3adf517b8c67939072ed7d',
+    )
+  })
+
+  it('qualifies expiry pruning in a forward-only correction', () => {
+    const migration = fs.readFileSync(correctionMigrationPath, 'utf8')
+    const functionBody = migration.match(
+      /CREATE OR REPLACE FUNCTION public\.record_client_resolution_shadow_v1[\s\S]*?AS \$\$([\s\S]*?)\$\$;/,
+    )?.[1]
+
+    expect(migration).toContain(
+      'CREATE OR REPLACE FUNCTION public.record_client_resolution_shadow_v1',
+    )
+    expect(functionBody).toContain(
+      'DELETE FROM public.client_resolution_shadow_events AS event',
+    )
+    expect(functionBody).toContain(
+      'WHERE event.expires_at <= clock_timestamp()',
+    )
+    expect(functionBody).not.toContain(
+      'WHERE expires_at <= clock_timestamp()',
     )
   })
 
