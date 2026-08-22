@@ -27,6 +27,16 @@ import type {
     PublishedAssaySampleTypeCatalog,
     ReviewAssaySampleTypeCatalogRevision,
     UpdateAssaySampleTypeCatalogReview,
+    AdjudicateClientCollision,
+    ClientCollisionAdjudicationResult,
+    ClientLifecycleDetail,
+    ClientLifecycleManagerData,
+    ClientLifecycleMutationResult,
+    CorrectClientIdentity,
+    DeactivateClient,
+    GetClientLifecycleDetail,
+    GetClientLifecycleManager,
+    RestoreClient,
 } from '@/types'
 import type { SubmitResultReview } from '@/types'
 import type { ClientActionName } from '@/lib/client-actions/types'
@@ -353,6 +363,60 @@ export function fetchClientsClient(search?: string) {
 
 export function updateClientClient(id: string, data: Partial<CreateClient>) {
     return callClientAction('updateClient', { id, data })
+}
+
+export function getClientLifecycleManagerClient(
+    data: Partial<GetClientLifecycleManager> = {},
+) {
+    return callClientAction<{ data: ClientLifecycleManagerData }>(
+        'getClientLifecycleManager',
+        data,
+    )
+}
+
+export function getClientLifecycleDetailManagerClient(
+    data: GetClientLifecycleDetail,
+) {
+    return callClientAction<{ data: ClientLifecycleDetail }>(
+        'getClientLifecycleDetailManager',
+        data,
+    )
+}
+
+export function deactivateClientClient(
+    data: DeactivateClient,
+): Promise<{ data: ClientLifecycleMutationResult }> {
+    return callClientAction<{ data: ClientLifecycleMutationResult }>(
+        'deactivateClient',
+        data,
+    )
+}
+
+export function restoreClientClient(
+    data: RestoreClient,
+): Promise<{ data: ClientLifecycleMutationResult }> {
+    return callClientAction<{ data: ClientLifecycleMutationResult }>(
+        'restoreClient',
+        data,
+    )
+}
+
+export function correctClientIdentityClient(
+    data: CorrectClientIdentity,
+): Promise<{ data: ClientLifecycleMutationResult }> {
+    return callClientAction<{ data: ClientLifecycleMutationResult }>(
+        'correctClientIdentity',
+        data,
+    )
+}
+
+export function adjudicateClientCollisionClient(
+    data: AdjudicateClientCollision,
+): Promise<{ data: ClientCollisionAdjudicationResult }> {
+    return callClientAction<{ data: ClientCollisionAdjudicationResult }>(
+        'adjudicateClientCollision',
+        data,
+    )
 }
 
 export async function logoutClient() {

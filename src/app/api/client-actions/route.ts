@@ -44,6 +44,14 @@ import {
     updateClient,
 } from '@/app/actions/clients'
 import {
+    adjudicateClientCollision,
+    correctClientIdentity,
+    deactivateClient,
+    getClientLifecycleDetailManager,
+    getClientLifecycleManager,
+    restoreClient,
+} from '@/app/actions/client-lifecycle'
+import {
     uploadSignature,
     getActiveSignature,
     getSignatureHistory,
@@ -276,6 +284,14 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
         }
         return updateClient(payload.id, payload.data)
     },
+    getClientLifecycleManager: async (payload) => getClientLifecycleManager(payload),
+    getClientLifecycleDetailManager: async (payload) =>
+        getClientLifecycleDetailManager(payload),
+    deactivateClient: async (payload) => deactivateClient(payload),
+    restoreClient: async (payload) => restoreClient(payload),
+    correctClientIdentity: async (payload) => correctClientIdentity(payload),
+    adjudicateClientCollision: async (payload) =>
+        adjudicateClientCollision(payload),
     // Signature management actions
     uploadManagerSignature: async (payload) => {
         // @deprecated - kept for backward compatibility

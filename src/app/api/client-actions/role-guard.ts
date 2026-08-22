@@ -11,6 +11,12 @@ const MANAGER_ONLY_ACTIONS = new Set<ClientActionName>([
     'updateAssaySampleTypeCatalogReview',
     'reviewAssaySampleTypeCatalogRevision',
     'publishAssaySampleTypeCatalogRevision',
+    'getClientLifecycleManager',
+    'getClientLifecycleDetailManager',
+    'deactivateClient',
+    'restoreClient',
+    'correctClientIdentity',
+    'adjudicateClientCollision',
 ])
 export const CLIENT_ACTION_FORBIDDEN_ERROR = 'Bạn không có quyền thực hiện thao tác này'
 

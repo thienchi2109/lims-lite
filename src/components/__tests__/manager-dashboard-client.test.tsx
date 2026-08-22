@@ -38,4 +38,14 @@ describe('ManagerDashboardClient', () => {
         const grid = container.querySelector('.grid')
         expect(grid?.className).toContain('mt-0')
     })
+
+    it('links managers to the client lifecycle workspace', () => {
+        mockUseApprovalCount.mockReturnValue({ data: 0 })
+
+        render(<ManagerDashboardClient user={{ full_name: 'Tran Thi B' }} />)
+
+        expect(
+            screen.getByRole('link', { name: /Quản lý khách hàng/i }).getAttribute('href'),
+        ).toBe('/manager/clients')
+    })
 })

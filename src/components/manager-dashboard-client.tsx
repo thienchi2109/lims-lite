@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { FlaskConical, CheckCircle2, ClipboardList, User, QrCode, BarChart3, ShieldCheck } from 'lucide-react'
+import { FlaskConical, CheckCircle2, ClipboardList, User, QrCode, BarChart3, ShieldCheck, ContactRound } from 'lucide-react'
 import { DashboardAlertBanner } from '@/components/dashboard-alert-banner'
 import { useApprovalCount } from '@/hooks/use-approval-count'
 
@@ -55,6 +55,14 @@ export function ManagerDashboardClient({ user }: ManagerDashboardClientProps) {
             href: "/manager/users",
             color: "from-pink-500 to-rose-600",
             iconColor: "text-pink-50"
+        },
+        {
+            title: "Quản lý khách hàng",
+            description: "Vòng đời, hiệu chỉnh và xử lý xung đột",
+            icon: ContactRound,
+            href: "/manager/clients",
+            color: "from-lime-600 to-emerald-700",
+            iconColor: "text-lime-50"
         },
         {
             title: "Mã QR Cổng Tra Cứu",
