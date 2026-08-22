@@ -21,9 +21,9 @@ user-visible matching change occurs in this phase.
 - [x] 1.5 Add database triggers that derive canonical projections on every
   legacy or v2 INSERT/UPDATE; preserve existing RLS, audit triggers, grants,
   fixed `search_path`, and behavior while adding non-unique candidate indexes.
-- [ ] 1.6 Add rollback-only SQL tests for normalization, lifecycle defaults,
+- [x] 1.6 Add rollback-only SQL tests for normalization, lifecycle defaults,
   confidentiality, RLS, grants, audit evidence, and unchanged legacy callers.
-- [ ] 1.7 Commit the migration, sync the home-server checkout, apply only that
+- [x] 1.7 Commit the migration, sync the home-server checkout, apply only that
   committed migration through SSH, run `run_security_tests()`, and verify focused
   client/accession tests, typecheck, lint, production health, and legacy smoke.
 
