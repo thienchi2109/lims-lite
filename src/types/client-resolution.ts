@@ -96,6 +96,25 @@ export type ResolveOrCreateClientInput = z.infer<
   typeof ResolveOrCreateClientInputSchema
 >
 
+export const ExistingAccessionClientResolutionSchema =
+  ClientResolutionInputSchema.safeExtend({
+    kind: z.literal('existing'),
+  })
+
+export const DraftAccessionClientResolutionSchema =
+  ResolveOrCreateClientInputSchema.safeExtend({
+    kind: z.literal('draft'),
+  })
+
+export const AccessionClientResolutionSchema = z.discriminatedUnion('kind', [
+  ExistingAccessionClientResolutionSchema,
+  DraftAccessionClientResolutionSchema,
+])
+
+export type AccessionClientResolution = z.infer<
+  typeof AccessionClientResolutionSchema
+>
+
 export const ClientResolutionReasonCodeSchema = z.enum([
   'trusted_identity_match',
   'trusted_identity_not_found',

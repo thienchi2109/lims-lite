@@ -6,6 +6,8 @@ const mockGetUser = vi.fn()
 const mockAdminFrom = vi.fn()
 const mockReceiverLookup = vi.fn()
 
+vi.mock('server-only', () => ({}))
+
 vi.mock('@/lib/supabase/server', () => ({
     createClient: (...args: unknown[]) => mockCreateClient(...args),
     createAdminClient: (...args: unknown[]) => mockCreateAdminClient(...args),

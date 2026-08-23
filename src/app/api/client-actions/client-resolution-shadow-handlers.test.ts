@@ -1,14 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+vi.mock('server-only', () => ({}))
+
 const mocks = vi.hoisted(() => ({
   findClientByIdentity: vi.fn(),
+  getClient: vi.fn(),
   upsertClient: vi.fn(),
+  resolveClientIdentityV2: vi.fn(),
   runClientResolutionShadow: vi.fn(),
 }))
 
 vi.mock('@/app/actions/clients', () => ({
   findClientByIdentity: mocks.findClientByIdentity,
+  getClient: mocks.getClient,
   upsertClient: mocks.upsertClient,
+}))
+
+vi.mock('@/lib/client-resolution/server', () => ({
+  resolveClientIdentityV2: mocks.resolveClientIdentityV2,
 }))
 
 vi.mock('@/lib/client-resolution/shadow', () => ({
@@ -39,9 +48,20 @@ const UPSERT_INPUT = {
 describe('client action shadow handlers', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    delete process.env.CLIENT_RESOLUTION_V2_CATEGORIES
+    delete process.env.CLIENT_RESOLUTION_LEGACY_UPSERT
     mocks.runClientResolutionShadow.mockResolvedValue(undefined)
     mocks.findClientByIdentity.mockResolvedValue({ data: CLIENT })
+    mocks.getClient.mockResolvedValue({ data: CLIENT })
     mocks.upsertClient.mockResolvedValue({ data: CLIENT })
+    mocks.resolveClientIdentityV2.mockResolvedValue({
+      data: {
+        outcome: 'matched',
+        reasonCode: 'trusted_identity_match',
+        clientId: CLIENT.id,
+        created: false,
+      },
+    })
   })
 
   it('runs a manual shadow comparison before returning the legacy lookup result', async () => {
@@ -135,5 +155,181 @@ describe('client action shadow handlers', () => {
       data: CLIENT,
     })
     expect(mocks.upsertClient).toHaveBeenCalledWith(UPSERT_INPUT)
+  })
+
+  it('routes an enabled QR lookup through v2 and returns the compatible client payload', async () => {
+    process.env.CLIENT_RESOLUTION_V2_CATEGORIES = 'qr'
+
+    const result = await findClientByIdentityWithShadow({
+      category: 'qr',
+      governmentIdentityValue: '086094006827',
+      name: 'Nguyen Van A',
+      dateOfBirth: '1994-09-21',
+    })
+
+    expect(result).toEqual({ data: CLIENT })
+    expect(mocks.resolveClientIdentityV2).toHaveBeenCalledWith({
+      governmentIdentityType: 'cccd',
+      governmentIdentityValue: '086094006827',
+      name: 'Nguyen Van A',
+      dateOfBirth: '1994-09-21',
+      phone: null,
+    })
+    expect(mocks.getClient).toHaveBeenCalledWith(CLIENT.id)
+    expect(mocks.findClientByIdentity).not.toHaveBeenCalled()
+  })
+
+  it('returns a compatible not-found lookup without creating or mutating a client', async () => {
+    process.env.CLIENT_RESOLUTION_V2_CATEGORIES = 'qr'
+    mocks.resolveClientIdentityV2.mockResolvedValue({
+      data: {
+        outcome: 'not_found',
+        reasonCode: 'trusted_identity_not_found',
+        clientId: null,
+        created: false,
+      },
+    })
+
+    const result = await findClientByIdentityWithShadow({
+      category: 'qr',
+      governmentIdentityValue: '086094006827',
+      name: 'Nguyen Van A',
+      dateOfBirth: '1994-09-21',
+    })
+
+    expect(result).toEqual({
+      data: null,
+      resolution: {
+        outcome: 'not_found',
+        reasonCode: 'trusted_identity_not_found',
+        clientId: null,
+        created: false,
+      },
+    })
+    expect(mocks.getClient).not.toHaveBeenCalled()
+    expect(mocks.upsertClient).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    [
+      'ambiguous',
+      'trusted_identity_ambiguous',
+      'Không thể xác định duy nhất',
+    ],
+    [
+      'conflict',
+      'inactive_candidate',
+      'Xung đột thông tin',
+    ],
+    [
+      'conflict',
+      'identity_conflict',
+      'Xung đột thông tin',
+    ],
+  ] as const)(
+    'fails closed for %s without exposing or mutating a candidate',
+    async (outcome, reasonCode, expectedLabel) => {
+      process.env.CLIENT_RESOLUTION_V2_CATEGORIES = 'qr'
+      mocks.resolveClientIdentityV2.mockResolvedValue({
+        data: {
+          outcome,
+          reasonCode,
+          clientId: null,
+          created: false,
+        },
+      })
+
+      const result = await findClientByIdentityWithShadow({
+        category: 'qr',
+        governmentIdentityValue: '086094006827',
+        name: 'Nguyen Van A',
+        dateOfBirth: '1994-09-21',
+      })
+
+      expect(result).toEqual({
+        error: expect.stringContaining(expectedLabel),
+      })
+      expect(mocks.getClient).not.toHaveBeenCalled()
+      expect(mocks.findClientByIdentity).not.toHaveBeenCalled()
+      expect(mocks.upsertClient).not.toHaveBeenCalled()
+    },
+  )
+
+  it('blocks the raw name and date-of-birth upsert when the retirement switch is off', async () => {
+    process.env.CLIENT_RESOLUTION_LEGACY_UPSERT = 'off'
+
+    const result = await upsertClientWithShadow(UPSERT_INPUT)
+
+    expect(result).toEqual({
+      error:
+        'Luồng lưu khách hàng cũ đã bị tắt. Vui lòng tải lại trang và thử lại.',
+    })
+    expect(mocks.upsertClient).not.toHaveBeenCalled()
+  })
+
+  it('prepares a not-found manual accession client without writing it early', async () => {
+    process.env.CLIENT_RESOLUTION_V2_CATEGORIES = 'manual'
+    mocks.resolveClientIdentityV2.mockResolvedValue({
+      data: {
+        outcome: 'not_found',
+        reasonCode: 'trusted_identity_not_found',
+        clientId: null,
+        created: false,
+      },
+    })
+
+    const result = await upsertClientWithShadow(UPSERT_INPUT, 'manual')
+
+    expect(result).toEqual({
+      data: {
+        kind: 'pending',
+        workflow: 'manual',
+        client: UPSERT_INPUT,
+      },
+      resolution: {
+        outcome: 'not_found',
+        reasonCode: 'trusted_identity_not_found',
+        clientId: null,
+        created: false,
+      },
+    })
+    expect(mocks.resolveClientIdentityV2).toHaveBeenCalledWith({
+      governmentIdentityType: 'cccd',
+      governmentIdentityValue: '086094006827',
+      name: 'Nguyen Van A',
+      dateOfBirth: '1994-09-21',
+      phone: '0901234567',
+    })
+    expect(mocks.upsertClient).not.toHaveBeenCalled()
+  })
+
+  it('returns an existing client when v2 preparation matches during a race', async () => {
+    process.env.CLIENT_RESOLUTION_V2_CATEGORIES = 'qr'
+
+    const result = await upsertClientWithShadow(UPSERT_INPUT, 'qr')
+
+    expect(result).toEqual({ data: CLIENT })
+    expect(mocks.getClient).toHaveBeenCalledWith(CLIENT.id)
+    expect(mocks.upsertClient).not.toHaveBeenCalled()
+  })
+
+  it('fails closed when v2 preparation finds an unsafe match', async () => {
+    process.env.CLIENT_RESOLUTION_V2_CATEGORIES = 'manual'
+    mocks.resolveClientIdentityV2.mockResolvedValue({
+      data: {
+        outcome: 'conflict',
+        reasonCode: 'phone_conflict',
+        clientId: null,
+        created: false,
+      },
+    })
+
+    const result = await upsertClientWithShadow(UPSERT_INPUT, 'manual')
+
+    expect(result).toEqual({
+      error: expect.stringContaining('Xung đột thông tin'),
+    })
+    expect(mocks.getClient).not.toHaveBeenCalled()
+    expect(mocks.upsertClient).not.toHaveBeenCalled()
   })
 })

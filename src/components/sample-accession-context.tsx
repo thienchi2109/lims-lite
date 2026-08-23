@@ -1,7 +1,8 @@
 'use client'
 
 import type { UseFormRegisterReturn } from 'react-hook-form'
-import type { Client, CreateClient, PublishedCatalogSampleType } from '@/types'
+import type { CreateClient, PublishedCatalogSampleType } from '@/types'
+import type { AccessionClientSelection } from '@/lib/client-resolution/accession'
 import type { SampleLabelPreset } from '@/lib/sample-label-template'
 import type { ParsedClientIdentityQr } from '@/lib/qr/parse-client-identity-qr'
 import { AlertCircle, Barcode, Calendar, CheckCircle2, Eye, QrCode, RefreshCw, Scan } from 'lucide-react'
@@ -16,8 +17,8 @@ import { SampleQualityField } from '@/components/sample-quality-field'
 import { SampleTypeSelector } from '@/components/sample-type-selector'
 
 interface SampleAccessionContextProps {
-    selectedClient: Client | null
-    onSelectClient: (client: Client | null) => void
+    selectedClient: AccessionClientSelection | null
+    onSelectClient: (client: AccessionClientSelection | null) => void
     showClientForm: boolean
     onOpenClientFormChange: (open: boolean) => void
     clientFormData: Partial<CreateClient> | undefined

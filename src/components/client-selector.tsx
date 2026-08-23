@@ -12,17 +12,27 @@ import {
 import { Input } from '@/components/ui/input'
 import { ClientQrScannerDialog } from '@/components/client-qr-scanner-dialog'
 import { ClientForm } from '@/components/client-form'
-import { fetchClientsClient } from '@/lib/api-client'
+import {
+    fetchClientsClient,
+    prepareManualAccessionClientClient,
+    prepareQrAccessionClientClient,
+} from '@/lib/api-client'
 import {
     parseClientIdentityQr,
 } from '@/lib/qr/parse-client-identity-qr'
 import { useClientIdentityScan } from '@/hooks/use-client-identity-scan'
 import { Client, CreateClient } from '@/types'
+import {
+    createDraftAccessionSelection,
+    createExistingAccessionSelection,
+    type AccessionClientSelection,
+    type AccessionClientWorkflow,
+} from '@/lib/client-resolution/accession'
 import { toast } from 'sonner'
 
 interface ClientSelectorProps {
-    selectedClient: Client | null
-    onSelect: (client: Client | null) => void
+    selectedClient: AccessionClientSelection | null
+    onSelect: (client: AccessionClientSelection | null) => void
     // Controlled state props
     isOpenForm?: boolean
     onOpenFormChange?: (open: boolean) => void
@@ -48,6 +58,9 @@ export function ClientSelector({
     const [loading, setLoading] = useState(false)
     const [showQRScanner, setShowQRScanner] = useState(false)
     const [addressSeedVersion, setAddressSeedVersion] = useState(0)
+    const [draftWorkflow, setDraftWorkflow] =
+        useState<AccessionClientWorkflow>('manual')
+    const [editingClientId, setEditingClientId] = useState<string | null>(null)
 
     // Internal state for uncontrolled mode
     const [internalShowClientForm, setInternalShowClientForm] = useState(false)
@@ -103,6 +116,8 @@ export function ClientSelector({
     } = useClientIdentityScan({
         onDraft: (draft) => {
             onDraftOwnershipChange?.()
+            setDraftWorkflow('qr')
+            setEditingClientId(null)
             setAddressSeedVersion((version) => version + 1)
             setShowQRScanner(false)
             onSelect(null)
@@ -111,7 +126,7 @@ export function ClientSelector({
         },
         onExistingClient: (client) => {
             onDraftOwnershipChange?.()
-            onSelect(client)
+            onSelect(createExistingAccessionSelection(client, 'qr'))
             setClientFormData(undefined)
             setShowClientForm(false)
         },
@@ -148,7 +163,9 @@ export function ClientSelector({
     const formattedDOB = useMemo(() => {
         if (!selectedClient) return ''
         try {
-            return new Date(selectedClient.date_of_birth).toLocaleDateString('vi-VN')
+            return new Date(
+                selectedClient.client.date_of_birth,
+            ).toLocaleDateString('vi-VN')
         } catch {
             return 'N/A'
         }
@@ -177,12 +194,35 @@ export function ClientSelector({
                 </div>
                 <ClientForm
                     key={clientFormData?.id_card_num || clientFormData?.name || 'new'}
+                    mode={editingClientId ? 'update' : 'upsert'}
+                    clientId={editingClientId ?? undefined}
                     initialData={clientFormData}
                     onUserEdit={claimDraftOwnership}
                     addressSeedVersion={addressSeedVersion}
+                    prepareClient={
+                        draftWorkflow === 'qr'
+                            ? prepareQrAccessionClientClient
+                            : prepareManualAccessionClientClient
+                    }
+                    onPending={(pending) => {
+                        claimDraftOwnership()
+                        onSelect(
+                            createDraftAccessionSelection(
+                                pending.client,
+                                pending.workflow,
+                            ),
+                        )
+                        setShowClientForm(false)
+                        setClientFormData(undefined)
+                    }}
                     onSuccess={(client) => {
                         claimDraftOwnership()
-                        onSelect(client)
+                        onSelect(
+                            createExistingAccessionSelection(
+                                client,
+                                draftWorkflow,
+                            ),
+                        )
                         setShowClientForm(false)
                         setClientFormData(undefined)
                     }}
@@ -202,7 +242,7 @@ export function ClientSelector({
                 <div className="bg-sky-50/50 dark:bg-sky-900/10 border border-sky-100 dark:border-sky-800 rounded-lg p-3 flex flex-col gap-3 shadow-sm">
                     <div className="flex justify-between items-start">
                         <div className="font-medium text-sky-900 dark:text-sky-100 truncate">
-                            {selectedClient.name}
+                            {selectedClient.client.name}
                         </div>
                         <div className="flex gap-1">
                             <Button
@@ -211,15 +251,21 @@ export function ClientSelector({
                                 className="h-6 w-6 text-sky-600 hover:text-sky-700 hover:bg-sky-100"
                                 onClick={() => {
                                     claimDraftOwnership()
+                                    setDraftWorkflow(selectedClient.workflow)
+                                    setEditingClientId(
+                                        selectedClient.kind === 'existing'
+                                            ? selectedClient.client.id
+                                            : null,
+                                    )
                                     setClientFormData({
-                                        name: selectedClient.name,
-                                        id_card_num: selectedClient.id_card_num,
-                                        date_of_birth: selectedClient.date_of_birth.split('T')[0],
-                                        gender: selectedClient.gender,
-                                        phone: selectedClient.phone,
-                                        address: selectedClient.address || '',
-                                        health_insurance_num: selectedClient.health_insurance_num || '',
-                                        expiry_date: selectedClient.expiry_date ? selectedClient.expiry_date.split('T')[0] : '',
+                                        name: selectedClient.client.name,
+                                        id_card_num: selectedClient.client.id_card_num,
+                                        date_of_birth: selectedClient.client.date_of_birth.split('T')[0],
+                                        gender: selectedClient.client.gender,
+                                        phone: selectedClient.client.phone,
+                                        address: selectedClient.client.address || '',
+                                        health_insurance_num: selectedClient.client.health_insurance_num || '',
+                                        expiry_date: selectedClient.client.expiry_date ? selectedClient.client.expiry_date.split('T')[0] : '',
                                     })
                                     setShowClientForm(true)
                                 }}
@@ -243,7 +289,7 @@ export function ClientSelector({
                     <div className="flex flex-col gap-1.5 text-xs text-sky-700 dark:text-sky-300">
                         <div className="flex items-center gap-2">
                             <Phone className="h-3 w-3 opacity-70" />
-                            <span>{selectedClient.phone}</span>
+                            <span>{selectedClient.client.phone}</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <Calendar className="h-3 w-3 opacity-70" />
@@ -251,7 +297,7 @@ export function ClientSelector({
                         </div>
                         <div className="flex items-center gap-2">
                             <CreditCard className="h-3 w-3 opacity-70" />
-                            <span className="truncate">{selectedClient.id_card_num}</span>
+                            <span className="truncate">{selectedClient.client.id_card_num}</span>
                         </div>
                     </div>
                 </div>
@@ -298,6 +344,8 @@ export function ClientSelector({
                                                     className="mt-2 h-auto p-0 text-sky-600"
                                                     onClick={() => {
                                                         claimDraftOwnership()
+                                                        setDraftWorkflow('manual')
+                                                        setEditingClientId(null)
                                                         setClientFormData({ name: searchQuery })
                                                         setShowClientForm(true)
                                                         setOpen(false)
@@ -318,7 +366,12 @@ export function ClientSelector({
                                                     className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
                                                     onClick={() => {
                                                         claimDraftOwnership()
-                                                        onSelect(client)
+                                                        onSelect(
+                                                            createExistingAccessionSelection(
+                                                                client,
+                                                                'manual',
+                                                            ),
+                                                        )
                                                         setOpen(false)
                                                     }}
                                                 >
@@ -357,6 +410,8 @@ export function ClientSelector({
                         className="w-full justify-start text-sky-600 hover:text-sky-700 hover:bg-sky-50 h-8 px-2 text-xs"
                         onClick={() => {
                             claimDraftOwnership()
+                            setDraftWorkflow('manual')
+                            setEditingClientId(null)
                             setClientFormData(undefined)
                             setShowClientForm(true)
                         }}

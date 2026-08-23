@@ -12,7 +12,7 @@ vi.stubGlobal('ResizeObserver', ResizeObserverMock)
 const serialMocks = vi.hoisted(() => ({
     accessionAndAssignTestsClient: vi.fn(),
     createSampleClient: vi.fn(),
-    findClientByIdentityClient: vi.fn(),
+    findClientByIdentityQrClient: vi.fn(),
     parseClientIdentityQr: vi.fn(),
     toastError: vi.fn(),
     toastSuccess: vi.fn(),
@@ -34,8 +34,12 @@ const serialMocks = vi.hoisted(() => ({
 
 vi.mock('@/lib/api-client', () => ({
     accessionAndAssignTestsClient: serialMocks.accessionAndAssignTestsClient,
+    assignManualAccessionTestsClient: serialMocks.accessionAndAssignTestsClient,
+    assignQrAccessionTestsClient: serialMocks.accessionAndAssignTestsClient,
     createSampleClient: serialMocks.createSampleClient,
-    findClientByIdentityClient: serialMocks.findClientByIdentityClient,
+    createManualAccessionSampleClient: serialMocks.createSampleClient,
+    createQrAccessionSampleClient: serialMocks.createSampleClient,
+    findClientByIdentityQrClient: serialMocks.findClientByIdentityQrClient,
 }))
 
 vi.mock('@/lib/qr/parse-client-identity-qr', () => ({
@@ -126,7 +130,7 @@ import { SampleAccessionForm } from '../sample-accession-form'
 describe('SampleAccessionForm dispatcher CCCD integration', () => {
     beforeEach(() => {
         vi.clearAllMocks()
-        serialMocks.findClientByIdentityClient.mockResolvedValue({ data: null })
+        serialMocks.findClientByIdentityQrClient.mockResolvedValue({ data: null })
     })
 
     it('runs lookup and administrative autofill exactly once for a parsed serial identity', async () => {
@@ -136,22 +140,23 @@ describe('SampleAccessionForm dispatcher CCCD integration', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Phát sự kiện CCCD serial' }))
 
         await waitFor(() => {
-            expect(serialMocks.findClientByIdentityClient).toHaveBeenCalledTimes(1)
+            expect(serialMocks.findClientByIdentityQrClient).toHaveBeenCalledTimes(1)
         })
 
-        expect(serialMocks.findClientByIdentityClient).toHaveBeenCalledWith(
-            'Nguyen Van A',
-            '1994-09-21',
-        )
+        expect(serialMocks.findClientByIdentityQrClient).toHaveBeenCalledWith({
+            governmentIdentityValue: '086094006827',
+            name: 'Nguyen Van A',
+            dateOfBirth: '1994-09-21',
+        })
         expect(serialMocks.parseClientIdentityQr).not.toHaveBeenCalled()
         expect(screen.queryByTestId('client-qr-scanner-dialog')).toBeNull()
         expect(screen.getByTestId('client-name').textContent).toBe('Nguyen Van A')
         expect(screen.getByTestId('client-address').textContent).toBe('Ha Noi')
     })
 
-    it('lets a successful scan own the draft before duplicate lookup completes', async () => {
+    it('waits for duplicate lookup before publishing the QR draft', async () => {
         let resolveLookup!: (value: { data: null }) => void
-        serialMocks.findClientByIdentityClient.mockReturnValueOnce(
+        serialMocks.findClientByIdentityQrClient.mockReturnValueOnce(
             new Promise((resolve) => {
                 resolveLookup = resolve
             }),
@@ -161,18 +166,21 @@ describe('SampleAccessionForm dispatcher CCCD integration', () => {
         fireEvent.click(screen.getByRole('button', { name: /Quét mã QR trên CCCD/i }))
         fireEvent.click(screen.getByRole('button', { name: 'Phát sự kiện CCCD serial' }))
 
-        expect(screen.getByTestId('client-name').textContent).toBe('Nguyen Van A')
-        expect(screen.getByTestId('client-address').textContent).toBe('Ha Noi')
+        expect(screen.getByTestId('client-name').textContent).toBe('')
+        expect(screen.getByTestId('client-address').textContent).toBe('')
 
         await act(async () => {
             resolveLookup({ data: null })
             await Promise.resolve()
         })
+
+        expect(screen.getByTestId('client-name').textContent).toBe('Nguyen Van A')
+        expect(screen.getByTestId('client-address').textContent).toBe('Ha Noi')
     })
 
     it('ignores an older duplicate lookup after a newer scan owns the draft', async () => {
         let resolveOlderLookup!: (value: { data: { name: string } }) => void
-        serialMocks.findClientByIdentityClient
+        serialMocks.findClientByIdentityQrClient
             .mockReturnValueOnce(new Promise((resolve) => {
                 resolveOlderLookup = resolve
             }))
@@ -197,9 +205,9 @@ describe('SampleAccessionForm dispatcher CCCD integration', () => {
         expect(screen.getByTestId('client-address').textContent).toBe('Da Nang')
     })
 
-    it('ignores a pending duplicate lookup after the user owns the draft', async () => {
+    it('invalidates a pending lookup when the user takes draft ownership', async () => {
         let resolveLookup!: (value: { data: { name: string } }) => void
-        serialMocks.findClientByIdentityClient.mockReturnValueOnce(
+        serialMocks.findClientByIdentityQrClient.mockReturnValueOnce(
             new Promise((resolve) => {
                 resolveLookup = resolve
             }),
@@ -215,8 +223,8 @@ describe('SampleAccessionForm dispatcher CCCD integration', () => {
             await Promise.resolve()
         })
 
-        expect(screen.getByTestId('client-name').textContent).toBe('Nguyen Van A')
-        expect(screen.getByTestId('client-address').textContent).toBe('Ha Noi')
+        expect(screen.getByTestId('client-name').textContent).toBe('')
+        expect(screen.getByTestId('client-address').textContent).toBe('')
     })
 
     it('closes the dialog and preserves invalid-QR feedback for an unknown serial event', async () => {
@@ -233,7 +241,7 @@ describe('SampleAccessionForm dispatcher CCCD integration', () => {
             )
         })
 
-        expect(serialMocks.findClientByIdentityClient).not.toHaveBeenCalled()
+        expect(serialMocks.findClientByIdentityQrClient).not.toHaveBeenCalled()
         expect(screen.queryByTestId('client-qr-scanner-dialog')).toBeNull()
     })
 })

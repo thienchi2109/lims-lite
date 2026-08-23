@@ -11,12 +11,12 @@
 import { useState, useCallback } from 'react'
 import type {
     AssayDefinitionWithMethods,
-    Client,
     CreateClient,
     PublishedCatalogSampleType,
     SelectedTest,
 } from '@/types'
 import type { GridRow } from '@/types/test-assignment'
+import type { AccessionClientSelection } from '@/lib/client-resolution/accession'
 import type { ParsedClientIdentityQr } from '@/lib/qr/parse-client-identity-qr'
 import type { UseFormRegisterReturn } from 'react-hook-form'
 import { AccessionWizardStepper } from '@/components/accession-wizard-stepper'
@@ -27,8 +27,8 @@ import { AccessionWizardStepSuccess } from '@/components/accession-wizard-step-s
 
 export interface AccessionMobileWizardProps {
     /* Customer / QR state (step 1) */
-    selectedClient: Client | null
-    onSelectClient: (client: Client | null) => void
+    selectedClient: AccessionClientSelection | null
+    onSelectClient: (client: AccessionClientSelection | null) => void
     showClientForm: boolean
     onOpenFormChange: (open: boolean) => void
     clientFormData: Partial<CreateClient> | undefined
@@ -171,7 +171,7 @@ export function AccessionMobileWizard(props: AccessionMobileWizardProps) {
 
                 {displayStep === 2 && (
                     <AccessionWizardStepReview
-                        selectedClient={props.selectedClient}
+                        selectedClient={props.selectedClient?.client ?? null}
                         selectedSampleType={props.selectedSampleType}
                         sampleQuality={props.sampleQuality}
                         receivedAt={props.receivedAtValue}
@@ -188,7 +188,7 @@ export function AccessionMobileWizard(props: AccessionMobileWizardProps) {
                 {displayStep === 3 && submitSuccess && (
                     <AccessionWizardStepSuccess
                         successMessage={submitSuccess}
-                        clientName={props.selectedClient?.name || ''}
+                        clientName={props.selectedClient?.client.name || ''}
                         sampleType={props.selectedSampleType}
                         testCount={props.selected.length}
                         onNewAccession={handleNewAccession}

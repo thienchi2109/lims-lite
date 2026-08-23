@@ -7,7 +7,9 @@ import type {
     SampleListParams,
     UpdateSample,
     CreateSample,
+    CreateSampleWithClientResolution,
     CreateSampleWithAssignments,
+    CreateSampleWithAssignmentsAndClientResolution,
     SaveBatchResults,
     ApproveResults,
     CancelApproval,
@@ -200,6 +202,30 @@ export function accessionAndAssignTestsClient(data: CreateSampleWithAssignments)
     return callClientAction('accessionAndAssignTests', data)
 }
 
+export function createManualAccessionSampleClient(
+    data: CreateSampleWithClientResolution,
+) {
+    return callClientAction('createManualAccessionSample', data)
+}
+
+export function createQrAccessionSampleClient(
+    data: CreateSampleWithClientResolution,
+) {
+    return callClientAction('createQrAccessionSample', data)
+}
+
+export function assignManualAccessionTestsClient(
+    data: CreateSampleWithAssignmentsAndClientResolution,
+) {
+    return callClientAction('assignManualAccessionTests', data)
+}
+
+export function assignQrAccessionTestsClient(
+    data: CreateSampleWithAssignmentsAndClientResolution,
+) {
+    return callClientAction('assignQrAccessionTests', data)
+}
+
 export function recordSampleLabelPrintClient(data: {
     sampleId: string
     copies: number
@@ -350,6 +376,14 @@ export function discardSampleClient(data: DiscardSample) {
 
 export function upsertClientClient(data: CreateClient) {
     return callClientAction('upsertClient', data)
+}
+
+export function prepareManualAccessionClientClient(data: CreateClient) {
+    return callClientAction('prepareManualAccessionClient', data)
+}
+
+export function prepareQrAccessionClientClient(data: CreateClient) {
+    return callClientAction('prepareQrAccessionClient', data)
 }
 
 export function findClientByIdentityClient(name: string, dateOfBirth: string) {
