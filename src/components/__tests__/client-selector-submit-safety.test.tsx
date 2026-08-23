@@ -19,6 +19,8 @@ vi.mock('@/hooks/use-client-identity-scan', () => ({
 
 vi.mock('@/lib/api-client', () => ({
     fetchClientsClient: vi.fn(async () => ({ data: [] })),
+    prepareManualAccessionClientClient: vi.fn(),
+    prepareQrAccessionClientClient: vi.fn(),
 }))
 
 import { ClientSelector } from '../client-selector'

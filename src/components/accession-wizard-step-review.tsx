@@ -7,7 +7,7 @@
  * and selected tests. Allows jumping back to specific steps to edit.
  */
 
-import type { Client, SelectedTest } from '@/types'
+import type { Client, CreateClient, SelectedTest } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -26,7 +26,7 @@ import {
 } from 'lucide-react'
 
 interface StepReviewProps {
-    selectedClient: Client | null
+    selectedClient: Client | CreateClient | null
     selectedSampleType: string
     sampleQuality: boolean | null
     receivedAt: string

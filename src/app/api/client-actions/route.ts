@@ -109,6 +109,22 @@ const actionHandlers: Record<ClientActionName, ActionHandler> = {
     updateSample: async (payload) => updateSample(payload),
     createSample: async (payload) => createSample(payload),
     accessionAndAssignTests: async (payload) => accessionAndAssignTests(payload),
+    prepareManualAccessionClient: async (payload) =>
+        upsertClientWithShadow(payload, 'manual'),
+    prepareQrAccessionClient: async (payload) =>
+        upsertClientWithShadow(payload, 'qr'),
+    createManualAccessionSample: async (payload) =>
+        createSample(payload, { clientResolutionWorkflow: 'manual' }),
+    createQrAccessionSample: async (payload) =>
+        createSample(payload, { clientResolutionWorkflow: 'qr' }),
+    assignManualAccessionTests: async (payload) =>
+        accessionAndAssignTests(payload, {
+            clientResolutionWorkflow: 'manual',
+        }),
+    assignQrAccessionTests: async (payload) =>
+        accessionAndAssignTests(payload, {
+            clientResolutionWorkflow: 'qr',
+        }),
     recordSampleLabelPrint: async (payload) => recordSampleLabelPrint(payload),
     getSampleTests: async (payload) => {
         if (!payload?.sampleId) {

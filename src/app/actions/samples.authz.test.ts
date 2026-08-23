@@ -9,6 +9,8 @@ const mockUpdate = vi.fn()
 const mockFrom = vi.fn()
 const mockRevalidatePath = vi.fn()
 
+vi.mock('server-only', () => ({}))
+
 vi.mock('@/lib/auth-helpers', () => ({
     requireAuth: (...args: unknown[]) => mockRequireAuth(...args),
     requireRole: (...args: unknown[]) => mockRequireRole(...args),

@@ -11,9 +11,9 @@ class ResizeObserverMock {
 vi.stubGlobal('ResizeObserver', ResizeObserverMock)
 
 const mocks = vi.hoisted(() => ({
-    createSampleClient: vi.fn(),
-    accessionAndAssignTestsClient: vi.fn(),
-    findClientByIdentityClient: vi.fn(),
+    createManualAccessionSampleClient: vi.fn(),
+    assignManualAccessionTestsClient: vi.fn(),
+    findClientByIdentityQrClient: vi.fn(),
     getPublishedCatalogClient: vi.fn(),
     printSampleBarcodeLabel: vi.fn(),
     toastSuccess: vi.fn(),
@@ -30,6 +30,31 @@ const mocks = vi.hoisted(() => ({
         created_at: '2026-01-01T00:00:00.000Z',
         updated_at: '2026-01-01T00:00:00.000Z',
     },
+    selection: {
+        kind: 'existing' as const,
+        workflow: 'manual' as const,
+        client: {
+            id: '11111111-1111-1111-1111-111111111111',
+            id_card_num: '012345678901',
+            name: 'Nguyen Van A',
+            date_of_birth: '1990-01-02T00:00:00.000Z',
+            gender: 'Nam' as const,
+            phone: '0912345678',
+            address: '1 Nguyen Trai',
+            health_insurance_num: null,
+            expiry_date: null,
+            created_at: '2026-01-01T00:00:00.000Z',
+            updated_at: '2026-01-01T00:00:00.000Z',
+        },
+        resolution: {
+            kind: 'existing' as const,
+            governmentIdentityType: 'cccd' as const,
+            governmentIdentityValue: '012345678901',
+            name: 'Nguyen Van A',
+            dateOfBirth: '1990-01-02',
+            phone: '0912345678',
+        },
+    },
     selectedTest: {
         assayId: 'assay-1',
         methodId: 'method-1',
@@ -40,9 +65,11 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/api-client', () => ({
-    createSampleClient: mocks.createSampleClient,
-    accessionAndAssignTestsClient: mocks.accessionAndAssignTestsClient,
-    findClientByIdentityClient: mocks.findClientByIdentityClient,
+    createManualAccessionSampleClient: mocks.createManualAccessionSampleClient,
+    createQrAccessionSampleClient: mocks.createManualAccessionSampleClient,
+    assignManualAccessionTestsClient: mocks.assignManualAccessionTestsClient,
+    assignQrAccessionTestsClient: mocks.assignManualAccessionTestsClient,
+    findClientByIdentityQrClient: mocks.findClientByIdentityQrClient,
     getPublishedAssaySampleTypeCatalogClient: mocks.getPublishedCatalogClient,
 }))
 
@@ -82,11 +109,11 @@ vi.mock('@/components/client-selector', () => ({
         selectedClient,
         onSelect,
     }: {
-        selectedClient: { name: string } | null
+        selectedClient: { client: { name: string } } | null
         onSelect: (client: unknown) => void
     }) => (
-        <button type="button" onClick={() => onSelect(mocks.client)}>
-            {selectedClient?.name ?? 'Chọn khách hàng'}
+        <button type="button" onClick={() => onSelect(mocks.selection)}>
+            {selectedClient?.client.name ?? 'Chọn khách hàng'}
         </button>
     ),
 }))
@@ -159,7 +186,7 @@ async function waitForCompatibilityCatalog() {
 describe('desktop sample quality accession contract', () => {
     beforeEach(() => {
         vi.clearAllMocks()
-        mocks.findClientByIdentityClient.mockResolvedValue({ data: null })
+        mocks.findClientByIdentityQrClient.mockResolvedValue({ data: null })
         mocks.getPublishedCatalogClient.mockResolvedValue({
             data: {
                 revisionNumber: 7,
@@ -179,10 +206,10 @@ describe('desktop sample quality accession contract', () => {
                 }],
             },
         })
-        mocks.createSampleClient.mockResolvedValue({
+        mocks.createManualAccessionSampleClient.mockResolvedValue({
             data: { id: 'sample-created-1', sample_id: 'SMP-001' },
         })
-        mocks.accessionAndAssignTestsClient.mockResolvedValue({
+        mocks.assignManualAccessionTestsClient.mockResolvedValue({
             data: {
                 sample: { id: 'sample-created-2', sample_id: 'SMP-002' },
                 results: [{ id: 'result-1' }],
@@ -237,8 +264,8 @@ describe('desktop sample quality accession contract', () => {
             ).toBeDefined()
         })
         expect(screen.queryByTestId('confirm-dialog')).toBeNull()
-        expect(mocks.createSampleClient).not.toHaveBeenCalled()
-        expect(mocks.accessionAndAssignTestsClient).not.toHaveBeenCalled()
+        expect(mocks.createManualAccessionSampleClient).not.toHaveBeenCalled()
+        expect(mocks.assignManualAccessionTestsClient).not.toHaveBeenCalled()
     })
 
     it('preserves unacceptable quality through no-test confirmation and clears it on reset', async () => {
@@ -257,7 +284,7 @@ describe('desktop sample quality accession contract', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục tạo mẫu' }))
 
         await waitFor(() => {
-            expect(mocks.createSampleClient).toHaveBeenCalledWith(
+            expect(mocks.createManualAccessionSampleClient).toHaveBeenCalledWith(
                 expect.objectContaining({ sample_quality: false }),
             )
         })
@@ -278,7 +305,7 @@ describe('desktop sample quality accession contract', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Lưu mẫu' }))
 
         await waitFor(() => {
-            expect(mocks.accessionAndAssignTestsClient).toHaveBeenCalledWith(
+            expect(mocks.assignManualAccessionTestsClient).toHaveBeenCalledWith(
                 expect.objectContaining({
                     sample_quality: true,
                     tests: [{

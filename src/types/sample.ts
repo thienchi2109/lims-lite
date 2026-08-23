@@ -6,6 +6,7 @@
 import { z } from 'zod'
 import { PaginationSchema, SampleStatus, SampleType } from './core'
 import { UUID_REGEX } from '@/lib/utils-lims'
+import { AccessionClientResolutionSchema } from './client-resolution'
 
 const SampleTypeSelectionSchema = z.object({
     sampleTypeId: z.string().uuid(),
@@ -51,8 +52,16 @@ const CreateSampleBaseSchema = z.object({
 
 export const CreateSampleSchema = CreateSampleBaseSchema.merge(OptionalSampleTypeSelectionSchema)
 export const CreateSampleV2Schema = CreateSampleBaseSchema.merge(SampleTypeSelectionSchema)
+export const CreateSampleWithClientResolutionSchema =
+    CreateSampleV2Schema.extend({
+        client_id: z.string().uuid().optional(),
+        client_resolution: AccessionClientResolutionSchema,
+    })
 
 export type CreateSample = z.infer<typeof CreateSampleSchema>
+export type CreateSampleWithClientResolution = z.infer<
+    typeof CreateSampleWithClientResolutionSchema
+>
 
 const CreateSampleWithAssignmentsBaseSchema = z.object({
     client_id: z.string().uuid(),
@@ -70,8 +79,17 @@ export const CreateSampleWithAssignmentsSchema =
     CreateSampleWithAssignmentsBaseSchema.merge(OptionalSampleTypeSelectionSchema)
 export const CreateSampleWithAssignmentsV2Schema =
     CreateSampleWithAssignmentsBaseSchema.merge(SampleTypeSelectionSchema)
+export const CreateSampleWithAssignmentsAndClientResolutionSchema =
+    CreateSampleWithAssignmentsV2Schema.extend({
+        client_id: z.string().uuid().optional(),
+        client_name: z.string().min(1).max(200).optional(),
+        client_resolution: AccessionClientResolutionSchema,
+    })
 
 export type CreateSampleWithAssignments = z.infer<typeof CreateSampleWithAssignmentsSchema>
+export type CreateSampleWithAssignmentsAndClientResolution = z.infer<
+    typeof CreateSampleWithAssignmentsAndClientResolutionSchema
+>
 
 export const UpdateSampleSchema = z.object({
     id: z.string().uuid(),

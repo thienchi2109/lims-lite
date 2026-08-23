@@ -345,6 +345,61 @@ describe('client action role guard', () => {
         },
     )
 
+    it.each([
+        ['prepareManualAccessionClient', 'manual', 'upsertClientWithShadow'],
+        ['prepareQrAccessionClient', 'qr', 'upsertClientWithShadow'],
+        ['createManualAccessionSample', 'manual', 'createSample'],
+        ['createQrAccessionSample', 'qr', 'createSample'],
+        [
+            'assignManualAccessionTests',
+            'manual',
+            'accessionAndAssignTests',
+        ],
+        [
+            'assignQrAccessionTests',
+            'qr',
+            'accessionAndAssignTests',
+        ],
+    ] as const)(
+        'dispatches analyst action %s through the fixed %s workflow adapter',
+        async (action, workflow, mockName) => {
+            mockRole('analyst')
+            const payload = { marker: action }
+
+            const response = await POST(buildRequest(action, payload))
+
+            expect(response.status).toBe(200)
+            if (mockName === 'upsertClientWithShadow') {
+                expect(mocks[mockName]).toHaveBeenCalledWith(payload, workflow)
+            } else {
+                expect(mocks[mockName]).toHaveBeenCalledWith(payload, {
+                    clientResolutionWorkflow: workflow,
+                })
+            }
+        },
+    )
+
+    it.each([
+        'prepareManualAccessionClient',
+        'prepareQrAccessionClient',
+        'createManualAccessionSample',
+        'createQrAccessionSample',
+        'assignManualAccessionTests',
+        'assignQrAccessionTests',
+    ] as const)(
+        'denies manager action %s before the accession adapter runs',
+        async (action) => {
+            mockRole('manager')
+
+            const response = await POST(buildRequest(action, {}))
+
+            expect(response.status).toBe(403)
+            expect(mocks.upsertClientWithShadow).not.toHaveBeenCalled()
+            expect(mocks.createSample).not.toHaveBeenCalled()
+            expect(mocks.accessionAndAssignTests).not.toHaveBeenCalled()
+        },
+    )
+
     it('denies approveResults before the privileged handler when manager OTP is missing', async () => {
         vi.stubEnv('MANAGER_EMAIL_OTP_ENABLED', 'TRUE')
         vi.stubEnv('MANAGER_HIV_EMAIL_OTP_ENABLED', 'FALSE')

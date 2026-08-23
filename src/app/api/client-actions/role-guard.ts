@@ -4,10 +4,23 @@ import { MANAGER_OTP_REQUIRED_ERROR, shouldRequireManagerStepUp } from '@/lib/ma
 import { decodeJwtPayload } from '@/lib/jwt'
 
 const DOCTOR_ALLOWED_ACTIONS = new Set<ClientActionName>(['getSamples'])
-const MANAGER_FORBIDDEN_ACTIONS = new Set<ClientActionName>(['createSample', 'accessionAndAssignTests'])
+const CLIENT_ACCESSION_ACTIONS = [
+    'prepareManualAccessionClient',
+    'prepareQrAccessionClient',
+    'createManualAccessionSample',
+    'createQrAccessionSample',
+    'assignManualAccessionTests',
+    'assignQrAccessionTests',
+] as const satisfies readonly ClientActionName[]
+const MANAGER_FORBIDDEN_ACTIONS = new Set<ClientActionName>([
+    'createSample',
+    'accessionAndAssignTests',
+    ...CLIENT_ACCESSION_ACTIONS,
+])
 const ANALYST_OR_MANAGER_ACTIONS = new Set<ClientActionName>([
     'resolveClientIdentityV2',
     'resolveOrCreateClientV2',
+    ...CLIENT_ACCESSION_ACTIONS,
 ])
 const MANAGER_ONLY_ACTIONS = new Set<ClientActionName>([
     'getAssaySampleTypeCatalogManager',

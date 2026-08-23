@@ -3,6 +3,7 @@ import 'server-only'
 import { randomUUID } from 'node:crypto'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import type { ClientResolutionInput } from '@/types'
+import { parseClientResolutionCategories } from './categories'
 
 export type ClientResolutionShadowCategory = 'manual' | 'qr' | 'upsert'
 
@@ -21,21 +22,9 @@ const VALID_CATEGORIES = new Set<ClientResolutionShadowCategory>([
 ])
 
 function getEnabledCategories() {
-  const configured =
-    process.env.CLIENT_RESOLUTION_SHADOW_CATEGORIES?.trim().toLowerCase()
-
-  if (!configured || configured === 'off') {
-    return new Set<ClientResolutionShadowCategory>()
-  }
-
-  return new Set(
-    configured
-      .split(',')
-      .map((category) => category.trim())
-      .filter(
-        (category): category is ClientResolutionShadowCategory =>
-          VALID_CATEGORIES.has(category as ClientResolutionShadowCategory),
-      ),
+  return parseClientResolutionCategories(
+    process.env.CLIENT_RESOLUTION_SHADOW_CATEGORIES,
+    VALID_CATEGORIES,
   )
 }
 

@@ -5,14 +5,22 @@ import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
-    type Client,
     type CreateClient,
-    type CreateSample,
-    type CreateSampleWithAssignments,
+    type CreateSampleWithClientResolution,
+    type CreateSampleWithAssignmentsAndClientResolution,
     type LabSpecialty,
     type SelectedTest,
 } from '@/types'
-import { accessionAndAssignTestsClient, createSampleClient } from '@/lib/api-client'
+import {
+    assignManualAccessionTestsClient,
+    assignQrAccessionTestsClient,
+    createManualAccessionSampleClient,
+    createQrAccessionSampleClient,
+} from '@/lib/api-client'
+import {
+    createExistingAccessionSelection,
+    type AccessionClientSelection,
+} from '@/lib/client-resolution/accession'
 import { printSampleBarcodeLabel } from '@/lib/sample-label-print-client'
 import type { SampleLabelPreset } from '@/lib/sample-label-template'
 import {
@@ -52,7 +60,8 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
     const [showConfirmation, setShowConfirmation] = useState(false)
     const [showLabelPrintDialog, setShowLabelPrintDialog] = useState(false)
 
-    const [selectedClient, setSelectedClient] = useState<Client | null>(null)
+    const [selectedClient, setSelectedClient] =
+        useState<AccessionClientSelection | null>(null)
     const [selectedSampleTypeId, setSelectedSampleTypeId] = useState<string | null>(null)
     const [selectionRevisionNumber, setSelectionRevisionNumber] =
         useState<number | null>(null)
@@ -190,18 +199,27 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
         try {
             if (selectedTests.length === 0) {
                 // Create sample WITHOUT tests (new flow)
-                const payload: CreateSample = {
-                    client_id: selectedClient.id,
+                const payload: CreateSampleWithClientResolution = {
+                    ...(selectedClient.kind === 'existing'
+                        ? {
+                            client_id: selectedClient.client.id,
+                            client_name: selectedClient.client.name,
+                        }
+                        : {}),
                     type: selectedSampleType.name,
                     sample_quality: sampleQuality,
-                    client_name: selectedClient.name, // Snapshot
                     received_at: data.received_at ? new Date(data.received_at).toISOString() : undefined,
                     sampleTypeId: selectedSampleType.id,
                     sampleTypeCode: selectedSampleType.importCode,
                     expectedRevisionNumber: catalog.revisionNumber,
+                    client_resolution: selectedClient.resolution,
                 }
 
-                const result = await createSampleClient(payload)
+                const createSampleForWorkflow =
+                    selectedClient.workflow === 'qr'
+                        ? createQrAccessionSampleClient
+                        : createManualAccessionSampleClient
+                const result = await createSampleForWorkflow(payload)
 
                 if (result.error) {
                     handleAssignmentError(result.error)
@@ -215,9 +233,13 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
                 }
             } else {
                 // Create sample WITH tests (existing flow)
-                const payload: CreateSampleWithAssignments = {
-                    client_id: selectedClient.id,
-                    client_name: selectedClient.name, // Snapshot
+                const payload: CreateSampleWithAssignmentsAndClientResolution = {
+                    ...(selectedClient.kind === 'existing'
+                        ? {
+                            client_id: selectedClient.client.id,
+                            client_name: selectedClient.client.name,
+                        }
+                        : {}),
                     type: selectedSampleType.name,
                     sample_quality: sampleQuality,
                     received_at: data.received_at ? new Date(data.received_at).toISOString() : undefined,
@@ -228,9 +250,14 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
                     sampleTypeId: selectedSampleType.id,
                     sampleTypeCode: selectedSampleType.importCode,
                     expectedRevisionNumber: catalog.revisionNumber,
+                    client_resolution: selectedClient.resolution,
                 }
 
-                const result = await accessionAndAssignTestsClient(payload)
+                const assignTestsForWorkflow =
+                    selectedClient.workflow === 'qr'
+                        ? assignQrAccessionTestsClient
+                        : assignManualAccessionTestsClient
+                const result = await assignTestsForWorkflow(payload)
 
                 if (result.error) {
                     handleAssignmentError(result.error)
@@ -263,7 +290,7 @@ export function SampleAccessionForm({ specialties = EMPTY_SPECIALTIES }: SampleA
             setShowClientForm(true)
         },
         onExistingClient: (client) => {
-            setSelectedClient(client)
+            setSelectedClient(createExistingAccessionSelection(client, 'qr'))
             setClientFormData(undefined)
             setShowClientForm(false)
             toast.success(`Đã tìm thấy khách hàng: ${client.name}`)

@@ -3,8 +3,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { CreateClientSchema, type CreateClient, type Client, Gender } from '@/types'
+import {
+    ClientSchema,
+    CreateClientSchema,
+    type CreateClient,
+    type Client,
+    Gender,
+} from '@/types'
 import { updateClientClient, upsertClientClient } from '@/lib/api-client'
+import {
+    isPendingAccessionClient,
+    type PendingAccessionClient,
+} from '@/lib/client-resolution/accession'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -24,6 +34,11 @@ interface ClientFormProps {
     clientId?: string
     initialData?: Partial<CreateClient>
     onSuccess: (client: Client) => void
+    prepareClient?: (data: CreateClient) => Promise<{
+        data?: unknown
+        error?: unknown
+    }>
+    onPending?: (pending: PendingAccessionClient) => void
     onCancel: () => void
     onUserEdit?: () => void
     addressSeedVersion?: number
@@ -35,6 +50,8 @@ export function ClientForm({
     clientId,
     initialData,
     onSuccess,
+    prepareClient,
+    onPending,
     onCancel,
     onUserEdit,
     addressSeedVersion,
@@ -99,12 +116,21 @@ export function ClientForm({
             const result =
                 mode === 'update'
                     ? await updateClientClient(clientId as string, data)
-                    : await upsertClientClient(data)
+                    : prepareClient
+                        ? await prepareClient(data)
+                        : await upsertClientClient(data)
 
             if (result.error) {
-                setSubmitError(result.error)
-            } else if (result.data) {
-                onSuccess(result.data)
+                setSubmitError(String(result.error))
+            } else if (isPendingAccessionClient(result.data)) {
+                onPending?.(result.data)
+            } else {
+                const parsedClient = ClientSchema.safeParse(result.data)
+                if (parsedClient.success) {
+                    onSuccess(parsedClient.data)
+                } else {
+                    setSubmitError('Không thể xác nhận thông tin khách hàng')
+                }
             }
         } catch (error) {
             setSubmitError(error instanceof Error ? error.message : 'Đã có lỗi xảy ra khi lưu khách hàng')

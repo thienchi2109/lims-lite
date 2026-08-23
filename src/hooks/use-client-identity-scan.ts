@@ -23,15 +23,14 @@ export function useClientIdentityScan({
     ) => {
         const scanGeneration = ++scanGenerationRef.current
         const { idCardNum, name, dateOfBirth, gender, address } = parsed
-
-        onDraft({
+        const draft = {
             name,
             id_card_num: idCardNum || '',
             date_of_birth: dateOfBirth,
             gender,
             phone: '',
             address: address || '',
-        })
+        } satisfies Partial<CreateClient>
 
         try {
             const result = await findClientByIdentityQrClient({
@@ -44,6 +43,8 @@ export function useClientIdentityScan({
                 && result.data
             ) {
                 onExistingClient(result.data)
+            } else if (scanGeneration === scanGenerationRef.current) {
+                onDraft(draft)
             }
         } catch (error) {
             if (scanGeneration === scanGenerationRef.current) {

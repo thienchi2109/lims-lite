@@ -8,7 +8,7 @@
  * Extracted from contextContent in sample-accession-form.tsx.
  */
 
-import type { Client, CreateClient, PublishedCatalogSampleType } from '@/types'
+import type { CreateClient, PublishedCatalogSampleType } from '@/types'
 import { ClientSelector } from '@/components/client-selector'
 import { SampleTypeSelector } from '@/components/sample-type-selector'
 import { ClientQrScannerDialog } from '@/components/client-qr-scanner-dialog'
@@ -19,12 +19,13 @@ import { Button } from '@/components/ui/button'
 import { SampleQualityField } from '@/components/sample-quality-field'
 import { Scan, Calendar, ArrowRight, RefreshCw } from 'lucide-react'
 import type { ParsedClientIdentityQr } from '@/lib/qr/parse-client-identity-qr'
+import type { AccessionClientSelection } from '@/lib/client-resolution/accession'
 import type { UseFormRegisterReturn } from 'react-hook-form'
 
 interface StepCustomerProps {
     /* Client state */
-    selectedClient: Client | null
-    onSelectClient: (client: Client | null) => void
+    selectedClient: AccessionClientSelection | null
+    onSelectClient: (client: AccessionClientSelection | null) => void
     showClientForm: boolean
     onOpenFormChange: (open: boolean) => void
     clientFormData: Partial<CreateClient> | undefined
