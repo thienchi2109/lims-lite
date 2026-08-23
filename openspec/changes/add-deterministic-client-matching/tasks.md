@@ -151,31 +151,31 @@ resolve-and-create, and sample mutation atomically; it SHALL NOT expose v2
 request/response shapes, scanner transport/parser, allowed profile edits,
 sample/result workflows, and unrelated client features remain compatible.
 
-- [ ] 6.1 Add failing tests for `matched`, `not_found`, `ambiguous`, and
+- [x] 6.1 Add failing tests for `matched`, `not_found`, `ambiguous`, and
   `conflict`, including inactive/restricted reasons, while locking scanner
   camera/Web Serial, QR parsing, address fields, confidentiality, allowed profile
   edits, CoA raw-phone authentication, and sample selection behavior.
-- [ ] 6.2 Route only lookup-only consumers through v2 behind a server-controlled
+- [x] 6.2 Route only lookup-only consumers through v2 behind a server-controlled
   switch; show Vietnamese outcomes and prohibit analyst override. Keep every
   creation-capable manual/QR flow entirely on its current path at this checkpoint.
-- [ ] 6.3 Complete lookup-only focused tests, shadow comparison, typecheck, lint,
+- [x] 6.3 Complete lookup-only focused tests, shadow comparison, typecheck, lint,
   React Doctor, browser smoke, and tested switch rollback before enabling any
   eligible read-only consumer.
-- [ ] 6.4 Add failing regressions proving matched requests never update identity
+- [x] 6.4 Add failing regressions proving matched requests never update identity
   or address, only `not_found` can create, and unresolved/restricted outcomes
   produce zero client, sample, or result mutation.
-- [ ] 6.5 Add versioned sample/accession mutation RPCs that lock and revalidate
+- [x] 6.5 Add versioned sample/accession mutation RPCs that lock and revalidate
   active client state, derive `client_name`, and atomically create or link the
   client and sample inside the same transaction.
-- [ ] 6.6 Deploy all v2-capable mutation adapters with their switches disabled,
+- [x] 6.6 Deploy all v2-capable mutation adapters with their switches disabled,
   reconcile canonical projections again, and prove the clean baseline has not
   drifted since Phase 3.
-- [ ] 6.7 Cut over each creation-capable manual/QR/upsert/accession workflow as
+- [x] 6.7 Cut over each creation-capable manual/QR/upsert/accession workflow as
   one unit behind its own server-controlled switch, preserving compatible
   success responses and never pairing v2 lookup with legacy mutation.
-- [ ] 6.8 Return Vietnamese `Xung đột thông tin` or
+- [x] 6.8 Return Vietnamese `Xung đột thông tin` or
   `Không thể xác định duy nhất` instead of overwriting unsafe matches.
-- [ ] 6.9 Observe all mutation callers on v2 while the legacy constraint/path
+- [x] 6.9 Observe all mutation callers on v2 while the legacy constraint/path
   remains structurally available; complete production smoke and a tested switch
   rollback before crossing the retirement gate.
 - [ ] 6.10 Irreversible retirement gate: after code search and production
