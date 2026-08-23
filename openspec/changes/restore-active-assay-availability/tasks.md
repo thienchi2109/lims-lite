@@ -24,10 +24,11 @@
   validation, and TypeScript typecheck.
 - [x] 3.2 Review the diff for applied-migration immutability, SQL security,
   audit attribution, and scope containment.
-- [ ] 3.3 Commit, push the reviewed branch, fast-forward `main` without a PR,
+- [x] 3.3 Commit, push the reviewed branch, fast-forward `main` without a PR,
   and sync source plus the home-server checkout.
-- [ ] 3.4 Apply migration 229 on the home server and run
+- [x] 3.4 Apply migration 229 on the home server and run
   `run_security_tests()`.
-- [ ] 3.5 Verify revision 2, 84/84 active assay visibility, zero soft-deleted
+- [x] 3.5 Verify revision 2, 84/84 active assay visibility, zero soft-deleted
   leakage, the four reported assay codes, and application health; then hand off
   production accession UI verification to the user.
+- [ ] 3.6 Record the user's production accession UI smoke-test result.
