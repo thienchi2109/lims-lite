@@ -31,4 +31,5 @@
 - [x] 3.5 Verify revision 2, 84/84 active assay visibility, zero soft-deleted
   leakage, the four reported assay codes, and application health; then hand off
   production accession UI verification to the user.
-- [ ] 3.6 Record the user's production accession UI smoke-test result.
+- [x] 3.6 Close without recording a production accession UI result at the
+  user's explicit archive direction on August 23, 2026.
