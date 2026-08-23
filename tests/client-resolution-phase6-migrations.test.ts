@@ -6,6 +6,8 @@ const additiveMigrationPath =
 const rollbackTestPath = 'tests/client-resolution-caller-cutover.test.sql'
 const concurrencyTestPath =
   'tests/client-resolution-caller-cutover-concurrency.test.sql'
+const composePath = 'docker-compose.yml'
+const envExamplePath = '.env.example'
 
 function read(path: string) {
   return existsSync(path) ? readFileSync(path, 'utf8') : ''
@@ -113,6 +115,20 @@ describe('Phase 6 deterministic client caller cutover additive migration', () =>
     expect(concurrencySql).toContain('pg_sleep(1)')
     expect(concurrency).toContain("'{resolution,outcome}' = 'conflict'")
     expect(concurrency).toContain("'{resolution,reason_code}' = 'inactive_candidate'")
+  })
+
+  it('wires production cutover switches with reversible defaults', () => {
+    const compose = read(composePath)
+    const envExample = read(envExamplePath)
+
+    expect(compose).toContain(
+      'CLIENT_RESOLUTION_V2_CATEGORIES: "${CLIENT_RESOLUTION_V2_CATEGORIES:-off}"',
+    )
+    expect(compose).toContain(
+      'CLIENT_RESOLUTION_LEGACY_UPSERT: "${CLIENT_RESOLUTION_LEGACY_UPSERT:-on}"',
+    )
+    expect(envExample).toContain('CLIENT_RESOLUTION_V2_CATEGORIES=off')
+    expect(envExample).toContain('CLIENT_RESOLUTION_LEGACY_UPSERT=on')
   })
 
   it('keeps the irreversible retirement gate closed', () => {
