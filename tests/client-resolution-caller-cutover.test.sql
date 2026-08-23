@@ -201,7 +201,7 @@ BEGIN
         ),
         (
             v_ambiguous_client_a_id,
-            NULL,
+            'BACKFILL-PHASE6-AMB-A',
             'Đặng Thị Song Sinh',
             DATE '1992-06-14',
             'Nữ',
@@ -213,7 +213,7 @@ BEGIN
         ),
         (
             v_ambiguous_client_b_id,
-            NULL,
+            'BACKFILL-PHASE6-AMB-B',
             'ĐẶNG THỊ SONG SINH',
             DATE '1992-06-14',
             'Nữ',

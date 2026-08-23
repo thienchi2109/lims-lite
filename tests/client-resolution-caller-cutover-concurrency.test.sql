@@ -29,6 +29,36 @@ BEGIN
 END;
 $contract$;
 
+SELECT
+    compatibility.sample_type_id AS cutover_sample_type_id,
+    revision.revision_number AS cutover_revision_number
+FROM public.assay_sample_type_compatibilities AS compatibility
+JOIN public.assay_sample_type_catalog_revisions AS revision
+  ON revision.id = compatibility.revision_id
+ AND revision.status = 'published'
+JOIN public.assay_sample_type_reviews AS review
+  ON review.revision_id = compatibility.revision_id
+ AND review.assay_definition_id = compatibility.assay_definition_id
+ AND review.disposition = 'configured'
+JOIN public.assay_definitions AS assay_definition
+  ON assay_definition.id = compatibility.assay_definition_id
+ AND assay_definition.deleted_at IS NULL
+ AND NOT assay_definition.is_confidential
+JOIN public.sample_types AS sample_type
+  ON sample_type.id = compatibility.sample_type_id
+ AND sample_type.deleted_at IS NULL
+WHERE compatibility.removed_at IS NULL
+  AND compatibility.assay_compatibility_generation =
+        assay_definition.compatibility_generation
+  AND compatibility.sample_type_compatibility_generation =
+        sample_type.compatibility_generation
+ORDER BY compatibility.created_at, compatibility.id
+LIMIT 1
+\gset
+
+\setenv CUTOVER_SAMPLE_TYPE_ID :cutover_sample_type_id
+\setenv CUTOVER_REVISION_NUMBER :cutover_revision_number
+
 CREATE FUNCTION pg_temp.cleanup_client_cutover_revalidation()
 RETURNS VOID
 LANGUAGE plpgsql
@@ -120,8 +150,12 @@ VALUES (
     'Concurrency fixture'
 );
 
-\! rm -f /tmp/client-cutover-locker.out /tmp/client-cutover-race.out /tmp/client-cutover-race.err /tmp/client-cutover-race-status
-\! timeout --kill-after=5s 30s sh -c "psql -v ON_ERROR_STOP=1 -U postgres -X -q -c \"BEGIN; UPDATE public.clients SET deleted_at = clock_timestamp(), deleted_by = '95360100-0000-0000-0000-000000000001', deletion_reason = 'Phase 6 revalidation race' WHERE id = '95360100-0000-0000-0000-000000000010'; SELECT pg_sleep(1); COMMIT;\" > /tmp/client-cutover-locker.out 2>&1 & locker_pid=\$!; sleep 0.2; psql -v ON_ERROR_STOP=1 -U postgres -X -Atq -c \"SET request.jwt.claims TO '{\\\"sub\\\":\\\"95360100-0000-0000-0000-000000000001\\\",\\\"role\\\":\\\"authenticated\\\"}'; SET request.jwt.claim.sub TO '95360100-0000-0000-0000-000000000001'; SET request.jwt.claim.role TO 'authenticated'; SET ROLE authenticated; WITH compatible AS (SELECT compatibility.sample_type_id, revision.revision_number FROM public.assay_sample_type_compatibilities AS compatibility JOIN public.assay_sample_type_catalog_revisions AS revision ON revision.id = compatibility.revision_id AND revision.status = 'published' JOIN public.assay_sample_type_reviews AS review ON review.revision_id = compatibility.revision_id AND review.assay_definition_id = compatibility.assay_definition_id AND review.disposition = 'configured' JOIN public.assay_definitions AS assay_definition ON assay_definition.id = compatibility.assay_definition_id AND assay_definition.deleted_at IS NULL AND NOT assay_definition.is_confidential JOIN public.sample_types AS sample_type ON sample_type.id = compatibility.sample_type_id AND sample_type.deleted_at IS NULL WHERE compatibility.removed_at IS NULL AND compatibility.assay_compatibility_generation = assay_definition.compatibility_generation AND compatibility.sample_type_compatibility_generation = sample_type.compatibility_generation ORDER BY compatibility.created_at, compatibility.id LIMIT 1) SELECT public.create_sample_with_client_resolution_v2(FALSE, 'cccd', '953601000010', 'Issue 111 Phase 6 Revalidation Race', DATE '1993-06-15', NULL, '0953601010', NULL, NULL, NULL, NULL::TIMESTAMPTZ, compatible.sample_type_id, TRUE, compatible.revision_number)::TEXT FROM compatible;\" > /tmp/client-cutover-race.out 2> /tmp/client-cutover-race.err; race_status=\$?; wait \$locker_pid; locker_status=\$?; [ \"\$locker_status\" -eq 0 ] && [ \"\$race_status\" -eq 0 ] && [ \"\$(wc -l < /tmp/client-cutover-race.out)\" -eq 1 ] && [ ! -s /tmp/client-cutover-race.err ] && ! grep -Eq '40001|initial_client_id|revalidated_client_id|95360100-0000-0000-0000-000000000010' /tmp/client-cutover-race.out /tmp/client-cutover-race.err\" && printf '0\n' > /tmp/client-cutover-race-status || printf '1\n' > /tmp/client-cutover-race-status
+\! rm -f /tmp/client-cutover-locker.out /tmp/client-cutover-locker-status /tmp/client-cutover-race.out /tmp/client-cutover-race.err /tmp/client-cutover-race-process-status /tmp/client-cutover-race-status
+\! (timeout --kill-after=5s 20s psql -v ON_ERROR_STOP=1 -U postgres -X -q -c "BEGIN; UPDATE public.clients SET deleted_at = clock_timestamp(), deleted_by = '95360100-0000-0000-0000-000000000001', deletion_reason = 'Phase 6 revalidation race' WHERE id = '95360100-0000-0000-0000-000000000010'; SELECT pg_sleep(1); COMMIT;"; printf '%s\n' "$?" > /tmp/client-cutover-locker-status) > /tmp/client-cutover-locker.out 2>&1 &
+\! sleep 0.2
+\! timeout --kill-after=5s 20s psql -v ON_ERROR_STOP=1 -U postgres -X -Atq -c "SET request.jwt.claims TO '{\"sub\":\"95360100-0000-0000-0000-000000000001\",\"role\":\"authenticated\"}'; SET request.jwt.claim.sub TO '95360100-0000-0000-0000-000000000001'; SET request.jwt.claim.role TO 'authenticated'; SET ROLE authenticated; SELECT public.create_sample_with_client_resolution_v2(FALSE, 'cccd', '953601000010', 'Issue 111 Phase 6 Revalidation Race', DATE '1993-06-15', NULL, '0953601010', NULL, NULL, NULL, NULL::TIMESTAMPTZ, '$CUTOVER_SAMPLE_TYPE_ID'::UUID, TRUE, '$CUTOVER_REVISION_NUMBER'::BIGINT)::TEXT;" > /tmp/client-cutover-race.out 2> /tmp/client-cutover-race.err; printf '%s\n' "$?" > /tmp/client-cutover-race-process-status
+\! timeout --kill-after=5s 30s sh -c 'while [ ! -f /tmp/client-cutover-locker-status ]; do sleep 0.1; done'
+\! locker_status=$(cat /tmp/client-cutover-locker-status 2>/dev/null || printf 1); race_status=$(cat /tmp/client-cutover-race-process-status 2>/dev/null || printf 1); [ "$locker_status" -eq 0 ] && [ "$race_status" -eq 0 ] && [ "$(wc -l < /tmp/client-cutover-race.out)" -eq 1 ] && [ ! -s /tmp/client-cutover-race.err ] && ! grep -Eq '40001|initial_client_id|revalidated_client_id|95360100-0000-0000-0000-000000000010' /tmp/client-cutover-race.out /tmp/client-cutover-race.err && printf '0\n' > /tmp/client-cutover-race-status || printf '1\n' > /tmp/client-cutover-race-status
 \set race_shell_failed `cat /tmp/client-cutover-race-status`
 
 \if :race_shell_failed
@@ -130,7 +164,7 @@ VALUES (
 \else
     CREATE TEMP TABLE client_cutover_race_output (
         envelope JSONB NOT NULL
-    ) ON COMMIT DROP;
+    );
 
     \copy client_cutover_race_output (envelope) FROM '/tmp/client-cutover-race.out'
 
@@ -165,7 +199,7 @@ VALUES (
 \endif
 
 SELECT pg_temp.cleanup_client_cutover_revalidation();
-\! rm -f /tmp/client-cutover-locker.out /tmp/client-cutover-race.out /tmp/client-cutover-race.err /tmp/client-cutover-race-status
+\! rm -f /tmp/client-cutover-locker.out /tmp/client-cutover-locker-status /tmp/client-cutover-race.out /tmp/client-cutover-race.err /tmp/client-cutover-race-process-status /tmp/client-cutover-race-status
 
 \if :race_shell_failed
     DO $shell_failure$
