@@ -5,7 +5,9 @@ import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
     ClientSchema,
+    ClientProfileUpdateSchema,
     CreateClientSchema,
+    type ClientProfileUpdate,
     type CreateClient,
     type Client,
     Gender,
@@ -113,12 +115,15 @@ export function ClientForm({
                 return
             }
 
-            const result =
-                mode === 'update'
-                    ? await updateClientClient(clientId as string, data)
-                    : prepareClient
-                        ? await prepareClient(data)
-                        : await upsertClientClient(data)
+            let result
+            if (mode === 'update') {
+                const profileUpdate: ClientProfileUpdate = ClientProfileUpdateSchema.parse(data)
+                result = await updateClientClient(clientId as string, profileUpdate)
+            } else {
+                result = prepareClient
+                    ? await prepareClient(data)
+                    : await upsertClientClient(data)
+            }
 
             if (result.error) {
                 setSubmitError(String(result.error))
@@ -170,6 +175,7 @@ export function ClientForm({
                     <Input
                         id="name"
                         {...register('name')}
+                        readOnly={mode === 'update'}
                         placeholder="Nhập họ tên đầy đủ"
                         className="shadow-sm h-9"
                     />
@@ -186,6 +192,7 @@ export function ClientForm({
                     <Input
                         id="id_card_num"
                         {...register('id_card_num')}
+                        readOnly={mode === 'update'}
                         placeholder="Nhập số giấy tờ tùy thân"
                         className="shadow-sm h-9"
                     />
@@ -236,6 +243,7 @@ export function ClientForm({
                             id="date_of_birth"
                             type="date"
                             {...register('date_of_birth')}
+                            readOnly={mode === 'update'}
                             className={dateInputClassName}
                         />
                         {errors.date_of_birth && (

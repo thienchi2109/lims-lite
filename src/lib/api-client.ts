@@ -15,6 +15,7 @@ import type {
     CancelApproval,
     CreateUser,
     UpdateUser,
+    ClientProfileUpdate,
     RejectSample,
     DiscardSample,
     CreateClient,
@@ -424,7 +425,7 @@ export function fetchClientsClient(search?: string) {
     return callClientAction('getClients', search ? { search } : undefined)
 }
 
-export function updateClientClient(id: string, data: Partial<CreateClient>) {
+export function updateClientClient(id: string, data: ClientProfileUpdate) {
     return callClientAction('updateClient', { id, data })
 }
 

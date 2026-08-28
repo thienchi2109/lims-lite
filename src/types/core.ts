@@ -106,8 +106,10 @@ export type ManagerStepUpPayload = z.infer<typeof ManagerStepUpPayloadSchema>
 // CLIENT SCHEMAS
 // ============================================================================
 
+export const ClientIdSchema = z.string().uuid()
+
 export const ClientSchema = z.object({
-    id: z.string().uuid(),
+    id: ClientIdSchema,
     id_card_num: z.string(),
     name: z.string(),
     date_of_birth: z.string(),
@@ -137,21 +139,19 @@ export const CreateClientSchema = z.object({
 
 export type CreateClient = z.infer<typeof CreateClientSchema>
 
-export const UpdateClientSchema = z.object({
-    id: z.string().uuid(),
-    id_card_num: z.string().min(1).optional(),
-    name: z.string().min(1).optional(),
-    date_of_birth: z.string().refine((val) => !isNaN(Date.parse(val)), {
-        message: 'Ngày sinh không hợp lệ'
-    }).optional(),
-    gender: Gender.optional(),
-    phone: z.string().regex(/^(0|\+84)[0-9]{9,10}$/, 'Số điện thoại không hợp lệ').optional(),
-    address: z.string().optional(),
-    health_insurance_num: z.string().optional(),
-    expiry_date: z.string().optional(),
-})
+export const ClientProfileUpdateSchema = CreateClientSchema.pick({
+    gender: true,
+    phone: true,
+    address: true,
+    health_insurance_num: true,
+    expiry_date: true,
+}).partial()
 
-export type UpdateClient = z.infer<typeof UpdateClientSchema>
+export type ClientProfileUpdate = z.infer<typeof ClientProfileUpdateSchema>
+
+export const UpdateClientSchema = ClientProfileUpdateSchema.strict().refine(
+    (data) => Object.values(data).some((value) => value !== undefined),
+)
 
 // ============================================================================
 // LOGIN SCHEMA

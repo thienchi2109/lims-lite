@@ -95,16 +95,16 @@ before apply:
    workspace/API path backed by `correct_client_identity_v1`; tests must not
    introduce a second direct identity mutation path.
 
-- [ ] **Step 1:** Add focused server-action tests that mock the Supabase query
+- [x] **Step 1:** Add focused server-action tests that mock the Supabase query
       chain and prove profile-only payloads reach `.update()`.
-- [ ] **Step 2:** Add a separate denial test for each protected identity field
+- [x] **Step 2:** Add a separate denial test for each protected identity field
       and assert `.from('clients').update(...)` is not called.
-- [ ] **Step 3:** Add a React test that submits `ClientForm` in update mode and
+- [x] **Step 3:** Add a React test that submits `ClientForm` in update mode and
       asserts `updateClientClient()` receives no identity keys.
-- [ ] **Step 4:** Replace stale source-shape assertions in the two `.mjs` tests
+- [x] **Step 4:** Replace stale source-shape assertions in the two `.mjs` tests
       with the new contract: analyst profile edits remain allowed, identity
       edits use the audited manager lifecycle path.
-- [ ] **Step 5:** Run the focused tests and verify RED against the current code:
+- [x] **Step 5:** Run the focused tests and verify RED against the current code:
 
 ```bash
 rtk npx vitest run \
@@ -143,10 +143,10 @@ Expected: failures show that `ClientForm` sends the full payload and
 - Do not alter the existing manager lifecycle workspace path that invokes
   `correct_client_identity_v1`.
 
-- [ ] **Step 1:** Implement the smallest schema, component, API, and action
+- [x] **Step 1:** Implement the smallest schema, component, API, and action
       changes required by the RED tests.
-- [ ] **Step 2:** Run the Task 1 commands and verify GREEN.
-- [ ] **Step 3:** Run adjacent lifecycle and API route tests:
+- [x] **Step 2:** Run the Task 1 commands and verify GREEN.
+- [x] **Step 3:** Run adjacent lifecycle and API route tests:
 
 ```bash
 rtk npx vitest run \

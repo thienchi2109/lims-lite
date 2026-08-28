@@ -1,4 +1,4 @@
-// Regression test: analysts can update clients (RLS + server action).
+// Regression test: analysts and managers can update client profile fields only.
 // Run with: node tests/clients-update-allows-analyst.test.mjs
 
 import { readFile, readdir } from 'node:fs/promises';
@@ -16,10 +16,40 @@ const [clientsActionContent, migrationFiles] = await Promise.all([
 const updateClientStart = clientsActionContent.indexOf('export async function updateClient');
 assert.ok(updateClientStart !== -1, 'updateClient action must exist');
 
-const updateClientBlock = clientsActionContent.slice(updateClientStart);
-assert.ok(
-  updateClientBlock.includes("'analyst'") || updateClientBlock.includes('"analyst"'),
-  'updateClient must allow analysts to update clients'
+const nextActionStart = clientsActionContent.indexOf(
+  '\nexport async function ',
+  updateClientStart + 1
+);
+const updateClientBlock = clientsActionContent.slice(
+  updateClientStart,
+  nextActionStart === -1 ? clientsActionContent.length : nextActionStart
+);
+
+for (const role of ['analyst', 'manager']) {
+  assert.ok(
+    updateClientBlock.includes(`'${role}'`) || updateClientBlock.includes(`"${role}"`),
+    `updateClient must allow ${role}s to update client profile fields`
+  );
+}
+
+for (const field of [
+  'gender',
+  'phone',
+  'address',
+  'health_insurance_num',
+  'expiry_date',
+]) {
+  assert.match(
+    updateClientBlock,
+    new RegExp(`updateData\\.${field}\\s*=`),
+    `updateClient must preserve the ${field} profile update`
+  );
+}
+
+assert.doesNotMatch(
+  updateClientBlock,
+  /updateData\.(?:id_card_num|name|date_of_birth)\s*=/,
+  'updateClient must reject identity fields instead of sending them to clients.update'
 );
 
 const sqlFiles = migrationFiles.filter((file) => file.endsWith('.sql'));

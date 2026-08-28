@@ -6,11 +6,28 @@ import { isIsoDateString } from '@/lib/iso-date'
 import { getUserConfidentialAccess } from '@/lib/data/confidential-samples'
 import { filterConfidentialAssociatedClients } from '@/lib/data/confidential-clients'
 import {
+    ClientIdSchema,
     CreateClientSchema,
     UpdateClientSchema,
     type CreateClient,
     type Client,
+    type ClientProfileUpdate,
 } from '@/types'
+
+const CLIENT_IDENTITY_UPDATE_ERROR =
+    'Không thể cập nhật trực tiếp thông tin định danh; hãy dùng quy trình hiệu chỉnh danh tính'
+const INVALID_CLIENT_ID_ERROR = 'ID khách hàng không hợp lệ'
+const INVALID_CLIENT_UPDATE_ERROR =
+    'Dữ liệu cập nhật hồ sơ khách hàng không hợp lệ'
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+    return (
+        typeof value === 'object' &&
+        value !== null &&
+        !Array.isArray(value) &&
+        Object.getPrototypeOf(value) === Object.prototype
+    )
+}
 
 export async function getClient(id: string) {
     try {
@@ -270,7 +287,7 @@ export async function getClients(search?: string) {
         return { error: error instanceof Error ? error.message : 'Failed to fetch clients' }
     }
 }
-export async function updateClient(id: string, data: Partial<CreateClient>) {
+export async function updateClient(id: unknown, data: unknown) {
     try {
         const supabase = await createSupabaseClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -285,11 +302,26 @@ export async function updateClient(id: string, data: Partial<CreateClient>) {
         if (userData?.role !== 'manager' && userData?.role !== 'analyst') {
             return { error: 'Only analysts and managers can update clients' }
         }
-        const validatedData = UpdateClientSchema.parse({ id, ...data })
+        const parsedId = ClientIdSchema.safeParse(id)
+        if (!parsedId.success) {
+            return { error: INVALID_CLIENT_ID_ERROR }
+        }
+        if (!isPlainObject(data)) {
+            return { error: INVALID_CLIENT_UPDATE_ERROR }
+        }
+        if (
+            Object.prototype.hasOwnProperty.call(data, 'id_card_num') ||
+            Object.prototype.hasOwnProperty.call(data, 'name') ||
+            Object.prototype.hasOwnProperty.call(data, 'date_of_birth')
+        ) {
+            return { error: CLIENT_IDENTITY_UPDATE_ERROR }
+        }
+        const parsedUpdate = UpdateClientSchema.safeParse(data)
+        if (!parsedUpdate.success) {
+            return { error: INVALID_CLIENT_UPDATE_ERROR }
+        }
+        const validatedData: ClientProfileUpdate = parsedUpdate.data
         const updateData: Record<string, unknown> = {}
-        if (validatedData.id_card_num !== undefined) updateData.id_card_num = validatedData.id_card_num
-        if (validatedData.name !== undefined) updateData.name = validatedData.name
-        if (validatedData.date_of_birth !== undefined) updateData.date_of_birth = validatedData.date_of_birth
         if (validatedData.gender !== undefined) updateData.gender = validatedData.gender
         if (validatedData.phone !== undefined) updateData.phone = validatedData.phone
         if (validatedData.address !== undefined) updateData.address = validatedData.address || null
@@ -298,21 +330,12 @@ export async function updateClient(id: string, data: Partial<CreateClient>) {
         const { data: client, error } = await supabase
             .from('clients')
             .update(updateData)
-            .eq('id', id)
+            .eq('id', parsedId.data)
             .select()
             .single()
         if (error) {
             console.error('Error updating client:', error)
             return { error: error.message }
-        }
-        if (updateData.name) {
-            const { error: samplesError } = await supabase
-                .from('samples')
-                .update({ client_name: client.name })
-                .eq('client_id', id)
-            if (samplesError) {
-                console.error('Error syncing samples client_name:', samplesError)
-            }
         }
         revalidatePath('/analyst/accession')
         revalidatePath('/samples')
