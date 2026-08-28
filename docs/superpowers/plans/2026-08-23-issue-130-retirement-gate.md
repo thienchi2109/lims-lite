@@ -1,295 +1,467 @@
-# Issue #130 — Irreversible Phase 6 Retirement Gate (tasks 6.10–6.14) Implementation Plan
+# Issue #130 - Irreversible Phase 6 Retirement Gate (tasks 6.10-6.14) Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development
-> (recommended) or superpowers:executing-plans to implement this plan task-by-task.
-> Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Revision 2026-08-28:** Corrects the migration number, production baseline,
+> application compatibility gap, persistent security coverage, TDD ordering,
+> rollback-only SQL tests, and push-before-deploy sequence found during review.
+>
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> `superpowers:subagent-driven-development` (recommended) or
+> `superpowers:executing-plans` to implement this plan task-by-task.
 
-**Goal:** Apply the irreversible forward-only gate migration 229 that removes
-`clients_unique_identity UNIQUE (name, date_of_birth)` and blocks direct
-identity-column UPDATE, with red-green TDD coverage before and after apply.
+**Goal:** Retire `clients_unique_identity UNIQUE (name, date_of_birth)` with
+forward-only migration 230 only after the application can edit client profile
+fields without directly updating identity columns. Block direct authenticated
+updates to `id_card_num`, `name`, and `date_of_birth`, while preserving the
+audited manager correction path and deterministic v2 resolution contracts.
 
-**Architecture:** One additive forward-only SQL migration (baseline assert →
-drop constraint → revoke column grants → postcondition verify), covered by a
-vitest static-shape test (runs locally without DB) and a behavior `.test.sql`
-suite (runs on the home-server production postgres via SSH + docker psql).
-App code is untouched; only DB contracts and docs change.
+**Architecture:** Deliver two ordered compatibility layers in one reviewed
+source release. First, narrow normal client edits to profile-only fields and
+keep identity correction behind `correct_client_identity_v1`. Second, add
+migration 230 with strict baseline assertions, bounded lock/statement time,
+the irreversible constraint drop, column-grant hardening, and replacement
+persistent security coverage. Push the committed source before the home server
+pulls it; deploy the compatible application before applying the migration.
 
-**Tech Stack:** PostgreSQL (self-hosted Supabase, docker `lims-postgres`),
-Vitest static migration tests, OpenSpec change `add-deterministic-client-matching`.
+**Tech Stack:** Next.js 16, React 19, TypeScript, PostgreSQL (self-hosted
+Supabase in Docker on the home server), Vitest, rollback-only psql tests, and
+OpenSpec change `add-deterministic-client-matching`.
 
-**Spec:** openspec/changes/add-deterministic-client-matching/{tasks.md,design.md}
-(issue #130 owns tasks 6.10–6.14 ONLY; no Phase 7)
+**Spec:** `openspec/changes/add-deterministic-client-matching/{tasks.md,design.md}`
+(Issue #130 owns tasks 6.10-6.14 only; no Phase 7).
+
+## Verified Starting Point
+
+Reconfirm these drift-prone facts immediately before implementation and again
+before apply:
+
+- Migration 229 is already committed and deployed as
+  `229_restore_active_assay_availability.sql`; the retirement gate must be 230.
+- Production checkout `/opt/lims-lite` was at `8ce56b8` during plan review.
+- `clients_unique_identity UNIQUE (name, date_of_birth)` still exists.
+- Production had 63 clients, zero canonical-projection drift, and zero
+  same-name/DOB duplicate groups.
+- Resolver signatures are exactly:
+  - `resolve_client_identity_v2(text,text,text,date,text)`
+  - `resolve_or_create_client_v2(text,text,text,date,text,text,text,text,date)`
+- `authenticated` has no table-level UPDATE grant and has column UPDATE on:
+  `id_card_num`, `name`, `date_of_birth`, `gender`, `phone`, `address`,
+  `health_insurance_num`, and `expiry_date`.
+- Production switches were:
+  - `CLIENT_RESOLUTION_V2_CATEGORIES=manual,qr`
+  - `CLIENT_RESOLUTION_LEGACY_UPSERT=off`
+  - shadow categories `manual,qr,upsert`
 
 ## Global Constraints
 
-- Applied migrations are byte-for-byte immutable; fixes go in new forward-only migrations.
-- No DELETE of client/sample/result/audit data; no merges, UUID replacement, or relinking.
-- Never restore name/DOB uniqueness after valid same-name/DOB rows exist.
-- DB access ONLY: `ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42`, then from
-  `/opt/lims-lite`:
-  `sudo -n docker exec -i lims-postgres psql -U postgres -d postgres -v ON_ERROR_STOP=1`.
-- No Supabase MCP / Supabase CLI. This workspace never runs Docker DB.
-- Every migration: role checks where relevant, document security impact,
-  run `run_security_tests()` after apply.
-- All UI copy Vietnamese; Zod + strict TS for any TS changes.
-- Conventional Commits, imperative mood, under 100 characters.
+- Applied migrations are byte-for-byte immutable. Do not edit migration 228 or
+  any other applied migration; all database changes belong in migration 230.
+- No client deletion, merging, UUID replacement, sample relinking, or historical
+  mutation. Do not restore name/DOB uniqueness after valid duplicates can exist.
+- Production DB access is only SSH to `khoa-xn-cdc@100.93.19.42`, then
+  `sudo -n docker exec ... lims-postgres psql` from `/opt/lims-lite`.
+- Do not use Supabase MCP, Supabase CLI, or Docker in this workspace.
+- All production SQL behavior tests must use `\set ON_ERROR_STOP on`, an outer
+  `BEGIN`, a rollback transaction boundary, deterministic fixture identifiers,
+  and read-only post-rollback residue assertions. They must never commit data.
+- Expected SQL failures must be caught and asserted independently. A single
+  `ON_ERROR_STOP` failure is evidence for only that failing statement.
+- Run `run_security_tests()` after applying migration 230.
+- Keep UI text Vietnamese, use Zod and strict TypeScript, and send mutations
+  through `src/lib/api-client.ts`.
+- Work directly on `main` as explicitly authorized for this plan revision and
+  Issue #130 implementation. Push source before any home-server pull.
 
 ---
 
-### Task 1: Static migration-shape test (RED)
+### Task 1: Application compatibility tests (RED)
+
+**Files:**
+- Create: `src/app/actions/clients.update-profile.test.ts`
+- Create: `src/components/__tests__/client-form-update.test.tsx`
+- Modify: `tests/clients-update-allows-analyst.test.mjs`
+- Modify: `tests/sample-edit-dialog-edits-client.test.mjs`
+
+**Behavior under test:**
+
+1. An analyst or manager can update only `gender`, `phone`, `address`,
+   `health_insurance_num`, and `expiry_date` through normal client editing.
+2. `ClientForm` update mode sends only those profile fields, even though the
+   form loaded a complete `CreateClient` object.
+3. Supplying `id_card_num`, `name`, or `date_of_birth` to the normal
+   `updateClient` action is rejected before the Supabase `.update()` call.
+4. The sample edit dialog still opens the linked client and saves profile
+   changes, but no longer promises that normal editing changes full identity.
+5. Manager identity corrections remain routed through the existing lifecycle
+   workspace/API path backed by `correct_client_identity_v1`; tests must not
+   introduce a second direct identity mutation path.
+
+- [ ] **Step 1:** Add focused server-action tests that mock the Supabase query
+      chain and prove profile-only payloads reach `.update()`.
+- [ ] **Step 2:** Add a separate denial test for each protected identity field
+      and assert `.from('clients').update(...)` is not called.
+- [ ] **Step 3:** Add a React test that submits `ClientForm` in update mode and
+      asserts `updateClientClient()` receives no identity keys.
+- [ ] **Step 4:** Replace stale source-shape assertions in the two `.mjs` tests
+      with the new contract: analyst profile edits remain allowed, identity
+      edits use the audited manager lifecycle path.
+- [ ] **Step 5:** Run the focused tests and verify RED against the current code:
+
+```bash
+rtk npx vitest run \
+  src/app/actions/clients.update-profile.test.ts \
+  src/components/__tests__/client-form-update.test.tsx
+rtk node tests/clients-update-allows-analyst.test.mjs
+rtk node tests/sample-edit-dialog-edits-client.test.mjs
+```
+
+Expected: failures show that `ClientForm` sends the full payload and
+`updateClient` accepts identity fields.
+
+### Task 2: Application compatibility implementation (GREEN)
+
+**Files:**
+- Modify: `src/components/client-form.tsx`
+- Modify: `src/app/actions/clients.ts`
+- Modify if required by the narrowed payload contract:
+  - `src/lib/api-client.ts`
+  - `src/lib/client-actions/types.ts`
+  - `src/app/api/client-actions/route.ts`
+
+**Implementation requirements:**
+
+- Define or reuse a schema/type for the five profile fields; do not duplicate
+  field lists across the component, API boundary, and server action if a local
+  shared schema is already available.
+- In `ClientForm` update mode, keep identity data visible for context but do not
+  submit `id_card_num`, `name`, or `date_of_birth` through `updateClientClient`.
+- In `updateClient`, reject protected identity keys explicitly and construct the
+  database update object from an allowlist of profile fields only.
+- Remove the normal-update branch that manually rewrites
+  `samples.client_name`; identity changes and snapshot/audit behavior remain
+  owned by the audited lifecycle RPC and database trigger.
+- Preserve analyst and manager access to normal profile edits.
+- Do not alter the existing manager lifecycle workspace path that invokes
+  `correct_client_identity_v1`.
+
+- [ ] **Step 1:** Implement the smallest schema, component, API, and action
+      changes required by the RED tests.
+- [ ] **Step 2:** Run the Task 1 commands and verify GREEN.
+- [ ] **Step 3:** Run adjacent lifecycle and API route tests:
+
+```bash
+rtk npx vitest run \
+  src/components/__tests__/client-lifecycle-workspace.test.tsx \
+  src/app/api/client-actions/role-guard.client-characterization.test.ts \
+  src/app/api/client-actions/route.test.ts
+```
+
+### Task 3: Static migration-shape test (RED)
 
 **Files:**
 - Create: `tests/client-retirement-gate-migration.test.ts`
 
-**Interfaces:**
-- Consumes: none (reads repo files)
-- Produces: failing test expecting
-  `supabase/migrations/229_remove_clients_unique_identity.sql` and
-  `tests/client-retirement-gate.test.sql` to exist with required content markers.
+This test requires only
+`supabase/migrations/230_remove_clients_unique_identity.sql`. It must not require
+the SQL behavior test, so migration implementation can make this task GREEN
+before the behavior suite is authored.
 
-- [ ] **Step 1: Write the failing test**
+Assertions:
 
-Mirror `tests/client-resolution-phase6-migrations.test.ts` (`readFileSync` +
-`normalizeSql`). Assertions:
+1. Migration starts with `BEGIN;`, ends with `COMMIT;`, sets
+   `lock_timeout = '5s'`, `statement_timeout = '60s'`, and a fixed local
+   `search_path`.
+2. Headers document security and historical-data impact.
+3. Baseline requires the exact unique constraint definition and both exact v2
+   resolver signatures listed above.
+4. Baseline reuses migration 228's complete canonical projection checks for
+   normalized name, normalized phone, government identity value, and government
+   identity type.
+5. Baseline verifies `sync_samples_client_name` by relation, name, `tgfoid`,
+   `NOT tgisinternal`, enabled state, and trigger definition.
+6. Baseline verifies no table-level authenticated UPDATE and the expected
+   eight column-level UPDATE grants before retirement.
+7. Gate drops `clients_unique_identity` and revokes authenticated UPDATE on
+   `id_card_num`, `name`, and `date_of_birth`.
+8. Postconditions verify the constraint is absent, all three protected columns
+   are denied, and the five approved profile columns remain writable.
+9. Migration `CREATE OR REPLACE`s
+   `test_client_resolution_sample_cutover_security()` so it checks post-gate
+   semantics instead of requiring the legacy constraint.
+10. The security runner entry and function comment describe post-retirement
+    protection, not reversible legacy-gate preservation.
+11. Forbidden data-changing/reversal patterns are absent: client DELETE,
+    TRUNCATE, client backfill UPDATE, `CREATE UNIQUE`, and `ADD CONSTRAINT`.
 
-1. Both files exist.
-2. Migration normalized starts `BEGIN;` ends `COMMIT;`, contains headers
-   `Security impact:` and `Historical data impact:`.
-3. Baseline guard present: normalized contains `clients_unique_identity` inside a
-   `$baseline$` DO block requiring `pg_constraint` match `contype = 'u'` AND
-   `pg_get_constraintdef(constraint_record.oid) = 'UNIQUE (name, date_of_birth)'`;
-   requires `to_regprocedure('public.resolve_or_create_client_v2(text,text,text,date,text,text,text,text,date)')`
-   IS NOT NULL; requires trigger `sync_samples_client_name` enabled `'O'`.
-4. Gate actions present:
-   `ALTER TABLE public.clients DROP CONSTRAINT clients_unique_identity;`
-   and `REVOKE UPDATE (name, date_of_birth) ON public.clients FROM authenticated;`
-5. Postcondition block asserts the constraint is gone and
-   `has_column_privilege('authenticated','public.clients','name','UPDATE')` is false,
-   while profile columns (`gender`,`phone`,`address`,`health_insurance_num`,`expiry_date`)
-   retain UPDATE privilege.
-6. Forbidden patterns absent (case-insensitive): `DELETE FROM`, `TRUNCATE`,
-   `CREATE UNIQUE`, `ADD CONSTRAINT`, `UPDATE public.clients SET`.
-
-- [ ] **Step 2: Run test, verify RED**
-
-Run: `npx vitest run tests/client-retirement-gate-migration.test.ts`
-Expected: FAIL — migration file does not exist.
-
-- [ ] **Step 3: Commit**
+- [ ] **Step 1:** Write the test.
+- [ ] **Step 2:** Run and verify RED because migration 230 does not exist:
 
 ```bash
-git add tests/client-retirement-gate-migration.test.ts
-git commit -m "test: add retirement gate migration shape expectations"
+rtk npx vitest run tests/client-retirement-gate-migration.test.ts
 ```
 
-### Task 2: Migration 229 (GREEN Task 1)
+### Task 4: Migration 230 implementation (GREEN)
 
 **Files:**
-- Create: `supabase/migrations/229_remove_clients_unique_identity.sql`
+- Create: `supabase/migrations/230_remove_clients_unique_identity.sql`
 
-**Interfaces:**
-- Consumes: baseline left by 228 (constraint present, v2 RPCs live).
-- Produces: DB state consumed by Task 3 tests — constraint removed;
-  `authenticated` loses UPDATE on `name`,`date_of_birth`; profile grants intact.
+**Migration structure:**
 
-- [ ] **Step 1: Write migration** — structure (full statements, comments in style of 218/228):
+1. Document purpose, irreversible security impact, and zero intended row
+   mutation.
+2. Start transaction and set:
 
 ```sql
--- Purpose: Irreversible Phase 6 retirement gate (issue #130, OpenSpec tasks 6.10-6.14):
--- remove legacy UNIQUE(name,date_of_birth) and block direct identity UPDATE.
--- Security impact: Authenticated callers lose column UPDATE on name and date_of_birth;
---   identity changes remain possible only through audited manager lifecycle RPCs and
---   resolve_or_create_client_v2 contracts. Profile edits (gender, phone, address,
---   health_insurance_num, expiry_date) stay allowed.
--- Historical data impact: Legacy uniqueness removed so valid same-name/DOB distinct
---   clients can exist. No rows are inserted, updated, or deleted by this migration.
 BEGIN;
+SET LOCAL lock_timeout = '5s';
+SET LOCAL statement_timeout = '60s';
 SET LOCAL search_path TO public, extensions;
-
-DO $baseline$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint AS constraint_record
-        WHERE constraint_record.conrelid = 'public.clients'::REGCLASS
-          AND constraint_record.conname = 'clients_unique_identity'
-          AND constraint_record.contype = 'u'
-          AND pg_get_constraintdef(constraint_record.oid) = 'UNIQUE (name, date_of_birth)'
-    ) THEN RAISE EXCEPTION 'Migration 229 requires the reversible legacy identity gate'; END IF;
-
-    IF to_regprocedure('public.resolve_or_create_client_v2(text,text,text,date,text,text,text,text,date)') IS NULL
-       OR to_regprocedure('public.resolve_client_identity_v2(boolean,text,text,text,date,text,text,text,text,date)') IS NULL THEN
-        RAISE EXCEPTION 'Migration 229 requires deterministic resolver v2 contracts'; END IF;
-
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_trigger
-        WHERE tgrelid = 'public.samples'::REGCLASS
-          AND tgname = 'sync_samples_client_name'
-          AND tgenabled = 'O'
-    ) THEN RAISE EXCEPTION 'Migration 229 requires sample snapshot baseline'; END IF;
-
-    IF EXISTS (
-        SELECT 1 FROM public.clients
-        WHERE identity_trust_level IS NULL
-           OR normalized_name IS DISTINCT FROM public.normalize_client_name_v1(name)
-    ) THEN RAISE EXCEPTION 'Migration 229 requires fully classified canonical clients'; END IF;
-END
-$baseline$;
-
-ALTER TABLE public.clients
-    DROP CONSTRAINT clients_unique_identity;
-
-REVOKE UPDATE (name, date_of_birth) ON TABLE public.clients FROM authenticated;
-
-DO $verify$
-DECLARE v_column TEXT;
-BEGIN
-    IF EXISTS (
-        SELECT 1 FROM pg_constraint
-        WHERE conrelid = 'public.clients'::REGCLASS
-          AND conname = 'clients_unique_identity'
-    ) THEN RAISE EXCEPTION 'Migration 229 left legacy identity constraint'; END IF;
-
-    FOREACH v_column IN ARRAY ARRAY['name','date_of_birth'] LOOP
-        IF has_column_privilege('authenticated','public.clients',v_column,'UPDATE') THEN
-            RAISE EXCEPTION 'Migration 229 left direct identity UPDATE on %', v_column;
-        END IF;
-    END LOOP;
-
-    FOREACH v_column IN ARRAY ARRAY['gender','phone','address',
-                                    'health_insurance_num','expiry_date'] LOOP
-        IF NOT has_column_privilege('authenticated','public.clients',v_column,'UPDATE') THEN
-            RAISE EXCEPTION 'Migration 229 dropped allowed profile UPDATE on %', v_column;
-        END IF;
-    END LOOP;
-END
-$verify$;
-
-COMMIT;
 ```
 
-NOTE before writing: verify exact signatures of `resolve_or_create_client_v2` /
-`resolve_client_identity_v2` on the home server (`\df+`) and align with the
-baseline assertions used by migration 228.
+3. In `$baseline$`, assert:
+   - exact `clients_unique_identity` definition;
+   - exact resolver signatures;
+   - migration 228 canonical projections have zero drift;
+   - complete sample snapshot trigger identity and definition;
+   - no table-level authenticated UPDATE;
+   - all eight expected column UPDATE grants are present.
+4. Drop only `clients_unique_identity`.
+5. Revoke authenticated column UPDATE on `id_card_num`, `name`, and
+   `date_of_birth`.
+6. `CREATE OR REPLACE`
+   `test_client_resolution_sample_cutover_security()` while preserving its
+   signature, ownership/grants, `STABLE` property, and fixed `search_path`.
+   Its post-retirement assertions must cover:
+   - legacy constraint absent;
+   - protected identity column updates denied;
+   - five profile column updates retained;
+   - transactional RPC signatures, grants, and fixed `search_path`;
+   - sample snapshot trigger identity, state, and definition.
+7. Update the existing `run_security_tests()` registration description and the
+   security function comment to post-retirement semantics without dropping
+   other registered tests.
+8. In `$verify$`, repeat the critical postconditions and run the replacement
+   security test before `COMMIT`.
 
-- [ ] **Step 2: Run Task 1 test, verify GREEN**
-
-Run: `npx vitest run tests/client-retirement-gate-migration.test.ts`
-Expected: PASS
-
-- [ ] **Step 3: Commit**
+- [ ] **Step 1:** Implement migration 230 using nearby migration style and
+      migration 228 baseline expressions verbatim where they remain valid.
+- [ ] **Step 2:** Run the Task 3 test and verify GREEN.
+- [ ] **Step 3:** Run existing static migration tests that protect the retained
+      v2 and lifecycle contracts:
 
 ```bash
-git add supabase/migrations/229_remove_clients_unique_identity.sql
-git commit -m "feat: remove legacy client identity uniqueness gate"
+rtk npx vitest run \
+  tests/client-canonical-foundation-migration.test.ts \
+  tests/client-lifecycle-guard-migration.test.ts \
+  tests/client-lifecycle-rpc-migration.test.ts \
+  tests/client-resolution-phase6-migrations.test.ts \
+  tests/client-retirement-gate-migration.test.ts
 ```
 
-### Task 3: DB behavior tests (RED on server, pre-apply)
+### Task 5: Rollback-only post-retirement SQL behavior suite
 
 **Files:**
 - Create: `tests/client-retirement-gate.test.sql`
 
-Self-verifying DO blocks (RAISE EXCEPTION on failure), each wrapped in its own
-transaction with cleanup limited to rows it created (or use ROLLBACK-per-case
-pattern used by `tests/client-lifecycle-guard.test.sql`). Cases:
+**Test harness requirements:**
 
-1. Constraint absent: `pg_constraint` lookup returns 0 rows.
-2. Same-name/DOB distinct persons: INSERT two clients, identical
-   `name`+`date_of_birth`, different `government_identity_value` → both succeed,
-   distinct UUIDs.
-3. Direct identity UPDATE denied: `SET ROLE authenticated;` then
-   `UPDATE public.clients SET name = ...` → expect `insufficient_privilege`;
-   same for `date_of_birth`. Reset role after each case.
-4. Profile edit compatibility: `SET ROLE authenticated; UPDATE ... SET phone/gender`
-   → succeeds.
-5. v2 contract intact: `SELECT public.resolve_or_create_client_v2(...)` creates/resolves
-   a same-name/DOB client without unique violation (use distinct fixture values).
-6. Manager lifecycle RPC path intact + audit row written (mirror assertions in
-   `client-lifecycle-rpc.test.sql`).
-7. Snapshot naming intact: insert sample linked to new client →
-   `samples.client_name` matches trigger expectation.
-8. Forward-only recovery guard: with two same-name/DOB rows present, attempt
-   `ALTER TABLE ... ADD CONSTRAINT ... UNIQUE (name,date_of_birth)` inside a DO block
-   expecting failure — proves uniqueness cannot return post-gate.
+- Begin with `\set ON_ERROR_STOP on`.
+- Use one outer `BEGIN` for all mutating fixtures and terminate it with
+  `ROLLBACK`; never use `COMMIT`.
+- Use an Issue #130-specific UUID/name/identity prefix that cannot collide with
+  production data.
+- Catch each expected `insufficient_privilege` or `unique_violation` inside its
+  own PL/pgSQL sub-block and fail if the expected exception is not raised.
+- Reset role after every role-switching case, including exception paths.
+- After rollback, run read-only assertions proving no matching clients,
+  samples, or audit rows remain.
 
-- [ ] **Step 1:** Write file.
-- [ ] **Step 2:** Execute on home server BEFORE applying 229 to confirm RED:
+**Behavior cases:**
+
+1. `clients_unique_identity` is absent.
+2. Two distinct clients with the same normalized name and DOB but different
+   government identities can coexist with distinct UUIDs.
+3. Direct authenticated UPDATE is denied independently for `id_card_num`,
+   `name`, and `date_of_birth`.
+4. Direct authenticated profile UPDATE succeeds for `gender`, `phone`,
+   `address`, `health_insurance_num`, and `expiry_date`.
+5. `resolve_or_create_client_v2(...)` handles a same-name/DOB distinct person
+   without a unique violation.
+6. `correct_client_identity_v1` remains manager-only, updates through the
+   audited contract, and writes the expected audit evidence.
+7. The sample snapshot trigger preserves `samples.client_name` behavior.
+8. A scoped attempt to recreate name/DOB uniqueness fails while duplicate
+   fixtures exist, proving forward-only recovery constraints.
+9. Final residue checks find zero Issue #130 clients, samples, and audit rows.
+
+- [ ] **Step 1:** Write the deterministic rollback-only suite.
+- [ ] **Step 2:** Perform a static review for transaction boundaries, exception
+      isolation, role reset, unique fixture prefixes, and residue assertions.
+- [ ] **Step 3:** Do not run this post-retirement suite against production
+      before migration 230. Pre-apply evidence is a separate task.
+
+### Task 6: Pre-apply entry gate and baseline evidence
+
+- [ ] **Step 1:** Search every mutation entry point, not only
+      `src/app/actions/clients.ts`:
+  - `src/app/api/client-actions/route.ts`
+  - `src/app/api/client-actions/client-resolution-shadow-handlers.ts`
+  - `src/lib/api-client.ts`
+  - `src/lib/client-resolution/cutover.ts`
+  - `src/components/client-form.tsx`
+  - `src/components/sample-edit-dialog.tsx`
+  - all raw `.upsert()` and direct client `.update()` callers
+- [ ] **Step 2:** Prove no enabled manual/QR/raw upsert path depends on
+      name/DOB uniqueness and record the three production switch values.
+- [ ] **Step 3:** Through SSH and read-only psql queries, reconfirm:
+  - exact resolver signatures;
+  - constraint present with exact definition;
+  - zero same-name/DOB duplicate groups;
+  - zero canonical projection drift;
+  - complete sample snapshot trigger baseline;
+  - no table-level authenticated UPDATE;
+  - all eight pre-gate column UPDATE grants;
+  - current row count and `/opt/lims-lite` commit.
+- [ ] **Step 4:** Capture baseline evidence showing the gate is not yet applied:
+      constraint count is one and protected identity grants are still true.
+      Do not run one failing `ON_ERROR_STOP` suite and claim it proves multiple
+      RED cases.
+- [ ] **Step 5:** Confirm the home-server checkout is clean and application
+      health is green before source deployment.
+
+### Task 7: Local review, commit, push, then deploy compatible application
+
+- [ ] **Step 1:** Run focused tests from Tasks 1-4, then:
 
 ```bash
-ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42 \
-  "sudo -n docker exec -i lims-postgres psql -U postgres -d postgres -v ON_ERROR_STOP=1" \
-  < tests/client-retirement-gate.test.sql
+rtk npm run typecheck
+rtk npm run lint
+rtk npm run react-doctor
+rtk openspec validate add-deterministic-client-matching --strict
+rtk git diff --check
 ```
 
-Expected: FAIL at case 1/3/8 (constraint still present) = true RED.
-
-- [ ] **Step 3: Commit**
+- [ ] **Step 2:** Review the full diff for Issue #130 scope. No Phase 7, no
+      applied migration edits, and no unrelated refactor.
+- [ ] **Step 3:** Commit application compatibility, migration, tests, and plan
+      in reviewable Conventional Commit units.
+- [ ] **Step 4:** Because direct `main` is authorized, synchronize and push:
 
 ```bash
-git add tests/client-retirement-gate.test.sql
-git commit -m "test: cover retirement gate same-name dob and denial behavior"
+rtk git pull --rebase origin main
+rtk git push origin main
+rtk git status --short --branch
+rtk git rev-list --left-right --count main...origin/main
 ```
 
-### Task 4: Rehearse + apply 229, verify GREEN + security suite
+Expected: clean worktree and `0 0` divergence.
 
-- [ ] **Step 1:** Confirm entry criteria on server: `/opt/lims-lite` git status clean,
-      health OK, deployed env has `CLIENT_RESOLUTION_V2_CATEGORIES=manual,qr` and
-      `CLIENT_RESOLUTION_LEGACY_UPSERT=off`; reconfirm code search shows no raw
-      name/DOB upsert caller remains in `src/app/actions/clients.ts`.
-- [ ] **Step 2:** Push workspace → `ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42 "cd /opt/lims-lite && git pull --ff-only"`
-- [ ] **Step 3:** Rehearsal note: switch rollback ENDS at this gate; capture pre-apply
-      `\d clients` output into issue evidence.
-- [ ] **Step 4:** Apply:
+- [ ] **Step 5:** Only after push succeeds, update the home-server checkout:
 
 ```bash
-ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42 \
-  "cd /opt/lims-lite && sudo -n docker exec -i lims-postgres psql -U postgres -d postgres -v ON_ERROR_STOP=1 < supabase/migrations/229_remove_clients_unique_identity.sql"
+rtk ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42 \
+  "cd /opt/lims-lite && git status --short && git pull --ff-only origin main"
 ```
 
-- [ ] **Step 5:** MANDATORY security suite + behavior GREEN:
+- [ ] **Step 6:** Deploy/restart the application using the established
+      home-server procedure without applying migration 230 yet.
+- [ ] **Step 7:** With the legacy constraint still present, smoke-test a
+      phone/address-only client edit and the existing manager identity correction
+      flow. This proves the application compatibility slice precedes the
+      irreversible database gate.
+
+### Task 8: Apply migration 230 and verify post-retirement GREEN
+
+- [ ] **Step 1:** Recheck migration checksum/content in `/opt/lims-lite` matches
+      the pushed commit and rerun the Task 6 database baseline.
+- [ ] **Step 2:** Apply the committed migration:
 
 ```bash
-ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42 \
-  "sudo -n docker exec lims-postgres psql -U postgres -d postgres -c 'SELECT * FROM run_security_tests();'"
-ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42 \
-  "sudo -n docker exec -i lims-postgres psql -U postgres -d postgres -v ON_ERROR_STOP=1" \
-  < tests/client-retirement-gate.test.sql
+rtk ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42 \
+  "cd /opt/lims-lite && sudo -n docker exec -i lims-postgres \
+  psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
+  < supabase/migrations/230_remove_clients_unique_identity.sql"
 ```
 
-Expected: all pass.
+- [ ] **Step 3:** Run the persistent security suite:
 
-- [ ] **Step 6:** Evidence queries (constraint absent from `pg_constraint`,
-      `has_column_privilege` matrix) pasted into issue #130.
+```bash
+rtk ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42 \
+  "sudo -n docker exec lims-postgres psql -U postgres -d postgres \
+  -v ON_ERROR_STOP=1 -c 'SELECT * FROM run_security_tests();'"
+```
 
-### Task 5: Blast-radius verification (tasks 6.13–6.14)
+- [ ] **Step 4:** Run the rollback-only post-retirement behavior suite:
 
-- [ ] `npm run typecheck && npm run lint && npm run react-doctor`
-- [ ] Focused vitest:
-      `npx vitest run tests/client-canonical-foundation-migration.test.ts tests/client-lifecycle-guard-migration.test.ts tests/client-resolution-phase6-migrations.test.ts tests/client-retirement-gate-migration.test.ts`
-      plus `npx vitest run src/lib/client-resolution`
-- [ ] Review & update stale expectations: `tests/clients-update-allows-analyst.test.mjs`
-      and `tests/sample-edit-dialog-edits-client.test.mjs` — analyst profile edits
-      still allowed; identity edits now deny (intentional; adjust fixtures only if
-      they mutate name/DOB directly).
-- [ ] Production browser smoke: manual accession flow, QR flow, client search,
-      sample detail panel, client edit dialog (phone/address editable;
-      name/DOB readonly/denied).
-- [ ] Health check: `curl -fsS https://cdclims.cloud/auth/v1/health`
-- [ ] Forward-only recovery rehearsal documented (no rollback switch beyond this gate).
+```bash
+rtk ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42 \
+  "sudo -n docker exec -i lims-postgres psql -U postgres -d postgres \
+  -v ON_ERROR_STOP=1" < tests/client-retirement-gate.test.sql
+```
 
-### Task 6: Docs + closeout (task 6.11)
+- [ ] **Step 5:** Capture postconditions: constraint absent, protected identity
+      grants false, approved profile grants true, security runner description
+      updated, trigger intact, and no Issue #130 fixture residue.
 
-- [ ] Tick 6.10–6.14 in `openspec/changes/add-deterministic-client-matching/tasks.md`.
-- [ ] Add "Rollback boundary" subsection to design.md: switch rollback ends at
-      migration 229; recovery = new forward-only application/database release;
-      restoring name/DOB uniqueness is forbidden.
-- [ ] Comment evidence on issue #130, close it.
-- [ ] Land the plane: `git pull --rebase && git push && git status` clean/up-to-date.
+### Task 9: Immediate blast-radius verification (tasks 6.13-6.14)
+
+- [ ] Re-run typecheck, lint, React Doctor, focused Vitest, and both updated
+      `.mjs` regression tests against the pushed commit.
+- [ ] Review shadow evidence after retirement; verify manual, QR, and legacy
+      upsert observations contain no unexpected fallback or unique violation.
+- [ ] Production browser smoke:
+  - manual accession and QR accession;
+  - client search and sample detail;
+  - profile-only client edit;
+  - manager audited identity correction;
+  - sample linkage and snapshot naming;
+  - statuses, results, audit history, and confidential/RLS behavior;
+  - unrelated search and existing workflows named in OpenSpec task 6.13.
+- [ ] Health check:
+
+```bash
+rtk curl -fsS https://cdclims.cloud/auth/v1/health
+```
+
+- [ ] Document the post-retirement recovery rehearsal: any correction requires
+      a new forward-only application/database release; restoring name/DOB
+      uniqueness is forbidden.
+
+### Task 10: OpenSpec, issue, and repository closeout (task 6.11)
+
+- [ ] Only after Tasks 8-9 pass, tick tasks 6.10-6.14 in
+      `openspec/changes/add-deterministic-client-matching/tasks.md`.
+- [ ] Add the rollback-boundary decision to `design.md`: switch rollback ends at
+      migration 230, recovery is forward-only, and name/DOB uniqueness cannot be
+      restored after valid duplicates may exist.
+- [ ] Record code-search, pre/post database, security, test, browser-smoke,
+      health, and recovery-rehearsal evidence on Issue #130.
+- [ ] File follow-up issues for any non-blocking work outside 6.10-6.14; do not
+      widen this change into Phase 7.
+- [ ] Close Issue #130 only when all acceptance evidence is present.
+- [ ] Commit closeout documentation, then land the plane:
+
+```bash
+rtk git pull --rebase origin main
+rtk git push origin main
+rtk git status --short --branch
+rtk git rev-list --left-right --count main...origin/main
+```
+
+Expected: clean worktree, local `main` aligned with `origin/main`, and the home
+server running the same committed source.
 
 ## Self-Review
 
-- Spec coverage: 6.10→T2/T4; 6.11→T6; 6.12→T1/T3; 6.13→T5; 6.14→T4/T5. No gaps.
-- Placeholders: RPC signature literals carry a deliberate NOTE-verify step at
-  execution start (Task 2 Step 1).
-- Naming consistency: migration filename `229_remove_clients_unique_identity.sql`
-  used across Tasks 1, 2, and 4; test filename `tests/client-retirement-gate.test.sql`
-  used across Tasks 1, 3, and 4.
+- 6.10: Tasks 1-8 provide compatibility, entry-gate proof, migration 230, and
+  direct identity UPDATE denial.
+- 6.11: Tasks 9-10 document and rehearse the irreversible rollback boundary.
+- 6.12: Tasks 1, 3, and 5 cover compatibility, duplicate identity, constraint
+  removal, update denial, and forward-only behavior.
+- 6.13: Task 9 covers sample linkage, snapshots, statuses, results, audit, RLS,
+  search, and user flows.
+- 6.14: Tasks 6-10 cover immediate blast radius, quality gates, shadow review,
+  browser smoke, health, recovery rehearsal, evidence, and closeout.
+- Migration naming is consistently
+  `230_remove_clients_unique_identity.sql`.
+- SQL behavior tests are deterministic and rollback-only; pre-apply baseline
+  proof is separate from the post-retirement suite.
