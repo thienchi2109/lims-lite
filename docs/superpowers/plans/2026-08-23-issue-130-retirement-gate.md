@@ -155,15 +155,17 @@ rtk npx vitest run \
   src/app/api/client-actions/route.test.ts
 ```
 
-### Task 3: Static migration-shape test (RED)
+### Task 3: Static migration-shape contract (paired with Task 4)
 
 **Files:**
 - Create: `tests/client-retirement-gate-migration.test.ts`
 
 This test requires only
-`supabase/migrations/230_remove_clients_unique_identity.sql`. It must not require
-the SQL behavior test, so migration implementation can make this task GREEN
-before the behavior suite is authored.
+`supabase/migrations/230_remove_clients_unique_identity.sql`. Author the
+contract before migration 230, but deliver and execute it together with Task 4.
+Do not create a standalone failing checkpoint merely because migration 230 is
+absent. The test must not require the SQL behavior suite, so Tasks 3-4 can be
+GREEN before Task 5 is authored.
 
 Assertions:
 
@@ -192,12 +194,9 @@ Assertions:
 11. Forbidden data-changing/reversal patterns are absent: client DELETE,
     TRUNCATE, client backfill UPDATE, `CREATE UNIQUE`, and `ADD CONSTRAINT`.
 
-- [ ] **Step 1:** Write the test.
-- [ ] **Step 2:** Run and verify RED because migration 230 does not exist:
-
-```bash
-rtk npx vitest run tests/client-retirement-gate-migration.test.ts
-```
+- [x] **Step 1:** Write the static contract before authoring migration 230.
+- [x] **Step 2:** Keep the contract and migration in one changeset; skip the
+      redundant missing-file RED checkpoint and verify GREEN under Task 4.
 
 ### Task 4: Migration 230 implementation (GREEN)
 
@@ -242,14 +241,14 @@ SET LOCAL search_path TO public, extensions;
 8. In `$verify$`, repeat the critical postconditions and run the replacement
    security test before `COMMIT`.
 
-- [ ] **Step 1:** Implement migration 230 using nearby migration style and
+- [x] **Step 1:** Implement migration 230 using nearby migration style and
       migration 228 baseline expressions verbatim where they remain valid.
-- [ ] **Step 2:** Run the Task 3 test and verify GREEN.
-- [ ] **Step 3:** Run existing static migration tests that protect the retained
+- [x] **Step 2:** Run the Task 3 test and verify GREEN.
+- [x] **Step 3:** Run existing static migration tests that protect the retained
       v2 and lifecycle contracts:
 
 ```bash
-rtk npx vitest run \
+rtk vitest run \
   tests/client-canonical-foundation-migration.test.ts \
   tests/client-lifecycle-guard-migration.test.ts \
   tests/client-lifecycle-rpc-migration.test.ts \
