@@ -250,6 +250,20 @@ silently overwrites an existing client. Scanner transport, QR parsing, sample
 creation/linkage, result workflows, and unrelated client search remain
 behaviorally unchanged.
 
+### Irreversible Phase 6 rollback boundary
+
+Migration `230_remove_clients_unique_identity.sql` is the irreversible Phase 6
+retirement gate. Once applied, switch rollback ends at task 6.10: the
+application may no longer recover by re-enabling legacy name/DOB upserts or
+direct identity updates.
+
+Any post-gate correction SHALL be delivered as a new forward-only
+application/database release with audited manager or resolver contracts. The
+name/DOB uniqueness constraint SHALL NOT be restored after valid distinct
+clients with the same name and date of birth may exist. The migration changes
+schema, grants, comments, and security verification behavior only; it does not
+delete, merge, relink, or rewrite client, sample, result, or audit history.
+
 Alternative rejected: a big-bang replacement. It provides no trustworthy way
 to distinguish intended matching differences from regressions.
 

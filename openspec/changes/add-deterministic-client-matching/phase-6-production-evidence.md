@@ -1,10 +1,12 @@
-# Phase 6 Reversible Caller Cutover Production Evidence
+# Phase 6 Caller Cutover and Retirement Production Evidence
 
 ## Scope and stopping point
 
-- Only Phase 6 tasks `6.1-6.9` are complete.
-- The irreversible retirement gate `6.10` was not crossed. Tasks `6.10-6.14`
-  remain pending in follow-up Issue #130.
+- Phase 6 tasks `6.1-6.14` are complete as of the post-retirement verification
+  recorded below.
+- The irreversible retirement gate was crossed by migration
+  `230_remove_clients_unique_identity.sql` on the home server. Issue #130 is
+  the closeout record for this gate.
 - No Phase 7 work was started.
 - The application implementation landed through PR #129 at commit
   `39cc95c6745971731df84e866d06e8cabe9d773a`.
@@ -142,10 +144,41 @@
 - Direct authenticated identity UPDATE remains available under the pre-gate
   compatibility surface.
 - No migration `229` retirement artifact exists or has been applied.
-- These retained objects are not data-loss findings. They preserve the
+- These retained objects were not data-loss findings. They preserved the
   reversible fallback structure before task `6.10`.
-- Issue #130 owns tasks `6.10-6.14`: the next-numbered forward-only retirement
-  migration, post-gate compatibility/security verification, and forward-only
-  recovery rehearsal.
+- The pre-apply state above is the baseline for task `6.10`; it is retained as
+  historical evidence because the production database is now post-retirement.
 - The follow-up must not delete, merge, replace UUIDs, or relink client,
   sample, result, or audit history.
+
+## Irreversible retirement and closeout evidence
+
+- Migration `230_remove_clients_unique_identity.sql` is immutable at SHA-256
+  `2cd5448f6be5ee19825f31b4d23e956f9ecd611bea3c2f378f1e1e9b1bbbcbcb`, matching
+  both the local `main` commit and `/opt/lims-lite` at `f9dc57b`.
+- The post-retirement database has no `clients_unique_identity` constraint;
+  authenticated table-level UPDATE is false; authenticated UPDATE is false for
+  `id_card_num`, `name`, and `date_of_birth`; and the explicitly allowed
+  profile columns remain writable.
+- Production invariants are clean: `64` client rows, zero same-name/DOB
+  duplicate groups, and the sample client-name snapshot trigger remains
+  enabled.
+- The rollback-only SQL suite passed, including distinct same-name/DOB
+  identities, protected identity updates, profile updates, resolver behavior,
+  manager correction/audit, snapshot preservation, forward-only uniqueness
+  recovery failure, and zero fixture residue.
+- `run_security_tests()` passed `36/36`. Local focused Vitest passed `55/55`,
+  both Issue #130 `.mjs` regression scripts passed, typecheck passed, lint
+  completed with `0` errors and `80` existing warnings, React Doctor exited
+  successfully, strict OpenSpec validation passed, and `git diff --check`
+  passed.
+- The home-server checkout is clean at `f9dc57b`; `lims-app` and
+  `lims-postgres` are healthy. Production root and auth health returned HTTP
+  `200`. The authenticated manual/QR browser and route smoke evidence from the
+  reversible checkpoint remains valid because the post-gate release changed
+  only the database boundary; the new post-gate SQL suite covers the changed
+  identity/profile authorization behavior.
+- Recovery is forward-only after task `6.10`: no switch rollback can restore
+  name/DOB uniqueness, and any future correction requires a new application and
+  database release. No client, sample, result, or audit history was deleted,
+  merged, relinked, or rewritten.

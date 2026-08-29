@@ -178,19 +178,19 @@ sample/result workflows, and unrelated client features remain compatible.
 - [x] 6.9 Observe all mutation callers on v2 while the legacy constraint/path
   remains structurally available; complete production smoke and a tested switch
   rollback before crossing the retirement gate.
-- [ ] 6.10 Irreversible retirement gate: after code search and production
+- [x] 6.10 Irreversible retirement gate: after code search and production
   evidence show every raw name/DOB upsert is disabled, apply a forward-only
   migration that removes the legacy UNIQUE (`name`, `date_of_birth`) constraint
   and blocks direct identity UPDATE outside audited manager/v2 contracts.
-- [ ] 6.11 Document that switch rollback ends at task 6.10; post-gate recovery
+- [x] 6.11 Document that switch rollback ends at task 6.10; post-gate recovery
   SHALL use a new forward-only application/database release and SHALL NOT restore
   name/DOB uniqueness after valid same-name/DOB clients can exist.
-- [ ] 6.12 Add same-name/DOB distinct-person, legacy-constraint removal,
+- [x] 6.12 Add same-name/DOB distinct-person, legacy-constraint removal,
   direct-update denial, compatibility, and forward-only rollback coverage.
-- [ ] 6.13 Verify sample linkage, snapshot naming, statuses, results, audit, RLS,
+- [x] 6.13 Verify sample linkage, snapshot naming, statuses, results, audit, RLS,
   QR/manual flows, unrelated search, and all other existing app workflows remain
   unchanged outside the intentional matching behavior.
-- [ ] 6.14 Complete immediate-blast-radius tests, typecheck, lint, React Doctor,
+- [x] 6.14 Complete immediate-blast-radius tests, typecheck, lint, React Doctor,
   shadow evidence review, production browser smoke, health checks, and
   post-retirement forward-only recovery rehearsal before declaring Phase 6
   complete.

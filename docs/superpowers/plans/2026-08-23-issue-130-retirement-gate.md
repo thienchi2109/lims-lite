@@ -300,7 +300,7 @@ rtk vitest run \
 
 ### Task 6: Pre-apply entry gate and baseline evidence
 
-- [ ] **Step 1:** Search every mutation entry point, not only
+- [x] **Step 1:** Search every mutation entry point, not only
       `src/app/actions/clients.ts`:
   - `src/app/api/client-actions/route.ts`
   - `src/app/api/client-actions/client-resolution-shadow-handlers.ts`
@@ -309,9 +309,9 @@ rtk vitest run \
   - `src/components/client-form.tsx`
   - `src/components/sample-edit-dialog.tsx`
   - all raw `.upsert()` and direct client `.update()` callers
-- [ ] **Step 2:** Prove no enabled manual/QR/raw upsert path depends on
+- [x] **Step 2:** Prove no enabled manual/QR/raw upsert path depends on
       name/DOB uniqueness and record the three production switch values.
-- [ ] **Step 3:** Through SSH and read-only psql queries, reconfirm:
+- [x] **Step 3:** Through SSH and read-only psql queries, reconfirm:
   - exact resolver signatures;
   - constraint present with exact definition;
   - zero same-name/DOB duplicate groups;
@@ -320,16 +320,16 @@ rtk vitest run \
   - no table-level authenticated UPDATE;
   - all eight pre-gate column UPDATE grants;
   - current row count and `/opt/lims-lite` commit.
-- [ ] **Step 4:** Capture baseline evidence showing the gate is not yet applied:
+- [x] **Step 4:** Capture baseline evidence showing the gate is not yet applied:
       constraint count is one and protected identity grants are still true.
       Do not run one failing `ON_ERROR_STOP` suite and claim it proves multiple
       RED cases.
-- [ ] **Step 5:** Confirm the home-server checkout is clean and application
+- [x] **Step 5:** Confirm the home-server checkout is clean and application
       health is green before source deployment.
 
 ### Task 7: Local review, commit, push, then deploy compatible application
 
-- [ ] **Step 1:** Run focused tests from Tasks 1-4, then:
+- [x] **Step 1:** Run focused tests from Tasks 1-4, then:
 
 ```bash
 rtk npm run typecheck
@@ -339,11 +339,11 @@ rtk openspec validate add-deterministic-client-matching --strict
 rtk git diff --check
 ```
 
-- [ ] **Step 2:** Review the full diff for Issue #130 scope. No Phase 7, no
+- [x] **Step 2:** Review the full diff for Issue #130 scope. No Phase 7, no
       applied migration edits, and no unrelated refactor.
-- [ ] **Step 3:** Commit application compatibility, migration, tests, and plan
+- [x] **Step 3:** Commit application compatibility, migration, tests, and plan
       in reviewable Conventional Commit units.
-- [ ] **Step 4:** Because direct `main` is authorized, synchronize and push:
+- [x] **Step 4:** Because direct `main` is authorized, synchronize and push:
 
 ```bash
 rtk git pull --rebase origin main
@@ -354,25 +354,25 @@ rtk git rev-list --left-right --count main...origin/main
 
 Expected: clean worktree and `0 0` divergence.
 
-- [ ] **Step 5:** Only after push succeeds, update the home-server checkout:
+- [x] **Step 5:** Only after push succeeds, update the home-server checkout:
 
 ```bash
 rtk ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42 \
   "cd /opt/lims-lite && git status --short && git pull --ff-only origin main"
 ```
 
-- [ ] **Step 6:** Deploy/restart the application using the established
+- [x] **Step 6:** Deploy/restart the application using the established
       home-server procedure without applying migration 230 yet.
-- [ ] **Step 7:** With the legacy constraint still present, smoke-test a
+- [x] **Step 7:** With the legacy constraint still present, smoke-test a
       phone/address-only client edit and the existing manager identity correction
       flow. This proves the application compatibility slice precedes the
       irreversible database gate.
 
 ### Task 8: Apply migration 230 and verify post-retirement GREEN
 
-- [ ] **Step 1:** Recheck migration checksum/content in `/opt/lims-lite` matches
+- [x] **Step 1:** Recheck migration checksum/content in `/opt/lims-lite` matches
       the pushed commit and rerun the Task 6 database baseline.
-- [ ] **Step 2:** Apply the committed migration:
+- [x] **Step 2:** Apply the committed migration:
 
 ```bash
 rtk ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42 \
@@ -381,7 +381,7 @@ rtk ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42 \
   < supabase/migrations/230_remove_clients_unique_identity.sql"
 ```
 
-- [ ] **Step 3:** Run the persistent security suite:
+- [x] **Step 3:** Run the persistent security suite:
 
 ```bash
 rtk ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42 \
@@ -389,7 +389,7 @@ rtk ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42 \
   -v ON_ERROR_STOP=1 -c 'SELECT * FROM run_security_tests();'"
 ```
 
-- [ ] **Step 4:** Run the rollback-only post-retirement behavior suite:
+- [x] **Step 4:** Run the rollback-only post-retirement behavior suite:
 
 ```bash
 rtk ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42 \
@@ -397,17 +397,17 @@ rtk ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42 \
   -v ON_ERROR_STOP=1" < tests/client-retirement-gate.test.sql
 ```
 
-- [ ] **Step 5:** Capture postconditions: constraint absent, protected identity
+- [x] **Step 5:** Capture postconditions: constraint absent, protected identity
       grants false, approved profile grants true, security runner description
       updated, trigger intact, and no Issue #130 fixture residue.
 
 ### Task 9: Immediate blast-radius verification (tasks 6.13-6.14)
 
-- [ ] Re-run typecheck, lint, React Doctor, focused Vitest, and both updated
+- [x] Re-run typecheck, lint, React Doctor, focused Vitest, and both updated
       `.mjs` regression tests against the pushed commit.
-- [ ] Review shadow evidence after retirement; verify manual, QR, and legacy
+- [x] Review shadow evidence after retirement; verify manual, QR, and legacy
       upsert observations contain no unexpected fallback or unique violation.
-- [ ] Production browser smoke:
+- [x] Production browser smoke:
   - manual accession and QR accession;
   - client search and sample detail;
   - profile-only client edit;
@@ -415,29 +415,29 @@ rtk ssh -o BatchMode=yes khoa-xn-cdc@100.93.19.42 \
   - sample linkage and snapshot naming;
   - statuses, results, audit history, and confidential/RLS behavior;
   - unrelated search and existing workflows named in OpenSpec task 6.13.
-- [ ] Health check:
+- [x] Health check:
 
 ```bash
 rtk curl -fsS https://cdclims.cloud/auth/v1/health
 ```
 
-- [ ] Document the post-retirement recovery rehearsal: any correction requires
+- [x] Document the post-retirement recovery rehearsal: any correction requires
       a new forward-only application/database release; restoring name/DOB
       uniqueness is forbidden.
 
 ### Task 10: OpenSpec, issue, and repository closeout (task 6.11)
 
-- [ ] Only after Tasks 8-9 pass, tick tasks 6.10-6.14 in
+- [x] Only after Tasks 8-9 pass, tick tasks 6.10-6.14 in
       `openspec/changes/add-deterministic-client-matching/tasks.md`.
-- [ ] Add the rollback-boundary decision to `design.md`: switch rollback ends at
+- [x] Add the rollback-boundary decision to `design.md`: switch rollback ends at
       migration 230, recovery is forward-only, and name/DOB uniqueness cannot be
       restored after valid duplicates may exist.
-- [ ] Record code-search, pre/post database, security, test, browser-smoke,
+- [x] Record code-search, pre/post database, security, test, browser-smoke,
       health, and recovery-rehearsal evidence on Issue #130.
-- [ ] File follow-up issues for any non-blocking work outside 6.10-6.14; do not
+- [x] File follow-up issues for any non-blocking work outside 6.10-6.14; do not
       widen this change into Phase 7.
-- [ ] Close Issue #130 only when all acceptance evidence is present.
-- [ ] Commit closeout documentation, then land the plane:
+- [x] Close Issue #130 only when all acceptance evidence is present.
+- [x] Commit closeout documentation, then land the plane:
 
 ```bash
 rtk git pull --rebase origin main
