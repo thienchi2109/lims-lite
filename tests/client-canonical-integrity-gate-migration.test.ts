@@ -100,6 +100,17 @@ describe('client canonical integrity gate migration', () => {
     expect(normalized).toContain(
       "has_column_privilege('authenticated', 'public.clients', v_column, 'UPDATE')",
     )
+    expect(normalized).toContain('FROM pg_policy')
+    expect(normalized).toContain(
+      "'Authenticated users can read clients'",
+    )
+    expect(normalized).toContain("'Analysts can create clients'")
+    expect(normalized).toContain(
+      "'Analysts and managers can update clients'",
+    )
+    expect(normalized).toContain("'Managers can delete clients'")
+    expect(normalized).toContain('auth.uid()')
+    expect(normalized).toContain('get_user_role()')
   })
 
   it('does not restore legacy or accidental normalized uniqueness', () => {

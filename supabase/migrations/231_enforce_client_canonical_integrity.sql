@@ -164,6 +164,54 @@ BEGIN
             'Migration 231 found broadened authenticated client table ACL';
     END IF;
 
+    IF (SELECT count(*) FROM pg_policy
+        WHERE polrelid = 'public.clients'::REGCLASS) <> 4
+       OR NOT EXISTS (
+           SELECT 1
+           FROM pg_policy
+           WHERE polrelid = 'public.clients'::REGCLASS
+             AND polname = 'Authenticated users can read clients'
+             AND polcmd = 'r'
+             AND lower(pg_get_expr(polqual, polrelid)) LIKE '%auth.uid()%'
+             AND lower(pg_get_expr(polqual, polrelid)) LIKE '%is not null%'
+       )
+       OR NOT EXISTS (
+           SELECT 1
+           FROM pg_policy
+           WHERE polrelid = 'public.clients'::REGCLASS
+             AND polname = 'Analysts can create clients'
+             AND polcmd = 'a'
+             AND lower(pg_get_expr(polwithcheck, polrelid))
+                     LIKE '%get_user_role()%'
+             AND lower(pg_get_expr(polwithcheck, polrelid))
+                     LIKE '%analyst%'
+             AND lower(pg_get_expr(polwithcheck, polrelid))
+                     LIKE '%manager%'
+       )
+       OR NOT EXISTS (
+           SELECT 1
+           FROM pg_policy
+           WHERE polrelid = 'public.clients'::REGCLASS
+             AND polname = 'Analysts and managers can update clients'
+             AND polcmd = 'w'
+             AND lower(pg_get_expr(polqual, polrelid))
+                     LIKE '%get_user_role()%'
+             AND lower(pg_get_expr(polwithcheck, polrelid))
+                     LIKE '%get_user_role()%'
+       )
+       OR NOT EXISTS (
+           SELECT 1
+           FROM pg_policy
+           WHERE polrelid = 'public.clients'::REGCLASS
+             AND polname = 'Managers can delete clients'
+             AND polcmd = 'd'
+             AND lower(pg_get_expr(polqual, polrelid)) LIKE '%manager%'
+       )
+    THEN
+        RAISE EXCEPTION
+            'Migration 231 found an unexpected client RLS policy set';
+    END IF;
+
     FOR v_signature, v_operation IN
         SELECT *
         FROM (
@@ -244,6 +292,49 @@ BEGIN
     IF has_table_privilege('authenticated', 'public.clients', 'UPDATE')
        OR has_table_privilege('authenticated', 'public.clients', 'DELETE')
        OR has_table_privilege('authenticated', 'public.clients', 'TRUNCATE')
+    THEN
+        RETURN FALSE;
+    END IF;
+
+    IF (SELECT count(*) FROM pg_policy
+        WHERE polrelid = 'public.clients'::REGCLASS) <> 4
+       OR NOT EXISTS (
+           SELECT 1
+           FROM pg_policy
+           WHERE polrelid = 'public.clients'::REGCLASS
+             AND polname = 'Authenticated users can read clients'
+             AND polcmd = 'r'
+             AND lower(pg_get_expr(polqual, polrelid)) LIKE '%auth.uid()%'
+             AND lower(pg_get_expr(polqual, polrelid)) LIKE '%is not null%'
+       )
+       OR NOT EXISTS (
+           SELECT 1
+           FROM pg_policy
+           WHERE polrelid = 'public.clients'::REGCLASS
+             AND polname = 'Analysts can create clients'
+             AND polcmd = 'a'
+             AND lower(pg_get_expr(polwithcheck, polrelid))
+                     LIKE '%get_user_role()%'
+       )
+       OR NOT EXISTS (
+           SELECT 1
+           FROM pg_policy
+           WHERE polrelid = 'public.clients'::REGCLASS
+             AND polname = 'Analysts and managers can update clients'
+             AND polcmd = 'w'
+             AND lower(pg_get_expr(polqual, polrelid))
+                     LIKE '%get_user_role()%'
+             AND lower(pg_get_expr(polwithcheck, polrelid))
+                     LIKE '%get_user_role()%'
+       )
+       OR NOT EXISTS (
+           SELECT 1
+           FROM pg_policy
+           WHERE polrelid = 'public.clients'::REGCLASS
+             AND polname = 'Managers can delete clients'
+             AND polcmd = 'd'
+             AND lower(pg_get_expr(polqual, polrelid)) LIKE '%manager%'
+       )
     THEN
         RETURN FALSE;
     END IF;

@@ -188,13 +188,8 @@ BEGIN
            WHERE polrelid = 'public.clients'::REGCLASS
              AND polname = 'Authenticated users can read clients'
              AND polcmd = 'r'
-             AND lower(
-                 replace(
-                     replace(pg_get_expr(polqual, polrelid), ' ', ''),
-                     E'\n',
-                     ''
-                 )
-             ) LIKE '%auth.uid()isnotnull%'
+             AND lower(pg_get_expr(polqual, polrelid)) LIKE '%auth.uid()%'
+             AND lower(pg_get_expr(polqual, polrelid)) LIKE '%is not null%'
        )
        OR NOT EXISTS (
            SELECT 1
@@ -202,11 +197,11 @@ BEGIN
            WHERE polrelid = 'public.clients'::REGCLASS
              AND polname = 'Analysts can create clients'
              AND polcmd = 'a'
-             AND lower(replace(pg_get_expr(polqual, polrelid), ' ', ''))
+             AND lower(replace(pg_get_expr(polwithcheck, polrelid), ' ', ''))
                      LIKE '%get_user_role()%'
-             AND lower(replace(pg_get_expr(polqual, polrelid), ' ', ''))
+             AND lower(replace(pg_get_expr(polwithcheck, polrelid), ' ', ''))
                      LIKE '%analyst%'
-             AND lower(replace(pg_get_expr(polqual, polrelid), ' ', ''))
+             AND lower(replace(pg_get_expr(polwithcheck, polrelid), ' ', ''))
                      LIKE '%manager%'
        )
        OR NOT EXISTS (
