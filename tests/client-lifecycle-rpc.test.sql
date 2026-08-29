@@ -108,6 +108,7 @@ DECLARE
     v_correction_conflict_denied BOOLEAN := FALSE;
     v_audit_failure_denied BOOLEAN := FALSE;
     v_adjudication_denied BOOLEAN := FALSE;
+    v_trusted_identity_insert_denied BOOLEAN := FALSE;
     v_adjudication_immutable BOOLEAN := FALSE;
 BEGIN
     INSERT INTO auth.users (id, email)
@@ -347,17 +348,17 @@ BEGIN
         'manager detail must expose the selected full identity only'
     );
 
-    INSERT INTO public.clients (
-        id,
-        id_card_num,
-        name,
-        date_of_birth,
-        gender,
-        phone,
-        address
-    )
-    VALUES
-        (
+    BEGIN
+        INSERT INTO public.clients (
+            id,
+            id_card_num,
+            name,
+            date_of_birth,
+            gender,
+            phone,
+            address
+        )
+        VALUES (
             v_trusted_client_id,
             '951100001050',
             'Issue 111 Phase Two Trusted A',
@@ -365,8 +366,20 @@ BEGIN
             'Nam',
             '0951101050',
             'Rollback fixture'
-        ),
-        (
+        );
+    END;
+
+    BEGIN
+        INSERT INTO public.clients (
+            id,
+            id_card_num,
+            name,
+            date_of_birth,
+            gender,
+            phone,
+            address
+        )
+        VALUES (
             v_trusted_collision_id,
             '951100001050',
             'Issue 111 Phase Two Trusted B',
@@ -375,40 +388,14 @@ BEGIN
             '0951101051',
             'Rollback fixture'
         );
-
-    SELECT
-        max(updated_at) FILTER (WHERE id = v_trusted_client_id),
-        max(updated_at) FILTER (WHERE id = v_trusted_collision_id)
-    INTO v_trusted_client_updated_at, v_trusted_collision_updated_at
-    FROM public.clients
-    WHERE id IN (v_trusted_client_id, v_trusted_collision_id);
-
-    SELECT candidate.evidence_level
-    INTO v_collision_evidence_level
-    FROM public.get_client_collision_candidates_v1(v_trusted_client_id)
-        AS candidate
-    WHERE candidate.related_client_id = v_trusted_collision_id
-      AND candidate.collision_type = 'government_identity';
-
-    BEGIN
-        PERFORM public.adjudicate_client_collision_v1(
-            v_trusted_client_id,
-            v_trusted_collision_id,
-            v_trusted_client_updated_at,
-            v_trusted_collision_updated_at,
-            'government_identity',
-            'confirmed_distinct',
-            'Định danh tin cậy trùng nhau phải yêu cầu hiệu chỉnh'
-        );
     EXCEPTION
-        WHEN SQLSTATE 'P1111' THEN
-            v_trusted_distinct_denied := TRUE;
+        WHEN unique_violation THEN
+            v_trusted_identity_insert_denied := TRUE;
     END;
 
     PERFORM pg_temp.assert_client_lifecycle(
-        v_collision_evidence_level = 'trusted'
-            AND v_trusted_distinct_denied,
-        'trusted government identity cannot be adjudicated as distinct'
+        v_trusted_identity_insert_denied,
+        'trusted government identity duplicate must be rejected by the unique index'
     );
 
     v_result := public.adjudicate_client_collision_v1(
