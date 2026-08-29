@@ -45,6 +45,19 @@ describe('client resolver v2 API boundaries', () => {
     expect(serverModule).toContain(".rpc('resolve_or_create_client_v2'")
   })
 
+  it('does not keep a successful direct legacy client upsert caller', () => {
+    const clientsAction = read('src/app/actions/clients.ts')
+    const shadowHandler = read(
+      'src/app/api/client-actions/client-resolution-shadow-handlers.ts',
+    )
+
+    expect(clientsAction).not.toContain(".upsert(")
+    expect(clientsAction).not.toContain("onConflict: 'name,date_of_birth'")
+    expect(clientsAction).toContain('resolveOrCreateClientV2')
+    expect(shadowHandler).not.toContain("import { upsertClient }")
+    expect(shadowHandler).toContain('resolveOrCreateClientV2')
+  })
+
   it('sends a typed resolver request through src/lib/api-client.ts', async () => {
     fetchMock.mockResolvedValue(
       new Response(

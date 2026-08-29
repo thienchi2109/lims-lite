@@ -5,6 +5,9 @@ import { revalidatePath } from 'next/cache'
 import { isIsoDateString } from '@/lib/iso-date'
 import { getUserConfidentialAccess } from '@/lib/data/confidential-samples'
 import { filterConfidentialAssociatedClients } from '@/lib/data/confidential-clients'
+import { classifyGovernmentIdentity } from '@/lib/client-resolution/accession'
+import { localizeClientResolution } from '@/lib/client-resolution/messages'
+import { resolveOrCreateClientV2 } from '@/lib/client-resolution/server'
 import {
     ClientIdSchema,
     CreateClientSchema,
@@ -80,70 +83,31 @@ export async function upsertClient(data: CreateClient) {
             return { error: 'Unauthorized' }
         }
         const validatedData = CreateClientSchema.parse(data)
-        if (validatedData.phone && validatedData.phone !== '0000000000') {
-            const { data: existingByPhone } = await supabase
-                .from('clients')
-                .select('id, name, date_of_birth')
-                .eq('phone', validatedData.phone)
-                .single()
-            if (existingByPhone) {
-                const isSamePerson =
-                    existingByPhone.name.toLowerCase() === validatedData.name.toLowerCase() &&
-                    existingByPhone.date_of_birth === validatedData.date_of_birth
+        const resolution = await resolveOrCreateClientV2({
+            ...classifyGovernmentIdentity(validatedData.id_card_num),
+            name: validatedData.name,
+            dateOfBirth: validatedData.date_of_birth,
+            gender: validatedData.gender,
+            phone: validatedData.phone,
+            address: validatedData.address || null,
+            healthInsuranceNum: validatedData.health_insurance_num || null,
+            expiryDate: validatedData.expiry_date || null,
+        })
+        if ('error' in resolution) {
+            return resolution
+        }
+        if (resolution.data.outcome !== 'matched' || !resolution.data.clientId) {
+            const localized = localizeClientResolution(resolution.data)
+            return {
+                error: `${localized.label}: ${localized.message}`,
+            }
+        }
 
-                if (!isSamePerson) {
-                    return {
-                        error: `Số điện thoại ${validatedData.phone} đã được sử dụng bởi khách hàng "${existingByPhone.name}". Vui lòng sử dụng số điện thoại khác hoặc chọn khách hàng hiện có.`,
-                        existingClient: existingByPhone,
-                    }
-                }
-            }
-        }
-        const { data: client, error } = await supabase
-            .from('clients')
-            .upsert(
-                {
-                    id_card_num: validatedData.id_card_num,
-                    name: validatedData.name,
-                    date_of_birth: validatedData.date_of_birth,
-                    gender: validatedData.gender,
-                    phone: validatedData.phone,
-                    address: validatedData.address || null,
-                    health_insurance_num: validatedData.health_insurance_num || null,
-                    expiry_date: validatedData.expiry_date || null,
-                },
-                {
-                    onConflict: 'name,date_of_birth',
-                    ignoreDuplicates: false,
-                }
-            )
-            .select()
-            .single()
-        if (error) {
-            const trustedIdentityConflict = [
-                error.message,
-                error.details,
-                error.hint,
-            ].some((value) =>
-                value?.includes(
-                    'clients_unique_trusted_government_identity',
-                ),
-            )
-            if (error.code === '23505' && trustedIdentityConflict) {
-                return {
-                    error:
-                        'Xung đột thông tin: CCCD/CMND đã được sử dụng bởi khách hàng khác. Vui lòng kiểm tra lại hoặc nhờ quản lý xử lý.',
-                }
-            }
-            console.error('Error upserting client:', error)
-            if (error.code === '23505' && error.message.includes('phone')) {
-                return { error: 'Số điện thoại này đã được sử dụng bởi khách hàng khác' }
-            }
-            return { error: error.message }
-        }
+        const client = await getClient(resolution.data.clientId)
+        if ('error' in client) return client
         revalidatePath('/analyst/accession')
         revalidatePath('/samples')
-        return { data: client as Client }
+        return client
     } catch (error) {
         console.error('Error in upsertClient:', error)
         return { error: error instanceof Error ? error.message : 'Failed to save client' }

@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
     getUserConfidentialAccess: vi.fn(),
     filterConfidentialAssociatedClients: vi.fn(),
     revalidatePath: vi.fn(),
+    resolveOrCreateClientV2: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -24,6 +25,18 @@ vi.mock('@/lib/data/confidential-clients', () => ({
 
 vi.mock('next/cache', () => ({
     revalidatePath: (...args: unknown[]) => mocks.revalidatePath(...args),
+}))
+
+vi.mock('@/lib/client-resolution/server', () => ({
+    resolveOrCreateClientV2: (...args: unknown[]) =>
+        mocks.resolveOrCreateClientV2(...args),
+}))
+
+vi.mock('@/lib/client-resolution/accession', () => ({
+    classifyGovernmentIdentity: (value: string) => ({
+        governmentIdentityType: 'cccd',
+        governmentIdentityValue: value,
+    }),
 }))
 
 import {
@@ -215,37 +228,55 @@ describe('legacy client matching characterization', () => {
 describe('legacy client upsert characterization', () => {
     beforeEach(() => {
         vi.clearAllMocks()
-    })
-
-    it('upserts all legacy fields on raw name and date-of-birth conflict', async () => {
-        const phoneQuery = createQuery({
-            data: null,
-            error: {
-                code: 'PGRST116',
+        mocks.getUserConfidentialAccess.mockResolvedValue({
+            canAccessConfidential: true,
+            error: null,
+        })
+        mocks.filterConfidentialAssociatedClients.mockImplementation(
+            async (clients: Client[]) => ({
+                data: clients,
+            }),
+        )
+        mocks.resolveOrCreateClientV2.mockResolvedValue({
+            data: {
+                outcome: 'matched',
+                reasonCode: 'client_created',
+                clientId: CLIENT.id,
+                created: true,
             },
         })
-        const upsertQuery = createQuery({
+    })
+
+    it('delegates all client fields to the transactional resolver and returns the client', async () => {
+        const authClient = mockAuthenticatedClient(vi.fn())
+        const clientQuery = createQuery({
             data: CLIENT,
             error: null,
         })
-        const from = vi.fn()
-            .mockReturnValueOnce(phoneQuery)
-            .mockReturnValueOnce(upsertQuery)
-        mockAuthenticatedClient(from)
+        const clientReadClient = {
+            auth: authClient.auth,
+            from: vi.fn(() => clientQuery),
+        }
+        mocks.createClient
+            .mockReset()
+            .mockResolvedValueOnce(authClient)
+            .mockResolvedValueOnce(clientReadClient)
 
         const result = await upsertClient(CLIENT_INPUT)
 
         expect(result).toEqual({ data: CLIENT })
-        expect(phoneQuery.eq).toHaveBeenCalledWith('phone', CLIENT_INPUT.phone)
-        expect(upsertQuery.upsert).toHaveBeenCalledWith(
-            {
-                ...CLIENT_INPUT,
-            },
-            {
-                onConflict: 'name,date_of_birth',
-                ignoreDuplicates: false,
-            },
-        )
+        expect(mocks.resolveOrCreateClientV2).toHaveBeenCalledWith({
+            governmentIdentityType: 'cccd',
+            governmentIdentityValue: CLIENT_INPUT.id_card_num,
+            name: CLIENT_INPUT.name,
+            dateOfBirth: CLIENT_INPUT.date_of_birth,
+            gender: CLIENT_INPUT.gender,
+            phone: CLIENT_INPUT.phone,
+            address: CLIENT_INPUT.address,
+            healthInsuranceNum: CLIENT_INPUT.health_insurance_num,
+            expiryDate: CLIENT_INPUT.expiry_date,
+        })
+        expect(clientReadClient.from).toHaveBeenCalledWith('clients')
         expect(mocks.revalidatePath).toHaveBeenNthCalledWith(
             1,
             '/analyst/accession',
@@ -253,60 +284,40 @@ describe('legacy client upsert characterization', () => {
         expect(mocks.revalidatePath).toHaveBeenNthCalledWith(2, '/samples')
     })
 
-    it('returns the current Vietnamese phone collision contract', async () => {
-        const existingClient = {
-            id: '33333333-3333-4333-8333-333333333333',
-            name: 'Trần Văn B',
-            date_of_birth: '1980-01-02',
-        }
-        const phoneQuery = createQuery({
-            data: existingClient,
-            error: null,
-        })
-        const from = vi.fn(() => phoneQuery)
-        mockAuthenticatedClient(from)
-
-        const result = await upsertClient(CLIENT_INPUT)
-
-        expect(result).toEqual({
-            error: `Số điện thoại ${CLIENT_INPUT.phone} đã được sử dụng bởi khách hàng "${existingClient.name}". Vui lòng sử dụng số điện thoại khác hoặc chọn khách hàng hiện có.`,
-            existingClient,
-        })
-        expect(from).toHaveBeenCalledTimes(1)
-        expect(mocks.revalidatePath).not.toHaveBeenCalled()
-    })
-
-    it('sanitizes trusted government identity uniqueness conflicts', async () => {
-        const phoneQuery = createQuery({
-            data: null,
-            error: {
-                code: 'PGRST116',
+    it('returns a stable Vietnamese conflict when the resolver rejects the request', async () => {
+        mockAuthenticatedClient(vi.fn())
+        mocks.resolveOrCreateClientV2.mockResolvedValue({
+            data: {
+                outcome: 'conflict',
+                reasonCode: 'phone_conflict',
+                clientId: null,
+                created: false,
             },
         })
-        const upsertQuery = createQuery({
-            data: null,
-            error: {
-                code: '23505',
-                message:
-                    'duplicate key value violates unique constraint "clients_unique_trusted_government_identity"',
-                details:
-                    'Key (government_identity_value)=(086094006827) already exists',
-            },
-        })
-        const from = vi.fn()
-            .mockReturnValueOnce(phoneQuery)
-            .mockReturnValueOnce(upsertQuery)
-        mockAuthenticatedClient(from)
 
         const result = await upsertClient(CLIENT_INPUT)
 
         expect(result).toEqual({
             error:
-                'Xung đột thông tin: CCCD/CMND đã được sử dụng bởi khách hàng khác. Vui lòng kiểm tra lại hoặc nhờ quản lý xử lý.',
+                'Xung đột thông tin: Số điện thoại đang gắn với hồ sơ khác và không thể dùng để tạo mới.',
         })
-        expect(JSON.stringify(result)).not.toMatch(
-            /duplicate key|clients_unique|086094006827/i,
-        )
+        expect(mocks.revalidatePath).not.toHaveBeenCalled()
+    })
+
+    it('fails closed without a table mutation when resolver execution fails', async () => {
+        const from = vi.fn()
+        mockAuthenticatedClient(from)
+        mocks.resolveOrCreateClientV2.mockResolvedValue({
+            error: 'Không thể phân giải khách hàng. Vui lòng thử lại.',
+        })
+
+        const result = await upsertClient(CLIENT_INPUT)
+
+        expect(result).toEqual({
+            error:
+                'Không thể phân giải khách hàng. Vui lòng thử lại.',
+        })
+        expect(from).not.toHaveBeenCalled()
         expect(mocks.revalidatePath).not.toHaveBeenCalled()
     })
 

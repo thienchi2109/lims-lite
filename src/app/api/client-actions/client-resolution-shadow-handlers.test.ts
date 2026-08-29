@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   findClientByIdentity: vi.fn(),
   getClient: vi.fn(),
   upsertClient: vi.fn(),
+  resolveOrCreateClientV2: vi.fn(),
   resolveClientIdentityV2: vi.fn(),
   runClientResolutionShadow: vi.fn(),
 }))
@@ -18,6 +19,7 @@ vi.mock('@/app/actions/clients', () => ({
 
 vi.mock('@/lib/client-resolution/server', () => ({
   resolveClientIdentityV2: mocks.resolveClientIdentityV2,
+  resolveOrCreateClientV2: mocks.resolveOrCreateClientV2,
 }))
 
 vi.mock('@/lib/client-resolution/shadow', () => ({
@@ -54,6 +56,14 @@ describe('client action shadow handlers', () => {
     mocks.findClientByIdentity.mockResolvedValue({ data: CLIENT })
     mocks.getClient.mockResolvedValue({ data: CLIENT })
     mocks.upsertClient.mockResolvedValue({ data: CLIENT })
+    mocks.resolveOrCreateClientV2.mockResolvedValue({
+      data: {
+        outcome: 'matched',
+        reasonCode: 'client_created',
+        clientId: CLIENT.id,
+        created: true,
+      },
+    })
     mocks.resolveClientIdentityV2.mockResolvedValue({
       data: {
         outcome: 'matched',
@@ -119,19 +129,26 @@ describe('client action shadow handlers', () => {
     )
   })
 
-  it('runs the upsert shadow comparison before the legacy mutation', async () => {
+  it('runs the upsert shadow comparison before the resolver-backed mutation', async () => {
     const order: string[] = []
     mocks.runClientResolutionShadow.mockImplementation(async () => {
       order.push('shadow')
     })
-    mocks.upsertClient.mockImplementation(async () => {
-      order.push('legacy-upsert')
-      return { data: CLIENT }
+    mocks.resolveOrCreateClientV2.mockImplementation(async () => {
+      order.push('resolver')
+      return {
+        data: {
+          outcome: 'matched',
+          reasonCode: 'client_created',
+          clientId: CLIENT.id,
+          created: true,
+        },
+      }
     })
 
     const result = await upsertClientWithShadow(UPSERT_INPUT)
 
-    expect(order).toEqual(['shadow', 'legacy-upsert'])
+    expect(order).toEqual(['shadow', 'resolver'])
     expect(result).toEqual({ data: CLIENT })
     expect(mocks.runClientResolutionShadow).toHaveBeenCalledWith({
       category: 'upsert',
@@ -143,10 +160,20 @@ describe('client action shadow handlers', () => {
         phone: '0901234567',
       },
     })
-    expect(mocks.upsertClient).toHaveBeenCalledWith(UPSERT_INPUT)
+    expect(mocks.resolveOrCreateClientV2).toHaveBeenCalledWith({
+      governmentIdentityType: 'cccd',
+      governmentIdentityValue: '086094006827',
+      name: 'Nguyen Van A',
+      dateOfBirth: '1994-09-21',
+      gender: 'Nam',
+      phone: '0901234567',
+      address: null,
+      healthInsuranceNum: null,
+      expiryDate: null,
+    })
   })
 
-  it('keeps legacy upsert behavior when shadow comparison rejects', async () => {
+  it('keeps the resolver-backed mutation when shadow comparison rejects', async () => {
     mocks.runClientResolutionShadow.mockRejectedValue(
       new Error('shadow unavailable'),
     )
@@ -154,7 +181,8 @@ describe('client action shadow handlers', () => {
     await expect(upsertClientWithShadow(UPSERT_INPUT)).resolves.toEqual({
       data: CLIENT,
     })
-    expect(mocks.upsertClient).toHaveBeenCalledWith(UPSERT_INPUT)
+    expect(mocks.resolveOrCreateClientV2).toHaveBeenCalled()
+    expect(mocks.upsertClient).not.toHaveBeenCalled()
   })
 
   it('routes an enabled QR lookup through v2 and returns the compatible client payload', async () => {

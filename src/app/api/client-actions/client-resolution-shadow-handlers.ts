@@ -1,7 +1,6 @@
 import {
   findClientByIdentity,
   getClient,
-  upsertClient,
 } from '@/app/actions/clients'
 import {
   isClientResolutionV2Enabled,
@@ -9,7 +8,10 @@ import {
   type ClientResolutionCutoverCategory,
 } from '@/lib/client-resolution/cutover'
 import { localizeClientResolution } from '@/lib/client-resolution/messages'
-import { resolveClientIdentityV2 } from '@/lib/client-resolution/server'
+import {
+  resolveClientIdentityV2,
+  resolveOrCreateClientV2,
+} from '@/lib/client-resolution/server'
 import {
   runClientResolutionShadow,
   type ClientResolutionShadowCategory,
@@ -172,5 +174,34 @@ export async function upsertClientWithShadow(
     }
   }
 
-  return upsertClient(data)
+  if (!parsed.success) {
+    return {
+      error:
+        parsed.error.issues[0]?.message ??
+        'Thông tin khách hàng không hợp lệ',
+    }
+  }
+
+  const resolution = await resolveOrCreateClientV2({
+    ...classifyGovernmentIdentity(parsed.data.id_card_num),
+    name: parsed.data.name,
+    dateOfBirth: parsed.data.date_of_birth,
+    gender: parsed.data.gender,
+    phone: parsed.data.phone,
+    address: parsed.data.address || null,
+    healthInsuranceNum: parsed.data.health_insurance_num || null,
+    expiryDate: parsed.data.expiry_date || null,
+  })
+  if ('error' in resolution) {
+    return resolution
+  }
+
+  if (resolution.data.outcome === 'matched' && resolution.data.clientId) {
+    return getClient(resolution.data.clientId)
+  }
+
+  const localized = localizeClientResolution(resolution.data)
+  return {
+    error: `${localized.label}: ${localized.message}`,
+  }
 }
