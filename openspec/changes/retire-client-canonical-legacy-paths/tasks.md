@@ -7,7 +7,7 @@
 - [ ] 1.3 Query PII-free shadow aggregates, aggregate client/sample/audit
   activity, live function dependencies, ACLs, and PostgREST exposure through
   SSH plus Docker/psql only.
-- [ ] 1.4 Repeat static code search for compatibility actions, cutover flags,
+- [x] 1.4 Repeat static code search for compatibility actions, cutover flags,
   shadow RPC calls, direct client writes, and legacy RPC names.
 - [ ] 1.5 Commit reviewed observation evidence and classify every candidate as
   `retire`, `retain`, or `investigate`; stop if the window is stale,
