@@ -292,10 +292,10 @@ rtk vitest run \
    fixtures exist, proving forward-only recovery constraints.
 9. Final residue checks find zero Issue #130 clients, samples, and audit rows.
 
-- [ ] **Step 1:** Write the deterministic rollback-only suite.
-- [ ] **Step 2:** Perform a static review for transaction boundaries, exception
+- [x] **Step 1:** Write the deterministic rollback-only suite.
+- [x] **Step 2:** Perform a static review for transaction boundaries, exception
       isolation, role reset, unique fixture prefixes, and residue assertions.
-- [ ] **Step 3:** Do not run this post-retirement suite against production
+- [x] **Step 3:** Do not run this post-retirement suite against production
       before migration 230. Pre-apply evidence is a separate task.
 
 ### Task 6: Pre-apply entry gate and baseline evidence
