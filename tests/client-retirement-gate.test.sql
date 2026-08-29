@@ -137,7 +137,7 @@ BEGIN
             'Issue 130 Duplicate Person',
             DATE '1980-01-13',
             'Nam',
-            '091300000011',
+            '0913000011',
             'Issue 130 fixture A',
             '130-000-000-011',
             DATE '2030-01-13'
@@ -148,7 +148,7 @@ BEGIN
             'Issue 130 Duplicate Person',
             DATE '1980-01-13',
             'Nữ',
-            '091300000012',
+            '0913000012',
             'Issue 130 fixture B',
             '130-000-000-012',
             DATE '2030-01-13'
@@ -159,7 +159,7 @@ BEGIN
             'Issue 130 Correction Original',
             DATE '1988-08-08',
             'Khác',
-            '091300000013',
+            '0913000013',
             'Issue 130 correction fixture',
             '130-000-000-013',
             DATE '2030-08-08'
@@ -234,7 +234,7 @@ BEGIN
     BEGIN
         UPDATE public.clients
         SET gender = 'Khác',
-            phone = '091300000091',
+            phone = '0913000091',
             address = 'Issue 130 updated profile',
             health_insurance_num = '130-000-000-091',
             expiry_date = DATE '2031-01-13'
@@ -253,7 +253,7 @@ BEGIN
         'authenticated_allows_profile_update',
         v_error IS NULL
             AND v_client.gender = 'Khác'
-            AND v_client.phone = '091300000091'
+            AND v_client.phone = '0913000091'
             AND v_client.address = 'Issue 130 updated profile'
             AND v_client.health_insurance_num = '130-000-000-091'
             AND v_client.expiry_date = DATE '2031-01-13'
@@ -280,7 +280,7 @@ BEGIN
             'Issue 130 Duplicate Person',
             DATE '1980-01-13',
             'Nam',
-            '091300000099',
+            '0913000099',
             'Issue 130 resolver fixture',
             '130-000-000-099',
             DATE '2030-01-13'
@@ -333,7 +333,7 @@ BEGIN
             'Issue 130 Correction Revised',
             DATE '1988-08-09',
             'Nữ',
-            '091300000014',
+            '0913000014',
             'Issue 130 manager correction'
         );
     EXCEPTION
@@ -388,7 +388,7 @@ BEGIN
             'Issue 130 Correction Revised',
             DATE '1988-08-09',
             'Nữ',
-            '091300000014',
+            '0913000014',
             'Issue 130 manager correction'
         );
 
@@ -400,7 +400,7 @@ BEGIN
               AND name = 'Issue 130 Correction Revised'
               AND date_of_birth = DATE '1988-08-09'
               AND gender = 'Nữ'
-              AND phone = '091300000014'
+              AND phone = '0913000014'
         )
         INTO v_corrected;
 
