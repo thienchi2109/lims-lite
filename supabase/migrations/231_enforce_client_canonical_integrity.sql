@@ -388,7 +388,17 @@ BEGIN
         FROM pg_proc
         WHERE oid = v_function;
 
-        IF v_definition NOT LIKE '%SET search_path = public, extensions%'
+        IF NOT EXISTS (
+               SELECT 1
+               FROM pg_proc AS function_record
+               WHERE function_record.oid = v_function
+                 AND 'search_path=public, extensions' = ANY(
+                     COALESCE(
+                         function_record.proconfig,
+                         ARRAY[]::TEXT[]
+                     )
+                 )
+           )
            OR v_definition NOT LIKE '%get_user_role%'
         THEN
             RETURN FALSE;

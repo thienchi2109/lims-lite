@@ -134,6 +134,7 @@ describe('client canonical integrity gate migration', () => {
       'CREATE OR REPLACE FUNCTION public.test_client_canonical_integrity_security()',
     )
     expect(normalized).toContain('SET search_path = public, extensions')
+    expect(normalized).toContain('search_path=public, extensions')
     expect(normalized).toContain(
       'test_client_canonical_integrity_security()',
     )
