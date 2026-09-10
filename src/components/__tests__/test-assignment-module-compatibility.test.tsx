@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -153,6 +154,56 @@ describe('TestAssignmentModule compatibility catalog', () => {
         'disabled',
         true,
       )
+    })
+  })
+
+  it('exposes a newly created assay only after its compatibility is published and the module reopens', async () => {
+    const user = userEvent.setup()
+    const newAssay = {
+      id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      name: 'HBsAb định lượng',
+      import_code: 'CT-000295',
+      specialty_id: null,
+      method_name: 'Miễn dịch tự động',
+      methods: [],
+    }
+    // Creation updates the master list, but does not publish compatibility.
+    mocks.fetchAssayDefinitionsClient.mockResolvedValue({ data: [newAssay] })
+    const firstVisit = renderModule()
+
+    await screen.findByText('Không tìm thấy xét nghiệm phù hợp')
+    expect(screen.queryByText(newAssay.name)).toBeNull()
+    expect(mocks.assignTestsClient).not.toHaveBeenCalled()
+    firstVisit.unmount()
+
+    mocks.getPublishedCatalogClient.mockResolvedValue({
+      data: {
+        revisionNumber: 8,
+        sampleTypeId: null,
+        sampleTypes: [sampleType],
+        assays: [{
+          sampleTypeId: sampleType.id,
+          assayDefinitionId: newAssay.id,
+          importCode: newAssay.import_code,
+          name: newAssay.name,
+          methodName: newAssay.method_name,
+          specialtyId: null,
+        }],
+      },
+    })
+    renderModule()
+
+    await user.click(await screen.findByText(newAssay.name))
+    await user.click(screen.getByRole('button', { name: 'Chỉ định (1)' }))
+
+    await waitFor(() => {
+      expect(mocks.assignTestsClient).toHaveBeenCalledWith({
+        sampleId: '22222222-2222-4222-8222-222222222222',
+        sampleTypeId: sampleType.id,
+        sampleTypeCode: sampleType.importCode,
+        expectedRevisionNumber: 8,
+        tests: [{ assayId: newAssay.id, methodId: null }],
+      })
     })
   })
 
