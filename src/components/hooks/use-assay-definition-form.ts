@@ -158,11 +158,21 @@ export function useAssayDefinitionForm({
           }
         }
 
-        toast.success(
-          mode === "create"
-            ? "Đã tạo chỉ tiêu xét nghiệm thành công"
-            : "Đã cập nhật chỉ tiêu xét nghiệm thành công",
-        );
+        if (mode === "create") {
+          toast.success(
+            "Đã tạo chỉ tiêu. Cần cấu hình loại mẫu tương thích và công bố danh mục để nhân viên xét nghiệm có thể chỉ định.",
+            {
+              duration: Infinity,
+              closeButton: true,
+              action: {
+                label: "Cấu hình tương thích",
+                onClick: () => router.push("/manager/assays/compatibility"),
+              },
+            },
+          );
+        } else {
+          toast.success("Đã cập nhật chỉ tiêu xét nghiệm thành công");
+        }
         resetForm();
         onClose();
         router.refresh();

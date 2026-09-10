@@ -1,10 +1,12 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AssayDefinitionDialog } from '../assay-definition-dialog'
 import type { AssayDefinition } from '../assay-definition-dialog/types'
 import type { LabSpecialty } from '@/types'
 
 const mocks = vi.hoisted(() => ({
+  push: vi.fn(),
   refresh: vi.fn(),
   createAssayDefinitionClient: vi.fn(),
   updateAssayDefinitionClient: vi.fn(),
@@ -17,7 +19,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ refresh: mocks.refresh }),
+  useRouter: () => ({ refresh: mocks.refresh, push: mocks.push }),
 }))
 
 vi.mock('sonner', () => ({
@@ -155,6 +157,7 @@ describe('AssayDefinitionDialog method entry', () => {
   })
 
   it('creates an assay with arbitrary Phương pháp text as methodName', async () => {
+    const user = userEvent.setup()
     render(
       <AssayDefinitionDialog
         open
@@ -181,7 +184,7 @@ describe('AssayDefinitionDialog method entry', () => {
       target: { value: 'RT-PCR tự thiết lập' },
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Tạo' }))
+    await user.click(screen.getByRole('button', { name: 'Tạo' }))
 
     await waitFor(() => {
       expect(mocks.createAssayDefinitionClient).toHaveBeenCalledWith(
@@ -194,6 +197,15 @@ describe('AssayDefinitionDialog method entry', () => {
     })
     expect(mocks.createAssayDefinitionClient.mock.calls[0][0]).not.toHaveProperty('methodId')
     expect(mocks.createAssayDefinitionClient.mock.calls[0][0]).not.toHaveProperty('import_code')
+    expect(mocks.toast.success).toHaveBeenCalledWith(
+      'Đã tạo chỉ tiêu. Cần cấu hình loại mẫu tương thích và công bố danh mục để nhân viên xét nghiệm có thể chỉ định.',
+      expect.objectContaining({
+        duration: Infinity,
+        action: { label: 'Cấu hình tương thích', onClick: expect.any(Function) },
+      }),
+    )
+    mocks.toast.success.mock.calls[0][1].action.onClick()
+    expect(mocks.push).toHaveBeenCalledWith('/manager/assays/compatibility')
   })
 
   it('updates assay-owned Phương pháp text without showing catalog method management', async () => {
