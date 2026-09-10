@@ -49,4 +49,25 @@ File và runtime liên quan không thay đổi trong nhánh điều tra này.
 - Không bỏ bộ lọc tương thích, tự gán mọi loại mẫu, sửa migration 229 hoặc
   tự động công bố chỉ vì thao tác tạo chỉ tiêu thành công.
 
-Lượt điều tra chỉ bổ sung test và tài liệu; chưa sửa runtime, chưa ghi DB.
+## Hotfix đã thực hiện
+
+Theo yêu cầu hotfix trên main và không deploy app, ngày 2026-09-10:
+
+- Commit `def329c` đã push lên `origin/main`: thông báo sau khi tạo chỉ tiêu
+  nhắc cấu hình/công bố tương thích, có nút mở trang cấu hình và nút đóng.
+  Test UI ghi nhận RED đúng thông báo thiếu trước khi sửa; sau sửa 3 files,
+  16/16 tests PASS, typecheck/lint PASS, React Doctor 100/100.
+- Chạy script đã commit `scripts/publish-new-assay-availability.sql` qua
+  SSH/Docker trên home server. Transaction COMMIT thành công, công bố revision 3
+  cho đúng hai mã với `LM-000001` (Máu), qua các RPC có audit hiện có.
+  Script có kiểm tra baseline/hash, actor, giữ cặp cũ và hậu điều kiện RPC;
+  đây là thao tác dữ liệu một lần, không phải migration schema.
+- Read-back: revision 2 superseded, revision 3 published; hai mã hiện có cặp
+  tương thích Máu, tổng 86 cặp (giữ 84 cặp cũ).
+- `tests/new-assay-availability.readonly.sql` nay PASS (exit 0);
+  `run_security_tests()` đạt 36/36.
+- Không deploy/build/restart app, không reload schema. Thông báo UI mới chỉ
+  có hiệu lực sau lần deploy tiếp theo. Analyst tải lại hoặc mở lại màn hình
+  chỉ định để lấy revision 3.
+- Chưa kiểm tra trực tiếp bằng trình duyệt; bằng chứng live là RPC/dữ liệu
+  production, kết hợp test tương tác UI tại source.
