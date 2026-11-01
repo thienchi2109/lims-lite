@@ -1,7 +1,7 @@
 ---
 id: TASK-2
 title: Chốt hợp đồng import nguyên tử và provenance
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-11-01'
 updated_date: '2026-11-01'
@@ -20,18 +20,18 @@ Roadmap: https://github.com/thienchi2109/lims-lite/issues/107
 
 Prerequisite #108 đã đóng. TASK-1/#112 đã được người dùng duyệt ngày 2026-11-01; draft này kế thừa hợp đồng template đó, không mở lại client matching/catalog decisions.
 
-Draft review: [Hợp đồng import nguyên tử và provenance](../../docs/superpowers/specs/2026-11-01-atomic-import-provenance-contract-design.md).
+Bản hợp đồng đã duyệt: [Hợp đồng import nguyên tử và provenance](../../docs/superpowers/specs/2026-11-01-atomic-import-provenance-contract-design.md).
 Đã soạn state machine, commitment-only preview 30 phút, confirm gửi lại cùng file, atomic transaction, server receipt, authorization/RLS/audit, canonical hashes, retry/recovery và retention/mappings.
-Root đã review bản sửa; đang chờ người dùng duyệt contract, acceptance criteria dưới đây chưa được coi là chốt. Chưa triển khai runtime, chưa ghi resolution/đóng #113; caps/timeout thuộc #114, partition OpenSpec thuộc #115.
+Người dùng đã xác nhận “duyệt” ngày 2026-11-01 đối với bản đã review tại commit `38dff1c`; các acceptance criteria đã chốt ở phạm vi quyết định #113. Chưa triển khai runtime; caps/timeout thuộc #114, partition OpenSpec thuộc #115.
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Chốt trạng thái và dữ liệu batch cần lưu, vòng đời preview/xác nhận, thời hạn hiệu lực và cách kiểm tra lại quyền, danh mục, đối sánh khi xác nhận.
-- [ ] #2 Chốt ranh giới transaction để chỉ tạo mẫu mới và chỉ định của chúng; một lỗi bất kỳ không để lại người, mẫu hoặc chỉ định được tạo dở từ lô.
-- [ ] #3 Chốt analyst-only confirmation, enforcement phía server/database, RLS và audit; received_at dùng thời điểm xác nhận phía server chung cho lô.
-- [ ] #4 Chốt idempotency, xác nhận đồng thời, retry sau timeout, tra cứu kết quả và cleanup để không tạo trùng hoặc mất khả năng truy vết.
-- [ ] #5 Chốt metadata, SHA-256 file nguồn, hash payload chuẩn hóa và ánh xạ dòng–entity cần giữ; không lưu workbook nguồn hoặc toàn bộ payload chuẩn hóa, không âm thầm ghi đè danh tính.
-- [ ] #6 Ghi hợp đồng, các tình huống thất bại/phục hồi và bằng chứng quyết định vào #113; không coi xác nhận là chữ ký điện tử.
+- [x] #1 Chốt trạng thái và dữ liệu batch cần lưu, vòng đời preview/xác nhận, thời hạn hiệu lực và cách kiểm tra lại quyền, danh mục, đối sánh khi xác nhận.
+- [x] #2 Chốt ranh giới transaction để chỉ tạo mẫu mới và chỉ định của chúng; một lỗi bất kỳ không để lại người, mẫu hoặc chỉ định được tạo dở từ lô.
+- [x] #3 Chốt analyst-only confirmation, enforcement phía server/database, RLS và audit; received_at dùng thời điểm xác nhận phía server chung cho lô.
+- [x] #4 Chốt idempotency, xác nhận đồng thời, retry sau timeout, tra cứu kết quả và cleanup để không tạo trùng hoặc mất khả năng truy vết.
+- [x] #5 Chốt metadata, SHA-256 file nguồn, hash payload chuẩn hóa và ánh xạ dòng–entity cần giữ; không lưu workbook nguồn hoặc toàn bộ payload chuẩn hóa, không âm thầm ghi đè danh tính.
+- [x] #6 Ghi hợp đồng, các tình huống thất bại/phục hồi và bằng chứng quyết định vào #113; không coi xác nhận là chữ ký điện tử.
 <!-- AC:END -->
 
 ## Review and Verification

@@ -1,7 +1,7 @@
 # Hợp đồng import nguyên tử và provenance
 
 Ngày: 2026-11-01. Phạm vi: quyết định [#113](https://github.com/thienchi2109/lims-lite/issues/113), thuộc roadmap [#107](https://github.com/thienchi2109/lims-lite/issues/107).
-Trạng thái: **DRAFT — chờ review và người dùng duyệt**. Các trạng thái, trường và boundary dưới đây là đề xuất, chưa phải bảng/RPC/API hiện có.
+Trạng thái: **Đã được người dùng duyệt ngày 2026-11-01** qua xác nhận “duyệt”, sau root review và verification đối với bản tại commit `38dff1c`. Các trạng thái, trường và boundary dưới đây là hợp đồng đã duyệt, chưa phải bảng/RPC/API hiện có.
 Tài liệu chốt hành vi và bằng chứng cần giữ; chưa là implementation plan, migration, parser hoặc giao diện.
 Hợp đồng template đã duyệt: [#112](2026-11-01-excel-template-contract-design.md). Không mở lại invariant #108/#109/#110/#111/#112.
 
@@ -26,11 +26,11 @@ Giữ thuật ngữ nghiệp vụ trong [CONTEXT.md](../../../CONTEXT.md): khác
 
 | Phương án | Đánh đổi |
 | --- | --- |
-| **Đề xuất: giữ commitment, gửi lại cùng file khi confirm** | Server không persist workbook/full normalized payload. Browser giữ file đã chọn trong bộ nhớ; confirm tự gửi lại file đó, không thêm thao tác chọn file khi còn trang. Server tái parse và đối chiếu commitment trước transaction. Mất file/tab thì preview mới. |
+| **Đã chọn: giữ commitment, gửi lại cùng file khi confirm** | Server không persist workbook/full normalized payload. Browser giữ file đã chọn trong bộ nhớ; confirm tự gửi lại file đó, không thêm thao tác chọn file khi còn trang. Server tái parse và đối chiếu commitment trước transaction. Mất file/tab thì preview mới. |
 | Giữ toàn bộ normalized payload 30 phút | Đơn giản lúc confirm nhưng vẫn là lưu toàn bộ payload; không phù hợp invariant #108, kể cả mã hóa hoặc gọi là cache. Không chọn. |
 | Giữ payload chỉ trong RAM server 30 phút | Vẫn giữ full payload, mất preview khi restart và khó bảo đảm nhiều instance. Không chọn. |
 
-Đây là **đề xuất mới cần duyệt ở #113**, không suy diễn rằng #108 đã cho phép lưu tạm payload.
+Đây là **lựa chọn đã được duyệt ở #113**; #108 vẫn không cho phép lưu tạm toàn bộ payload.
 Workbook chỉ tồn tại trong bộ nhớ xử lý request upload/confirm và browser đang dùng. Không ghi Storage, filesystem tạm, DB, cache, log, tracing body, error report hoặc backup.
 Full normalized object cũng chỉ tồn tại khi xử lý request/transaction; không serialize vào bảng preview hay job queue.
 Nếu multipart/runtime không thể tránh disk spool thì chưa đạt contract; phải thay đường upload hoặc xin đổi quyết định trước triển khai.
@@ -185,7 +185,7 @@ Entity bị soft-delete/void về sau không xóa mapping/receipt. Kết quả t
 Lỗi có sheet/row/column/code/message/ref trong response đủ sửa file; `callerContext`/ref chỉ ở ephemeral UI response. Server chỉ giữ sheet/row/column/code/count và context vận hành không chứa raw ref/PII; không persist nguyên response lỗi. Error workbook nếu có sinh theo yêu cầu khi còn request/browser data, không lưu server.
 File kết quả chỉ được sinh từ DB sau success và kiểm tra quyền hiện tại; không dựa vào payload đã purge. Download không làm đổi receipt.
 
-| Dữ liệu | Thời gian/cleanup đề xuất |
+| Dữ liệu | Thời gian/cleanup |
 | --- | --- |
 | Workbook/full normalized payload | Không lưu durable; giải phóng bộ nhớ request ngay khi xong, không cache/recovery từ server. |
 | Preview bindings/fingerprints chi tiết | Hard logical expiry đúng `expires_at` sau 30 phút: không nhận confirm mới từ thời điểm này. Terminal hoặc deadline làm bindings eligible để purge khi lock-safe; transaction đã được chấp nhận trước deadline vẫn được hoàn tất. Physical purge có thể trễ vì row lock/DB outage; authorization/expiry vẫn chặn dùng lại, không gia hạn TTL. |
@@ -210,10 +210,10 @@ Không ghi PII đã purge vào audit cleanup; không xóa batch/audit để gi�
 8. Canonicalization vectors: đảo dòng/đổi ref/name file không đổi hash; đổi quan hệ client–sample hoặc multiplicity làm đổi hash; cùng file sau client-create vẫn trùng hash; giữ leading zero, ISO/null/Unicode đúng contract.
 9. Cleanup/restart/expiry không xóa receipt/dedup/audit, không lộ preview cho analyst khác/manager, không có workbook/full payload trong disk/cache/log/DB/backups.
 
-## 10. Điểm cần duyệt và ranh giới tiếp theo
+## 10. Quyết định #113 và ranh giới tiếp theo
 
-Đề xuất phê duyệt #113 gồm: commitment-only preview + gửi lại file khi confirm; state machine/atomic transaction; confirmation-time server receipt; dedup toàn LIMS bằng canonical input; safe metadata/mappings/audit retention và cleanup ở trên.
-Không còn lựa chọn kỹ thuật thường lệ cần hỏi thêm trong phạm vi draft. Các lựa chọn này vẫn **chưa được người dùng duyệt**; TASK-2 giữ In Progress, acceptance criteria chưa đánh dấu chốt, #113 chưa đóng.
+Người dùng đã duyệt #113 ngày 2026-11-01, gồm: commitment-only preview + gửi lại file khi confirm; state machine/atomic transaction; confirmation-time server receipt; dedup toàn LIMS bằng canonical input; safe metadata/mappings/audit retention và cleanup ở trên.
+Xác nhận nguyên văn: “duyệt”. TASK-2 hoàn tất ở phạm vi quyết định, với liên kết hợp đồng và kết quả review/verification được ghi vào #113. Chưa có implementation hoặc runtime evidence cho atomic bulk import.
 Caps 10 MB/500 clients/1.000 samples/20.000 assignments chỉ là provisional của #108; #114 phải đo và thay/giữ caps, timeouts, lock budgets, memory/transfer costs (gồm upload lại lúc confirm).
 #115 mới phân chia dependency-safe OpenSpec changes; #113 không tạo whole-feature OpenSpec, implementation plan hay SQL/API/parser/UI.
 Nếu prototype không thể đáp ứng no-payload-retention và atomicity cùng caps, thu hẹp caps hoặc mang trade-off cụ thể quay lại quyết định; không âm thầm đổi invariant.

@@ -203,17 +203,17 @@ retires legacy paths only after a post-enforcement observation window; it may be
 deferred without weakening the enforced contract. Applied migrations remain
 immutable, and every rollback is a new forward-only migration.
 
-- [ ] 7.1 Gate A: assert zero unresolved canonical collisions, no authoritative
+- [x] 7.1 Gate A: assert zero unresolved canonical collisions, no authoritative
   legacy mutation callers, fully reconciled canonical projections, complete
   lifecycle audit coverage, and successful Phase 6 production evidence.
-- [ ] 7.2 Gate A: validate the Phase 4 trusted typed CCCD/CMND uniqueness across
+- [x] 7.2 Gate A: validate the Phase 4 trusted typed CCCD/CMND uniqueness across
   active/inactive clients, then add remaining normalized-phone and canonical
   candidate integrity guards without making name/DOB a unique identity.
-- [ ] 7.3 Gate A: verify hard DELETE and broad identity/lifecycle UPDATE are
+- [x] 7.3 Gate A: verify hard DELETE and broad identity/lifecycle UPDATE are
   already denied, remove only temporary bypass grants, and preserve explicitly
   allowed profile edits; policy changes use `DROP POLICY IF EXISTS`, explicit
   role checks, fixed `search_path`, and minimal grants.
-- [ ] 7.4 Gate A: add rollback-only SQL coverage for uniqueness, restore
+- [x] 7.4 Gate A: add rollback-only SQL coverage for uniqueness, restore
   conflicts, concurrency, RLS, audit, hard-delete denial, resolver outcomes, and
   unchanged sample/result history.
 - [ ] 7.5 Gate A: apply only the committed enforcement migration, run
@@ -231,3 +231,32 @@ immutable, and every rollback is a new forward-only migration.
 - [ ] 7.9 Strict-validate and archive this OpenSpec change, update #107/#111
   traceability, close or file implementation follow-ups, and sync local, origin,
   and the approved deployment checkout.
+
+### Evidence reconciliation — 2026-11-01
+
+Phase 7 was split at commit `eca575c` into
+[Gate A canonical integrity](../../enforce-client-canonical-integrity/tasks.md)
+and [Gate B legacy retirement](../../retire-client-canonical-legacy-paths/tasks.md).
+These original task IDs remain for traceability; do not count them again as new
+implementation work beside the successor changes.
+
+- 7.1: [Gate A preflight and post-apply evidence](../../enforce-client-canonical-integrity/gate-a-preflight-evidence.md)
+  records the zero-blocker baseline and successful preflight; baseline predicates
+  are explicit in [the SQL preflight](../../../../tests/client-canonical-integrity-preflight.sql).
+- 7.2–7.3: [migration 231](../../../../supabase/migrations/231_enforce_client_canonical_integrity.sql)
+  and the same post-apply record prove projection enforcement, trusted typed
+  uniqueness, preserved non-unique candidate indexes and the post-230 ACL/RLS.
+- 7.4: [rollback-only SQL coverage](../../../../tests/client-canonical-integrity-gate.test.sql)
+  and the recorded lifecycle/security/concurrency runs provide implementation
+  evidence; the runs are dated historical evidence, not a new runtime check.
+- 7.5 is composite: apply, SQL/source gates and health have dated evidence, but
+  browser smoke and the prepared forward-only rollback rehearsal need explicit
+  evidence before this entire item can be checked.
+- 7.6–7.8 remain subject to observation/approval/retirement evidence in the
+  successor changes. 7.9 is partly evidenced by the archive commit; do not infer
+  all traceability/deployment-checkout synchronization from archive presence.
+
+The 2026-11-01 local run of the three prerequisite migration contract test files
+passed 25/25. It validates source contracts only, not current database or app
+state. Decision contracts #112/#113 are approved in the Backlog records; bulk
+import implementation still awaits capacity proof and partitioning #114/#115.
