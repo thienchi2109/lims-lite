@@ -6,12 +6,14 @@ Backlog này theo dõi bốn đầu việc còn mở của [Wayfinder #107](http
 
 | Task | Nội dung | Trạng thái | Phụ thuộc còn mở | Issue gốc |
 | --- | --- | --- | --- | --- |
-| [TASK-1](tasks/task-1%20-%20Chot-hop-dong-template-Excel-va-validation.md) | Chốt template Excel và validation | To Do | Không | [#112](https://github.com/thienchi2109/lims-lite/issues/112) |
+| [TASK-1](tasks/task-1%20-%20Chot-hop-dong-template-Excel-va-validation.md) | Chốt template Excel và validation | In Progress | Không | [#112](https://github.com/thienchi2109/lims-lite/issues/112) |
 | [TASK-2](tasks/task-2%20-%20Chot-hop-dong-import-nguyen-tu-va-provenance.md) | Chốt import nguyên tử và provenance | To Do | Không | [#113](https://github.com/thienchi2109/lims-lite/issues/113) |
 | [TASK-3](tasks/task-3%20-%20Kiem-chung-nang-luc-va-gioi-han-import.md) | Kiểm chứng năng lực và giới hạn import | To Do | TASK-1, TASK-2 | [#114](https://github.com/thienchi2109/lims-lite/issues/114) |
 | [TASK-4](tasks/task-4%20-%20Phan-chia-OpenSpec-va-task-trien-khai-import.md) | Phân chia OpenSpec và task triển khai | To Do | TASK-3 | [#115](https://github.com/thienchi2109/lims-lite/issues/115) |
 
 Có thể bắt đầu TASK-1 và TASK-2 độc lập. TASK-3 và TASK-4 giữ trạng thái `To Do`; dependency thể hiện điều kiện để bắt đầu, không dùng trạng thái `In Progress` khi chưa có công việc thực tế.
+
+TASK-1 đang review [bản dự thảo hợp đồng template phiên bản 1](../docs/superpowers/specs/2026-11-01-excel-template-contract-design.md); chưa phải quyết định đã duyệt hoặc tính năng đã triển khai.
 
 ## Phạm vi đã chốt
 
