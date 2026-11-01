@@ -1,7 +1,7 @@
 project_name: "lims-lite"
 default_status: "To Do"
 statuses: ["To Do", "In Progress", "Done"]
-labels: ["excel-import", "decision", "prototype"]
+labels: ["excel-import", "decision", "prototype", "client-canonical", "verification", "cleanup"]
 task_prefix: "task"
 remote_operations: false
 auto_commit: false

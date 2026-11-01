@@ -1,9 +1,10 @@
 ---
 id: TASK-2
 title: Chốt hợp đồng import nguyên tử và provenance
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-11-01'
+updated_date: '2026-11-01'
 labels: [excel-import, decision]
 dependencies: []
 priority: high
@@ -17,7 +18,11 @@ Issue gốc: https://github.com/thienchi2109/lims-lite/issues/113
 
 Roadmap: https://github.com/thienchi2109/lims-lite/issues/107
 
-Prerequisite #108 đã đóng. Có thể giải quyết song song TASK-1; các điều kiện validation và danh mục phải nhất quán trước khi bắt đầu TASK-3.
+Prerequisite #108 đã đóng. TASK-1/#112 đã được người dùng duyệt ngày 2026-11-01; draft này kế thừa hợp đồng template đó, không mở lại client matching/catalog decisions.
+
+Draft review: [Hợp đồng import nguyên tử và provenance](../../docs/superpowers/specs/2026-11-01-atomic-import-provenance-contract-design.md).
+Đã soạn state machine, commitment-only preview 30 phút, confirm gửi lại cùng file, atomic transaction, server receipt, authorization/RLS/audit, canonical hashes, retry/recovery và retention/mappings.
+Root đã review bản sửa; đang chờ người dùng duyệt contract, acceptance criteria dưới đây chưa được coi là chốt. Chưa triển khai runtime, chưa ghi resolution/đóng #113; caps/timeout thuộc #114, partition OpenSpec thuộc #115.
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
@@ -28,3 +33,9 @@ Prerequisite #108 đã đóng. Có thể giải quyết song song TASK-1; các �
 - [ ] #5 Chốt metadata, SHA-256 file nguồn, hash payload chuẩn hóa và ánh xạ dòng–entity cần giữ; không lưu workbook nguồn hoặc toàn bộ payload chuẩn hóa, không âm thầm ghi đè danh tính.
 - [ ] #6 Ghi hợp đồng, các tình huống thất bại/phục hồi và bằng chứng quyết định vào #113; không coi xác nhận là chữ ký điện tử.
 <!-- AC:END -->
+
+## Review and Verification
+
+- Root yêu cầu và xác minh hai bản sửa: durable errors không giữ temporary refs kể cả hợp lệ; hard logical expiry 30 phút tách khỏi physical purge khi lock-safe và không hủy transaction đã được chấp nhận.
+- Root chạy độc lập SHA-256 vector trong tài liệu, kiểm tra 10 local links của contract, privacy/expiry boundaries và giới hạn 350 dòng: PASS. Đây là kiểm tra contract, chưa phải test atomic import runtime.
+- Đối chiếu OpenSpec liên quan đã ghi trong backlog README; source migration contract tests chạy lại 25/25 PASS nhưng không chứng minh current production hoặc completion của #113.
