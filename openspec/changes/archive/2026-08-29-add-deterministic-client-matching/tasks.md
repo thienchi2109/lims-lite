@@ -228,7 +228,7 @@ immutable, and every rollback is a new forward-only migration.
 - [ ] 7.8 Gate B: rerun full client/accession regressions, sample/result blast
   radius, typecheck, lint, React Doctor, SQL security suites, browser smoke,
   Vietnamese outcome checks, audit/RLS verification, and rollback documentation.
-- [ ] 7.9 Strict-validate and archive this OpenSpec change, update #107/#111
+- [x] 7.9 Strict-validate and archive this OpenSpec change, update #107/#111
   traceability, close or file implementation follow-ups, and sync local, origin,
   and the approved deployment checkout.
 
@@ -253,10 +253,20 @@ implementation work beside the successor changes.
   browser smoke and the prepared forward-only rollback rehearsal need explicit
   evidence before this entire item can be checked.
 - 7.6–7.8 remain subject to observation/approval/retirement evidence in the
-  successor changes. 7.9 is partly evidenced by the archive commit; do not infer
-  all traceability/deployment-checkout synchronization from archive presence.
+  successor changes.
+- 7.9: archive/follow-up commit `eca575c` is an ancestor of `ee44741`, whose
+  [dated preflight record](../../enforce-client-canonical-integrity/gate-a-preflight-evidence.md)
+  shows source and approved home-server checkout at the same commit. This proves
+  the historical archive handoff, not today's running app or deployment HEAD.
+  [#107](https://github.com/thienchi2109/lims-lite/issues/107) and
+  [#111](https://github.com/thienchi2109/lims-lite/issues/111) bodies were updated
+  and read back on 2026-11-01 with archive/successor/evidence links; Backlog
+  TASK-5/6 file the remaining observation/retirement follow-ups. Local/origin
+  synchronization is verified at each documentation push.
 
 The 2026-11-01 local run of the three prerequisite migration contract test files
 passed 25/25. It validates source contracts only, not current database or app
 state. Decision contracts #112/#113 are approved in the Backlog records; bulk
 import implementation still awaits capacity proof and partitioning #114/#115.
+`openspec validate --all --strict` also passed 47/47 on 2026-11-01; this schema
+validation does not replace runtime or browser verification.
