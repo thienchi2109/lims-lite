@@ -1,8 +1,8 @@
-# Hợp đồng template Excel tiếp nhận mẫu — đề xuất phiên bản 1
+# Hợp đồng template Excel tiếp nhận mẫu — phiên bản 1
 
-Trạng thái: **Bản dự thảo để duyệt quyết định #112**, chưa phải hợp đồng đã được người dùng xác nhận.
+Trạng thái: **Đã được người dùng duyệt ngày 2026-11-01** qua xác nhận “duyệt contract”, sau review độc lập và verification của root đối với bản tại commit `3c820dc`.
 Ngày khảo sát nguồn: 2026-11-01. Phạm vi: định dạng workbook và validation; chưa triển khai parser, workbook hay UI.
-Mọi quy tắc ở phần 2–9 là đề xuất mới của #112, trừ khi dẫn rõ invariant đã chốt ở phần 1.
+Các quy tắc ở phần 2–9 là hợp đồng đã được duyệt của #112; phần 1 ghi các invariant được tái sử dụng từ quyết định trước.
 Issue: [#112](https://github.com/thienchi2109/lims-lite/issues/112); roadmap: [#107](https://github.com/thienchi2109/lims-lite/issues/107).
 
 ## 1. Nền tảng đã chốt và nguồn kiểm chứng
@@ -190,7 +190,7 @@ UI error response được có `callerContext` gồm sheet/row/column và `tempo
 Log/audit lỗi chỉ lưu code/tọa độ và context vận hành cần thiết; redact raw cell values/PII/full rows và `temporaryReference` do người dùng nhập. Không ghi nguyên UI error response vào log. Provenance/row-to-entity mappings đã chốt ở #108 là dữ liệu riêng theo #113, không phải payload log lỗi.
 Mọi lỗi đều chặn confirmation; không import một phần, không bỏ lỗi thành warning. Thông báo reuse optional fields là thông tin, không phải lỗi.
 
-| Code đề xuất | Vị trí ví dụ | Thông báo mẫu |
+| Mã lỗi | Vị trí ví dụ | Thông báo mẫu |
 | --- | --- | --- |
 | `TEMPLATE_VERSION_UNSUPPORTED` | `Thông tin template`, ô chứa version | “Phiên bản template không được hỗ trợ. Vui lòng tải template hiện hành.” |
 | `TEMPLATE_METADATA_INVALID` | `Thông tin template`, ô descriptor | “Thông tin template hoặc danh mục đã bị thay đổi. Vui lòng tải lại template.” |
@@ -241,9 +241,9 @@ Hợp lệ: một client mới, hai mẫu mới, hai chỉ định; client chỉ
 | Thêm cột `Giờ nhận mẫu`, đổi sheet `Mẫu` thành `Mau`, sửa catalog | Lỗi cấu trúc/metadata trước business validation |
 | Publish revision mới sau tải template hoặc sau preview; đổi method làm generation stale | Preview/confirm bị từ chối tương ứng; không ghi business rows |
 
-## 10. Điều kiện chốt #112
+## 10. Quyết định #112
 
 Đã phân định: layout/cột/version, refs, ISO/Text/null, duplicates/missing refs, workbook restrictions, lỗi định vị tiếng Việt, matching reuse/create và catalog drift.
-Lựa chọn mới cần người dùng duyệt là toàn bộ contract 1 ở phần 2–9, nhất là ISO/Text-only và requiredness tạo mới; chưa có xác nhận đó trong live #112 tại ngày khảo sát.
-Sau review và xác nhận, ghi ngày/người xác nhận, liên kết tài liệu/decision gist vào #112 rồi mới đánh dấu TASK-1 Done/đóng #112.
-Không promote OpenSpec hoặc triển khai parser từ draft này. #113 nguyên tử/provenance, #114 cap đã đo, #115 phân chia OpenSpec vẫn là các task riêng.
+Người dùng đã duyệt toàn bộ hợp đồng phiên bản 1 ở phần 2–9 ngày 2026-11-01, gồm ISO/Text-only, requiredness tạo mới, duplicate policy, descriptor và catalog drift. Xác nhận nguyên văn: “duyệt contract”.
+TASK-1 hoàn tất ở phạm vi quyết định; #112 lưu liên kết hợp đồng và kết quả review/verification. Quyết định này chưa phải bằng chứng implementation hoặc runtime.
+Việc promote OpenSpec và triển khai parser được theo dõi riêng; #113 nguyên tử/provenance, #114 cap đã đo, #115 phân chia OpenSpec vẫn là các task riêng.
