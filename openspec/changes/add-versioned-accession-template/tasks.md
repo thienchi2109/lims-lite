@@ -9,11 +9,13 @@ Phase 1 chỉ đạt source gate; [evidence và snapshot interface](phase-1-sour
 
 ## 2. Phase 2 — Descriptor và generator, một PR/session source
 
-- [ ] 2.1 RED tests cho bounded signed metadata+authorityDigest+catalogDigest, tampered labels/method/codes/pairs/metadata, malformed/unknown key, restart verification, current authority drift và independent display-label changes.
-- [ ] 2.2 Dùng Node crypto HMAC-SHA256 server-only, canonical digest schemas và timing-safe MAC verification; không embed toàn catalog vào descriptor, không dependency mới/registry/workbook retention.
-- [ ] 2.3 RED→GREEN workbook round-trip tests đúng tám visible sheets/headers/order/metadata literal Text, input columns @, no seeded business rows; guide ISO1900–2100/typed identity/conditional fields/leading zeros/no business count caps theo #112.
-- [ ] 2.4 Dùng xlsx hiện có tạo workbook từ một snapshot, authenticated descriptor và server timestamp; fail closed config/version/catalog not ready hoặc output file không <10.000.000 bytes; không truncate catalog hoặc ghi temp file/cache/log.
-- [ ] 2.5 Chạy focused tests, scoped lint/typecheck và OpenSpec strict; snapshot+verifier handoff cho successor parser, source evidence không thay runtime gate.
+- [x] 2.1 RED tests cho bounded signed metadata+authorityDigest+catalogDigest, tampered labels/method/codes/pairs/metadata, malformed/unknown key, restart verification, current authority drift và independent display-label changes.
+- [x] 2.2 Dùng Node crypto HMAC-SHA256 server-only, canonical digest schemas và timing-safe MAC verification; không embed toàn catalog vào descriptor, không dependency mới/registry/workbook retention.
+- [x] 2.3 RED→GREEN workbook round-trip tests đúng tám visible sheets/headers/order/metadata literal Text, input columns @, no seeded business rows; guide ISO1900–2100/typed identity/conditional fields/leading zeros/no business count caps theo #112.
+- [x] 2.4 Dùng xlsx hiện có tạo workbook từ một snapshot, authenticated descriptor và server timestamp; fail closed config/version/catalog not ready hoặc output file không <10.000.000 bytes; không truncate catalog hoặc ghi temp file/cache/log.
+- [x] 2.5 Chạy focused tests, scoped lint/typecheck và OpenSpec strict; snapshot+verifier handoff cho successor parser, source evidence không thay runtime gate.
+
+Phase 2 chỉ đạt source gate; [evidence, canonical schemas và API handoff](phase-2-source-evidence.md). OpenSpec **9/19** tasks source complete; Phase 3/4 và overall TASK-8 vẫn **INCOMPLETE/In Progress**. Migration 232, SQL/security và deployed runtime gates chưa chạy.
 
 ## 3. Phase 3 — Download endpoint và Vietnamese control, một PR/session source
 
