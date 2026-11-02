@@ -119,7 +119,7 @@ HTTP retry của cùng confirm chưa có kết quả xác định không phải 
 Với endpoint đã trả terminal thành công, lặp confirm chỉ là đọc receipt; không gia hạn TTL hoặc tạo audit giả như đã tiếp nhận lần nữa.
 Lookup không cần gửi lại file; trả trạng thái/receipt đã commit. Khi chưa commit tuyệt đối không trả official IDs dự kiến.
 Nếu mất file sau timeout: vẫn lookup trước; success lấy receipt không cần file. Nếu còn `preview_ready` và không có transaction đang chạy, không thể confirm từ metadata: chọn lại đúng byte file gốc hoặc tạo linked attempt mới; không tái dựng payload trên server. Nếu kết quả còn chưa xác định thì tiếp tục lookup, không upload mới để đoán kết quả.
-Chưa chốt timeout HTTP/DB/locks hay nhịp polling cứng: #114 phải đo và đặt chúng trong dung lượng đã chứng minh; timeout không làm đổi invariants trên.
+Chưa chốt timeout HTTP/DB/locks hay nhịp polling cứng: [TASK-7](../../../backlog/tasks/task-7%20-%20Nghiem-thu-capacity-va-atomicity-import-thuc.md) phải đo runtime và đặt chúng trong dung lượng đã chứng minh (chuyển từ #114 theo quyết định 2026-11-02); timeout không làm đổi invariants trên.
 
 ## 6. Authorization, RLS và audit
 
@@ -189,11 +189,11 @@ File kết quả chỉ được sinh từ DB sau success và kiểm tra quyền 
 | --- | --- |
 | Workbook/full normalized payload | Không lưu durable; giải phóng bộ nhớ request ngay khi xong, không cache/recovery từ server. |
 | Preview bindings/fingerprints chi tiết | Hard logical expiry đúng `expires_at` sau 30 phút: không nhận confirm mới từ thời điểm này. Terminal hoặc deadline làm bindings eligible để purge khi lock-safe; transaction đã được chấp nhận trước deadline vẫn được hoàn tất. Physical purge có thể trễ vì row lock/DB outage; authorization/expiry vẫn chặn dùng lại, không gia hạn TTL. |
-| `preparing` bỏ dở | Recovery có lease/heartbeat metadata không payload; chỉ đánh dấu failed sau khi xác nhận request không còn hoạt động. Ngưỡng cụ thể phải khớp timeout đã đo #114. |
+| `preparing` bỏ dở | Recovery có lease/heartbeat metadata không payload; chỉ đánh dấu failed sau khi xác nhận request không còn hoạt động. Ngưỡng cụ thể phải khớp timeout runtime được đo ở TASK-7. |
 | Batch metadata, binding digest, audit, success mappings và dedup claim | Giữ durable, không TTL tự động trong MVP. Retention pháp lý/archival tương lai cần quyết định riêng; cleanup preview không xóa lịch sử hoặc mở đường nhập lại. |
 
 Cleanup là tác vụ privileged nhỏ, lock batch trước quyết định, idempotent, chỉ purge bindings đã không còn dùng được và ghi audit count/time. Không hủy/đổi expired cho transaction đã được chấp nhận trước deadline; chờ commit/rollback rồi xử lý terminal state tương ứng.
-Chưa có bằng chứng để hứa physical purge đúng phút thứ 30. Purge SLO, retry/recovery budget và lịch chạy phải được đo/chốt ở #114; khi DB phục hồi phải quét các bindings quá hạn còn lại, không chỉ xử lý deadline mới.
+Chưa có bằng chứng để hứa physical purge đúng phút thứ 30. Purge SLO, retry/recovery budget và lịch chạy phải được đo/chốt ở TASK-7; khi DB phục hồi phải quét các bindings quá hạn còn lại, không chỉ xử lý deadline mới.
 Không ghi PII đã purge vào audit cleanup; không xóa batch/audit để giải quyết lỗi kỹ thuật. Không cần giữ workbook để chạy recovery.
 
 ## 9. Các tình huống phải chứng minh khi triển khai
@@ -214,6 +214,6 @@ Không ghi PII đã purge vào audit cleanup; không xóa batch/audit để gi�
 
 Người dùng đã duyệt #113 ngày 2026-11-01, gồm: commitment-only preview + gửi lại file khi confirm; state machine/atomic transaction; confirmation-time server receipt; dedup toàn LIMS bằng canonical input; safe metadata/mappings/audit retention và cleanup ở trên.
 Xác nhận nguyên văn: “duyệt”. TASK-2 hoàn tất ở phạm vi quyết định, với liên kết hợp đồng và kết quả review/verification được ghi vào #113. Chưa có implementation hoặc runtime evidence cho atomic bulk import.
-Caps 10 MB/500 clients/1.000 samples/20.000 assignments chỉ là provisional của #108; #114 phải đo và thay/giữ caps, timeouts, lock budgets, memory/transfer costs (gồm upload lại lúc confirm).
+Quyết định người dùng 2026-11-02 thay giả thuyết caps #108: chỉ file **<10.000.000 bytes** (10 MB decimal), không có count caps nghiệp vụ. 500/1.000/20.000 chỉ còn là fixture lịch sử. #114/TASK-3 kiểm chứng prototype local theo [bằng chứng hiện hành](2026-11-02-import-file-limit-evidence.md); TASK-7 nhận nghĩa vụ runtime/DB/HTTP/end-to-end, timeouts, lock budgets, memory/transfer costs (gồm upload lại lúc confirm).
 #115 mới phân chia dependency-safe OpenSpec changes; #113 không tạo whole-feature OpenSpec, implementation plan hay SQL/API/parser/UI.
-Nếu prototype không thể đáp ứng no-payload-retention và atomicity cùng caps, thu hẹp caps hoặc mang trade-off cụ thể quay lại quyết định; không âm thầm đổi invariant.
+Nếu runtime không thể đáp ứng no-payload-retention, atomicity hoặc phòng vệ tài nguyên trong phạm vi file đã duyệt, mang trade-off cụ thể quay lại quyết định; không âm thầm đổi invariant hoặc thêm count caps. Size pass không bảo đảm workbook hợp lệ hoặc xử lý an toàn mọi file.

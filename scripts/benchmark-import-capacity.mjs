@@ -9,6 +9,7 @@ import { makeFixture, preflight, parseWorkbook, validateWorkbook, buildPreview, 
 
 const script = fileURLToPath(import.meta.url)
 const budgets = { parseMs: 2000, validateMs: 1000, previewMs: 1000, totalMs: 4000, maxRssMiB: 512, watchdogMs: 30000, oldSpaceMiB: 384 }
+// Historical fixture sizes only; these counts are not business limits.
 const boundary = { clients: 500, samples: 1000, assignments: 20000 }
 export const cases = [
   { name: 'normal', clients: 10, samples: 20, assignments: 100 },
@@ -16,10 +17,11 @@ export const cases = [
   { name: 'samples-boundary', clients: 10, samples: 1000, assignments: 1000 },
   { name: 'assignments-boundary', clients: 10, samples: 1000, assignments: 20000 },
   { name: 'combined-boundary', ...boundary },
-  ...['clients', 'samples', 'assignments'].map((key) => ({ name: key + '-over', ...boundary, [key]: boundary[key] + 1, expected: 'COUNT_LIMIT' })),
+  ...['clients', 'samples', 'assignments'].map((key) => ({ name: key + '-former-cap-plus-one', ...boundary, [key]: boundary[key] + 1 })),
   { name: 'invalid-last-boundary', ...boundary, fault: 'last-reference', expected: 'INVALID_ASSIGNMENT' },
   { name: 'compressible-padding', ...boundary, paddingChars: 8000000 },
   { name: 'entropy-padding', ...boundary, paddingChars: 8000000, entropy: true },
+  ...[9999999, 10000000, 10000001].map((fileBytes) => ({ name: 'file-' + fileBytes, ...boundary, paddingChars: 8000000, entropy: true, fileBytes, ...(fileBytes >= LIMITS.fileBytes ? { expected: 'FILE_LIMIT' } : {}) })),
   { name: 'file-over', ...boundary, paddingChars: 11000000, entropy: true, expected: 'FILE_LIMIT' },
   { name: 'inflated-over', ...boundary, paddingChars: 34000000, expected: 'INFLATED_LIMIT' },
   { name: 'entries-over', ...boundary, extraEntries: 260, expected: 'ENTRY_LIMIT' },
@@ -51,7 +53,7 @@ function child(file, stall) {
       counts = preview.counts
     })
   } catch (error) {
-    outcome = /^(FILE_LIMIT|INFLATED_LIMIT|ENTRY_LIMIT|CELL_LIMIT|COUNT_LIMIT|ZIP_INVALID|INVALID_[A-Z_]+|DUPLICATE_[A-Z_]+|ORPHAN_ROW)$/.test(error.message) ? error.message : 'UNEXPECTED_ERROR'
+    outcome = /^(FILE_LIMIT|INFLATED_LIMIT|ENTRY_LIMIT|CELL_LIMIT|EMPTY_BATCH|ZIP_INVALID|INVALID_[A-Z_]+|DUPLICATE_[A-Z_]+|ORPHAN_ROW)$/.test(error.message) ? error.message : 'UNEXPECTED_ERROR'
   }
   const cpu = process.cpuUsage()
   process.stdout.write(JSON.stringify({ outcome, stage, zip, timings, memory, counts, previewBytes, maxRssMiB: mib(process.resourceUsage().maxRSS * 1024), cpuMs: Math.round((cpu.user + cpu.system) / 1000) }))

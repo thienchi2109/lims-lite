@@ -1,5 +1,13 @@
 # TASK-3 / #114 — bằng chứng capacity prototype
 
+> **Hồ sơ lịch sử, đã được thay thế ngày 2026-11-02:** người dùng chọn file
+> **<10.000.000 bytes**, bỏ count caps nghiệp vụ. Kết luận 10 MiB, COUNT_LIMIT
+> và AC bên dưới mô tả lần đo cũ; JSON cũ giữ nguyên. Xem
+> [quyết định và bằng chứng hiện hành](2026-11-02-import-file-limit-evidence.md).
+> Nghĩa vụ DB/HTTP/end-to-end chuyển sang
+> [TASK-7](../../../backlog/tasks/task-7%20-%20Nghiem-thu-capacity-va-atomicity-import-thuc.md);
+> chúng chưa được chứng minh bằng prototype.
+
 Trạng thái: **INCOMPLETE**, chỉ prototype Node CLI cục bộ, dữ liệu tổng hợp.
 Không phải parser/generator template sản phẩm hoặc bằng chứng home server.
 
