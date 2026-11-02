@@ -28,9 +28,15 @@ Phase 3 đạt source gate: [route/UI và RED→GREEN evidence](phase-3-source-e
 
 ## 4. Phase 4 — Migration, security và rollout, session runtime riêng
 
-- [ ] 4.1 Xác nhận source phases đã review/committed và operations authorization cụ thể; chưa được cấp quyền thì ghi INCOMPLETE, không chạy production từ workspace.
-- [ ] 4.2 Trên home-server checkout /opt/lims-lite qua SSH BatchMode, áp dụng committed new migration với sudo Docker psql ON_ERROR_STOP; lưu expected baseline/result state và migration revision.
-- [ ] 4.3 Chạy focused SQL regression và SELECT * FROM run_security_tests() sau migration; analyst/manager/anonymous/RLS/grants checks PASS, PII-free evidence timestamp/command/outcome.
+- [x] 4.1 Xác nhận source phases đã review/committed và operations authorization cụ thể; chưa được cấp quyền thì ghi INCOMPLETE, không chạy production từ workspace.
+- [x] 4.2 Trên home-server checkout /opt/lims-lite qua SSH BatchMode, áp dụng committed new migration với sudo Docker psql ON_ERROR_STOP; lưu expected baseline/result state và migration revision.
+- [x] 4.3 Chạy focused SQL regression và SELECT * FROM run_security_tests() sau migration; analyst/manager/anonymous/RLS/grants checks PASS, PII-free evidence timestamp/command/outcome.
 - [ ] 4.4 Cấu hình server-only signing secret và rollout app; tải binary qua app/proxy thật, verify workbook/layout/types/consistent binding và no-retention/no-store; ghi image/app/config revisions không ghi secret.
-- [ ] 4.5 Kiểm tra fail-closed missing/retired-key behavior và restart verification bằng synthetic catalog; rollback app surface nếu lỗi, SQL fix chỉ bằng migration mới.
+- [x] 4.5 Kiểm tra fail-closed missing/retired-key behavior và restart verification bằng synthetic catalog; rollback app surface nếu lỗi, SQL fix chỉ bằng migration mới.
 - [ ] 4.6 Root review source/SQL/deployed gates riêng, cập nhật TASK-8/#136 và #107; chỉ promote successor TASK-9 sau exit verified. Whole-importer DB/HTTP/end-to-end capacity/atomicity/recovery vẫn ở TASK-7/#134 sau TASK-9–13.
+
+Phase 4 đạt **17/19** theo [runtime evidence](phase-4-runtime-evidence.md): migration 232, rollback-only SQL, security 36/36, rollout healthy và synthetic key/restart/workbook PASS; root đã kiểm tra độc lập. **4.4/4.6 INCOMPLETE**: chưa có legitimate analyst session để chứng minh successful binary download/no-retention qua app/proxy. TASK-8 tiếp tục In Progress; chưa promote TASK-9.
+
+Phase 4 đạt SQL, anonymous-denial và synthetic-runtime gates; [runtime evidence](phase-4-runtime-evidence.md).
+OpenSpec **17/19**; TASK-8 vẫn In Progress. Authenticated binary download/no-retention chưa có bằng chứng;
+4.4/4.6 **INCOMPLETE**, không promote TASK-9.
