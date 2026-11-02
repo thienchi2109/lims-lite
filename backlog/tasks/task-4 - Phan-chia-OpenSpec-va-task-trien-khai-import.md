@@ -1,7 +1,7 @@
 ---
 id: TASK-4
 title: Phân chia OpenSpec và task triển khai import Excel
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-11-01'
 updated_date: '2026-11-02'
@@ -31,3 +31,9 @@ Quyết định ngày 2026-11-02: file phải nhỏ hơn 10.000.000 bytes, khôn
 - [ ] #5 Xác định riêng các gate migration, security tests, rollout và nghiệm thu trên home server; trạng thái triển khai/xác minh chỉ đóng khi có bằng chứng thực tế và đúng phạm vi được phép.
 - [ ] #6 Cập nhật #115, #107 và chỉ mục backlog với thứ tự thực hiện, task mới và các câu hỏi còn lại trước khi đóng task.
 <!-- AC:END -->
+
+## Implementation partition — chờ root review
+
+[Bản phân chia, test ownership và gate](../../docs/superpowers/specs/2026-11-02-import-implementation-partition.md) là artifact review chính. Sequence thực: TASK-8/#136 generator/download → TASK-9/#137 parser → TASK-10/#138 preview → TASK-11/#139 atomic commit → TASK-12/#140 HTTP/recovery → TASK-13/#141 Vietnamese UI → TASK-7/#134 runtime acceptance. TASK-5/6 là lane riêng không chặn importer.
+
+Chỉ [add-versioned-accession-template](../../openspec/changes/add-versioned-accession-template/proposal.md) được tạo đủ proposal/design/spec/tasks; successor mappings mới planned, không tạo whole-feature spec. Tất cả implementation checkboxes giữ trống. TASK-4 In Progress và AC chưa tick cho đến root độc lập review/verify và sync #115/#107; không mở PR/merge hoặc thực hiện runtime trong task này.

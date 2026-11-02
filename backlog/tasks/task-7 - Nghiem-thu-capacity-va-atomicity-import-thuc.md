@@ -4,20 +4,21 @@ title: Nghiệm thu capacity và atomicity của importer thực
 status: To Do
 assignee: []
 created_date: '2026-11-02'
+updated_date: '2026-11-02'
 labels: [excel-import, verification]
-dependencies: [TASK-4]
+dependencies: [TASK-8, TASK-9, TASK-10, TASK-11, TASK-12, TASK-13]
 priority: high
 ---
 
 ## Description
 
-Issue nghiệm thu: https://github.com/thienchi2109/lims-lite/issues/134 (sub-issue #107; phụ thuộc #115 trước khi liên kết prerequisite implementation).
+Issue nghiệm thu: https://github.com/thienchi2109/lims-lite/issues/134 (sub-issue #107; prerequisite implementation #136–#141 theo TASK-4, thay blocker tạm #115).
 
 Gate nghiệm thu sau triển khai nhận toàn bộ nghĩa vụ DB/HTTP/end-to-end chưa chứng minh từ TASK-3/#114 theo quyết định ngày 2026-11-02. Chỉ giới hạn nghiệp vụ file **<10.000.000 bytes**, không giới hạn số khách hàng/mẫu/chỉ định. Size pass không thay validation hoặc bảo đảm xử lý mọi workbook. Không chặn TASK-4 phân chia và không thực hiện production operations lúc tạo task này.
 
 Nguồn: [template #112](../../docs/superpowers/specs/2026-11-01-excel-template-contract-design.md), [atomic/provenance #113](../../docs/superpowers/specs/2026-11-01-atomic-import-provenance-contract-design.md), [prototype lịch sử](../../docs/superpowers/specs/2026-11-02-import-capacity-evidence.md), [file-only local evidence](../../docs/superpowers/specs/2026-11-02-import-file-limit-evidence.md), [TASK-3](task-3%20-%20Kiem-chung-nang-luc-va-gioi-han-import.md), [TASK-4](task-4%20-%20Phan-chia-OpenSpec-va-task-trien-khai-import.md).
 
-Prerequisite hiện biết: TASK-4. Các task implementation generator/download, server descriptor/catalog binding và resolver, safe parser, durable preview/hash, atomic confirmation/provenance, API/UI và recovery chưa được phân chia; TASK-4 phải tạo và liên kết ID thực vào dependencies trước bắt đầu gate này. Không giả định chúng đã tồn tại hoặc đã chạy được. TASK-4 không phụ thuộc TASK-7.
+Prerequisites thực đã tạo: [TASK-8/#136 generator/download](task-8%20-%20Tao-va-tai-template-tiep-nhan-co-phien-ban.md), [TASK-9/#137 parser](task-9%20-%20Parse-va-validate-workbook-template.md), [TASK-10/#138 preview](task-10%20-%20Tao-preview-bat-bien-va-canonical-hash.md), [TASK-11/#139 commit/provenance](task-11%20-%20Commit-import-nguyen-tu-va-provenance.md), [TASK-12/#140 HTTP/recovery/purge](task-12%20-%20Xac-nhan-HTTP-tra-cuu-va-recovery-import.md), [TASK-13/#141 Vietnamese UI](task-13%20-%20Giao-dien-import-tieng-Viet.md). Chi tiết source/SQL/security/rollout ownership và exit ở [phân chia TASK-4](../../docs/superpowers/specs/2026-11-02-import-implementation-partition.md). Tất cả implementation tasks còn To Do; tạo ID không chứng minh runtime. TASK-4 không phụ thuộc TASK-7; TASK-5/6 lane riêng không chặn importer.
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
