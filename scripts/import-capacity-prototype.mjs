@@ -18,8 +18,9 @@ function schemaModule(id) {
     const source = readFileSync(path.join(root, 'src', sources[id] + '.ts'), 'utf8')
     const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText
     const loadedModule = { exports: {} }
+    // Fixed repository modules only: workbook/request data never reaches compiled code.
     // coa-auth owns an unrelated cleanup timer; retain it without keeping this CLI alive.
-    new Function('require', 'module', 'exports', 'setInterval', compiled)(schemaModule, loadedModule, loadedModule.exports, (...args) => setInterval(...args).unref())
+    new Function('require', 'module', 'exports', 'setInterval', compiled)(schemaModule, loadedModule, loadedModule.exports, (...args) => setInterval(...args).unref()) // NOSONAR: S1523 false positive; only allowlisted trusted repository source is compiled.
     cache.set(id, loadedModule.exports)
   }
   return cache.get(id)

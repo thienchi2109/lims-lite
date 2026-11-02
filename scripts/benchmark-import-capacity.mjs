@@ -43,7 +43,7 @@ function child(file, stall) {
   try {
     zip = measure('preflight', () => preflight(bytes))
     const workbook = measure('parse', () => parseWorkbook(bytes))
-    if (stall) { process.stderr.write('PARSE_COMPLETED\n'); for (;;) { /* injected unresponsive parse successor */ } }
+    if (stall) { process.stderr.write('PARSE_COMPLETED\n'); Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, budgets.watchdogMs) }
     const validated = measure('validate', () => validateWorkbook(workbook))
     measure('preview', () => {
       const preview = buildPreview(validated)
