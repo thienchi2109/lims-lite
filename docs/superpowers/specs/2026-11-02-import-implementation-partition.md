@@ -1,6 +1,6 @@
 # TASK-4 — Phân chia triển khai import Excel
 
-Trạng thái: **In Progress, chờ root review độc lập và GitHub sync**. Tài liệu này phân chia implementation; chưa có importer production. Không mở PR hoặc merge trong session TASK-4.
+Trạng thái: **Done trong phạm vi phân chia, root review/verification và GitHub sync hoàn tất trên branch `docs/task-4-import-partition`; chưa merge main**. Tài liệu này phân chia implementation; chưa có importer production. Không mở PR hoặc merge trong session TASK-4.
 
 ## Quyết định giữ nguyên và evidence
 
@@ -62,4 +62,10 @@ Prototype technical guards32MiB declared inflated/256 ZIP entries/160k declared 
 - TASK-8 phase1 xác minh authority RPC generation/snapshot shape mới nhất; cơ chế HMAC và tests được chốt trong design. Key config/rotation phải không lộ secret; key nghỉ dùng làm descriptor fail closed, không tự cấp template TTL khác #112.
 - TASK-9 promotion chốt actual inflate/ZIP/XML resource model dựa parser hiện có; giá trị guard production chưa được local benchmark phê chuẩn.
 - TASK-12/TASK-7 chốt scheduler/recovery/purge/HTTP/DB/lock/poll budgets bằng runtime baseline; không hardcode đề xuất timeout thành guarantee. TASK-7 có authority đo trong môi trường riêng được cấp quyền, không phải permission chạy production từ TASK-4.
-- Không còn decision blocker cho phân chia/generator proposal; runtime authorization và bằng chứng thuộc các gate sau. TASK-4 vẫn In Progress tới khi root độc lập review và cập nhật #115/#107/backlog; GitHub mapping #136–#141 đã được root cấp từ issues thực, không invent IDs.
+- Không còn decision blocker cho phân chia/generator proposal; runtime authorization và bằng chứng thuộc các gate sau. TASK-4 đã root review/verify và sync #115/#107/#134; TASK-8–13/#136–#141 là IDs thực, còn To Do. Bước tiếp theo TASK-8, không tự thực hiện implementation trong session này.
+
+## Root review và verification — 2026-11-02
+
+Root độc lập review diff `76e01c7..8863e36`; hai reviewer SPEC và QUALITY PASS, không findings còn mở. Root chạy OpenSpec strict/status PASS (4/4 artifacts, 19 implementation tasks chưa tick), 72 local links/13-task DAG/mapping/scope checks PASS, historical benchmark JSON SHA256 không đổi và `git diff --check` PASS. #107/#115/#134 bodies đã sync và đọc lại khớp; #136–#141 là subissues OPEN với dependency graph đã kiểm tra. TASK-7 giữ đủ các AC runtime chưa tick; bước tiếp theo là TASK-8/#136, chưa tự bắt đầu implementation.
+
+Kiểm tra có thể chạy lại: `rtk proxy openspec validate add-versioned-accession-template --strict --no-interactive`, `rtk proxy openspec status --change add-versioned-accession-template --json`, `rtk proxy git diff --check`. Artifacts done chỉ nghĩa đã soạn tài liệu; không chứng minh implementation hoặc runtime. SHA256 JSON lịch sử vẫn `05bb5cc1b9c2d74f8a5e7647ddec875939f61712c5b05a23c7bff309788a83d2`.
