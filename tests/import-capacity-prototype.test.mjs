@@ -15,10 +15,27 @@ test('eight-sheet synthetic fixture yields complete preview without official IDs
   assert.equal(JSON.stringify(preview).includes('officialId'), false)
 })
 
-test('exact count boundary succeeds, each independent +1 rejects the whole preview', () => {
-  assert.deepEqual(buildPreview(prepare(LIMITS)).counts, { clients: 500, samples: 1000, assignments: 20000 })
-  for (const key of ['clients', 'samples', 'assignments']) {
-    assert.throws(() => prepare({ ...LIMITS, [key]: LIMITS[key] + 1 }), /COUNT_LIMIT/)
+const formerCounts = { clients: 500, samples: 1000, assignments: 20000 }
+for (const key of Object.keys(formerCounts)) test('former ' + key + ' cap +1 produces complete preview', () => {
+  const counts = { ...formerCounts, [key]: formerCounts[key] + 1 }
+  assert.deepEqual(buildPreview(prepare(counts)).counts, counts)
+})
+
+test('decimal 10 MB is strict: valid 9,999,999-byte XLSX previews, exact/above reject before decode', () => {
+  for (const fileBytes of [9999999, 10000000, 10000001]) {
+    const bytes = makeFixture({ ...formerCounts, paddingChars: 8000000, entropy: true, fileBytes })
+    assert.equal(preflight(bytes, { ...LIMITS, fileBytes: 10000002 }).fileBytes, fileBytes)
+    if (fileBytes === 9999999) assert.deepEqual(buildPreview(validateWorkbook(parseWorkbook(bytes))).counts, formerCounts)
+    else assert.throws(() => parseWorkbook(bytes), /FILE_LIMIT/)
+  }
+  assert.equal(LIMITS.fileBytes, 10000000)
+})
+
+test('empty batches remain invalid without business count caps', () => {
+  for (const [sheet, range] of [['Khách hàng', 'A1:J1'], ['Mẫu', 'A1:C1'], ['Chỉ định', 'A1:B1']]) {
+    const workbook = parseWorkbook(makeFixture())
+    workbook.Sheets[sheet]['!ref'] = range
+    assert.throws(() => validateWorkbook(workbook), /EMPTY_BATCH/)
   }
 })
 

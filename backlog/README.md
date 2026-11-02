@@ -1,6 +1,6 @@
 # Theo dõi chức năng import Excel
 
-Backlog này theo dõi [Wayfinder #107](https://github.com/thienchi2109/lims-lite/issues/107): bốn task quyết định/prototype trước triển khai và hai task song song liên quan client canonical. Hoàn tất các quyết định chưa đồng nghĩa tính năng import đã hoàn tất; TASK-4 phải tạo các task implementation theo phân chia được duyệt.
+Backlog này theo dõi [Wayfinder #107](https://github.com/thienchi2109/lims-lite/issues/107): bốn task quyết định/prototype trước triển khai, hai task song song liên quan client canonical và TASK-7 nghiệm thu importer thực sau triển khai. Hoàn tất các quyết định chưa đồng nghĩa tính năng import đã hoàn tất; TASK-4 phải tạo các task implementation theo phân chia được duyệt.
 
 ## Danh sách task
 
@@ -8,14 +8,15 @@ Backlog này theo dõi [Wayfinder #107](https://github.com/thienchi2109/lims-lit
 | --- | --- | --- | --- | --- |
 | [TASK-1](tasks/task-1%20-%20Chot-hop-dong-template-Excel-va-validation.md) | Chốt template Excel và validation | Done | Không | [#112](https://github.com/thienchi2109/lims-lite/issues/112) |
 | [TASK-2](tasks/task-2%20-%20Chot-hop-dong-import-nguyen-tu-va-provenance.md) | Chốt import nguyên tử và provenance | Done | Không | [#113](https://github.com/thienchi2109/lims-lite/issues/113) |
-| [TASK-3](tasks/task-3%20-%20Kiem-chung-nang-luc-va-gioi-han-import.md) | Kiểm chứng năng lực và giới hạn import | In Progress | Không | [#114](https://github.com/thienchi2109/lims-lite/issues/114) |
-| [TASK-4](tasks/task-4%20-%20Phan-chia-OpenSpec-va-task-trien-khai-import.md) | Phân chia OpenSpec và task triển khai | To Do | TASK-3 | [#115](https://github.com/thienchi2109/lims-lite/issues/115) |
+| [TASK-3](tasks/task-3%20-%20Kiem-chung-nang-luc-va-gioi-han-import.md) | Prototype local và file <10 MB decimal | Done | Không | [#114](https://github.com/thienchi2109/lims-lite/issues/114) |
+| [TASK-4](tasks/task-4%20-%20Phan-chia-OpenSpec-va-task-trien-khai-import.md) | Phân chia OpenSpec và task triển khai | To Do | Không | [#115](https://github.com/thienchi2109/lims-lite/issues/115) |
 | [TASK-5](tasks/task-5%20-%20Xac-minh-observation-va-approval-Gate-B.md) | Xác minh observation và approval Gate B | To Do | Evidence/runtime và approval chưa được xác minh | OpenSpec canonical integrity / legacy retirement |
 | [TASK-6](tasks/task-6%20-%20Thuc-hien-retirement-client-legacy-Gate-B.md) | Thực hiện retirement client legacy Gate B | To Do | TASK-5 | OpenSpec legacy retirement |
+| [TASK-7](tasks/task-7%20-%20Nghiem-thu-capacity-va-atomicity-import-thuc.md) | Nghiệm thu capacity/atomicity DB/HTTP/end-to-end | To Do | TASK-4; các prerequisite runtime sẽ được TASK-4 tạo/liên kết | [#134](https://github.com/thienchi2109/lims-lite/issues/134) |
 
-TASK-1/2 đã hoàn tất; TASK-3 đang thực hiện prototype #114 và TASK-4 còn chờ TASK-3. Dependency trong từng file task giữ toàn bộ quan hệ, còn bảng này chỉ liệt kê các dependency chưa hoàn tất.
+TASK-1/2/3 đã hoàn tất trong phạm vi tương ứng; TASK-4 đủ điều kiện bắt đầu phân chia triển khai. Dependency trong từng file task giữ toàn bộ quan hệ, còn bảng này chỉ liệt kê các dependency chưa hoàn tất.
 
-TASK-3 có [bằng chứng prototype local ngày 2026-11-02](../docs/superpowers/specs/2026-11-02-import-capacity-evidence.md): root kiểm tra lại 6/6 self-check và 45 lượt benchmark. Chưa có bằng chứng commit DB/home server hoặc cap sản phẩm; chưa hoàn tất task.
+Quyết định người dùng 2026-11-02: chỉ giới hạn nghiệp vụ file **<10.000.000 bytes**, bỏ count caps khách hàng/mẫu/chỉ định và giữ phòng vệ tài nguyên kỹ thuật. [Bằng chứng mới](../docs/superpowers/specs/2026-11-02-import-file-limit-evidence.md): root chạy lại 10/10 self-check và 54 trials local, scoped ESLint PASS, hai reviewer chấp nhận; [bằng chứng cũ](../docs/superpowers/specs/2026-11-02-import-capacity-evidence.md) cùng JSON cũ giữ làm lịch sử. TASK-3 đã review/sync; các AC DB/HTTP/end-to-end cũ chưa được tick thành đạt mà chuyển TASK-7/#134. TASK-4 không chờ TASK-7; phân chia trước, chọn generator/download template làm change implementation đầu tiên, rồi liên kết task runtime thực làm prerequisite TASK-7.
 
 Người dùng đã duyệt [hợp đồng template phiên bản 1](../docs/superpowers/specs/2026-11-01-excel-template-contract-design.md) ngày 2026-11-01 sau review và verification độc lập; quyết định #112 hoàn tất, chưa triển khai tính năng.
 
@@ -45,6 +46,7 @@ Phần import template/parser, preview, batch confirmation/provenance và UI ch�
 - Một người được xét nghiệm có nhiều mẫu; chỉ định thuộc mẫu. Đối sánh người có sẵn không âm thầm ghi đè danh tính.
 - Không lưu workbook nguồn hoặc toàn bộ payload chuẩn hóa; giữ metadata, hash, audit và ánh xạ cần thiết theo hợp đồng sẽ chốt ở TASK-2.
 - Không mở rộng sang đăng ký trước lấy mẫu, thêm chỉ định vào mẫu cũ hoặc ánh xạ cột Excel tùy ý.
+- File <10.000.000 bytes, không có count caps nghiệp vụ; workbook vẫn phải hợp lệ và vượt resource guards thì từ chối toàn bộ.
 
 ## Cập nhật thủ công
 

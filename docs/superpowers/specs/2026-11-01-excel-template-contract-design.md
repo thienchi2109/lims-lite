@@ -160,8 +160,8 @@ Không tự fill-null/overwrite address/BHYT/gender của client đã khớp. Pr
 
 Data-validation rule là metadata tạo dropdown, không phải formula cell. Rule chỉ được trỏ tới range nội bộ đã định nghĩa; không tính toán hay truy cập tài nguyên ngoài.
 Dropdown chỉ hỗ trợ nhập; paste có thể bỏ qua dropdown nên server vẫn validate mọi ô và mọi pair. Không thực thi macro, formula, external links hoặc đánh giá formula engine.
-Giới hạn file nén/giải nén, số dòng/ô/mẫu/chỉ định và thời gian xử lý phải được đo/chốt ở #114; số mục tiêu cũ không trở thành cap trong #112.
-File vượt resource limits đã được #114 chứng minh phải fail closed; không cắt bớt dòng hoặc trả preview thành công cho phần file đã đọc.
+Quyết định người dùng 2026-11-02 bổ sung #112: file phải **<10.000.000 bytes** (10 MB decimal), không có count caps khách hàng/mẫu/chỉ định; các số lượng thử nghiệm cũ chỉ là fixture lịch sử. Size pass không thay workbook validation hoặc bảo đảm mọi file dưới ngưỡng xử lý được.
+Giữ phòng vệ tài nguyên giải nén/ZIP entries/ô/thời gian/bộ nhớ; file vượt guard phải fail closed, không cắt bớt dòng hoặc trả preview một phần. #114/TASK-3 chỉ chứng minh prototype local; safe actual inflate và runtime/DB/HTTP được nghiệm thu sau triển khai ở [TASK-7](../../../backlog/tasks/task-7%20-%20Nghiem-thu-capacity-va-atomicity-import-thuc.md), theo [bằng chứng hiện hành](2026-11-02-import-file-limit-evidence.md).
 
 ## 8. Catalog drift: tạo template → preview → confirm
 
@@ -246,4 +246,4 @@ Hợp lệ: một client mới, hai mẫu mới, hai chỉ định; client chỉ
 Đã phân định: layout/cột/version, refs, ISO/Text/null, duplicates/missing refs, workbook restrictions, lỗi định vị tiếng Việt, matching reuse/create và catalog drift.
 Người dùng đã duyệt toàn bộ hợp đồng phiên bản 1 ở phần 2–9 ngày 2026-11-01, gồm ISO/Text-only, requiredness tạo mới, duplicate policy, descriptor và catalog drift. Xác nhận nguyên văn: “duyệt contract”.
 TASK-1 hoàn tất ở phạm vi quyết định; #112 lưu liên kết hợp đồng và kết quả review/verification. Quyết định này chưa phải bằng chứng implementation hoặc runtime.
-Việc promote OpenSpec và triển khai parser được theo dõi riêng; #113 nguyên tử/provenance, #114 cap đã đo, #115 phân chia OpenSpec vẫn là các task riêng.
+Việc promote OpenSpec và triển khai parser được theo dõi riêng; #113 nguyên tử/provenance, #114 prototype local theo quyết định 2026-11-02, #115 phân chia OpenSpec và TASK-7 nghiệm thu runtime là các task riêng.

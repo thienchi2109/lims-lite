@@ -26,7 +26,7 @@ function schemaModule(id) {
   return cache.get(id)
 }
 const { ResolveOrCreateClientInputSchema } = schemaModule('client')
-export const LIMITS = { clients: 500, samples: 1000, assignments: 20000, fileBytes: 10485760, inflatedBytes: 33554432, entries: 256, cells: 160000 }
+export const LIMITS = { fileBytes: 10000000, inflatedBytes: 33554432, entries: 256, cells: 160000 }
 const headers = {
   'Hướng dẫn': ['Hướng dẫn nhập mẫu tổng hợp'],
   'Thông tin template': ['Thuộc tính', 'Giá trị'],
@@ -40,7 +40,7 @@ const headers = {
 const fail = (code) => { throw new Error(code) }
 const assay = (index) => 'CT-' + String(index + 1).padStart(6, '0')
 
-export function makeFixture({ clients = 10, samples = 20, assignments = 100, fault, paddingChars = 0, entropy = false, extraEntries = 0 } = {}) {
+export function makeFixture({ clients = 10, samples = 20, assignments = 100, fault, paddingChars = 0, entropy = false, extraEntries = 0, fileBytes } = {}) {
   const data = Object.fromEntries(Object.entries(headers).map(([name, row]) => [name, [[...row]]]))
   data['Thông tin template'].push(...Object.entries({ template_id: 'lims-bulk-accession', template_version: '1', generated_at: '2026-11-02T00:00:00.000Z', compatibility_revision: '1', catalog_binding: 'SYNTHETIC-UNVERIFIED' }))
   data['Danh mục loại mẫu'].push(['LM-000001', 'Loại mẫu tổng hợp'])
@@ -73,12 +73,19 @@ export function makeFixture({ clients = 10, samples = 20, assignments = 100, fau
     for (let i = 0; i < extraEntries; i++) XLSX.CFB.utils.cfb_add(zip, 'synthetic-' + i + '.txt', Buffer.from('x'))
     buffer = XLSX.CFB.write(zip, { type: 'buffer', fileType: 'zip', compression: true })
   }
+  if (fileBytes !== undefined) {
+    // Valid ZIP comment preserves the generated XLSX; no arbitrary trailing padding.
+    const end = buffer.length - 22, commentBytes = fileBytes - buffer.length
+    if (!Number.isInteger(commentBytes) || commentBytes < 0 || commentBytes > 65535 || buffer.readUInt32LE(end) !== 0x06054b50) fail('FIXTURE_SIZE')
+    buffer = Buffer.concat([buffer, Buffer.alloc(commentBytes, 65)])
+    buffer.writeUInt16LE(commentBytes, end + 20)
+  }
   return buffer
 }
 
 // ZIP central-directory metadata only: not an adversarial ZIP/XML security validator.
 export function preflight(buffer, limits = LIMITS) {
-  if (buffer.length > limits.fileBytes) fail('FILE_LIMIT')
+  if (buffer.length >= limits.fileBytes) fail('FILE_LIMIT')
   let end = buffer.length - 22
   while (end >= Math.max(0, buffer.length - 65557) && buffer.readUInt32LE(end) !== 0x06054b50) end--
   if (end < 0 || end + 22 > buffer.length || buffer.readUInt32LE(end) !== 0x06054b50) fail('ZIP_INVALID')
@@ -130,7 +137,7 @@ export function validateWorkbook(workbook) {
     rows[name] = output
   }
   const clients = rows['Khách hàng'], samples = rows['Mẫu'], assignments = rows['Chỉ định']
-  for (const [key, values] of Object.entries({ clients, samples, assignments })) if (!values.length || values.length > LIMITS[key]) fail('COUNT_LIMIT')
+  if (!clients.length || !samples.length || !assignments.length) fail('EMPTY_BATCH')
   const clientRefs = new Map(), sampleRefs = new Map(), usedClients = new Set(), usedSamples = new Set(), pairs = new Set()
   const tempCode = /^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$/
   for (const [ref, name, dateOfBirth, type, identity, gender, phone, address, insurance, expiry] of clients) {
