@@ -19,10 +19,12 @@ Phase 2 chỉ đạt source gate; [evidence, canonical schemas và API handoff](
 
 ## 3. Phase 3 — Download endpoint và Vietnamese control, một PR/session source
 
-- [ ] 3.1 Chốt header placement theo user steering; RED tests server analyst authorization, binary XLSX response/filename/no-store, unavailable catalog/config và safe Vietnamese errors.
-- [ ] 3.2 Thêm authenticated binary download route, không base64 JSON/file cache hoặc business mutations; giữ client-mutation api-client convention nếu có mutation invocation.
-- [ ] 3.3 Thêm “Tải template Excel” ở proposed AccessionPageHeader /analyst/accession, giữ walkthrough, mobile wrap; accessible name/focus/pending/error và keyboard interaction tests.
-- [ ] 3.4 GREEN focused route/UI tests, typecheck/scoped lint/React checks thích hợp, OpenSpec strict; review no secrets/PII/payload logging và no retained generated workbook.
+- [x] 3.1 Chốt header placement theo user steering; RED tests server analyst authorization, binary XLSX response/filename/no-store, unavailable catalog/config và safe Vietnamese errors.
+- [x] 3.2 Thêm authenticated binary download route, không base64 JSON/file cache hoặc business mutations; giữ client-mutation api-client convention nếu có mutation invocation.
+- [x] 3.3 Thêm “Tải template Excel” ở proposed AccessionPageHeader /analyst/accession, giữ walkthrough, mobile wrap; accessible name/focus/pending/error và keyboard interaction tests.
+- [x] 3.4 GREEN focused route/UI tests, typecheck/scoped lint/React checks thích hợp, OpenSpec strict; review no secrets/PII/payload logging và no retained generated workbook.
+
+Phase 3 đạt source gate: [route/UI và RED→GREEN evidence](phase-3-source-evidence.md), **111/111** focused/immediate-blast-radius tests. OpenSpec **13/19**; Phase 4 vẫn **NOT RUN**, overall TASK-8 **In Progress**. Source/mocked requests không chứng minh deployed download/proxy/no-retention hoặc SQL/security runtime.
 
 ## 4. Phase 4 — Migration, security và rollout, session runtime riêng
 
