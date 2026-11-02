@@ -1,6 +1,6 @@
 # TASK-4 — Phân chia triển khai import Excel
 
-Trạng thái: **Done trong phạm vi phân chia, root review/verification và GitHub sync hoàn tất trên branch `docs/task-4-import-partition`; chưa merge main**. Tài liệu này phân chia implementation; chưa có importer production. Không mở PR hoặc merge trong session TASK-4.
+Trạng thái: **Done trong phạm vi phân chia, root review/verification và GitHub sync hoàn tất đã merge vào `main` từ commit `c2372c7`**. Tài liệu này phân chia implementation; chưa có importer production. Không mở PR hoặc merge trong session TASK-4.
 
 ## Quyết định giữ nguyên và evidence
 
