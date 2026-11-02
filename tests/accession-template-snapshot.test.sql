@@ -7,6 +7,8 @@
 \set ON_ERROR_STOP on
 SET client_encoding = 'UTF8';
 BEGIN;
+SET LOCAL lock_timeout = '3s';
+SET LOCAL statement_timeout = '30s';
 SET LOCAL search_path TO public, pg_temp;
 
 CREATE FUNCTION pg_temp.assert_template_snapshot(p_condition BOOLEAN, p_message TEXT)
