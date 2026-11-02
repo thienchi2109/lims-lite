@@ -1,9 +1,11 @@
 ## 1. Phase 1 — Snapshot authority, một PR/session source
 
-- [ ] 1.1 Recheck current catalog/schema/RPC/grants baseline và next unused migration number; không chỉnh applied SQL, không coi Git status là bằng chứng chưa áp dụng.
-- [ ] 1.2 Viết và chạy RED focused snapshot/authorization tests: consistent revision, code→UUID/generations, active configured pairs, no orphan/stale/duplicate, missing revision/pair và analyst-only.
-- [ ] 1.3 Thêm additive forward-only snapshot RPC migration với baseline/result assertions, RLS/grants/revokes/search_path và security impact; giữ legacy catalog API/publish policy.
-- [ ] 1.4 Chạy GREEN source contract tests và OpenSpec strict; lưu riêng SQL runtime checks chưa chạy. Handoff schema snapshot cho phase2, không claim deployed readiness.
+- [x] 1.1 Recheck current catalog/schema/RPC/grants baseline và next unused migration number; không chỉnh applied SQL, không coi Git status là bằng chứng chưa áp dụng.
+- [x] 1.2 Viết và chạy RED focused snapshot/authorization tests: consistent revision, code→UUID/generations, active configured pairs, no orphan/stale/duplicate, missing revision/pair và analyst-only.
+- [x] 1.3 Thêm additive forward-only snapshot RPC migration với baseline/result assertions, RLS/grants/revokes/search_path và security impact; giữ legacy catalog API/publish policy.
+- [x] 1.4 Chạy GREEN source contract tests và OpenSpec strict; lưu riêng SQL runtime checks chưa chạy. Handoff schema snapshot cho phase2, không claim deployed readiness.
+
+Phase 1 chỉ đạt source gate; [evidence và snapshot interface](phase-1-source-evidence.md). Migration 232 chưa áp dụng; SQL regression, run_security_tests() và runtime/concurrency gate **NOT RUN**. TASK-8 vẫn In Progress.
 
 ## 2. Phase 2 — Descriptor và generator, một PR/session source
 
