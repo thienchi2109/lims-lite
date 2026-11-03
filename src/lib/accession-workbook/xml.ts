@@ -2,6 +2,7 @@
 import 'server-only'
 import { SaxesParser, type SaxesTagNS } from 'saxes'
 import { WorkbookBudget } from './budget'
+import { WorkbookFailure } from './errors'
 
 export const SPREADSHEET_NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'
 export type XmlEvents = { open?: (tag: SaxesTagNS) => void; close?: (tag: SaxesTagNS) => void; text?: (value: string) => void }
@@ -60,6 +61,7 @@ export async function parseAccessionXml(bytes: Buffer, budget: WorkbookBudget, e
         parser.write(decoder.decode()).close()
         if (depth !== 0) invalid()
     } catch (error) {
+        if (error instanceof WorkbookFailure) throw error
         if (error instanceof Error && ['RESOURCE_LIMIT', 'XML_INVALID'].includes(error.message)) throw error
         invalid()
     } finally { budget.release(workingBytes) }

@@ -4,7 +4,7 @@ import * as XLSX from 'xlsx'
 import { createTemplateBinding } from './binding'
 import { BUSINESS_HEADERS, SHEET_NAMES, snapshotCatalogs, validateTemplateSnapshot } from './contract'
 
-const GUIDE = [
+export const GUIDE = [
     ['Hướng dẫn tiếp nhận mẫu bằng Excel — phiên bản 1'],
     ['Chỉ tiếp nhận mẫu mới đã lấy, chất lượng đạt. Không cập nhật mẫu cũ. Phải xem trước và xác nhận toàn bộ; có lỗi thì không nhập một phần.'],
     ['Giữ nguyên tám trang tính, tên trang, tên cột, thông tin template và danh mục. Nhập dữ liệu từ dòng 2 vào Khách hàng, Mẫu, Chỉ định; giữ tên cả các cột không bắt buộc.'],
@@ -72,7 +72,7 @@ export function generateAccessionTemplate(snapshotInput: unknown, signingConfig:
         sheet['!cols'] = rows[0].map(() => ({ wch: 24 }))
         XLSX.utils.book_append_sheet(workbook, sheet, SHEET_NAMES[index])
     })
-    const raw: unknown = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx', compression: true, WTF: true })
+    const raw: unknown = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx', bookSST: true, compression: true, WTF: true })
     if (!Buffer.isBuffer(raw)) throw new Error('ACCESSION_TEMPLATE_GENERATION_UNAVAILABLE')
     const output = formatBusinessColumns(raw)
     assertTemplateFileSize(output.length)

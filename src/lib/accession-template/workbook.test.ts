@@ -15,6 +15,17 @@ const headers = [
 const rows = (workbook: XLSX.WorkBook, name: string) => XLSX.utils.sheet_to_json<string[]>(workbook.Sheets[name], { header: 1, raw: true, defval: '' })
 
 describe('accession workbook XLSX round-trip', () => {
+    it('physically encodes literal cells as shared strings instead of cached-formula string cells', async () => {
+        const { generateAccessionTemplate } = await import('./workbook')
+        const archive = XLSX.CFB.read(generateAccessionTemplate(snapshotFixture(), signingFixture()), { type: 'buffer' })
+        expect(XLSX.CFB.find(archive, '/xl/sharedStrings.xml')).toBeTruthy()
+        for (let index = 1; index <= 8; index++) {
+            const xml = Buffer.from(XLSX.CFB.find(archive, `/xl/worksheets/sheet${index}.xml`).content).toString('utf8')
+            expect(xml).not.toMatch(/<c\b[^>]*\bt="str"/)
+            expect(xml).toMatch(/<c\b[^>]*\bt="s"/)
+        }
+    })
+
     it('emits exact eight visible sheets, literal headers/metadata/catalogs and no business rows', async () => {
         const { generateAccessionTemplate } = await import('./workbook')
         const { verifyTemplateBinding } = await import('./binding')
