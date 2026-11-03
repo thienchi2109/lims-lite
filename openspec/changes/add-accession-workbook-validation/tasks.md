@@ -12,10 +12,10 @@
 
 ## 3. Phase 3 — structural rows and handoff
 
-- [ ] 3.1 Retain failing normalization/date/identity/optional-field, case/duplicate/reference/orphan/pair, former-cap-plus-one and late-invalid-cell tests.
-- [ ] 3.2 Implement typed all-or-nothing in-memory structural output and complete Vietnamese errors without identity resolution, writes or retention.
-- [ ] 3.3 Run all focused parser/template tests, scoped lint, typecheck and OpenSpec strict; independently review source diff and leave TASK-10 interface/evidence handoff.
+- [x] 3.1 Retain failing normalization/date/identity/optional-field, case/duplicate/reference/orphan/pair, former-cap-plus-one and late-invalid-cell tests.
+- [x] 3.2 Implement typed all-or-nothing in-memory structural output and complete Vietnamese errors without identity resolution, writes or retention.
+- [x] 3.3 Run all focused parser/template tests, scoped lint, typecheck and OpenSpec strict; independently review source diff and leave TASK-10 interface/evidence handoff.
 
 ## 4. Acceptance boundary
 
-- [ ] 4.1 Record source-only limitations and leave TASK-7 runtime capacity/upload/proxy acceptance and TASK-8 deferred 4.4/4.6 unchanged.
+- [x] 4.1 Record source-only limitations and leave TASK-7 runtime capacity/upload/proxy acceptance and TASK-8 deferred 4.4/4.6 unchanged.

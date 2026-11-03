@@ -184,4 +184,10 @@ describe('exact literal accession workbook', () => {
         const bytes = mutateWorkbook(workbookFixture(), { '/xl/sharedStrings.xml': xml => xml.replace('</sst>', '<si><t>_x0000_</t></si></sst>') })
         expect((await parseAccessionWorkbook(bytes, options())).ok).toBe(false)
     })
+
+    it('rejects unexpected literal content in package structural XML', async () => {
+        const { parseAccessionWorkbook } = await import('./workbook')
+        const bytes = mutateWorkbook(workbookFixture(), { '/xl/_rels/workbook.xml.rels': xml => xml.replace('</Relationships>', 'unexpected structural text</Relationships>') })
+        expect((await parseAccessionWorkbook(bytes, options())).ok).toBe(false)
+    })
 })

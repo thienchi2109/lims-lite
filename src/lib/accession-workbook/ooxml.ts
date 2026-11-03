@@ -27,7 +27,10 @@ export async function semanticXml(bytes: Buffer, budget: WorkbookBudget, grammar
             frame?.children.add(tag.local)
             stack.push({ name: tag.local, children: new Set() }); events.open?.(tag)
         },
-        text(value) { events.text?.(value) },
+        text(value) {
+            if (events.text) events.text(value)
+            else if (value.trim()) unsupported()
+        },
         close(tag) { events.close?.(tag); stack.pop() },
     })
 }
