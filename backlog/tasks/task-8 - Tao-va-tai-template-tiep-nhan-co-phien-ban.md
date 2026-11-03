@@ -4,7 +4,7 @@ title: Tạo và tải template tiếp nhận có phiên bản
 status: In Progress
 assignee: []
 created_date: '2026-11-02'
-updated_date: '2026-11-02'
+updated_date: '2026-11-03'
 labels: [excel-import, implementation]
 dependencies: [TASK-4]
 priority: high
@@ -45,3 +45,7 @@ Nguồn và thứ tự: [phân chia TASK-4](../../docs/superpowers/specs/2026-11
 [Runtime evidence](../../openspec/changes/add-versioned-accession-template/phase-4-runtime-evidence.md): user authorize Phase 4, root review source/commands rồi worker vận hành trên home server. Migration 232 đã COMMIT và trở thành immutable; rollback-only SQL fixture PASS, security **36/36 PASS**, không còn dữ liệu fixture. App source `9d9f193` build/deploy healthy, runtime signing `task8-v1`; giữ image/ref rollback cũ. Root kiểm tra độc lập SQL/security, public health 200, template anonymous 401/private no-store và synthetic key/fresh-process/workbook checks trong container mới đều PASS. Scoped source checks **12/12 PASS**; không đổi dependency.
 
 OpenSpec **17/19**, tasks 4.1/4.2/4.3/4.5 đạt; **4.4/4.6 và AC #5–6 vẫn INCOMPLETE** vì chưa có legitimate analyst session để kiểm thử binary download thành công qua app/proxy, success headers/workbook/current binding và deployed no-retention. Không coi anonymous denial hoặc synthetic harness là bằng chứng gate này. TASK-8/#136 giữ **In Progress/OPEN**; chưa promote TASK-9. Expanded SQL matrix/concurrency và whole-importer acceptance không được claim PASS.
+
+## Quyết định defer — 2026-11-03
+
+Người dùng yêu cầu defer hai mục OpenSpec **4.4/4.6** và sẽ tự kiểm tra sau. Phần authenticated binary download/workbook/binding/success headers/no-retention của 4.4 được giao người dùng kiểm tra; exit review còn lại của 4.6 chờ kết quả đó. AC #5–6 giữ unchecked, **DEFERRED / chưa nghiệm thu**, không chuyển thành PASS. OpenSpec vẫn **17/19**, TASK-8/#136 **In Progress/OPEN**. Không tiếp tục yêu cầu tài khoản/phiên analyst; tiếp nhận kết quả khi người dùng quay lại. TASK-9 chưa bắt đầu.

@@ -1,7 +1,8 @@
 # Phase 4 runtime evidence — 2026-11-02 UTC
 
-Status: **INCOMPLETE**. Source/review, SQL, deployed anonymous-denial and
-synthetic runtime gates **PASS**; authenticated download gate **INCOMPLETE**.
+Status: **DEFERRED by user — 2026-11-03**. Source/review, SQL, deployed anonymous-denial and
+synthetic runtime gates **PASS**; authenticated download and final exit review
+remain unverified, with user verification deferred until later.
 User authorized Phase 4 operations
 in this session; root reviewed the concrete commands before runtime mutation.
 All Docker/PostgreSQL operations below ran through BatchMode SSH on
@@ -162,3 +163,13 @@ download the binary, inspect the actual workbook and signed/current authority,
 verify success-response `private, no-store`, and verify no retained workbook or
 business/Storage writes. Do not substitute forged cookies, service-role auth,
 or the synthetic harness for that gate.
+
+## User deferral — 2026-11-03
+
+The user explicitly deferred the two remaining TASK-8 items and will perform
+the manual verification later. Tasks **4.4/4.6** remain unchecked: the user
+owns the authenticated download/no-retention check; final exit review awaits
+that result. Do not continue requesting analyst credentials or a session.
+This decision records **DEFERRED**, not PASS or completed acceptance: progress
+remains **17/19**, TASK-8/#136 stays **In Progress/OPEN**. Existing runtime
+evidence is unchanged; TASK-9 has not started.
