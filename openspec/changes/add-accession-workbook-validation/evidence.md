@@ -75,3 +75,7 @@ Import `validateAccessionWorkbook` and `ValidatedAccessionWorkbook` from `src/li
 - Root inspected each source phase and final diff. Independent spec review cleared its singleton/Unicode findings and the final structural-XML change; standards review found no actionable issue. The minor repeated-diagnostic finding was fixed with local validator guards and a retained RED→GREEN regression.
 - Source exit accepted: OpenSpec **10/10**, Backlog TASK-9 **5/5**. Reviewable source checkpoints are `0e06bbe` (Phase 1), `b9c4301` (Phase 2), followed by Phase 3 integration. No full test suite, deployment, database test or production-capacity claim is implied by these focused source gates.
 - TASK-8 remains **17/19, 4.4/4.6 DEFERRED**. TASK-10 is not started; the consumer interface above is its handoff. TASK-7 retains runtime acceptance.
+
+## Subsequent authorized application rollout
+
+At 2026-11-03 02:48 UTC, the user-authorized app rollout built source `00d5389` on the home server and activated its new image. [Rollout evidence and manual-test limits](home-server-rollout-2026-11-03.md). This updates the template generator; no import upload/preview/confirm surface exists yet. TASK-8 deferred gates and TASK-7 acceptance remain open.

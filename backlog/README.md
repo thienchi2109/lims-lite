@@ -49,6 +49,8 @@ Phase 4 được user authorize ngày 2026-11-02: migration 232 COMMIT, rollback
 
 ## Phạm vi đã chốt
 
+Rollout 2026-11-03 02:48 UTC: app source `00d5389` đã build/deploy trên home server, health/public smoke PASS theo [evidence](../openspec/changes/add-accession-workbook-validation/home-server-rollout-2026-11-03.md). Người dùng hiện chỉ test được tải template; parser chưa nối upload/preview/confirm UI/API. TASK-8 4.4/4.6 vẫn DEFERRED và TASK-7 runtime acceptance chưa đạt.
+
 - Chỉ tiếp nhận mẫu mới đã lấy và đạt chất lượng, qua template `.xlsx` có phiên bản do LIMS tạo.
 - Bắt buộc preview; chỉ analyst được xác nhận; có lỗi thì từ chối toàn bộ lô.
 - Một người được xét nghiệm có nhiều mẫu; chỉ định thuộc mẫu. Đối sánh người có sẵn không âm thầm ghi đè danh tính.
