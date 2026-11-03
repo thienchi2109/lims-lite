@@ -34,3 +34,7 @@ User giao worker triển khai theo checkpoint an toàn; root điều phối và 
 ## Checkpoint 1 — Phase 1 source, 2026-11-03
 
 Worker `gpt-6.1-sol/high` hoàn tất adapter + typed RPC wrapper và migration 233 chỉ đọc, dùng normalization/resolver canonical v2 với guard cùng batch theo nhóm. Root review độc lập, SPEC PASS, STANDARDS không finding; root chạy **222 tests PASS**, ESLint/typecheck/OpenSpec strict PASS. [Evidence](../../openspec/changes/add-accession-preview-commitment/evidence.md). Giữ SQL behavioral fixtures để chạy sau authorization riêng; migration/SQL/security chưa thực thi nên AC #1 chưa tick đầy đủ. Dừng ở checkpoint source này; Phase 2 canonical hash là bước tiếp theo, chưa release. Không deploy hoặc mở upload/preview UI.
+
+## Checkpoint 2 — Phase 2 source, 2026-11-03
+
+User release Phase 2; worker `gpt-6.1-sol/high` hoàn tất `accession-intent-v1` và SHA-256 theo golden vector đã duyệt. Hash dùng normalized input, UTF-8 byte sort và graph lồng nhau giữ multiplicity; không phụ thuộc ref/thứ tự/UUID/outcome/display state. Root review độc lập, SPEC PASS, STANDARDS không finding; root chạy **274 tests PASS**, ESLint/typecheck/OpenSpec strict PASS. SQL parity fixtures độc lập đã viết nhưng **NOT RUN / INCOMPLETE**, nên AC #2 vẫn chưa tick đầy đủ. Không sửa migration, không vận hành DB/deploy. Dừng ở checkpoint source này; Phase 3 durable commitment/TTL chưa release. [Evidence](../../openspec/changes/add-accession-preview-commitment/evidence.md).

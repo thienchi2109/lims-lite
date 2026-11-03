@@ -1,4 +1,4 @@
-# TASK-10 Phase 1 source evidence
+# TASK-10 source evidence
 
 Baseline: `c7c6806`; Phase 1 source-only release after root independently verified checkpoint 0 strict OpenSpec validation. No Phase 2–4 release. No SQL/database/Docker/SSH execution, deployment, commit or push by the worker.
 
@@ -39,3 +39,31 @@ Checkpoint 1 is accepted as **SOURCE ONLY**. Phase 2 canonical hashing, Phase 3 
 ## Current boundary
 
 Application/static source tests do not execute SQL, prove canonical SQL parity, RLS/security behavior, restart durability or full AC1. Retained SQL fixtures must run only in the separately authorized home-server session. Runtime SQL/security acceptance: **INCOMPLETE**.
+
+## Phase 2 — source release and RED→GREEN
+
+Root released Phase 2 from verified clean/pushed `d1823898ebe8f3e293a4ae92449b5323a1eeff21`; the unreleased Phase 2 statement in the historical Phase 1 record above applied at that earlier checkpoint. Phase 3/4 remain unreleased. No database/SSH/Docker/deployment/dependency/commit/push operations by the worker; migration 233 is unchanged.
+
+`rtk npm exec -- vitest run src/lib/accession-preview/intent.test.ts` — before implementation: exit 1 / **24 failed assertions**, no collection failure, for the missing canonicalizer. After implementation and replacement of temporary missing-module loading with ordinary imports: exit 0 / **24 passed**.
+
+New `intent.ts` consumes only Phase 1 normalized input and nested graph references. It encodes each sortable value once before comparison, uses Buffer.compare, preserves identical sample multiplicity and all graph edges, and returns canonicalJson/canonicalizationVersion/normalizedPayloadHash without mutating inputs. One-line export of the existing PlannedClient type is the only Phase 1 production change.
+
+Golden JSON bytes/hash match the approved `090da05ce3b97394845d98b5d3fde180f150b3d452b5f067155466859a4e908e` vector. The shared named unicode-control vector is 239 UTF-8 bytes with digest `6ef396284f59ca65aa652936439faffc4406111fb34f3fa99de59a8bbfc72b5d`; it includes U+E000 versus U+10000 ordering, quote/backslash/control escapes and literal U+2028/U+2029. Tests also retain create→reuse stability, significant supplied optional input versus ignored display state, metadata/ref/order independence, distinct graph rebind changes, identical-node permutation, surrogate rejection and graph/plan consistency failures.
+
+`rtk npm exec -- vitest run src/lib/accession-preview src/lib/client-resolution src/lib/accession-workbook src/lib/accession-template tests/accession-preview-clients-migration.test.ts tests/accession-template-snapshot-migration.test.ts tests/client-resolution-contracts.test.ts` — exit 0 / **15 files, 255 tests passed**.
+
+`rtk npm exec -- eslint src/lib/accession-preview/intent.ts src/lib/accession-preview/intent.test.ts src/lib/accession-preview/clients.ts` — exit 0.
+
+`rtk npm run typecheck` — exit 0. `rtk proxy openspec validate add-accession-preview-commitment --strict` — exit 0, valid. `rtk git diff --check` — exit 0; separate new-file trailing-whitespace inspection clean. Source sizes: intent.ts 67 lines, intent.test.ts 147, parity SQL 105.
+
+`tests/accession-preview-canonicalization.sql` retains independent PostgreSQL tuple-array serialization, explicit UTF-8 byte sorting and native sha256 checks against the same named fixed vectors, plus SQL normalizer, nested ordering/multiplicity/edge checks. All helpers are pg_temp and the fixture rolls back; there is no production helper/migration. **This SQL has NOT RUN.** Application success and matching expected constants do not prove cross-runtime SQL/application parity. Phase 1 SQL/security and Phase 2 parity acceptance remain **INCOMPLETE** until an authorized home-server session executes the retained fixtures.
+
+Phase 2 production/test source frozen after root and independent spec/standards reviews. No Phase 3/4 or full TASK-10 completion claim.
+
+## Root checkpoint 2 acceptance — 2026-11-03
+
+Root independently reviewed the canonicalizer and SQL fixture. SPEC PASS; STANDARDS no actionable findings. Golden bytes/hash, literal Unicode/control escaping, UTF-8 sorting, nested graph/multiplicity, create→reuse stability, optional input significance and fail-closed graph checks match the approved contract. No historical migration, dependency or runtime configuration changed.
+
+At 07:56 UTC root ran the worker's Phase 1+2 command with `src/app/api/accession/template/route.test.ts` added: **16 files / 274 tests PASS**. Root also reran scoped ESLint, `rtk npm run typecheck`, `rtk proxy openspec validate add-accession-preview-commitment --strict --no-interactive` and diff checks: all PASS. The approved golden hash was separately recomputed with Node stdlib before implementation review.
+
+Checkpoint 2 is accepted as **SOURCE ONLY**. SQL canonicalization fixtures and Phase 1 migration/security fixtures remain **NOT RUN / INCOMPLETE**; no SQL/application runtime parity, deployment or whole-import acceptance is claimed. Next checkpoint is Phase 3 durable commitments/TTL; user release is still pending. TASK-10/#138 remains OPEN/In Progress.

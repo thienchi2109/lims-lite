@@ -29,10 +29,10 @@ Files: create `src/lib/accession-preview/client-contract.ts`, `clients.ts`, `cli
 
 Files: create `src/lib/accession-preview/intent.ts` and `intent.test.ts`; add `tests/accession-preview-canonicalization.sql` fixtures, extending SQL bridge source only through a new forward-only migration if required.
 
-- [ ] 2.1 Obtain explicit Phase 2 release and review exact normalized input tuple and SQL/application fixture boundary.
-- [ ] 2.2 Write retained tests for the approved golden SHA-256; UTF-8 byte ordering/Unicode/control escaping/null/unpaired-surrogate rules; reference/order/filename independence; identical sample multiplicity; changed client/sample/assignment edges; same hash before/after create→reuse; normalized-input optional fields remaining significant. Run `rtk npm exec -- vitest run src/lib/accession-preview/intent.test.ts` and capture RED.
-- [ ] 2.3 Implement exact nested tuple serialization and node:crypto hashing; exclude binding/outcome/UUID metadata and preserve graph/multiplicity. Add SQL normalization/application canonical-byte parity fixtures; no prototype defaults or JSONB-text serialization.
-- [ ] 2.4 Run Phase 1/2 focused tests, scoped ESLint, `rtk npm run typecheck` and strict OpenSpec validation. Record source GREEN and SQL parity runtime INCOMPLETE; stop for root and independent review before integration/next release.
+- [x] 2.1 Root released Phase 2 source only from clean/pushed `d1823898ebe8f3e293a4ae92449b5323a1eeff21` and approved normalized input tuple / SQL fixture boundary.
+- [x] 2.2 Retain 24 canonicalization tests; actual RED exit 1 / 24 failed assertions before implementation, then GREEN 24/24. Covers golden bytes/hash, UTF-8 ordering/control escapes/null/surrogates, references/metadata/order invariance, multiplicity, changed distinct graph edges, create→reuse stability, input versus display and malformed graph/plan rejection.
+- [x] 2.3 Implement exact nested tuples with native byte sorting/hashing, no input mutation or normalization approximation. Retain independent fixture-local SQL serialization/normalization/byte/hash vectors in `tests/accession-preview-canonicalization.sql`; no production SQL/migration changes. SQL parity NOT RUN / INCOMPLETE.
+- [x] 2.4 Worker Phase 1+2 focused suite 15 files/255 tests PASS; root independently ran 16 files/274 tests including template API coverage. Scoped ESLint, typecheck, OpenSpec strict and diff/whitespace checks PASS. Root source review accepted; independent SPEC PASS and STANDARDS no findings. Evidence in evidence.md. SQL parity remains NOT RUN / INCOMPLETE; Phase 3/4 remain unreleased.
 
 ## 3. Phase 3 — durable commitments (one PR/session)
 

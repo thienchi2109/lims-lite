@@ -7,7 +7,7 @@ import type { ValidatedAccessionWorkbook } from '@/lib/accession-workbook/valida
 import { BUSINESS_HEADERS } from '@/lib/accession-template/contract'
 import { PreviewClientRowSchema, type PreviewClientRow } from './client-contract'
 
-type PlannedClient = PreviewClientRow & {
+export type PlannedClient = PreviewClientRow & {
     disposition: 'create' | 'reuse'
     clientId: string | null
     callerContext: ValidatedAccessionWorkbook['clients'][number]['callerContext']
