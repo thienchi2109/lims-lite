@@ -1,7 +1,7 @@
 ---
 id: TASK-10
 title: Tạo preview bất biến và canonical hash
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-11-02'
 labels: [excel-import, implementation]
@@ -13,7 +13,7 @@ priority: high
 
 Issue: https://github.com/thienchi2109/lims-lite/issues/138 (sub-issue #107).
 
-OpenSpec dự kiến `add-accession-preview-commitment` (chưa tạo). Nguồn: [mapping](../../docs/superpowers/specs/2026-11-02-import-implementation-partition.md), #112 §§4–6,8 và #113 §§2–4,6–8.
+OpenSpec: [add-accession-preview-commitment](../../openspec/changes/add-accession-preview-commitment/proposal.md). Nguồn: [mapping](../../docs/superpowers/specs/2026-11-02-import-implementation-partition.md), #112 §§4–6,8 và #113 §§2–4,6–8.
 
 Preview chỉ giữ durable commitment/safe metadata; full normalized payload và file chỉ được xử lý trong bộ nhớ request/browser. Không lưu workbook vào DB/Storage/temp app file/cache/log; không dùng legacy matching hoặc TASK-5/6 làm dependency.
 
@@ -26,3 +26,11 @@ Preview chỉ giữ durable commitment/safe metadata; full normalized payload v�
 - [ ] #5 Source gate từng phase: focused RED→GREEN identity/drift/hash/immutability/expiry/authorization/audit tests, migration contract checks, scoped lint/typecheck/OpenSpec strict. Runtime session riêng sau authorization: apply committed migration qua home-server SSH/Docker, SQL tests + run_security_tests(), rollout rồi preview/restart/owner-isolation smoke. Ghi source/runtime evidence riêng.
 - [ ] #6 Exit: preview commitment tồn tại qua restart, không business writes, không retained source/payload; TASK-11 dùng commitment để xác nhận cùng bytes và normalized intent. Purge/recovery workers chưa được coi hoàn tất trước TASK-12; TASK-7 giữ nghiệm thu stress/TTL/crash thật.
 <!-- AC:END -->
+
+## Checkpoint 0 — 2026-11-03
+
+User giao worker triển khai theo checkpoint an toàn; root điều phối và review. Proposal/design/spec/tasks đã qua OpenSpec strict và root review; reviewer độc lập xác nhận guard cùng batch phù hợp canonical v2. Root release **Phase 1 source only**: adapter và SQL bridge chỉ đọc, dùng canonical normalization ở PostgreSQL; migration mới chưa áp dụng. Worker dừng sau GREEN để root/spec/standards review trước phase tiếp theo. Chưa có hash, durable preview hoặc preview API; SQL/security/runtime vẫn **INCOMPLETE**, TASK-8 deferred gates và TASK-7 giữ nguyên.
+
+## Checkpoint 1 — Phase 1 source, 2026-11-03
+
+Worker `gpt-6.1-sol/high` hoàn tất adapter + typed RPC wrapper và migration 233 chỉ đọc, dùng normalization/resolver canonical v2 với guard cùng batch theo nhóm. Root review độc lập, SPEC PASS, STANDARDS không finding; root chạy **222 tests PASS**, ESLint/typecheck/OpenSpec strict PASS. [Evidence](../../openspec/changes/add-accession-preview-commitment/evidence.md). Giữ SQL behavioral fixtures để chạy sau authorization riêng; migration/SQL/security chưa thực thi nên AC #1 chưa tick đầy đủ. Dừng ở checkpoint source này; Phase 2 canonical hash là bước tiếp theo, chưa release. Không deploy hoặc mở upload/preview UI.

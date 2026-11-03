@@ -11,6 +11,8 @@ import {
   type ResolveOrCreateClientInput,
 } from '@/types'
 import { z } from 'zod'
+import type { ValidatedClient } from '@/lib/accession-workbook/clients'
+import { PreviewClientInputSchema, PreviewClientRowSchema, type PreviewClientRow } from '@/lib/accession-preview/client-contract'
 
 const SAFE_RESOLUTION_ERROR =
   'Không thể phân giải khách hàng. Vui lòng thử lại.'
@@ -149,6 +151,42 @@ export async function resolveOrCreateClientV2(
     })
 
     return error ? { error: SAFE_RESOLUTION_ERROR } : mapRpcRows(data)
+  } catch {
+    return { error: SAFE_RESOLUTION_ERROR }
+  }
+}
+
+// Read-only batch bridge: raw caller references never cross the SQL boundary.
+export async function resolveAccessionPreviewClientsV1(
+  clients: ValidatedClient[],
+): Promise<{ data: PreviewClientRow[] } | { error: string }> {
+  const auth = await requireRole('analyst')
+  if (isAuthError(auth)) return { error: SAFE_RESOLUTION_FORBIDDEN }
+  const rows = new Set<number>()
+  const inputs = []
+  for (const client of clients) {
+    const { name, dateOfBirth, governmentIdentityType = null, governmentIdentityValue = null,
+      gender, phone = null, address = null, healthInsuranceNum = null, expiryDate = null } = client
+    const row = client.callerContext?.row
+    const parsed = PreviewClientInputSchema.safeParse({ name, dateOfBirth, governmentIdentityType, governmentIdentityValue,
+      gender, phone, address, healthInsuranceNum, expiryDate })
+    if (!parsed.success || !Number.isSafeInteger(row) || row <= 0 || rows.has(row)) return { error: SAFE_RESOLUTION_ERROR }
+    rows.add(row)
+    inputs.push({ row, ...parsed.data })
+  }
+  if (!inputs.length) return { error: SAFE_RESOLUTION_ERROR }
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase.rpc('resolve_accession_preview_clients_v1', { p_clients: inputs })
+    const parsed = z.array(PreviewClientRowSchema).safeParse(data)
+    if (error || !parsed.success || parsed.data.length !== inputs.length) return { error: SAFE_RESOLUTION_ERROR }
+    const seen = new Set<number>()
+    for (const result of parsed.data) {
+      if (!rows.has(result.row) || seen.has(result.row) || result.issues.some(issue =>
+        issue.relatedRows.some(related => !rows.has(related) || related === result.row))) return { error: SAFE_RESOLUTION_ERROR }
+      seen.add(result.row)
+    }
+    return { data: parsed.data }
   } catch {
     return { error: SAFE_RESOLUTION_ERROR }
   }
