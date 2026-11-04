@@ -67,3 +67,9 @@ Root independently reviewed the canonicalizer and SQL fixture. SPEC PASS; STANDA
 At 07:56 UTC root ran the worker's Phase 1+2 command with `src/app/api/accession/template/route.test.ts` added: **16 files / 274 tests PASS**. Root also reran scoped ESLint, `rtk npm run typecheck`, `rtk proxy openspec validate add-accession-preview-commitment --strict --no-interactive` and diff checks: all PASS. The approved golden hash was separately recomputed with Node stdlib before implementation review.
 
 Checkpoint 2 is accepted as **SOURCE ONLY**. SQL canonicalization fixtures and Phase 1 migration/security fixtures remain **NOT RUN / INCOMPLETE**; no SQL/application runtime parity, deployment or whole-import acceptance is claimed. Next checkpoint is Phase 3 durable commitments/TTL; user release is still pending. TASK-10/#138 remains OPEN/In Progress.
+
+## Authorized SQL parity follow-up — 2026-11-04
+
+[Exact runtime evidence](phase-2-sql-parity-2026-11-04.md): user authorized Phase 2 parity; root streamed the committed fixture from `2fd0d5c` through home-server SSH/Docker psql. PostgreSQL 15.1/UTF8 executed all **10 SQL assertions PASS**, explicit `ROLLBACK`, no remaining fixture helpers and unchanged normalizer definitions. Root reran **24/24 application intent tests PASS**; golden/Unicode canonical bytes/hashes match. Current deployed security baseline **36/36 PASS**.
+
+This closes the previously unexecuted **Phase 2 parity vector gate only**. Migration 233 remains absent; Phase 1 SQL/security, Phase 3/4, rollout and full TASK-10 acceptance remain open. No migration application or deployment occurred.
