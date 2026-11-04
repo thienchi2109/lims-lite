@@ -73,3 +73,35 @@ Checkpoint 2 is accepted as **SOURCE ONLY**. SQL canonicalization fixtures and P
 [Exact runtime evidence](phase-2-sql-parity-2026-11-04.md): user authorized Phase 2 parity; root streamed the committed fixture from `2fd0d5c` through home-server SSH/Docker psql. PostgreSQL 15.1/UTF8 executed all **10 SQL assertions PASS**, explicit `ROLLBACK`, no remaining fixture helpers and unchanged normalizer definitions. Root reran **24/24 application intent tests PASS**; golden/Unicode canonical bytes/hashes match. Current deployed security baseline **36/36 PASS**.
 
 This closes the previously unexecuted **Phase 2 parity vector gate only**. Migration 233 remains absent; Phase 1 SQL/security, Phase 3/4, rollout and full TASK-10 acceptance remain open. No migration application or deployment occurred.
+
+## Phase 3 — released source checkpoint, 2026-11-04
+
+User dispatched worker `gpt-6.1-sol/high`; root reviewed the schema/lifecycle, service-role/current analyst/owner boundary, separate versioned HMAC key ring, database TTL/lease and transactional authority rechecks before implementation. Source scope only: no migration execution, production configuration or deployment.
+
+Worker captured meaningful RED with `rtk npm exec -- vitest run tests/accession-preview-commitment-migration.test.ts src/lib/accession-preview/server.test.ts`: exit 1, **2 files / 10 failed tests**, five missing migration contract assertions and five application behavior failures against an explicit unimplemented surface, without collection errors. An earlier harness collection failure was corrected before this retained RED.
+
+### GREEN and independent review
+
+Five feature files implement migration 234, minimal server orchestration and retained source/application/SQL fixtures. Known source SHA/size bind write-once after preparing allocation, counts remain null until validation/seal, and database time owns lease/30-minute TTL/finished_at. Full snapshot and canonical client decisions are transactionally rechecked under documented coarse SHARE locks. Only safe metadata/typed bindings/HMAC survive; identity recheck parameters remain transient.
+
+Independent SPEC PASS. STANDARDS found one P2: the privilege loop could change pre-existing same-name overloads. Worker added a fail-closed routine-name baseline and exact-signature security assertions; re-review found no remaining actionable issue. Root also inspected final schema/grants/lifecycle/audit/HMAC/lease and application/fixture diff. A naming clarification changed `descriptor_digest` to `template_claims_digest`: it commits to authenticated parser claims, while source SHA-256 binds the exact original descriptor/workbook bytes. These corrections retained an additional RED run (2 failed / 16 passed), then **18/18 affected tests PASS**.
+
+At 09:40 UTC, after the corrections, root independently ran:
+
+`rtk npm exec -- vitest run src/lib/accession-preview src/lib/client-resolution src/lib/accession-workbook src/lib/accession-template tests/accession-preview-clients-migration.test.ts tests/accession-template-snapshot-migration.test.ts tests/client-resolution-contracts.test.ts tests/accession-preview-commitment-migration.test.ts src/app/api/accession/template/route.test.ts`
+
+Exit 0: **18 files / 292 tests PASS**, including 12 server behavior tests with real parser/planner and mocked SQL transports, plus 6 migration source checks. The source checks do not execute SQL.
+
+`rtk npm exec -- eslint src/lib/accession-preview/server.ts src/lib/accession-preview/server.test.ts tests/accession-preview-commitment-migration.test.ts` — exit 0, no warnings.
+
+`rtk npm run typecheck` — exit 0. `rtk proxy openspec validate add-accession-preview-commitment --strict --no-interactive` — exit 0, valid. `rtk git diff --check` — exit 0.
+
+New application/test files are 146/148/38/213 lines; migration 234 is 367 lines and keeps its single-purpose schema, baseline, security, audit and final verification atomic. No dependency, historical migration or deployment configuration changed.
+
+### Root checkpoint 3 acceptance and limits
+
+**SOURCE ONLY accepted**, with independent SPEC/STANDARDS/root review. TASK-10/#138 remains OPEN/In Progress; AC #3 and the runtime exit criteria remain unchecked. Phase 4 has not been released.
+
+Migrations **233/234 are unapplied**; all new SQL behavioral/RLS/security fixtures are **NOT RUN / INCOMPLETE**. Exact database clock equality, real concurrent heartbeat/recovery races, restart, retention and TTL acceptance require separately authorized home-server execution and `run_security_tests()`. The prior deployed 36/36 baseline does not certify either new migration. No DB operation or deployment occurred in this phase.
+
+Runtime must provision separate `ACCESSION_PREVIEW_BINDING_KEY_ID`/`ACCESSION_PREVIEW_BINDING_KEYS` and measured `ACCESSION_PREVIEW_POLICY` (evidence ID, finite lease/heartbeat and parser resources); absent/invalid policy or key fails closed, with no production defaults or secrets introduced. TASK-7 must benchmark coarse SHARE-lock contention; Phase 4 must integrate request cancellation/timeouts with heartbeat termination. TASK-11 owns atomic success; TASK-12 owns recovery/purge. TASK-8 deferred download gates remain deferred.

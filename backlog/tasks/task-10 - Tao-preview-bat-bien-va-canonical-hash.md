@@ -42,3 +42,9 @@ User release Phase 2; worker `gpt-6.1-sol/high` hoàn tất `accession-intent-v1
 ## Phase 2 SQL parity — 2026-11-04
 
 User authorize chạy parity; root chạy đúng committed fixture `2fd0d5c` trên PostgreSQL 15.1/UTF8 ở home server: **10/10 SQL assertions PASS**, khớp golden/Unicode bytes/hash phía ứng dụng (**24/24 tests PASS**). Fixture `ROLLBACK`, không còn helper tạm, normalizers không đổi; deployed security baseline **36/36 PASS**. [Runtime evidence](../../openspec/changes/add-accession-preview-commitment/phase-2-sql-parity-2026-11-04.md). AC #2 đạt; migration 233/Phase 1 SQL vẫn chưa chạy, không deploy, Phase 3/4 và full TASK-10 vẫn mở.
+
+## Checkpoint 3 — Phase 3 source, 2026-11-04
+
+User dispatch worker `gpt-6.1-sol/high`; root điều phối/review và chấp nhận **SOURCE ONLY**. Migration 234 + server orchestration giữ metadata/typed bindings/HMAC, source SHA/size write-once, owner/current analyst/service-only RPC, DB TTL30phút/lease/finished_at và transactional catalog/client recheck, không business writes hoặc lưu payload. Root tự chạy **18 files / 292 tests PASS**, ESLint/typecheck/OpenSpec strict/diff-check PASS. SPEC PASS; STANDARDS P2 về overload privilege đã sửa và re-review không finding. [Evidence](../../openspec/changes/add-accession-preview-commitment/evidence.md).
+
+AC #3 vẫn chưa tick đầy đủ: migrations 233/234 và SQL/RLS/security/restart/TTL/runtime **NOT RUN / INCOMPLETE**; không deploy. Policy/key production chưa provision, thiếu cấu hình thì fail closed; coarse SHARE locks chờ TASK-7 benchmark. Phase 4 chưa release, TASK-11/12/13 và TASK-8 deferred gates giữ nguyên.
