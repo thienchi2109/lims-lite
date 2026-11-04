@@ -11,12 +11,14 @@ import { WorkbookBudget } from '@/lib/accession-workbook/budget'
 import { resolveAccessionPreviewClients, type PlannedClient } from './clients'
 import { PreviewClientRowSchema } from './client-contract'
 import { canonicalizeAccessionIntent } from './intent'
+import { awaitPreviewOperation, checkPreviewDeadline } from './cancellation'
 
 const positive = z.number().int().positive().safe()
 const keyId = z.string().regex(/^[A-Za-z0-9_-]{1,32}$/)
 const configSchema = z.strictObject({
     activeKeyId: keyId, keys: z.record(keyId, z.string().regex(/^[a-fA-F0-9]{64}$/)),
     policy: z.strictObject({ evidenceId: z.string().regex(/^[A-Za-z0-9._:/-]{1,160}$/), leaseMs: positive, heartbeatMs: positive,
+        request: z.strictObject({ maxBytes: positive.min(10000001), maxResponseBytes: positive.min(512), timeoutMs: positive.max(2147483647) }),
         resources: z.strictObject({ maxInflatedBytes: positive, maxEntries: positive, maxCells: positive, maxXmlDepth: positive,
             maxXmlTextBytes: positive, maxRetainedBytes: positive, maxElapsedMs: positive }) }),
 }).refine(c => Object.hasOwn(c.keys, c.activeKeyId) && c.policy.heartbeatMs < c.policy.leaseMs
@@ -72,46 +74,53 @@ function buildBindings(batchId: string, workbook: ValidatedAccessionWorkbook, cl
 
 const batchSchema = z.object({ id: z.string().uuid(), lease_token: z.string().uuid(), lease_generation: positive,
     preview_created_at: z.string().nullable(), expires_at: z.string().nullable() })
-const sealedSchema = z.object({ id: z.string().uuid(), preview_created_at: z.string(), expires_at: z.string() })
+const timestamp = z.string().datetime({ offset: true }).transform(value => new Date(value).toISOString()).refine(value => value.length === 24)
+const sealedSchema = z.object({ id: z.string().uuid(), preview_created_at: timestamp, expires_at: timestamp })
 
 // Trusted server caller only. Phase 4 owns multipart/HTTP; no body-supplied actor/config.
-export async function prepareAccessionPreview(source: Uint8Array, retryOf?: string) {
-    const actor = await requireRole('analyst')
+export async function prepareAccessionPreview(source: Uint8Array, retryOf?: string, signal: AbortSignal = new AbortController().signal, deadline?: number) {
+    const startedAt = performance.now()
+    const wait = <T>(operation: PromiseLike<T>) => awaitPreviewOperation(operation, signal, deadline)
+    const actor = await wait(requireRole('analyst'))
     if (isAuthError(actor) || actor.role !== 'analyst') throw new Error('ACCESSION_PREVIEW_FORBIDDEN')
     if (!(source instanceof Uint8Array) || source.byteLength < 1 || source.byteLength >= 10000000) throw new Error('ACCESSION_PREVIEW_SOURCE_INVALID')
     if (retryOf !== undefined) z.string().uuid().parse(retryOf)
     const config = readPreviewConfiguration(), signing = readTemplateSigningConfig()
-    const admin = createAdminClient(), user = await createClient()
-    const start = await admin.rpc('start_accession_preview', { p_actor: actor.id, p_retry_of: retryOf ?? null,
-        p_lease_ms: config.policy.leaseMs, p_policy_evidence: config.policy.evidenceId })
+    deadline ??= startedAt + config.policy.request.timeoutMs
+    checkPreviewDeadline(signal, deadline)
+    const admin = createAdminClient(), user = await wait(createClient())
+    const start = await wait(admin.rpc('start_accession_preview', { p_actor: actor.id, p_retry_of: retryOf ?? null,
+        p_lease_ms: config.policy.leaseMs, p_policy_evidence: config.policy.evidenceId }).abortSignal(signal))
     if (start.error) throw new Error('ACCESSION_PREVIEW_UNAVAILABLE')
     const batch = batchSchema.parse(start.data)
     const fence = { p_actor: actor.id, p_batch: batch.id, p_token: batch.lease_token, p_generation: batch.lease_generation }
     let heartbeatError = false, pending: Promise<void> | undefined
     const heartbeat = async () => {
-        try { const result = await admin.rpc('heartbeat_accession_preview', fence); if (result.error) heartbeatError = true }
+        try { const result = await wait(admin.rpc('heartbeat_accession_preview', fence).abortSignal(signal)); if (result.error) heartbeatError = true }
         catch { heartbeatError = true }
     }
     const timer = setInterval(() => { if (!pending) pending = heartbeat().finally(() => { pending = undefined }) }, config.policy.heartbeatMs)
-    const stopHeartbeat = async () => { clearInterval(timer); await pending; if (heartbeatError) throw new Error('ACCESSION_PREVIEW_LEASE_STALE') }
+    const cancel = () => clearInterval(timer)
+    signal.addEventListener('abort', cancel, { once: true })
+    const stopHeartbeat = async () => { clearInterval(timer); if (pending) await wait(pending); signal.throwIfAborted(); if (heartbeatError) throw new Error('ACCESSION_PREVIEW_LEASE_STALE') }
     try {
         const bytes = Buffer.from(source), sourceHash = sha256(bytes)
-        const sourceBinding = await admin.rpc('heartbeat_accession_preview', { ...fence, p_source_sha256: sourceHash, p_source_size: bytes.length })
+        const sourceBinding = await wait(admin.rpc('heartbeat_accession_preview', { ...fence, p_source_sha256: sourceHash, p_source_size: bytes.length }).abortSignal(signal))
         if (sourceBinding.error) throw new Error('ACCESSION_PREVIEW_LEASE_STALE')
-        const authority = await user.rpc('get_accession_template_snapshot')
+        const authority = await wait(user.rpc('get_accession_template_snapshot').abortSignal(signal))
         if (authority.error) throw new Error('ACCESSION_PREVIEW_AUTHORITY_CHANGED')
         const snapshot = validateTemplateSnapshot(authority.data)
-        const parsed = await validateAccessionWorkbook(bytes, { snapshot, signingConfig: signing, resources: config.policy.resources })
+        const parsed = await wait(validateAccessionWorkbook(bytes, { snapshot, signingConfig: signing, resources: config.policy.resources }))
         if (!parsed.ok) {
             await stopHeartbeat()
-            const rejected = await admin.rpc('finish_accession_preview', { ...fence, p_state: 'rejected', p_reason: 'WORKBOOK_INVALID' })
+            const rejected = await wait(admin.rpc('finish_accession_preview', { ...fence, p_state: 'rejected', p_reason: 'WORKBOOK_INVALID' }).abortSignal(signal))
             if (rejected.error) throw new Error('ACCESSION_PREVIEW_UNAVAILABLE')
             return { ok: false as const, batchId: batch.id, errors: parsed.errors }
         }
-        const workbook = parsed.value, plan = await resolveAccessionPreviewClients(workbook)
+        const workbook = parsed.value, plan = await wait(resolveAccessionPreviewClients(workbook, signal))
         if (!plan.ok) {
             await stopHeartbeat()
-            const rejected = await admin.rpc('finish_accession_preview', { ...fence, p_state: 'rejected', p_reason: 'CLIENT_INVALID' })
+            const rejected = await wait(admin.rpc('finish_accession_preview', { ...fence, p_state: 'rejected', p_reason: 'CLIENT_INVALID' }).abortSignal(signal))
             if (rejected.error) throw new Error('ACCESSION_PREVIEW_UNAVAILABLE')
             return { ok: false as const, batchId: batch.id, errors: plan.errors }
         }
@@ -120,8 +129,16 @@ export async function prepareAccessionPreview(source: Uint8Array, retryOf?: stri
         const clientInputs = workbook.clients.map(client => ({ row: client.callerContext.row, name: client.name, dateOfBirth: client.dateOfBirth,
             governmentIdentityType: client.governmentIdentityType, governmentIdentityValue: client.governmentIdentityValue,
             gender: client.gender, phone: client.phone, address: client.address, healthInsuranceNum: client.healthInsuranceNum, expiryDate: client.expiryDate }))
+        const counts = { clients: plan.clients.length, samples: workbook.samples.length, assignments: workbook.assignments.length,
+            create: plan.clients.filter(client => client.disposition === 'create').length, reuse: plan.clients.filter(client => client.disposition === 'reuse').length }
+        const clients = plan.clients.map(({ row, disposition, input, displayValues }) => ({ row, disposition, input,
+            existingValues: displayValues, unchangedFields: disposition === 'reuse' ? Object.keys(input) : [] }))
+        // Normalize DB timestamps to 24-byte ISO strings; reserve the complete response before any seal.
+        const summary = { ok: true as const, batchId: batch.id, previewCreatedAt: '0000-01-01T00:00:00.000Z', expiresAt: '0000-01-01T00:00:00.000Z', counts, clients }
+        if (Buffer.byteLength(JSON.stringify(summary), 'utf8') > config.policy.request.maxResponseBytes) throw new Error('ACCESSION_PREVIEW_RESPONSE_LIMIT')
         await stopHeartbeat()
-        const sealed = await admin.rpc('seal_accession_preview', { ...fence, p_snapshot: snapshot, p_clients: clientInputs,
+        checkPreviewDeadline(signal, deadline)
+        const sealed = await wait(admin.rpc('seal_accession_preview', { ...fence, p_snapshot: snapshot, p_clients: clientInputs,
             p_expected_clients: expectedClients, p_bindings_text: binding.canonical, p_metadata: {
                 source_sha256: sourceHash, source_size: bytes.length, normalized_payload_hash: intent.normalizedPayloadHash,
                 canonicalization_version: intent.canonicalizationVersion, template_version: workbook.template.version,
@@ -130,17 +147,17 @@ export async function prepareAccessionPreview(source: Uint8Array, retryOf?: stri
                 catalog_digest: catalogDigest(snapshotCatalogs(snapshot)), revision: snapshot.revisionNumber,
                 validation_version: 'accession-workbook-v1', resolver_version: 'accession-preview-clients-v1', binding_set_digest: binding.digest,
                 client_count: plan.clients.length, sample_count: workbook.samples.length, assignment_count: workbook.assignments.length,
-                create_count: plan.clients.filter(client => client.disposition === 'create').length,
-                reuse_count: plan.clients.filter(client => client.disposition === 'reuse').length,
-            } })
+                create_count: counts.create, reuse_count: counts.reuse,
+            } }).abortSignal(signal))
         if (sealed.error) throw new Error('ACCESSION_PREVIEW_AUTHORITY_CHANGED')
         const committed = sealedSchema.parse(sealed.data)
-        return { ok: true as const, batchId: batch.id, previewCreatedAt: committed.preview_created_at, expiresAt: committed.expires_at,
-            counts: { clients: plan.clients.length, samples: workbook.samples.length, assignments: workbook.assignments.length }, clients: plan.clients }
+        return { ...summary, previewCreatedAt: committed.preview_created_at, expiresAt: committed.expires_at }
     } catch {
-        clearInterval(timer); await pending
+        clearInterval(timer)
         // Fenced cleanup cannot rewrite a completed seal after an unknown network outcome.
-        try { await admin.rpc('finish_accession_preview', { ...fence, p_state: 'failed', p_reason: 'PREPARATION_FAILED' }) } catch { /* TASK-12 recovers an abandoned lease. */ }
+        if (!signal.aborted) {
+            try { await wait(admin.rpc('finish_accession_preview', { ...fence, p_state: 'failed', p_reason: 'PREPARATION_FAILED' }).abortSignal(signal)) } catch { /* TASK-12 recovers an abandoned lease. */ }
+        }
         throw new Error('ACCESSION_PREVIEW_UNAVAILABLE')
-    } finally { clearInterval(timer) }
+    } finally { clearInterval(timer); signal.removeEventListener('abort', cancel) }
 }

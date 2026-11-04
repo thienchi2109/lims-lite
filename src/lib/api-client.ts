@@ -47,6 +47,7 @@ import type {
 import type { SubmitResultReview } from '@/types'
 import type { ClientActionName } from '@/lib/client-actions/types'
 import type { SampleLabelAuditPreset } from '@/lib/sample-label-template'
+import { PreviewValidationResponseSchema } from '@/lib/accession-preview/http-contract'
 
 export {
     fetchApprovalBatchClient,
@@ -108,6 +109,10 @@ async function callClientAction<T = any>(
         body: JSON.stringify({ action, payload }),
     })
 
+    return readClientMutationResponse<T>(response)
+}
+
+async function readClientMutationResponse<T>(response: Response): Promise<T> {
     if (response.status === 401) {
         // Handle session expiry
         console.error('Session expired or invalid, redirecting to login...')
@@ -169,6 +174,20 @@ async function callClientAction<T = any>(
     }
 
     return data as T
+}
+
+export async function createAccessionPreviewClient(file: File, retryOfBatchId?: string, options: CallClientActionOptions = {}) {
+    const body = new FormData()
+    body.set('file', file)
+    if (retryOfBatchId !== undefined) body.set('retryOfBatchId', retryOfBatchId)
+    const response = await fetch('/api/accession-preview', {
+        method: 'POST', credentials: 'include', body, signal: options.signal,
+    })
+    if (response.status === 422) {
+        const parsed = PreviewValidationResponseSchema.safeParse(await response.clone().json().catch(() => null))
+        if (parsed.success) return parsed.data
+    }
+    return readClientMutationResponse<Awaited<ReturnType<typeof import('@/lib/accession-preview/server').prepareAccessionPreview>>>(response)
 }
 
 export function fetchSamplesClient(params: SampleListParams) {

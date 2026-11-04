@@ -14,12 +14,12 @@ export type PlannedClient = PreviewClientRow & {
 }
 type ClientPlan = { ok: true; clients: PlannedClient[] } | { ok: false; errors: WorkbookError[] }
 
-export async function resolveAccessionPreviewClients(workbook: ValidatedAccessionWorkbook): Promise<ClientPlan> {
+export async function resolveAccessionPreviewClients(workbook: ValidatedAccessionWorkbook, signal?: AbortSignal): Promise<ClientPlan> {
     const unavailable = (): ClientPlan => ({ ok: false, errors: [workbookError('CLIENT_RESOLUTION_UNAVAILABLE', {}, 'Không thể phân giải khách hàng. Vui lòng thử lại.')] })
     const inputs = new Map(workbook.clients.map(client => [client.callerContext.row, client]))
     if (!inputs.size || inputs.size !== workbook.clients.length) return unavailable()
     let response
-    try { response = await resolveAccessionPreviewClientsV1(workbook.clients) }
+    try { response = await (signal ? resolveAccessionPreviewClientsV1(workbook.clients, signal) : resolveAccessionPreviewClientsV1(workbook.clients)) }
     catch { return unavailable() }
     if ('error' in response || response.data.length !== inputs.size) return unavailable()
     const results: PreviewClientRow[] = [], seen = new Set<number>()

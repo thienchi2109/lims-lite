@@ -159,9 +159,11 @@ export async function resolveOrCreateClientV2(
 // Read-only batch bridge: raw caller references never cross the SQL boundary.
 export async function resolveAccessionPreviewClientsV1(
   clients: ValidatedClient[],
+  signal?: AbortSignal,
 ): Promise<{ data: PreviewClientRow[] } | { error: string }> {
   const auth = await requireRole('analyst')
   if (isAuthError(auth)) return { error: SAFE_RESOLUTION_FORBIDDEN }
+  signal?.throwIfAborted()
   const rows = new Set<number>()
   const inputs = []
   for (const client of clients) {
@@ -177,7 +179,8 @@ export async function resolveAccessionPreviewClientsV1(
   if (!inputs.length) return { error: SAFE_RESOLUTION_ERROR }
   try {
     const supabase = await createClient()
-    const { data, error } = await supabase.rpc('resolve_accession_preview_clients_v1', { p_clients: inputs })
+    const operation = supabase.rpc('resolve_accession_preview_clients_v1', { p_clients: inputs })
+    const { data, error } = await (signal ? operation.abortSignal(signal) : operation)
     const parsed = z.array(PreviewClientRowSchema).safeParse(data)
     if (error || !parsed.success || parsed.data.length !== inputs.length) return { error: SAFE_RESOLUTION_ERROR }
     const seen = new Set<number>()

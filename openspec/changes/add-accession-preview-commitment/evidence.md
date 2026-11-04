@@ -111,3 +111,40 @@ Runtime must provision separate `ACCESSION_PREVIEW_BINDING_KEY_ID`/`ACCESSION_PR
 [Exact executed DB evidence](phase-3-db-gate-2026-11-04.md) supersedes the earlier unapplied/NOT RUN statements for migrations 233/234 and the listed behavioral/RLS/security fixtures only. Both immutable migrations committed from `715bd8f`; security was **36/36 PASS** after each and final. The first client fixture exposed a test-only authority error against private normalizers; root reviewed and committed the fixture-only correction `d24e8e0`, retaining original RED and committed GREEN without changing migrations or grants. Corrected client fixture: **22 assertion invocations + five denied-role + six malformed-input cases PASS**. Commitment fixture: **35 assertions PASS**. Rollback cleanup left zero synthetic rows/helpers/bindings/audit; baseline business counts, existing canonical functions, ledgers, assay fingerprint, checkout and named container remained unchanged.
 
 Root independently ran fresh home-server read-only SQL: security **36/36**, both new security helpers true, exact lifecycle RPC privileges/owners/search paths, two RLS tables/two policies, hidden lease token, private normalizers, zero synthetic/preview rows and unchanged business counts all verified. App deployment, authenticated preview HTTP, exact clock equality, restart, concurrent races, retention/full TTL and TASK-7/11/12 acceptance remain **INCOMPLETE**. Phase 4 remains unreleased and TASK-10 stays OPEN/In Progress.
+
+## Phase 4 — accepted source checkpoint, 2026-11-04
+
+User released the analyst preview HTTP/API-client source phase to worker `gpt-6.1-sol/high`; root coordinates and independently reviews. This release does not authorize production deployment, database/container operations or runtime key/policy provisioning. Source baseline: `a1a82961cab55c4bd12024c78e09daa9f6cd7da6`.
+
+Worker reported retained RED before implementation: `rtk npm exec -- vitest run src/app/api/accession-preview/route.test.ts src/lib/api-client.accession-preview.test.ts --reporter=dot` exited 1 with **2 files / 30 failed tests**, without collection or unhandled errors. Failures exercise the absent route behavior and absent transport export. Coverage includes active analyst/OTP before body, strict multipart and measured stream limits, exact source bytes, safe complete responses/no-store, deadline/disconnect and existing session redirect conventions. Final GREEN and independent acceptance follow below.
+
+Root review found two boundary failures and required retained regressions before fixes:
+
+- The shared mutation parser discarded complete row errors on HTTP 422. Worker retained **1 failed / 3 passed** in `src/lib/api-client.accession-preview.test.ts`, then added strict feature-specific validation for complete rejected-preview responses, preserving existing generic mutation/session behavior.
+- A synchronous parser could outlast the request timeout while its abort timer remained queued, then dispatch seal through promise microtasks. `rtk npm exec -- vitest run src/lib/accession-preview/server.test.ts -t 'synchronous parsing exceeds'` retained **1 failed / 20 skipped**: a real workbook/parser fixture blocked 30 ms against a test-only 10 ms deadline and incorrectly called seal. An absolute monotonic deadline now travels from route through preparation, is checked around awaits and immediately before seal, and does not reset after authentication/body admission. Synchronous parsing remains cooperatively bounded rather than preempted.
+
+The follow-up route regression `rtk npm exec -- vitest run src/app/api/accession-preview/route.test.ts -t 'elapsed preparation fails'` retained **1 failed / 33 skipped**: a late generic preparation error returned 503 while its abort timer was queued. The route now checks elapsed monotonic time in its error path and returns sanitized HTTP 408 consistently.
+
+Final review corrections retained two more regressions. `rtk npm exec -- vitest run src/lib/accession-preview/cancellation.test.ts` initially failed both native-Promise cases: expired admission left an already-running rejection unobserved. The helper now observes native Promise failure on initial admission rejection without starting lazy RPC thenables; all three helper tests pass. SPEC review also required explicit unknown-outcome wording after an in-flight seal is aborted. The existing disconnect test first failed against the old replay instruction, then passed with conservative HTTP 408 text that does not suggest retrying. A server regression verifies that abort after seal dispatch skips failure cleanup/further heartbeats even if the seal later succeeds.
+
+### Root Phase 4 verification
+
+Root independently reran the final source after all review corrections: **26 files / 362 tests PASS**, including 34 route tests, 22 server tests, three cancellation tests, five new transport tests and the existing shared mutation regression tests. Exact focused command:
+
+```sh
+rtk npm exec -- vitest run src/lib/accession-preview src/lib/client-resolution src/lib/accession-workbook src/lib/accession-template tests/accession-preview-clients-migration.test.ts tests/accession-template-snapshot-migration.test.ts tests/client-resolution-contracts.test.ts tests/accession-preview-commitment-migration.test.ts src/app/api/accession/template/route.test.ts src/app/api/accession-preview/route.test.ts src/lib/api-client.accession-preview.test.ts src/lib/api-client.test.ts src/lib/api-client.approval-batches.test.ts src/lib/api-client.sample-quality.test.ts tests/client-lifecycle-api-client.test.ts tests/assay-sample-type-catalog-api-client.test.ts
+rtk npm run typecheck
+rtk npm exec -- eslint src/app/api/accession-preview/route.ts src/app/api/accession-preview/route.test.ts src/lib/accession-preview/cancellation.ts src/lib/accession-preview/cancellation.test.ts src/lib/accession-preview/http-contract.ts src/lib/accession-preview/clients.ts src/lib/accession-preview/server.ts src/lib/accession-preview/server.test.ts src/lib/api-client.ts src/lib/api-client.accession-preview.test.ts src/lib/client-resolution/server.ts
+rtk proxy openspec validate add-accession-preview-commitment --strict --no-interactive
+rtk proxy git -c core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol diff --check
+```
+
+Typecheck, scoped ESLint, strict OpenSpec and CRLF-aware diff check all **PASS**. The per-command whitespace option preserves the pre-existing mixed line endings in `api-client.ts`; no repository/global Git setting or whole-file normalization was introduced. No migration file changed.
+
+### Independent review and source acceptance
+
+- **SPEC: PASS.** The unknown-outcome response and post-dispatch abort behavior now match the released checkpoint; no remaining actionable findings.
+- **STANDARDS: PASS.** No remaining actionable findings after final cancellation review. The initial timestamp-size concern was retracted after verifying ISO normalization and the fixed 24-character response encoding; all added modules are included in the integration diff.
+- **Root: SOURCE ONLY accepted.** Active analyst/OTP/Origin admission, exact bounded bytes, complete safe create/reuse summaries and 422 row errors, pre-seal response budget, absolute deadline and abort fences were independently inspected and verified. No React import UI, confirm/status endpoint, purge runner, dependency, migration change, production operation or deployment was added.
+
+TASK-10/#138 remains **OPEN / In Progress**. Source Phase 4 is complete; runtime keys and measured policy (including mandatory `request.maxBytes/maxResponseBytes/timeoutMs`) remain unprovisioned and fail closed. Deployed authenticated preview HTTP, restart, exact clock equality, concurrent races, retention/full TTL and capacity acceptance remain **INCOMPLETE**. An aborted already-dispatched seal may have committed; authoritative state/recovery belongs to DB/TASK-12. TASK-7/11/12/13 and TASK-8 deferred gates remain unchanged.
