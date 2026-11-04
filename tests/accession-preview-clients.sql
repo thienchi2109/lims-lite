@@ -46,6 +46,8 @@ DECLARE
     v_data JSONB;
     v_bad JSONB;
     v_input JSONB;
+    v_expected_name TEXT;
+    v_expected_phone TEXT;
     v_row JSONB;
     v_resolution RECORD;
     v_assay UUID;
@@ -115,12 +117,15 @@ BEGIN
     EXECUTE 'RESET ROLE';
     PERFORM set_config('request.jwt.claim.sub', v_analyst::TEXT, TRUE);
     PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', v_analyst, 'role', 'authenticated')::TEXT, TRUE);
+    v_input := pg_temp.preview_client(4, U&'  Nguy\1EC5n   Preview233 Canonical  ', '953900000101', '+84953900101');
+    -- Canonical helpers stay private; capture expected values before the analyst role boundary.
+    v_expected_name := public.normalize_client_name_v1(v_input->>'name');
+    v_expected_phone := public.normalize_client_phone_v1(v_input->>'phone');
     EXECUTE 'SET LOCAL ROLE authenticated';
 
-    v_input := pg_temp.preview_client(4, U&'  Nguy\1EC5n   Preview233 Canonical  ', '953900000101', '+84953900101');
     v_data := public.resolve_accession_preview_clients_v1(jsonb_build_array(v_input));
-    PERFORM pg_temp.assert_preview(v_data->0->'input'->>'name' = public.normalize_client_name_v1(v_input->>'name')
-        AND v_data->0->'input'->>'phone' = public.normalize_client_phone_v1(v_input->>'phone')
+    PERFORM pg_temp.assert_preview(v_data->0->'input'->>'name' = v_expected_name
+        AND v_data->0->'input'->>'phone' = v_expected_phone
         AND v_data->0->'resolution'->>'outcome' = 'not_found', '215 normalizer parity without JS approximation');
     v_data := public.resolve_accession_preview_clients_v1(jsonb_build_array(pg_temp.preview_client(4, 'Preview233 Placeholder', NULL, '0000000000')));
     PERFORM pg_temp.assert_preview(v_data->0->'input'->'phone' = 'null'::JSONB, 'placeholder is missing, not creation phone');
