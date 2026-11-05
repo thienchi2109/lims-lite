@@ -8,6 +8,7 @@ TASK-10 seals an analyst-owned preview without business writes. TASK-11 must con
 - Add a trusted server confirmation boundary and one database transaction that rechecks current authorization, source/intent/bindings, catalog and client authority before creating clients, samples and results.
 - Retain safe terminal failures outside the business subtransaction and return the existing receipt for authorized same-batch repeats.
 - Add focused source checks and rollback/concurrency/security SQL fixtures, with separately authorized home-server runtime gates.
+- Apply the user's explicit current-schema method exception: imported result/mapping `method_id` is NULL; validate authoritative assay `method_name` against sealed text at creation without inventing a UUID or adding a durable method-text snapshot.
 
 ## Capabilities
 

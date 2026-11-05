@@ -37,6 +37,11 @@ Confirmation SHALL serialize batch access and relevant catalog/client writers wi
 - **WHEN** revision/generation/pair/method or client outcome/UUID/display fields change, confidentiality is withdrawn or the owner loses analyst authority
 - **THEN** the whole batch fails closed without silent replanning, profile overwrite or partial writes
 
+#### Scenario: Current schema has authoritative method text without a canonical method UUID
+- **WHEN** an import uses the user-approved current-schema exception to the method-UUID contract
+- **THEN** result and assignment-mapping method_id SHALL be NULL, current assay method_name SHALL match sealed binding methodName at creation, and no UUID SHALL be inferred from text
+- **AND** no durable method-text snapshot SHALL be added; after binding purge, history follows current-state entity semantics
+
 ### Requirement: Entire business graph commits atomically
 Confirmation SHALL directly create only genuinely new clients, all new assigned samples and all pending result assignments in one database transaction. Every sample MUST have acceptable quality, one common database `received_at` and authenticated `received_by`; official identifiers SHALL be generated only inside business work. The implementation MUST NOT emulate atomicity by looping single-accession RPCs or compensating deletes.
 

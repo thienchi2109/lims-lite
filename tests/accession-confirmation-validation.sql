@@ -16,6 +16,9 @@ END; $$;
 \if :{?confirmation_concurrency}
 SELECT set_config('test.confirmation_concurrency','on',true);
 \endif
+\if :{?confirmation_shared_actors}
+SELECT set_config('test.confirmation_shared_actors','on',true);
+\endif
 CREATE FUNCTION pg_temp.assert_confirmation(p_condition BOOLEAN,p_message TEXT) RETURNS VOID LANGUAGE plpgsql AS $$
 BEGIN IF p_condition IS DISTINCT FROM TRUE THEN RAISE EXCEPTION 'confirmation assertion: %',p_message; END IF; END;
 $$;
@@ -66,10 +69,16 @@ DECLARE
     v_accepted TIMESTAMPTZ; v_client UUID; v_sample UUID; v_reused JSONB; v_matched JSONB; v_reuse_metadata JSONB;
     v_reuse_bindings TEXT; v_current JSONB;
 BEGIN
-    INSERT INTO auth.users(id,email) VALUES(v_owner,'confirmation236-owner@lims.local'),(v_other,'confirmation236-other@lims.local');
-    INSERT INTO public.users(id,username,full_name,role,email) VALUES
-        (v_owner,'confirmation236_owner','Synthetic owner','analyst','confirmation236-owner@lims.local'),
-        (v_other,'confirmation236_other','Synthetic other','analyst','confirmation236-other@lims.local');
+    IF current_setting('test.confirmation_shared_actors',true)='on' THEN
+        PERFORM pg_temp.assert_confirmation((SELECT count(*)=2 FROM public.users WHERE deleted_at IS NULL AND role='analyst'
+            AND ((id=v_owner AND username='confirmation236_owner') OR (id=v_other AND username='confirmation236_other'))),
+            'shared setup requires exact committed disposable synthetic actors');
+    ELSE
+        INSERT INTO auth.users(id,email) VALUES(v_owner,'confirmation236-owner@lims.local'),(v_other,'confirmation236-other@lims.local');
+        INSERT INTO public.users(id,username,full_name,role,email) VALUES
+            (v_owner,'confirmation236_owner','Synthetic owner','analyst','confirmation236-owner@lims.local'),
+            (v_other,'confirmation236_other','Synthetic other','analyst','confirmation236-other@lims.local');
+    END IF;
     PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',v_owner,'role','authenticated')::TEXT,true);
     PERFORM set_config('request.jwt.claim.sub',v_owner::TEXT,true); PERFORM set_config('request.jwt.claim.role','authenticated',true);
     v_snapshot:=public.get_accession_template_snapshot(); v_pair:=v_snapshot->'pairs'->0;

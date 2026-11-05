@@ -1,5 +1,4 @@
-// Server-only TASK-11 Phase 2: request-local verification, no business writes or confirmation RPC.
-// The later atomic entrypoint must revalidate this transient handoff under database locks.
+// Request-local verification; atomic confirmation revalidates this handoff under database locks.
 import 'server-only'
 import { createHash } from 'node:crypto'
 import { z } from 'zod'
@@ -13,7 +12,7 @@ import { canonicalizeAccessionIntent } from './intent'
 import { buildBindings, digestBindingSet, readPreviewConfiguration } from './server'
 
 const count = z.number().int().nonnegative().safe()
-const receiptSchema = z.strictObject({ batch_id: z.string().uuid(), owner_id: z.string().uuid(),
+export const accessionReceiptSchema = z.strictObject({ batch_id: z.string().uuid(), owner_id: z.string().uuid(),
     confirmation_received_at: z.string().datetime({ offset: true }), client_count: count.positive(), sample_count: count.positive(),
     assignment_count: count.positive(), create_count: count, reuse_count: count })
 const loadedSchema = z.object({ batch: z.object({ id: z.string().uuid(), owner_id: z.string().uuid(),
@@ -21,6 +20,10 @@ const loadedSchema = z.object({ batch: z.object({ id: z.string().uuid(), owner_i
     bindings: z.array(z.array(z.unknown())).min(1) })
 const sha256 = (input: string | Uint8Array) => createHash('sha256').update(input).digest('hex')
 function unavailable(): never { throw new Error('ACCESSION_CONFIRMATION_UNAVAILABLE') }
+export class ConfirmationPreparationFailure extends Error {
+    constructor(public readonly actorId: string, public readonly batchId: string, public readonly reasonCode:
+        'PREVIEW_CONTENT_CHANGED' | 'AUTHORITY_CHANGED' | 'ATTESTATION_REQUIRED' | 'CONFIGURATION_UNAVAILABLE', message: string) { super(message) }
+}
 
 export async function prepareAccessionConfirmation(batchId: string, source?: Uint8Array, acceptableQuality?: boolean) {
     const actor = await requireRole('analyst')
@@ -30,15 +33,15 @@ export async function prepareAccessionConfirmation(batchId: string, source?: Uin
     const loaded = await createAdminClient().rpc('get_accession_confirmation_preparation', { p_actor: actor.id, p_batch: batchId })
     if (loaded.error) unavailable()
     if (loaded.data && typeof loaded.data === 'object' && 'receipt' in loaded.data) {
-        const parsed = receiptSchema.safeParse(loaded.data.receipt)
+        const parsed = accessionReceiptSchema.safeParse(loaded.data.receipt)
         if (!parsed.success || parsed.data.batch_id !== batchId || parsed.data.owner_id !== actor.id
             || parsed.data.client_count !== parsed.data.create_count + parsed.data.reuse_count) unavailable()
         return { kind: 'receipt' as const, receipt: parsed.data }
     }
     const protectedData = loadedSchema.safeParse(loaded.data)
     if (!protectedData.success || protectedData.data.batch.id !== batchId || protectedData.data.batch.owner_id !== actor.id) unavailable()
-    if (acceptableQuality !== true) throw new Error('ACCESSION_CONFIRMATION_ATTESTATION_REQUIRED')
-    if (!(source instanceof Uint8Array) || source.byteLength < 1 || source.byteLength >= 10000000) throw new Error('ACCESSION_CONFIRMATION_SOURCE_INVALID')
+    if (acceptableQuality !== true) throw new ConfirmationPreparationFailure(actor.id,batchId,'ATTESTATION_REQUIRED','ACCESSION_CONFIRMATION_ATTESTATION_REQUIRED')
+    if (!(source instanceof Uint8Array) || source.byteLength < 1 || source.byteLength >= 10000000) throw new ConfirmationPreparationFailure(actor.id,batchId,'PREVIEW_CONTENT_CHANGED','ACCESSION_CONFIRMATION_SOURCE_INVALID')
     try {
         const { batch, bindings: sealed } = protectedData.data
         const bytes = Buffer.from(source)
@@ -78,5 +81,9 @@ export async function prepareAccessionConfirmation(batchId: string, source?: Uin
         // Acceptance time belongs to the later locked transaction, never the application clock.
         return { kind: 'prepared' as const, actorId: actor.id, batchId, attested: true as const, workbook, snapshot,
             clients, expectedClients, canonicalIntent: intent.canonicalJson, bindingsText: binding.canonical, metadata }
-    } catch { return unavailable() }
+    } catch (error) {
+        const reason = error instanceof Error && /CONFIGURATION_UNAVAILABLE$/.test(error.message)
+            ? 'CONFIGURATION_UNAVAILABLE' : 'PREVIEW_CONTENT_CHANGED'
+        throw new ConfirmationPreparationFailure(actor.id,batchId,reason,'ACCESSION_CONFIRMATION_UNAVAILABLE')
+    }
 }

@@ -97,6 +97,15 @@ describe('trusted confirmation preparation', () => {
     it.each([undefined, new Uint8Array(), new Uint8Array(10000000)])('rejects invalid original source', async source => {
         await expect(prepare(id, source, true)).rejects.toThrow('ACCESSION_CONFIRMATION_SOURCE_INVALID')
     })
+    it('tags only owner-verified controlled rejection for safe atomic terminal handling', async () => {
+        const { ConfirmationPreparationFailure } = await import('./confirmation')
+        const failure = await prepare(id, undefined, true).catch(error => error)
+        expect(failure).toBeInstanceOf(ConfirmationPreparationFailure)
+        expect(failure).toMatchObject({ actorId: id, batchId: id, reasonCode: 'PREVIEW_CONTENT_CHANGED' })
+        expect(Object.keys(failure).sort()).toEqual(['actorId','batchId','reasonCode'])
+        loaded.batch.owner_id = '22222222-2222-4222-8222-222222222222'
+        expect(await prepare(id, undefined, true).catch(error => error)).not.toBeInstanceOf(ConfirmationPreparationFailure)
+    })
     it('reuses retained key v1 after rotation and yields only transient handoff', async () => {
         const result = await prepare(id, bytes, true)
         expect(result).toMatchObject({ kind: 'prepared', actorId: id, batchId: id, attested: true,

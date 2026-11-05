@@ -27,15 +27,15 @@
 
 ## 3. Phase 3 — atomic business confirmation and terminal outcomes
 
-- [ ] 3.1 Add focused source/helper regressions and retain expected RED for one atomic handoff, same receipt, terminal no replay, common DB receipt time, safe failure and private dedup outcomes.
-- [ ] 3.2 Add new forward-only migration extending the batch mutation guard/reason constraints for validated success and safe confirmation terminal outcomes without changing historical SQL.
-- [ ] 3.3 Add service-only atomic entrypoint using the Phase 2 locked validation helper, one inner business subtransaction and outer safe failure persistence; preserve verified actor context and restore original claims.
-- [ ] 3.4 Insert unique receipt claim, new clients, assigned samples, pending results, all mappings/exact-actor audit links and batch success/audit together; explicitly invoke final graph validator inside the business exception block before success returns, use common DB received_at/actor and official IDs only during commit, with no single-accession RPC loop.
-- [ ] 3.5 Return authorized same-batch committed receipt without repeat writes/audit or file requirement; make global hash collision non-disclosing and other terminal attempts nonreplayable.
-- [ ] 3.6 Wire narrow server adapter to the atomic service RPC with strict output validation and no HTTP endpoint or blind automatic retries.
-- [ ] 3.7 Retain SQL fixture injecting failure after client, sample, final assignment, mappings and audit, asserting before/after business/claim/mapping/audit counts and safe outer terminal outcome; verify actual graph and audit actor links on success.
-- [ ] 3.8 Retain multi-session scenarios for same-batch/cross-batch concurrency, external client/lifecycle/catalog writers, expiry while locked and accepted-before-deadline completion; specify commands/assertions and cleanup, not mock lock proof.
-- [ ] 3.9 Run scoped tests GREEN plus immediate parser/resolver/template/commitment blast radius, touched-file lint, typecheck, strict OpenSpec and diff checks; freeze for root independent SPEC/STANDARDS review.
+- [x] 3.1 Retained initial RED 23 failures and counter-order RED 1 failure, then focused adapter/source regressions for one handoff, same receipt, terminal no replay, safe failure, private dedup and unknown outcomes. SQL receipt-time assertions retained NOT RUN.
+- [x] 3.2 Added forward-only migration 237 with guard/reason extensions and correction of 235's invalid assay method column; historical 233–236 remain unchanged. User approved method_id NULL with sealed/current methodName checks.
+- [x] 3.3 Added service-only atomic entrypoint reusing the locked validator, one business exception subtransaction, safe outer terminal persistence and all three JWT settings restored. Counter table exclusion precedes Phase 2 locks; runtime behavior NOT RUN.
+- [x] 3.4 Added claim-first direct business writes, all mappings/exact-actor INSERT audit links, common accepted DB time/actor, commit-path official IDs and explicit final validation inside the savepoint. No single-accession RPC loop; imported result/mapping method_id NULL by user decision.
+- [x] 3.5 Added authorized receipt-first same-batch success, nonreplayable other terminal states and private ALREADY_IMPORTED handling before preparation failure and after rollback, including winner-created-client drift.
+- [x] 3.6 Added strict server adapter with one atomic RPC for prepared/controlled failure handoffs, no HTTP endpoint or blind retry; uncertain RPC outcomes remain OUTCOME_UNKNOWN.
+- [x] 3.7 Retained disposable rollback-only SQL success/graph/actor-audit assertions and five-stage failure injection with exact business/claim/mapping/audit counts and safe outer failure. SQL NOT RUN.
+- [x] 3.8 Retained concrete same/cross-batch, external writer/counter, expiry-wait and accepted-before-deadline commands/assertions/cleanup. Shared synthetic COMMITs require separate disposable DB authorization. SQL concurrency/deadlock proof NOT RUN.
+- [x] 3.9 Root independently verified 19 files / 304 tests, touched lint, typecheck, strict OpenSpec, immutable hashes and whitespace; independent SPEC/STANDARDS PASS. Phase 3 SOURCE accepted; Phase 4/runtime/exit gates remain unreleased.
 
 ## 4. Separately authorized home-server runtime and exit gates
 
