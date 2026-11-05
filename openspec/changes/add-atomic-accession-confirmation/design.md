@@ -1,0 +1,95 @@
+## Context
+
+Authority is the approved [atomic/provenance contract #113](../../../docs/superpowers/specs/2026-11-01-atomic-import-provenance-contract-design.md), [template contract #112](../../../docs/superpowers/specs/2026-11-01-excel-template-contract-design.md), [TASK-4 partition](../../../docs/superpowers/specs/2026-11-02-import-implementation-partition.md) and TASK-11/#139. Source baseline is `be7eb5c7b8943fd4fb904e9c9aae7df41b29683a`. TASK-10 source and its scoped database gate are accepted; deployed application remains `c7c6806`, with HTTP/restart/capacity/retention gates incomplete. Keys and measured runtime policy are unprovisioned.
+
+Applied migrations 233/234 are immutable. Migration 234 supplies `accession_preview_batches`, expiring `accession_preview_bindings`, service-only lifecycle RPCs and active analyst authorization. Its mutation trigger deliberately forbids `preview_ready → succeeded`; reason constraints do not yet allow confirmation failures. Bindings retain source row/parent-row graph, catalog UUID/generation/method and client outcome/UUID/HMAC, but no raw temporary references. Existing business destinations are `clients`, `samples` and `results`; sample quality is Boolean, assigned samples receive pending results. Existing business audit triggers already write entity record IDs and `auth.uid()`.
+
+## Goals / Non-Goals
+
+**Goals:** Consume an immutable commitment in one database transaction; recheck current authority; globally deduplicate only successful canonical intents; retain immutable minimal receipt/mappings/audit; preserve recoverable failure and same-batch receipt semantics.
+
+**Non-Goals:** HTTP confirm/status/download, preparing recovery/purge, UI, deployment, runtime configuration provisioning, capacity claims, signature/OTP semantics, client profile reconciliation or loops over existing single-sample accession RPCs. Those remain TASK-12/13/7 or existing workflows.
+
+## Decisions
+
+### 1. A successful receipt is also the global claim
+
+Use `accession_import_receipts` with `batch_id` primary key/FK and `normalized_payload_hash` globally unique across actors, files, expiry and canonicalization versions. Do not add a separate claim table. Store only owner, database receipt time and validated created/reused/client/sample/assignment counts needed for durable history; sealed source/version/digest metadata stays on the immutable batch. Hide hash from browser column grants. A successful receipt is durable for the lifetime of import history; entity soft deletion/void and binding cleanup never remove it.
+
+Use one typed `accession_import_mappings` table, primary key `(batch_id, kind, row_number)`. Row-shape checks and FKs distinguish:
+
+| Kind | Minimal durable fields |
+| --- | --- |
+| client | client temp ref, canonical client UUID, created/reused outcome |
+| sample | sample temp ref, parent client ref/UUID, new sample UUID, official sample identifier |
+| assignment | parent sample ref/UUID, assay import code/UUID, method UUID/null, new result UUID |
+
+All kinds include fixed sheet/kind and source row. Common columns are `batch_id`, `kind`, `row_number`, validated `temporary_reference` (client/sample), `parent_kind`/`parent_row`/`parent_temporary_reference` (sample/assignment), typed `client_id`/`sample_id`/`result_id`/`assay_id`/`method_id`, and `creation_audit_id`. Client-only created/reused outcome, sample-only official identifier and assignment-only assay code complete the shapes. CHECKs require relevant fields and forbid unrelated fields. Composite self-FKs `(batch_id,parent_kind,parent_row)` keep parents within the batch/kind; kind-scoped ref/entity uniqueness prevents duplicate client/sample references or mapped entities. Assignments uniquely identify `(batch_id,sample_id,assay_id)`.
+
+Source refs come only from revalidated request-local rows and survive only in successful mappings. No profile field, filename, failure ref, source/normalized row or workbook bytes are durable. Noncascading FKs preserve history. Created-client/sample/result mappings link their real INSERT audit UUID with exact table/record/actor; reused clients have no fabricated creation audit. Do not change generic business audit behavior or widen audit SELECT.
+
+One private final validator checks complete source counts/graph, parent refs/UUIDs, result sample/assay/method, official sample identifiers, audit links and matching successful batch/receipt owner/hash/time. Explicitly call it **inside the business exception block** after success writes and before returning, so validation failure enters outer safe-failure persistence. Add one deferred receipt-INSERT constraint trigger as a commit-time safety belt. Mapping CHECKs/FKs do local work; never schedule a full graph scan per mapping or change global constraint mode. Validation is creation-time only: no triggers on subsequent ordinary entity updates, and historical method/status snapshots do not constrain later auditable workflows. Terminal receipt/mapping UPDATE/DELETE and graph extension are forbidden. A rolled-back pending claim cannot block later attempts.
+
+### 2. Read authority is separate from write authority
+
+New tables enable RLS. No browser or service role receives table writes. Write helpers are owned by `postgres`, schema qualify objects, pin `search_path = public, pg_temp` and revoke PUBLIC/anon/authenticated execute; only the trusted service entrypoint is executable by `service_role`. Internal helpers remain ungranted. Reuse `authorize_accession_preview_actor` to require service caller plus current nondeleted analyst and hold the actor row lock through commit.
+
+Receipt reads require a current nondeleted users row and either analyst ownership or current manager role. Every mapping, including reused clients, first requires the same parent-receipt gate; broad clients SELECT in 048 does not establish ownership. Managers gain success history without preview ownership/binding access. `get_user_role()` alone does not establish an active profile.
+
+Mapping reads then require an active current client plus `NOT client_has_confidential_samples(client_id) OR user_can_access_confidential()` under the reader's identity (127/221); manager role does not imply the confidential flag. Sample mappings require current nondeleted sample visibility under 132; assignment mappings additionally require result visibility under 124 and their parent client/sample gates. Deactivated/deleted/restricted entity mapping details are hidden while safe receipt metadata survives. Reuse existing boolean confidentiality helpers, not a richer definer entity lookup. Audit policy 077 remains unchanged; audit UUID links do not authorize audit payloads. Hash is hidden by column grants, with no public hash lookup or cross-actor winning receipt disclosure.
+
+### 3. Trusted server preparation verifies bytes and keyed fingerprints
+
+Introduce a narrow server-only confirmation adapter deriving actor from `requireRole('analyst')` and validating batch UUID first. An authorized succeeded attempt reaches existing receipt lookup **before** requiring source bytes, attestation, keys/configuration, bindings or expiry; current read guards still apply. This same-confirm short circuit is not a status endpoint. New preview_ready confirmation requires explicit all-samples-collected/acceptable-quality attestation and transient original bytes strictly below 10,000,000 decimal bytes. Reload protected commitment/bindings, reparse with existing `validateAccessionWorkbook`, verify signed descriptor/template/catalog, rerun the canonical preview client planner and `canonicalizeAccessionIntent`, and compare exact source SHA-256/size, canonicalization version/hash and sealed metadata.
+
+Recompute each client HMAC with its retained `key_version`, using existing `fingerprintClientBinding`, dedicated key ring and full canonical decision/display fields. Compare complete typed bindings and binding-set digest; unknown/missing/invalid key configuration fails closed. No client-supplied normalized JSON, actor, UUID, received time or hash becomes authority. Never send HMAC secrets to SQL. Reuse existing digest/config/parser/resolver helpers; export an existing private helper only if needed by both paths, with focused regression coverage and root approval.
+
+The service-only SQL boundary receives validated transient workbook rows, current snapshot, canonical intent bytes/hash, expected full resolver output and verified typed bindings. SQL independently checks exact shapes/counts/row graph, hashes and sealed bindings, reruns snapshot/resolver under locks and compares current output to the server-verified output. SQL trusts the privileged server for original-file parsing and HMAC verification, because the keys and bytes remain request-local. Exposing this RPC to authenticated normalized JSON would invalidate this trust boundary.
+
+### 4. Lock authority before the acceptance clock
+
+Lock batch first and recheck owner/state/current role. Authorized `succeeded` is receipt lookup only, independent of expiry or source resend; other terminal states cannot replay. Do not persist a `confirming` state.
+
+After service/active-actor authorization holds the users row FOR SHARE and batch locking succeeds, acquire these locks sequentially in migration-234 order with relationship tables appended: `assay_definitions` SHARE → `assay_sample_type_catalog_revisions` SHARE → `assay_sample_type_compatibilities` SHARE → `assay_sample_type_reviews` SHARE → `client_collision_adjudications` SHARE → `clients` SHARE ROW EXCLUSIVE → `sample_types` SHARE → `samples` SHARE ROW EXCLUSIVE → `results` SHARE ROW EXCLUSIVE. Helper 127 reads samples and helper 126 reads results joined to assay definitions, so client exclusion alone cannot fence confidentiality relationship changes. Every written table takes its final mode upfront; no SHARE-to-write upgrades. The users-row lock fences role/active/confidential-flag withdrawal and assay SHARE fences method/confidentiality changes. Recheck published revision, active UUID/code/generation/method, selected pairs and version support. Rerun `resolve_accession_preview_clients_v1` under actor context; compare outcome, exact UUID, normalized input, display fields and same-batch guards. Never switch reuse/create or modify an existing client.
+
+Current canonical creator 223 acquires sorted advisory keys before INSERT; lifecycle writers 216 acquire clients SHARE ROW EXCLUSIVE before row locks. Confirmation therefore never calls the advisory-locking/create helper after its table lock. It uses the existing read-only resolver and direct validated client INSERT under table exclusion, retaining canonical projection/validation/audit triggers. A key-holding external writer may wait for clients, but confirmation does not wait for its key. Existing single-accession/catalog transaction lock interactions must be retained as a runtime concurrency scenario; source inspection alone is not a deadlock proof.
+
+Take one `clock_timestamp()` only after all relevant locks and revalidation, immediately before business work. Equality with `expires_at` is expired. This is receipt time and every sample's `received_at`; actor is every sample's `received_by`, quality is explicitly TRUE/acceptable. A transaction accepted before expiry may finish afterward; no reload/lock wait/retry extends TTL. Official sample IDs come from `generate_next_sample_id()` only during business commit; rollback gaps are allowed.
+
+### 5. One business subtransaction and a safe outer terminal outcome
+
+After locking batch, execute authority checks, acceptance and all receipt/business/mapping/success/audit work in a PL/pgSQL exception subtransaction. Insert the unique receipt claim before business rows; direct-create only not_found clients, insert all new assigned samples, then all pending results using current assay `method_id`. Never invoke the single-accession RPC repeatedly. Insert all mappings, set success/audit, and explicitly invoke the private final validator inside this exception block before returning success. Deferred validation is a safety belt, not the first graph validation.
+
+Capture the original `request.jwt.claims`, `request.jwt.claim.sub` and `request.jwt.claim.role` before impersonation. Verify the service caller/current active analyst first, then set transaction-local claims to that authenticated actor with role authenticated only around resolver, projection, business writes and receipt-read authority. Existing `trigger_audit_log()` then records the true actor for every new entity rather than the null service-role `auth.uid()`. Restore all three values on success and exception, as seal234 already does; assertions cover actor attribution and restoration. Created-entity mappings retain the corresponding existing INSERT audit UUID; reused-client mappings do not pretend a new client INSERT occurred. The outer safe failure audit uses the verified batch owner explicitly and does not rely on a leaked impersonation context.
+
+A controlled error rolls back the entire inner block, including receipt claim, clients, samples, results, mappings, batch-success and success audit. The outer transaction records terminal failed/expired with an allowlisted safe reason and lifecycle audit. Never retain SQL exception/detail/request data. Invalid caller/wrong owner must not mutate someone else's batch; withdrawn owners cannot succeed. If connection/server loss prevents outer persistence, return no fabricated terminal result: the database rolls back and TASK-12 must resolve the surviving state by lock/status. HTTP timeout is not a terminal failure.
+
+Unique intent conflict yields failed/ALREADY_IMPORTED with no winning receipt details. Same-batch locking yields one success and identical authorized receipt; retries do not repeat writes or success audit. A terminal failure/expiry requires a new linked attempt via existing start semantics.
+
+### 6. Source phases and retained verification
+
+Root reviews SPEC and STANDARDS at the schema checkpoint and each phase freeze. Each source phase is separately released and one reviewable commit/session; root owns integration/tracking/commits/push.
+
+1. Phase 1: next migration (currently 235) adds receipt/mappings, immutable/deferred invariants and RLS/grants/security helper. No confirmation/business-write endpoint. Existing 234 success guard remains unchanged until Phase 3: Phase 1 fixtures use transaction-local pending deferred receipt/mapping rows for shape/RLS/uniqueness checks, then ROLLBACK; explicitly expect final-validator/constraint rejection of unbacked success. Never disable historical guards, RLS or audit or add production test hooks. Positive committed success/full graph checks belong to Phase 3; Phase 1 runtime fixture scope is partial.
+2. Phase 2: next migration adds the private locked validation boundary and narrow server preparation helpers. No business-write release before root acceptance. Preparation yields no official IDs or persisted receipt time.
+3. Phase 3: next migration adds the atomic entrypoint, forward-only batch guard/reason extension and business/success/failure path; server adapter invokes it. Freeze source and hand off TASK-12 semantics.
+
+Retain source RED→GREEN contract/helper checks and SQL behavioral fixtures with failure injection via transaction-local test triggers, never production failpoint parameters. Cover malformed shape/graph/counts, caller/role/owner/quality, bytes/hash/HMAC/version drift, catalog/client/confidentiality drift, uniqueness and audit rollback after every write stage. Multi-session fixtures specify same/cross-batch races, external writers, lock-time expiry and accepted-before-deadline completion. SQL fixtures are NOT RUN until separately authorized on the home server; static tests do not certify atomicity, locks or RLS runtime.
+
+## Risks / Trade-offs
+
+- Coarse clients/samples/results SHARE ROW EXCLUSIVE serializes business writers and catalog SHARE delays publication → retain explicit `ponytail:` ceiling comments and TASK-7 measurement gate. Stable order avoids importer upgrades; actual legacy-writer/publisher deadlock behavior remains a multi-session runtime proof gate.
+- Locks and deferred constraint checks are PostgreSQL behavior → SQL runtime/security/concurrency evidence is mandatory and cannot be replaced by source checks.
+- Privileged server is the byte/HMAC trust boundary → no authenticated execute, strict typed inputs, dedicated retained keys, no raw body logging or payload storage.
+- Business entities may become confidential, deleted or void after success → immutable receipt survives, current mapping visibility is re-evaluated and never reconstructs the workbook.
+- Connection loss can prevent safe failure persistence → preserve unknown outcome and TASK-12 lookup/recovery contract.
+
+## Migration Plan
+
+Recheck next unused version for every phase. New migrations assert actual baseline signatures/schema/grants/guard definitions and verify their resulting state. Never modify 233/234 or any applied/uncertain historical migration. No DB/deploy operation occurs in this source session. A separately authorized home-server session applies committed migrations through SSH/Docker and runs scoped SQL fixtures plus `run_security_tests()` after each migration, checks privileges/RLS and captures PII-free evidence. Runtime RPC/HTTP/application rollout remains separately gated; rollback uses forward-only corrections and compatible application behavior.
+
+## Open Questions / Checkpoint Decisions
+
+- Initial root checkpoint must accept the combined receipt/claim schema, deferred final invariants, entity visibility predicates, exact lock ordering/ceiling and phase partition before migration/application code.
+- Mapping predicates incorporate root's independent 048/077/123/124/126/127/132/221 review; exact schema realization remains part of normal Phase 1 code review. No unresolved product-contract decision is introduced.
+- Exact SQL signatures and new migration numbers are rechecked at each phase release; no production key or timeout policy values are invented here.

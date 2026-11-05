@@ -1,7 +1,7 @@
 ---
 id: TASK-11
 title: Commit import nguyên tử và provenance
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-11-02'
 labels: [excel-import, implementation, database]
@@ -13,7 +13,7 @@ priority: high
 
 Issue: https://github.com/thienchi2109/lims-lite/issues/139 (sub-issue #107).
 
-OpenSpec dự kiến `add-atomic-accession-confirmation` (chưa tạo). Nguồn: [mapping](../../docs/superpowers/specs/2026-11-02-import-implementation-partition.md), #113 §§3–9 và #112 §§4,6,8.
+OpenSpec: [`add-atomic-accession-confirmation`](../../openspec/changes/add-atomic-accession-confirmation/tasks.md). Nguồn: [mapping](../../docs/superpowers/specs/2026-11-02-import-implementation-partition.md), #113 §§3–9 và #112 §§4,6,8.
 
 SQL atomic boundary sở hữu business writes, success state, durable global successful-intent claim, row mappings và audit trong một transaction. API/browser không được lần lượt gọi single-accession mutation để giả atomic batch.
 
@@ -26,3 +26,15 @@ SQL atomic boundary sở hữu business writes, success state, durable global su
 - [ ] #5 Runtime session riêng sau authorization: baseline assertions/migration apply home-server SSH/Docker, SQL regression và run_security_tests() PASS, rollout-compatible RPC smoke và evidence PII-free. Không sửa applied migration. Actual crash/network/HTTP budgets và full dataset stress còn ở TASK-7 sau TASK-12/13.
 - [ ] #6 Exit: function invariants có SQL evidence đúng môi trường, minimal durable receipt/mappings/dedup/audit cùng business commit; handoff terminal/unknown-outcome semantics và locks cho TASK-12. Nếu chưa runtime-authorized ghi INCOMPLETE, không tick SQL runtime gate nhờ source tests.
 <!-- AC:END -->
+
+## Source release — 2026-11-05
+
+User yêu cầu đi đúng thứ tự Backlog, hoãn UI/deploy tới bước tương ứng và dispatch worker `gpt-6.1-sol/high` làm TASK-11; root điều phối/review độc lập. Baseline source `be7eb5c7b8943fd4fb904e9c9aae7df41b29683a`. Bắt đầu bằng checkpoint artifact/schema/transaction/lock trước implementation, rồi các source phase review được theo AC #1–#3. Hợp đồng #112/#113 giữ nguyên; không ghép TASK-12/13.
+
+TASK-10 source và scoped SQL gate đã có evidence; deployed HTTP/restart/retention/concurrency/full TTL/capacity chưa được chứng nhận. Migrations 233/234 đã áp dụng và bất biến. Phiên TASK-11 hiện chỉ source/fixture/review; apply migration, SQL runtime và deployment cần gate riêng, không suy quyền từ source release này. Phần chuẩn bị UI/deploy trước đó đã dọn, chưa có UI code hoặc production mutation.
+
+## Phase 1 source checkpoint — 2026-11-05
+
+Root chấp nhận **SOURCE ONLY** sau review độc lập SPEC/STANDARDS và sửa/re-review security checker để so toàn bộ policy với biểu thức đóng băng khi tạo migration. Migration 235 có receipt kiêm global unique intent claim, typed immutable mappings, private final validator/deferred receipt check và RLS/grants theo quyền hiện tại; chưa có confirmation entrypoint/business writes. Migrations 233/234 giữ nguyên byte.
+
+Root tự chạy **4 files / 25 source tests PASS**, ESLint, typecheck, OpenSpec strict và whitespace PASS. OpenSpec đạt **8/28 tasks** gồm checkpoint và Phase 1; Phase 2 chưa release. [Evidence và hashes](../../openspec/changes/add-atomic-accession-confirmation/evidence.md). SQL fixture rollback-only đã viết nhưng **NOT RUN**; apply 235, SQL/RLS/security runtime, atomicity/concurrency/drift/TTL và runtime/exit AC vẫn **INCOMPLETE**, TASK-11/#139 giữ mở.
