@@ -53,10 +53,12 @@ export function digestBindingSet(bindings: readonly unknown[][]) {
     return { canonical, digest: sha256(canonical) }
 }
 
-function buildBindings(batchId: string, workbook: ValidatedAccessionWorkbook, clients: PlannedClient[], snapshot: ReturnType<typeof validateTemplateSnapshot>, config: BindingKeys) {
+export function buildBindings(batchId: string, workbook: ValidatedAccessionWorkbook, clients: PlannedClient[], snapshot: ReturnType<typeof validateTemplateSnapshot>, config: BindingKeys, retainedVersions?: ReadonlyMap<number, string>) {
     const bindings: unknown[][] = clients.map(client => {
         const { row, input, resolution, trustedIdentity, displayValues, issues } = client
-        const fingerprint = fingerprintClientBinding(batchId, { row, input, resolution, trustedIdentity, displayValues, issues }, config)
+        const activeKeyId = retainedVersions ? retainedVersions.get(row) : config.activeKeyId
+        if (!activeKeyId) throw new Error('ACCESSION_PREVIEW_CONFIGURATION_UNAVAILABLE')
+        const fingerprint = fingerprintClientBinding(batchId, { row, input, resolution, trustedIdentity, displayValues, issues }, { ...config, activeKeyId })
         return ['client', client.row, null, null, null, null, null, client.resolution.outcome, client.clientId, fingerprint.keyVersion, fingerprint.fingerprint]
     })
     const clientRows = new Map(workbook.clients.map(client => [client.temporaryReference, client.callerContext.row]))

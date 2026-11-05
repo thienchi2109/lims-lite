@@ -18,12 +18,12 @@
 
 ## 2. Phase 2 — trusted preparation and locked validation
 
-- [ ] 2.1 Add server preparation/helper tests and migration source checks; run expected RED for caller/owner/attestation, byte/content/hash and retained-key HMAC verification, malformed rows/graphs/counts and current authority drift.
-- [ ] 2.2 Add narrow server-only preparation with authorized succeeded receipt short circuit before file/attestation/key/config/expiry requirements; for new confirmation reuse parser/snapshot/resolver/intent and existing keyed binding/digest/config implementation, supporting retained key versions and failing closed for missing/invalid configuration.
-- [ ] 2.3 Add new migration with private locked confirmation validation helper: active actor/service caller, batch owner/state, sealed metadata/bindings, exact ordered catalog SHARE/client SHARE ROW EXCLUSIVE exclusion, current snapshot/resolver/graph authority and acceptance-time expiry.
-- [ ] 2.4 Capture/restore actor JWT claims across all paths, verify true actor audit context and ensure no receipt timestamp/official IDs/business writes are persisted by the preparation-only phase.
-- [ ] 2.5 Retain SQL behavioral scenarios for wrong caller/owner, role/quality withdrawal, catalog/client/method/confidentiality drift, exact lock-time TTL and current creator/lifecycle/publisher contention; label NOT RUN.
-- [ ] 2.6 Run focused helper/source tests GREEN, touched-file lint, typecheck, strict OpenSpec and diff checks; freeze for root independent SPEC/STANDARDS review and await Phase 3 release.
+- [x] 2.1 Retained preparation/source RED for caller/owner/attestation, bytes/hash, retained-key HMAC, malformed graph/counts and authority drift; review corrections retain separate revision/scenario and invalid method-column RED evidence.
+- [x] 2.2 Added server-only preparation reusing parser/snapshot/resolver/intent/bindings/config, authorized succeeded receipt shortcut before file/attestation/keys/config/expiry, retained key versions and fail-closed metadata/HMAC checks.
+- [x] 2.3 Added migration 236 with private locked validation, service/current active actor and owner/state checks, sealed metadata/bindings, exact ordered final-mode locks, current snapshot/resolver/graph authority, explicit sealed/current revision equality and post-validation acceptance clock.
+- [x] 2.4 Preserved/restored all three JWT claim settings around verified actor context; preparation persists no receipt timestamp, official IDs or business writes. Retained pure validation business/provenance/audit-count assertions; SQL runtime NOT RUN.
+- [x] 2.5 Retained actual rollback-only authority drift scenarios and concrete disposable-only multi-session commands/assertions/cleanup for writer contention and TTL. SQL runtime NOT RUN; full publisher/single-accession rehearsal and Phase 3 business outcomes remain INCOMPLETE.
+- [x] 2.6 Root independently verified 6 files / 112 tests, touched lint, typecheck, strict OpenSpec, historical migration hashes and whitespace; SPEC/STANDARDS PASS after corrections. Phase 2 SOURCE accepted; Phase 3 unreleased and blocked on the pre-existing 235 method-column defect documented in evidence.md.
 
 ## 3. Phase 3 — atomic business confirmation and terminal outcomes
 

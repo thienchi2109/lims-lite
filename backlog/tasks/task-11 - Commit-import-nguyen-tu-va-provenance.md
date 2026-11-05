@@ -38,3 +38,11 @@ TASK-10 source và scoped SQL gate đã có evidence; deployed HTTP/restart/rete
 Root chấp nhận **SOURCE ONLY** sau review độc lập SPEC/STANDARDS và sửa/re-review security checker để so toàn bộ policy với biểu thức đóng băng khi tạo migration. Migration 235 có receipt kiêm global unique intent claim, typed immutable mappings, private final validator/deferred receipt check và RLS/grants theo quyền hiện tại; chưa có confirmation entrypoint/business writes. Migrations 233/234 giữ nguyên byte.
 
 Root tự chạy **4 files / 25 source tests PASS**, ESLint, typecheck, OpenSpec strict và whitespace PASS. OpenSpec đạt **8/28 tasks** gồm checkpoint và Phase 1; Phase 2 chưa release. [Evidence và hashes](../../openspec/changes/add-atomic-accession-confirmation/evidence.md). SQL fixture rollback-only đã viết nhưng **NOT RUN**; apply 235, SQL/RLS/security runtime, atomicity/concurrency/drift/TTL và runtime/exit AC vẫn **INCOMPLETE**, TASK-11/#139 giữ mở.
+
+## Phase 2 source checkpoint — 2026-11-05
+
+Root chấp nhận **SOURCE ONLY** sau worker `gpt-6.1-sol/high`, scout đọc mã `gpt-6-luna/max` và review độc lập SPEC/STANDARDS. Server preparation tái sử dụng parser/resolver/intent/HMAC/config, trả authorized succeeded receipt trước file/attestation/keys/expiry; migration 236 thêm service-only protected reader và private locked validator, không ghi business rows/receipt time/official IDs. Migrations 233–235 giữ nguyên byte.
+
+Root tự chạy **6 files / 112 tests PASS**, touched ESLint, typecheck, OpenSpec strict và whitespace PASS. OpenSpec đạt **14/28 tasks**. Retained actual drift SQL fixture và concrete concurrency runbook đều **NOT RUN**; runtime/exit AC ở trên vẫn chưa tick. [Evidence](../../openspec/changes/add-atomic-accession-confirmation/evidence.md).
+
+**Phase 3 BLOCKER:** validator trong migration 235 dòng 140–141 tham chiếu `assay.method_id` đã bị bỏ khỏi `assay_definitions`; `method_name` là text authority, còn nullable `results.method_id` là FK riêng. Không sửa migration 235. Trước release Phase 3 phải sửa validator bằng migration forward-only mới sau 236 và chốt method semantics; SQL validation cần authorization home-server riêng. TASK-11/#139 tiếp tục In Progress; chưa release Phase 3, TASK-12/13, UI hoặc DB/deploy.
