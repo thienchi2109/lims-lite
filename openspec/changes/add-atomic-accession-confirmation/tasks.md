@@ -39,7 +39,7 @@
 
 ## 4. Separately authorized home-server runtime and exit gates
 
-Runtime recovery checkpoint: disposable migration 235 passed; 236 failed compilation and fully rolled back; 237 was not executed. New standalone 238 reconstructs 236/237 in one transaction from the verified 235 baseline, correcting only the confirmed CASE parser issue. Apply committed 235 then 238; skip immutable historical 236/237. Production remains at 233/234. Recovery 238, fixtures/concurrency and service smoke are NOT RUN pending source acceptance and explicit runtime release; all exit gates remain unchecked.
+Runtime recovery checkpoint: disposable 235 and 238 passed, including 36/36 security; 236 failed compilation and fully rolled back; 237 was not executed. Validation candidate passed with exact rollback counts. Atomic success exposed two legitimate result INSERT audits for NULL methods; new 239 selects the canonical full-row audit while preserving both events and strict duplicate detection. Apply committed 235, 238 then 239; skip immutable historical 236/237. Production remains at 233/234. Recovery 239, final committed fixtures/concurrency and service smoke remain NOT RUN pending source acceptance and explicit runtime release; all exit gates remain unchecked.
 
 - [ ] 4.1 Obtain operation-specific runtime release, verify committed exact revisions/immutable hashes and actual baseline from home-server checkout; no runtime authorization is implied by source release.
 - [ ] 4.2 Apply only new committed migrations through authorized home-server SSH/Docker path; run `run_security_tests()` after each and capture exact privileges/RLS/owners/search paths/final invariants.

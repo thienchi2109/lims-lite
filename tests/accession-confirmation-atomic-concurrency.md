@@ -3,7 +3,7 @@
 These same-batch and cross-batch scenarios retain concrete lock and outcome assertions.
 
 Only a separately authorized home-server `task11_disposable_*` database with
-migration 235 then recovery 238 and a published eligible catalog pair may run these
+migrations 235, 238 then 239 and a published eligible catalog pair may run these
 commands. No commands below ran in the source workspace. Original workbook,
 descriptor and HMAC trust are application tests; the SQL handoff is synthetic.
 Historical 236 failed during function compilation and rolled back; 238 supersedes
@@ -28,7 +28,7 @@ FROM task11_confirmation_args;
 COMMIT;
 ```
 
-This commits only synthetic users, sealed batch metadata/bindings and their safe
+This commits three synthetic users (two analysts and one manager), sealed batch metadata/bindings and their safe
 lifecycle audit. It calls no business confirmation. Both batches were sealed
 while the same client was absent. The fixed fixture UUIDs/emails must not already
 exist; setup failure is INCOMPLETE, never a reason to weaken validation.
@@ -46,7 +46,7 @@ SET LOCAL lock_timeout='90s';
 SET LOCAL statement_timeout='120s';
 ```
 
-The fixture asserts the exact synthetic actor IDs/usernames/current roles, then
+The fixture asserts all three exact synthetic actor IDs/usernames/current roles, then
 reconstructs its constant ephemeral workbook/snapshot/expected plan. Its unused
 private batch is rolled back at the end. The full handoff stays in a session-local
 temporary table, never in a committed public table or a payload file.

@@ -59,7 +59,7 @@ describe('private locked confirmation source boundary', () => {
     })
     it('retains runnable behavioral and multi-session runtime scenarios without claiming execution', () => {
         const fixture = existsSync('tests/accession-confirmation-validation.sql') ? readFileSync('tests/accession-confirmation-validation.sql', 'utf8') : ''
-        for (const token of ['NOT RUN', 'ROLLBACK;', 'wrong owner', 'role withdrawal', 'quality', 'catalog', 'confidential',
+        for (const token of ['NOT RUN', 'ROLLBACK;', 'wrong owner', 'manager denial', 'quality', 'catalog', 'confidential',
             'clock_timestamp', 'creator', 'lifecycle', 'publisher', 'request.jwt.claims', 'validate_accession_confirmation_locked']) expect(fixture).toContain(token)
         expect(fixture).not.toMatch(/DISABLE (?:TRIGGER|ROW LEVEL SECURITY)|session_replication_role/)
     })

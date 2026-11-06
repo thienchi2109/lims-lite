@@ -53,7 +53,7 @@ BEGIN
     BEGIN
         PERFORM public.validate_accession_confirmation_locked((p_args->>'actor')::UUID,(p_args->>'batch')::UUID,p_quality,
             p_args->'workbook',p_args->'snapshot',p_args->'clients',p_args->'expected',p_args->>'canonical',p_args->>'bindings',p_args->'metadata');
-    EXCEPTION WHEN raise_exception OR insufficient_privilege OR invalid_text_representation THEN v_rejected:=TRUE;
+    EXCEPTION WHEN raise_exception OR insufficient_privilege OR invalid_text_representation OR invalid_parameter_value THEN v_rejected:=TRUE;
     END;
     PERFORM pg_temp.assert_confirmation(v_rejected,'expected validation rejection');
 END;
@@ -62,6 +62,7 @@ DO $behavior$
 DECLARE
     v_owner UUID := '95600000-0000-4000-8000-000000000001';
     v_other UUID := '95600000-0000-4000-8000-000000000002';
+    v_manager UUID := '95600000-0000-4000-8000-000000000003';
     v_batch JSONB; v_id UUID; v_snapshot JSONB; v_pair JSONB; v_type JSONB; v_assay JSONB;
     v_clients JSONB; v_expected JSONB; v_bindings JSONB; v_text TEXT; v_metadata JSONB; v_workbook JSONB;
     v_canonical TEXT; v_input JSONB; v_args JSONB; v_now TIMESTAMPTZ; v_deadline TIMESTAMPTZ;
@@ -71,13 +72,16 @@ DECLARE
 BEGIN
     IF current_setting('test.confirmation_shared_actors',true)='on' THEN
         PERFORM pg_temp.assert_confirmation((SELECT count(*)=2 FROM public.users WHERE deleted_at IS NULL AND role='analyst'
-            AND ((id=v_owner AND username='confirmation236_owner') OR (id=v_other AND username='confirmation236_other'))),
+            AND ((id=v_owner AND username='confirmation236_owner') OR (id=v_other AND username='confirmation236_other')))
+            AND EXISTS(SELECT 1 FROM public.users WHERE id=v_manager AND username='confirmation236_manager' AND role='manager' AND deleted_at IS NULL),
             'shared setup requires exact committed disposable synthetic actors');
     ELSE
-        INSERT INTO auth.users(id,email) VALUES(v_owner,'confirmation236-owner@lims.local'),(v_other,'confirmation236-other@lims.local');
+        INSERT INTO auth.users(id,email) VALUES(v_owner,'confirmation236-owner@lims.local'),(v_other,'confirmation236-other@lims.local'),
+            (v_manager,'confirmation236-manager@lims.local');
         INSERT INTO public.users(id,username,full_name,role,email) VALUES
             (v_owner,'confirmation236_owner','Synthetic owner','analyst','confirmation236-owner@lims.local'),
-            (v_other,'confirmation236_other','Synthetic other','analyst','confirmation236-other@lims.local');
+            (v_other,'confirmation236_other','Synthetic other','analyst','confirmation236-other@lims.local'),
+            (v_manager,'confirmation236_manager','Synthetic manager','manager','confirmation236-manager@lims.local');
     END IF;
     PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',v_owner,'role','authenticated')::TEXT,true);
     PERFORM set_config('request.jwt.claim.sub',v_owner::TEXT,true); PERFORM set_config('request.jwt.claim.role','authenticated',true);
@@ -150,13 +154,9 @@ BEGIN
     PERFORM set_config('request.jwt.claim.role','authenticated',true);
     PERFORM pg_temp.expect_confirmation_rejection(v_args);
     PERFORM set_config('request.jwt.claim.role',v_role,true);
-    -- Explicit acceptable quality attestation; role withdrawal / inactive actor.
+    -- Explicit quality attestation; manager denial and reachable actor deactivation.
     PERFORM pg_temp.expect_confirmation_rejection(v_args,FALSE);
-    BEGIN
-        UPDATE public.users SET role='manager' WHERE id=v_owner;
-        PERFORM pg_temp.expect_confirmation_rejection(v_args);
-        RAISE EXCEPTION 'rollback role withdrawal' USING ERRCODE='Z0236';
-    EXCEPTION WHEN SQLSTATE 'Z0236' THEN NULL; END;
+    PERFORM pg_temp.expect_confirmation_rejection(jsonb_set(v_args,'{actor}',to_jsonb(v_manager)));
     BEGIN
         UPDATE public.users SET deleted_at=clock_timestamp() WHERE id=v_owner;
         PERFORM pg_temp.expect_confirmation_rejection(v_args);

@@ -1,7 +1,7 @@
 # TASK-11 Phase 2 concurrency scenarios — NOT RUN
 
 DISPOSABLE home-server database only, named `task11_disposable_*`, with migration
-235 then recovery 238 and a published eligible pair. Historical 236 failed during
+235, recovery 238 then 239 and a published eligible pair. Historical 236 failed during
 function compilation and rolled back; 238 supersedes 236/237 without editing them.
 Do not execute 236/237 before or after 238. Provisioning that database is a
 separately authorized operation. Run three postgres psql sessions A/B/C through

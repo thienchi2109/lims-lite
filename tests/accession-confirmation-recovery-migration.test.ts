@@ -19,6 +19,7 @@ describe('atomic accession recovery migration', () => {
             '235_add_accession_import_provenance.sql': 'afd069b663bee98feed3d9ea33d9654a3fe52e3bc38c054cd4c354259f67ceaa',
             '236_add_accession_confirmation_validation.sql': 'c1e804b0f1293304c0650d7036a3c279d2c4f938cd80a22f270de571a2417803',
             '237_add_atomic_accession_confirmation.sql': '07ab7ea28b1c2cb292ce679f94ecd893161ec10748c20964c60e070a4d6a2835',
+            '238_recover_atomic_accession_confirmation.sql': '17549f4d2b47dc000f8b429da4549e0d8cafe35d4049114295689351e93f8063',
         }
         for (const [name, hash] of Object.entries(hashes)) {
             expect(createHash('sha256').update(readMigration(name)).digest('hex')).toBe(hash)
@@ -43,5 +44,20 @@ describe('atomic accession recovery migration', () => {
         expect(recovery.match(/^BEGIN;$/gm)).toHaveLength(1)
         expect(recovery.match(/^COMMIT;$/gm)).toHaveLength(1)
         expect(recovery).not.toMatch(/check_function_bodies\s*=\s*(off|false)|^\\i[mr]?\b|pg_read_file|ALTER ROLE/gim)
+    })
+
+    it('forward-corrects only the exact full-row result audit selection after 238', () => {
+        const name = '239_fix_accession_confirmation_result_audit.sql'
+        const sql = existsSync(`supabase/migrations/${name}`) ? readMigration(name) : ''
+        const original = readMigration('238_recover_atomic_accession_confirmation.sql')
+            .match(/CREATE FUNCTION public\.confirm_accession_import\([^]*?\n\$\$;/)?.[0] ?? ''
+        expect(original).not.toBe('')
+        const statement = "SELECT id INTO STRICT v_audit FROM public.audit_logs WHERE table_name='results' AND record_id=v_result AND operation='INSERT' AND changed_by=p_actor;"
+        const expected = original.replace('CREATE FUNCTION', 'CREATE OR REPLACE FUNCTION')
+            .replace(statement, `${statement.slice(0, -1)} AND new_values->>'id'=v_result::TEXT;`)
+        expect(sql).toContain(expected)
+        expect(sql).toContain('53c657c987d434435783652def29b185959c0d1df2629b6472333689e79c57c7')
+        expect(sql).toContain("current_setting('check_function_bodies')::BOOLEAN IS DISTINCT FROM TRUE")
+        expect(sql).not.toMatch(/DROP TRIGGER|DISABLE TRIGGER|LIMIT 1/)
     })
 })
