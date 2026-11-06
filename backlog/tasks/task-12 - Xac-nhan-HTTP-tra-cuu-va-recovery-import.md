@@ -40,3 +40,11 @@ Giữ các AC tổng thể chưa tick tới gate tương ứng. SQL/security run
 Worker mới hoàn tất status-first client tại `api-client.ts`: GET status trước mỗi confirm hoặc linked preview, success lấy receipt không cần file, processing/unknown không replay; retry rõ ràng dùng `retryOfBatchId` hiện có. Schema receipt/status được dùng chung giữa server/browser. Migration mới `241_guard_accession_preview_retry.sql` tái sử dụng lock-aware status trong cùng transaction để giữ parent lock tới child INSERT, chỉ nhận ready/failed/rejected/expired, không đổi parent; 233–240 giữ nguyên từng byte. **240/241 chưa apply**.
 
 Root chấp nhận **SOURCE ONLY**, OpenSpec **16/27**. RED 41 ca; focused GREEN 46/46; root kiểm chứng độc lập **16 files / 270 tests PASS**, typecheck, touched ESLint, strict OpenSpec và diff checks PASS. Spec/Standards review không có blocker. SQL rollback/concurrency scenarios được giữ lại nhưng **NOT RUN**; chưa deploy hoặc smoke thật. Phase 3 recovery/purge chưa release, TASK-11 gates 4.4/4.5 vẫn INCOMPLETE. [Evidence Phase 2](../../openspec/changes/add-accession-confirmation-recovery/evidence.md).
+
+## Phase 3 source checkpoint — 2026-11-06
+
+Worker `gpt-6.1-sol/high` triển khai runner native-PG chạy một lần, cấu hình opt-in và password file; scout read-only dùng `gpt-6-luna/max`. Migration242 phục hồi lease hết hạn và purge bindings bằng batch lock/capability trong transaction, giữ receipt/dedup/mapping/business/audit; không replay confirm. Migrations233–241 giữ nguyên từng byte, package chỉ thêm một start script; không thêm scheduler/Compose/dependency.
+
+Root chấp nhận **SOURCE ONLY**, OpenSpec **21/27**. Root kiểm chứng độc lập **18 files / 309 tests PASS**, typecheck, touched ESLint, worker build, strict OpenSpec và diff checks PASS; Spec/Standards review không có blocker. RED harness ban đầu không hợp lệ đã được ghi rõ và chạy lại baseline đúng; không coi đó là RED sạch trước implementation. [Evidence Phase 3](../../openspec/changes/add-accession-confirmation-recovery/evidence.md).
+
+**240–242 chưa apply**. SQL/security/concurrency/native-role/proxy/no-retention/authenticated E2E vẫn **NOT RUN**; chưa chạy worker, deploy hoặc purge thật. Sáu runtime gates4.1–4.6 còn mở; TASK-11 gates4.4/4.5 vẫn INCOMPLETE.

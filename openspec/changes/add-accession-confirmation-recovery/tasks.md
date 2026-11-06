@@ -31,11 +31,11 @@ Each phase is one bounded source review checkpoint. Runtime operations are separ
 
 ## 3. Phase 3 — fenced recovery and lock-safe physical purge, separately released source
 
-- [ ] 3.1 Root releases Phase 3; inspect existing approval-worker entry/config/shutdown patterns and select the smallest import-specific runner shape without a new framework or invented timing budgets.
-- [ ] 3.2 Add/run RED for abandoned lease, stale heartbeat/generation, live work, worker restart/DB outage, concurrent status/confirm/purge and expiry while waiting for locks.
-- [ ] 3.3 Author only next-numbered forward recovery/purge migration(s), security registration and retained SQL fixtures using existing lease/finalization authority; never replay confirmation writes or alter historical SQL.
-- [ ] 3.4 Implement minimal maintenance entrypoint with lock/state reconciliation, safe audit and physical purge restricted to transient commitments/bindings; preserve receipt/dedup/mapping/business/audit and accepted transactions beyond TTL.
-- [ ] 3.5 Run focused worker/API/SQL-source regressions, lint/typecheck/OpenSpec checks and independent root review; document runtime wiring and stop with actual runtime gates NOT RUN.
+- [x] 3.1 Root releases Phase 3; inspect existing approval-worker entry/config/shutdown patterns and select the smallest import-specific runner shape without a new framework or invented timing budgets.
+- [x] 3.2 Add/run RED for abandoned lease, stale heartbeat/generation, live work, worker restart/DB outage, concurrent status/confirm/purge and expiry while waiting for locks.
+- [x] 3.3 Author only next-numbered forward recovery/purge migration(s), security registration and retained SQL fixtures using existing lease/finalization authority; never replay confirmation writes or alter historical SQL.
+- [x] 3.4 Implement minimal maintenance entrypoint with lock/state reconciliation, safe audit and physical purge restricted to transient commitments/bindings; preserve receipt/dedup/mapping/business/audit and accepted transactions beyond TTL.
+- [x] 3.5 Run focused worker/API/SQL-source regressions, lint/typecheck/OpenSpec checks and independent root review; document runtime wiring and stop with actual runtime gates NOT RUN.
 
 ## 4. Separately authorized home-server runtime and exit
 

@@ -135,3 +135,51 @@ rtk proxy npx vitest run src/lib/api-client*.test.ts src/lib/accession-preview s
 **16 files / 270 tests PASS**, exit0. Independent typecheck, touched six-file ESLint, strict OpenSpec and diff-check **PASS**. Separate Spec and Standards reviewers found no concrete blockers. Root inspected the client outcome validation and SQL lock scope, independently derived both start-function hashes and confirmed eight historical migrations233–240 plus `confirm.ts` byte-for-byte unchanged. Reconstructing the old API client after removing new functions and restoring its modified schema import matches the baseline bytes exactly.
 
 Root accepts tasks2.1–2.4 **SOURCE ONLY**, total **16/27**. Stop before Phase3. Runtime gates above remain **NOT RUN**, including applying240 then241 and running SQL/security/concurrency evidence; no claim of authenticated end-to-end behavior. Root owns source landing and remote-ref/issue verification.
+
+## Phase 3 source release — 2026-11-06
+
+User released Phase 3 with a `gpt-6.1-sol/high` implementation worker and Luna read-only scouts. Baseline clean main `dbd067ecf991ffdb00c660e4d623c3bcc6facd83`. Root retains coordination, verification and landing; tasks3.1–3.5 only, no runtime release.
+
+Two `gpt-6-luna/max` scouts independently established the existing worker build/entry convention and DB lease/guard/receipt constraints. Root accepted a separate explicitly enabled one-shot native-PG runner, existing `build:worker`, one package entry and no Compose/image/dependency changes. Source242 supplies recovery/purge, a narrowly granted native maintenance login, transaction-scoped private capability for guarded binding deletion/system attribution, and reduced post-purge non-success status. Historical233–241, durable provenance and sealed metadata remain unchanged. Measured operation budgets, scheduler/provisioning and all real SQL/security/concurrency work remain separate runtime gates.
+
+RED evidence correction: the first reported30 runtime failures were caused by an invalid jsdom harness and are **not valid behavior RED**; the six missing SQL-source checks were valid. After fixing the harness and returning to an absent-runtime baseline, root independently ran `rtk proxy npx vitest run src/workers/accession-confirmation-maintenance/runtime.test.ts --reporter=json`: **exit1, 0 passed / 30 failed**, every failure the explicit missing-maintenance-runtime assertion, no stderr. A temporary runtime implementation/green preceded this corrected baseline rerun; that chronology is retained, not described as an original clean36 RED. Worker must revalidate GREEN after restoring implementation. No worker entrypoint or DB was executed.
+
+## Phase 3 worker source evidence — 2026-11-06; frozen for root review
+
+After root independently accepted corrected RED, restoring the runner produced **30/30 PASS**. A supplemental native-PG error-event regression then produced **30 PASS / 1 FAIL**: an unhandled driver event could expose a raw database error. The retained fix registers the same interruption observer for native error events; the final runtime suite is **31/31 PASS**. Initial missing-migration/fixture RED was six failed source checks; two additional source checks bind the exact guard/status replacements and capability lifetime. These structural checks are **not PostgreSQL behavior proof**.
+
+Final focused command, **2 files / 39 tests PASS**, exit0:
+
+```sh
+rtk proxy npx vitest run src/workers/accession-confirmation-maintenance/runtime.test.ts tests/accession-import-maintenance-migration.test.ts
+```
+
+Immediate preview/confirm/status/client and existing approval-worker regressions, **23 files / 306 tests PASS**, exit0:
+
+```sh
+rtk proxy npx vitest run src/lib/api-client*.test.ts src/lib/accession-preview src/app/api/accession-preview/route.test.ts src/app/api/accession-confirmation tests/accession-confirmation-status-migration.test.ts tests/accession-preview-retry-migration.test.ts src/workers/approval-batches tests/approval-batch-worker-compose-config.test.ts
+```
+
+Final touched four-file ESLint, `rtk npm run typecheck`, `rtk npm run build:worker`, strict OpenSpec and `git diff --check`: **PASS**. New untracked source files were also checked explicitly for whitespace. All nine historical migrations233–241 remain byte-for-byte identical to `dbd067ecf991ffdb00c660e4d623c3bcc6facd83`. Existing worker/app source, compiler config, Compose/images and dependencies are unchanged; only the new package start script joins the new files. New implementation/fixture files are below350 lines.
+
+Migration242 validates exact guard/status/start/heartbeat/finalize baselines, uses four unique source replacements, and verifies exact resulting guard/status/maintenance hashes in its registered security check. Recovery/expiry, private authorization, transient deletion and safe system audit form one transaction. The caller must be the pinned native session or PostgreSQL's access-checked `service_role`; JWT/custom flags cannot grant maintenance. An unexpected receipt/state fails closed. Existing heartbeat/finalization reject stale state/token/generation/expiry, so immutable lease generation is preserved. Eligible rows drop out after reconciliation, allowing repeated one-shot invocations to catch up after missed deadlines without a count cap. Locked accepted confirmations are skipped.
+
+Retained runnable SQL: `tests/accession-import-maintenance.sql` uses the existing disposable synthetic rollback seed; covers abandoned/live leases, stale heartbeat/finalization, idempotence, exact metadata and actual-success receipt/mapping/business retention, effective privileges, transaction capability cleanup, lifecycle/cleanup audit failure rollback and reduced confidential terminal status. `tests/accession-import-maintenance-concurrency.md` retains separate-session lock/admission/TTL races, generation mismatch, outage/restart, backlog catch-up and native-login acceptance. **Both are NOT RUN**. SQL parsing, actual function execution, security registration/counts, PostgreSQL locks and authenticated behavior remain unverified by source tests.
+
+Runtime wiring: compiler output includes the new directory; `start:accession-maintenance` targets its `main.js`. No scheduler or Compose service is enabled. The existing worker image contains worker output with its approval CMD unchanged; the Next standalone image does not package this runner. Before a separately authorized runtime release, require all `ACCESSION_MAINTENANCE_*` configuration: `ENABLED=true`, `POLICY_ID` referring to measured TASK-7 evidence, positive native-range `DATABASE_OPERATION_TIMEOUT_MS`, explicit database `HOST/PORT/NAME/USER` (user pinned `accession_maintenance_worker`) and protected `DATABASE_PASSWORD_FILE`; inline password is rejected. Disabled startup reads no credential and creates no connection. The source role has no password; credential provisioning and effective PUBLIC privileges require runtime verification. There is one maintenance RPC per invocation, no confirmation dispatch, polling or retry framework, and no default timing budget.
+
+Signals and native client errors mark the outcome uncertain, drain the single operation and close the client; the entrypoint logs only allowlisted outcome/counts or a generic failure code. A client query timeout/disconnect does **not** prove a server rollback or persisted failure audit. A later invocation reconciles committed DB state and never replays business writes. Scheduler/drain/DB policy and backlog service levels remain TASK-7 measurements. No SSH, Docker, DB, worker entrypoint, fault injection, deployment, migration apply, fixture creation or physical purge was executed here. Runtime migrations240/241/242, SQL/security/concurrency/proxy/no-retention/native-login gates remain **NOT RUN**; TASK-11 stays OPEN26/28 with4.4/4.5 **INCOMPLETE**. Root owns final acceptance, issue updates, commit and push.
+
+### Root acceptance — Phase 3 SOURCE ONLY
+
+Root independently ran the frozen application/SQL source:
+
+```sh
+rtk proxy npx vitest run src/lib/api-client*.test.ts src/lib/accession-preview src/app/api/accession-preview/route.test.ts src/app/api/accession-confirmation src/workers/accession-confirmation-maintenance tests/accession-confirmation-status-migration.test.ts tests/accession-preview-retry-migration.test.ts tests/accession-import-maintenance-migration.test.ts
+```
+
+**18 files / 309 tests PASS**, exit0. Independent typecheck, touched four-file ESLint, worker build and strict OpenSpec **PASS**. Separate Spec and Standards reviewers found no concrete blockers. Root independently emulated all four unique source replacements and reproduced the resulting guard/status hashes; this does not prove SQL parsing or execution. Historical migrations233–241 match baseline `dbd067ecf991ffdb00c660e4d623c3bcc6facd83` byte-for-byte. Existing worker/Compose/images/compiler/dependencies are unchanged. The compiled package entry exists; it was never executed.
+
+`apply_patch` repeatedly emitted CRLF on the two touched package script lines. Root authorized removal of exactly those two CR bytes after reproducing the limitation. Removing the new script line from the repaired file reproduces baseline package bytes exactly; root independently confirmed this and `git diff --check` PASS.
+
+Root accepts tasks3.1–3.5 **SOURCE ONLY**, total **21/27**. Task3.2 records corrected mocked runtime/source RED and retained SQL/concurrency scenarios, not actual database races. All six runtime tasks4.1–4.6 remain unchecked. Migrations240–242 are **UNAPPLIED**; SQL/security/locks/audit atomicity/native login/proxy/no-retention/authenticated E2E remain **NOT RUN**. No deployment or runtime release is implied. TASK-11 remains OPEN26/28 with4.4/4.5 INCOMPLETE.

@@ -8,6 +8,7 @@
     "build:worker": "tsc -p tsconfig.worker.json",
     "start": "next start",
     "start:worker": "node dist-worker/approval-batches/main.js",
+    "start:accession-maintenance": "node dist-worker/accession-confirmation-maintenance/main.js",
     "lint": "eslint",
     "check:no-explicit-any": "node scripts/check-no-explicit-any.mjs",
     "typecheck": "tsc --noEmit",
