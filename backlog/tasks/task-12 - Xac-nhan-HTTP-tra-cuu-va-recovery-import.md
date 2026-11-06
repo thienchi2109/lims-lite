@@ -1,7 +1,7 @@
 ---
 id: TASK-12
 title: Xác nhận HTTP, tra cứu và recovery import
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-11-02'
 labels: [excel-import, implementation, recovery]
@@ -26,3 +26,11 @@ Confirm gửi lại IDENTICAL original workbook; server reparse/revalidate và s
 - [ ] #5 Runtime session riêng sau authorization: apply migration qua home-server SSH/Docker, SQL tests + run_security_tests(), rollout API/recovery runner và verify current image/config/proxy upload/no-buffer-to-disk path. Nếu hạ tầng không đáp ứng no-retention phải báo quyết định cụ thể, không tự nới contract; TASK-7 đo/chốt HTTP/DB/lock/poll/retry/purge budgets sau baseline.
 - [ ] #6 Exit: status/recovery path testable qua app thực, không duplicate/false failure, physical purge phân biệt expiry; ghi evidence nguồn/runtime riêng. Full crash/concurrency/capacity acceptance vẫn chờ TASK-7, không claim từ mock hoặc prototype watchdog.
 <!-- AC:END -->
+
+## Phase 1 source checkpoint — 2026-11-06
+
+Root đã review độc lập và chấp nhận **SOURCE ONLY** cho confirm/status HTTP tại `/api/accession-confirmation/[batchId]`, tái sử dụng adapter atomic hiện có và bounded upload/auth chung với preview. Migration mới `240_add_accession_confirmation_status.sql` cung cấp service-only status với owner/confidentiality checks, `NOWAIT`, receipt durable và DB-clock logical expiry; **chưa apply**. Migrations 233–239 và core confirm/preparation giữ nguyên từng byte.
+
+OpenSpec [`add-accession-confirmation-recovery`](../../openspec/changes/add-accession-confirmation-recovery/tasks.md): **12/27**, checkpoint 0 và Phase 1 hoàn tất; Phase 2/3 và runtime chưa release. RED 55 ca mới, thêm regression deadline RED, GREEN worker 146/146; root chạy độc lập 10 files / **208/208 PASS**, typecheck, touched ESLint, strict OpenSpec và diff checks PASS. Independent Spec/Standards review không có blocker. [Evidence](../../openspec/changes/add-accession-confirmation-recovery/evidence.md) ghi lệnh và giới hạn.
+
+Giữ các AC tổng thể chưa tick tới gate tương ứng. SQL/security runtime, authenticated adapter smoke, proxy/no-retention, recovery/purge và deployment **NOT RUN**; TASK-11 vẫn OPEN 26/28, gates 4.4/4.5 INCOMPLETE. Không có UI TASK-13 hoặc production fixture.
