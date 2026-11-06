@@ -97,7 +97,7 @@ BEGIN
         jsonb_build_array(jsonb_build_array(v_type->>'importCode','acceptable',jsonb_build_array(v_assay->>'importCode'))))));
     v_workbook:=jsonb_build_object('template',jsonb_build_object('templateId','accession-template','version','1','generatedAt','2026-11-05T00:00:00.000Z',
         'revision',v_snapshot->>'revisionNumber','authorityDigest',repeat('d',64),'catalogDigest',repeat('f',64)),
-        'clients',jsonb_build_array((v_clients->0-'row') || jsonb_build_object('temporaryReference','KH-01',
+        'clients',jsonb_build_array(((v_clients->0)-'row') || jsonb_build_object('temporaryReference','KH-01',
             'callerContext',jsonb_build_object('sheet','Khách hàng','row',2,'temporaryReference','KH-01'))),
         'samples',jsonb_build_array(jsonb_build_object('temporaryReference','M-01','clientTemporaryReference','KH-01','sampleTypeCode',v_type->>'importCode',
             'callerContext',jsonb_build_object('sheet','Mẫu','row',2,'temporaryReference','M-01'))),
