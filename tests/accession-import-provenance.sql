@@ -1,7 +1,7 @@
 -- Migration 235 PARTIAL rollback-only schema/RLS fixture. NOT RUN in this source workspace.
--- Requires 234/235 and an existing published eligible confidential assay/sample-type pair.
--- Pending deferred receipt/mapping rows never represent committed success; 234 guard stays intact.
--- No existing catalog/business rows are changed; positive success/full graph checks await Phase 3.
+-- Requires the named synthetic behavior DB with 235/238/239 and its published eligible pair.
+-- Pending deferred receipt/mapping rows never represent committed success; historical guards stay intact.
+-- Only the guarded synthetic assay confidentiality flag changes inside ROLLBACK; full success has its atomic fixture.
 \set ON_ERROR_STOP on
 BEGIN;
 SET LOCAL search_path TO public, pg_temp;
@@ -21,9 +21,12 @@ DECLARE
     v_other_batch UUID := '95500000-0000-4000-8000-000000000022';
     v_third_batch UUID := '95500000-0000-4000-8000-000000000023';
     v_sample UUID; v_sample_audit UUID; v_result UUID; v_result_audit UUID; v_type UUID; v_assay UUID; v_method UUID; v_code TEXT;
-    v_snapshot JSONB; v_id UUID; v_denied BOOLEAN; v_constraint TEXT; v_count BIGINT;
+    v_snapshot JSONB; v_id UUID; v_denied BOOLEAN; v_constraint TEXT; v_count BIGINT; v_generation BIGINT;
     v_before BIGINT[]; v_after BIGINT[]; v_now TIMESTAMPTZ := clock_timestamp();
 BEGIN
+    IF current_database()<>'task11_disposable_20261106_behavior' THEN
+        RAISE EXCEPTION 'provenance fixture requires named synthetic behavior DB';
+    END IF;
     SELECT ARRAY[(SELECT count(*) FROM public.clients),(SELECT count(*) FROM public.samples),
         (SELECT count(*) FROM public.results),(SELECT count(*) FROM public.accession_import_receipts)] INTO v_before;
     INSERT INTO auth.users(id,email) VALUES (v_owner,'provenance235-owner@lims.local'),
@@ -32,11 +35,19 @@ BEGIN
         (v_owner,'provenance235_owner','Synthetic owner','analyst','provenance235-owner@lims.local',TRUE),
         (v_other,'provenance235_other','Synthetic other','analyst','provenance235-other@lims.local',FALSE),
         (v_manager,'provenance235_manager','Synthetic manager','manager','provenance235-manager@lims.local',FALSE);
+    PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',v_manager,'role','authenticated')::TEXT,true);
+    PERFORM set_config('request.jwt.claim.sub',v_manager::TEXT,true);
+    PERFORM set_config('request.jwt.claim.role','authenticated',true);
+    SELECT compatibility_generation INTO STRICT v_generation FROM public.assay_definitions
+    WHERE id='23800000-0000-4000-8000-000000000003' AND name='Synthetic TASK11 Assay' AND NOT is_confidential;
+    UPDATE public.assay_definitions SET is_confidential=TRUE WHERE id='23800000-0000-4000-8000-000000000003';
+    PERFORM pg_temp.assert_provenance((SELECT compatibility_generation=v_generation FROM public.assay_definitions
+        WHERE id='23800000-0000-4000-8000-000000000003'),'synthetic confidentiality setup preserves published pair generation');
     PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',v_owner,'role','authenticated')::TEXT,true);
     PERFORM set_config('request.jwt.claim.sub',v_owner::TEXT,true);
     PERFORM set_config('request.jwt.claim.role','authenticated',true);
     v_snapshot := public.get_accession_template_snapshot();
-    SELECT (pair->>'sampleTypeId')::UUID,assay.id,assay.method_id,assay.import_code INTO v_type,v_assay,v_method,v_code
+    SELECT (pair->>'sampleTypeId')::UUID,assay.id,NULL::UUID,assay.import_code INTO v_type,v_assay,v_method,v_code
     FROM jsonb_array_elements(v_snapshot->'pairs') pair
     JOIN public.assay_definitions assay ON assay.id=(pair->>'assayDefinitionId')::UUID
     WHERE assay.is_confidential ORDER BY assay.id LIMIT 1;
@@ -48,7 +59,8 @@ BEGIN
     VALUES ('PROVENANCE235-SYNTHETIC',v_client,v_type,TRUE,v_owner,'assigned') RETURNING id INTO v_sample;
     INSERT INTO public.results(sample_id,assay_id,method_id,status) VALUES (v_sample,v_assay,v_method,'pending') RETURNING id INTO v_result;
     SELECT id INTO STRICT v_sample_audit FROM public.audit_logs WHERE table_name='samples' AND record_id=v_sample AND operation='INSERT';
-    SELECT id INTO STRICT v_result_audit FROM public.audit_logs WHERE table_name='results' AND record_id=v_result AND operation='INSERT';
+    SELECT id INTO STRICT v_result_audit FROM public.audit_logs WHERE table_name='results' AND record_id=v_result AND operation='INSERT'
+        AND new_values->>'id'=v_result::TEXT;
 
     -- Seed protected metadata with all historical triggers enabled; no success transition is attempted.
     FOREACH v_id IN ARRAY ARRAY[v_batch,v_other_batch,v_third_batch] LOOP
@@ -170,17 +182,21 @@ BEGIN
     SELECT count(*) INTO v_count FROM public.accession_import_mappings;
     PERFORM pg_temp.assert_provenance(v_count=1,'other actor sees only own mapping');
     SET LOCAL ROLE postgres;
-    UPDATE public.clients SET deleted_at=clock_timestamp(),deleted_by=v_other WHERE id=v_second_client;
+    UPDATE public.clients SET deleted_at=clock_timestamp(),deleted_by=v_other,deletion_reason='Synthetic provenance fixture deactivation' WHERE id=v_second_client;
     SET LOCAL ROLE authenticated;
     SELECT count(*) INTO v_count FROM public.accession_import_mappings;
     PERFORM pg_temp.assert_provenance(v_count=0,'deactivated client details hidden');
     SELECT count(*) INTO v_count FROM public.accession_import_receipts;
     PERFORM pg_temp.assert_provenance(v_count=1,'safe receipt survives client deactivation');
     SET LOCAL ROLE postgres;
-    UPDATE public.users SET role='doctor' WHERE id=v_other;
+    v_denied:=FALSE;
+    BEGIN UPDATE public.users SET role='doctor' WHERE id=v_other;
+    EXCEPTION WHEN insufficient_privilege THEN v_denied:=SQLERRM='User roles are immutable after account creation'; END;
+    PERFORM pg_temp.assert_provenance(v_denied AND (SELECT role='analyst' FROM public.users WHERE id=v_other),'actor role remains immutable');
+    UPDATE public.users SET deleted_at=clock_timestamp() WHERE id=v_other;
     SET LOCAL ROLE authenticated;
     SELECT count(*) INTO v_count FROM public.accession_import_receipts;
-    PERFORM pg_temp.assert_provenance(v_count=0,'withdrawn analyst role denied');
+    PERFORM pg_temp.assert_provenance(v_count=0,'deactivated current analyst history denied');
     SET LOCAL ROLE postgres;
     SELECT ARRAY[(SELECT count(*) FROM public.clients),(SELECT count(*) FROM public.samples),
         (SELECT count(*) FROM public.results),(SELECT count(*) FROM public.accession_import_receipts)] INTO v_after;
