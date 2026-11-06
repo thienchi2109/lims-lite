@@ -47,7 +47,8 @@ import type {
 import type { SubmitResultReview } from '@/types'
 import type { ClientActionName } from '@/lib/client-actions/types'
 import type { SampleLabelAuditPreset } from '@/lib/sample-label-template'
-import { PreviewValidationResponseSchema } from '@/lib/accession-preview/http-contract'
+import { PreviewValidationResponseSchema, accessionBatchIdSchema, accessionConfirmationStatusSchema,
+    type AccessionConfirmationStatus } from '@/lib/accession-preview/http-contract'
 
 export {
     fetchApprovalBatchClient,
@@ -188,6 +189,51 @@ export async function createAccessionPreviewClient(file: File, retryOfBatchId?: 
         if (parsed.success) return parsed.data
     }
     return readClientMutationResponse<Awaited<ReturnType<typeof import('@/lib/accession-preview/server').prepareAccessionPreview>>>(response)
+}
+
+async function requestAccessionConfirmation(batchId: string, init: RequestInit): Promise<AccessionConfirmationStatus> {
+    accessionBatchIdSchema.parse(batchId)
+    let response: Response, body: unknown
+    try {
+        response = await fetch(`/api/accession-confirmation/${batchId}`, { credentials: 'include', cache: 'no-store', ...init })
+        body = await response.clone().json().catch(() => null)
+    } catch { return { state: 'unknown', batchId } }
+    if (response.status === 401) return readClientMutationResponse(response)
+    if (response.status === 403) throw new Error('Bạn không có quyền truy cập lần nhập này.')
+    const parsed = accessionConfirmationStatusSchema.safeParse(body)
+    if (!parsed.success) return { state: 'unknown', batchId }
+    const result = parsed.data
+    const expectedStatus = result.state === 'unknown' ? 503 : ['preparing', 'processing'].includes(result.state) ? 202
+        : ['failed', 'rejected', 'expired'].includes(result.state) ? 422 : 200
+    if (response.status !== expectedStatus) return { state: 'unknown', batchId }
+    if (result.state === 'succeeded') {
+        if (result.receipt.batch_id !== batchId || result.receipt.client_count !== result.receipt.create_count + result.receipt.reuse_count) {
+            return { state: 'unknown', batchId }
+        }
+    } else if (result.batchId !== batchId) return { state: 'unknown', batchId }
+    return result
+}
+
+export function fetchAccessionConfirmationStatusClient(batchId: string, options: CallClientActionOptions = {}) {
+    return requestAccessionConfirmation(batchId, { method: 'GET', signal: options.signal })
+}
+
+export async function confirmAccessionClient(batchId: string, file?: File, acceptableQuality?: boolean, options: CallClientActionOptions = {}) {
+    const status = await fetchAccessionConfirmationStatusClient(batchId, options)
+    if (status.state !== 'preview_ready' || file === undefined) return status
+    if (acceptableQuality !== true) throw new Error('Cần xác nhận tất cả mẫu đã lấy, đạt chất lượng.')
+    if (!(file instanceof File) || file.size < 1 || file.size >= 10000000) throw new Error('Cần tệp Excel gốc dưới 10.000.000 byte.')
+    const body = new FormData()
+    body.set('file', file)
+    body.set('acceptableQuality', 'true')
+    return requestAccessionConfirmation(batchId, { method: 'POST', body, signal: options.signal })
+}
+
+export async function retryAccessionPreviewClient(batchId: string, file: File, options: CallClientActionOptions = {}) {
+    const status = await fetchAccessionConfirmationStatusClient(batchId, options)
+    if (!['failed', 'rejected', 'expired', 'preview_ready'].includes(status.state)) return status
+    // SQL rechecks the parent's lock, ownership and state through child creation; this GET is not a permit.
+    return createAccessionPreviewClient(file, batchId, options)
 }
 
 export function fetchSamplesClient(params: SampleListParams) {

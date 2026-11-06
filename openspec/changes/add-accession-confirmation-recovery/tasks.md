@@ -24,10 +24,10 @@ Each phase is one bounded source review checkpoint. Runtime operations are separ
 
 ## 2. Phase 2 — durable lookup and retry semantics, separately released source
 
-- [ ] 2.1 Root releases Phase 2; add/run RED for lost response before/after commit, DB/RPC uncertainty, file loss, terminal failed/rejected/expired linking and same-owner constraints.
-- [ ] 2.2 Complete allowlisted durable status/receipt and unknown-before-retry integration contract through existing preview retryOfBatchId; no workbook on lookup, no terminal reset, no blind replay or server reconstruction of payload.
-- [ ] 2.3 Retain production-shaped rollback/concurrency scenarios proving processing while locked, committed success after response loss and no official IDs before commit; do not run them without runtime authorization.
-- [ ] 2.4 Run focused regression, touched lint/typecheck/OpenSpec checks and root review; record source versus NOT RUN runtime and stop before Phase 3.
+- [x] 2.1 Root releases Phase 2; add/run RED for lost response before/after commit, DB/RPC uncertainty, file loss, terminal failed/rejected/expired linking and same-owner constraints.
+- [x] 2.2 Complete allowlisted durable status/receipt and unknown-before-retry integration contract through existing preview retryOfBatchId; no workbook on lookup, no terminal reset, no blind replay or server reconstruction of payload.
+- [x] 2.3 Retain production-shaped rollback/concurrency scenarios proving processing while locked, committed success after response loss and no official IDs before commit; do not run them without runtime authorization.
+- [x] 2.4 Run focused regression, touched lint/typecheck/OpenSpec checks and root review; record source versus NOT RUN runtime and stop before Phase 3.
 
 ## 3. Phase 3 — fenced recovery and lock-safe physical purge, separately released source
 

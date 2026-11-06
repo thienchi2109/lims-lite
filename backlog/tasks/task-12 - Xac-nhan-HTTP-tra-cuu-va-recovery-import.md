@@ -34,3 +34,9 @@ Root đã review độc lập và chấp nhận **SOURCE ONLY** cho confirm/stat
 OpenSpec [`add-accession-confirmation-recovery`](../../openspec/changes/add-accession-confirmation-recovery/tasks.md): **12/27**, checkpoint 0 và Phase 1 hoàn tất; Phase 2/3 và runtime chưa release. RED 55 ca mới, thêm regression deadline RED, GREEN worker 146/146; root chạy độc lập 10 files / **208/208 PASS**, typecheck, touched ESLint, strict OpenSpec và diff checks PASS. Independent Spec/Standards review không có blocker. [Evidence](../../openspec/changes/add-accession-confirmation-recovery/evidence.md) ghi lệnh và giới hạn.
 
 Giữ các AC tổng thể chưa tick tới gate tương ứng. SQL/security runtime, authenticated adapter smoke, proxy/no-retention, recovery/purge và deployment **NOT RUN**; TASK-11 vẫn OPEN 26/28, gates 4.4/4.5 INCOMPLETE. Không có UI TASK-13 hoặc production fixture.
+
+## Phase 2 source checkpoint — 2026-11-06
+
+Worker mới hoàn tất status-first client tại `api-client.ts`: GET status trước mỗi confirm hoặc linked preview, success lấy receipt không cần file, processing/unknown không replay; retry rõ ràng dùng `retryOfBatchId` hiện có. Schema receipt/status được dùng chung giữa server/browser. Migration mới `241_guard_accession_preview_retry.sql` tái sử dụng lock-aware status trong cùng transaction để giữ parent lock tới child INSERT, chỉ nhận ready/failed/rejected/expired, không đổi parent; 233–240 giữ nguyên từng byte. **240/241 chưa apply**.
+
+Root chấp nhận **SOURCE ONLY**, OpenSpec **16/27**. RED 41 ca; focused GREEN 46/46; root kiểm chứng độc lập **16 files / 270 tests PASS**, typecheck, touched ESLint, strict OpenSpec và diff checks PASS. Spec/Standards review không có blocker. SQL rollback/concurrency scenarios được giữ lại nhưng **NOT RUN**; chưa deploy hoặc smoke thật. Phase 3 recovery/purge chưa release, TASK-11 gates 4.4/4.5 vẫn INCOMPLETE. [Evidence Phase 2](../../openspec/changes/add-accession-confirmation-recovery/evidence.md).

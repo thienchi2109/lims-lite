@@ -10,11 +10,9 @@ import { validateAccessionWorkbook } from '@/lib/accession-workbook/validate'
 import { resolveAccessionPreviewClients } from './clients'
 import { canonicalizeAccessionIntent } from './intent'
 import { buildBindings, digestBindingSet, readPreviewConfiguration } from './server'
+import { accessionReceiptSchema } from './http-contract'
+export { accessionReceiptSchema } from './http-contract'
 
-const count = z.number().int().nonnegative().safe()
-export const accessionReceiptSchema = z.strictObject({ batch_id: z.string().uuid(), owner_id: z.string().uuid(),
-    confirmation_received_at: z.string().datetime({ offset: true }), client_count: count.positive(), sample_count: count.positive(),
-    assignment_count: count.positive(), create_count: count, reuse_count: count })
 const loadedSchema = z.object({ batch: z.object({ id: z.string().uuid(), owner_id: z.string().uuid(),
     state: z.literal('preview_ready'), expires_at: z.string().datetime({ offset: true }) }).passthrough(),
     bindings: z.array(z.array(z.unknown())).min(1) })

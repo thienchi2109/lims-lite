@@ -83,3 +83,55 @@ rtk proxy git diff --check
 - Root independently verified frozen code: expanded accession-preview libraries plus preview/confirm routes and SQL-source checks **10 files / 208 tests PASS**; typecheck, touched seven-file ESLint, strict OpenSpec and diff-check **PASS**. Root independently compared historical233–239 and core confirmation files byte-for-byte with baseline. Independent Standards and Spec reviewers found no concrete blockers; these source results do not close runtime gates.
 
 Root accepts Phase 1 **SOURCE ONLY**, tasks1.1–1.9 complete; total OpenSpec progress **12/27**. Phase2/3 and runtime remain unreleased. **Migration240 application, actual SQL fixtures/security execution, authenticated adapter smoke, concurrency/fault injection, proxy/no-retention inspection, recovery/physical purge and deployment: NOT RUN.** No SSH, Docker, database, fixture creation or purge operation occurred. TASK-11 remains OPEN26/28 with4.4/4.5 INCOMPLETE. Root owns source commit/push and remote-ref verification.
+
+## Phase 2 source release — 2026-11-06
+
+User explicitly released Phase 2 with a new `gpt-6.1-sol/high` worker; root retains coordination, independent verification and landing. Baseline clean main `7ec1c732757a3e92473cddc97df0f68ef7e03502`; Phase 1 is pushed and accepted. Using change `add-accession-confirmation-recovery`, tasks2.1–2.4 only; Phase 3 and runtime remain unreleased.
+
+Root reviewed the approved contract and accepted the narrow client/status-before-retry integration and browser-safe schema reuse. A read-only `gpt-6-luna/max` scout independently corroborated migration234's blocking parent `FOR SHARE`, its allowed `succeeded` parent and exclusion of `preview_ready`; insert triggers do not enforce retry eligibility. Root therefore authorized next-unused migration241 source to reuse migration240's lock-aware status inside the start transaction, retain the parent lock through child insertion, admit only unlocked preview_ready/failed/rejected/expired and preserve parent state. Historical233–240 remain unchanged. No SQL application or runtime access is authorized by this source release.
+
+## Phase 2 worker source evidence — 2026-11-06; pending root acceptance
+
+Clean RED, before client or migration241 implementation:
+
+```sh
+rtk proxy npx vitest run src/lib/api-client.accession-confirmation.test.ts tests/accession-preview-retry-migration.test.ts
+```
+
+**Exit1, 2 files / 41 failed**, 1.01s. All37 browser cases failed because the three confirmation/retry client exports were absent; four source checks failed because migration241 and its rollback fixture were absent. No unhandled rejection, timeout or fixture execution occurred.
+
+GREEN uses the existing `api-client.ts` response/session conventions and existing `http-contract.ts`, with one shared strict status/receipt allowlist consumed by server and browser. Every explicit confirmation/replacement first performs a credentialed no-store status GET. Only ready plus the selected original file and literal true attestation sends one confirmation POST; missing file returns ready without reconstructing a body. Transport/DB/proxy/malformed-result uncertainty returns unknown, and another explicit action starts with a fresh GET. A success receipt requires no file. Explicit replacement uses existing preview multipart `retryOfBatchId`, admits terminal or unlocked ready status, and never starts for processing/unknown/preparing/succeeded.
+
+Migration241 replaces only `start_accession_preview`, reusing owner/confidentiality/NOWAIT/logical-expiry status within the same transaction. The parent lock survives through the child INSERT, and disallowed status raises an admission error before any child exists. Parent state/commitment/receipt are unchanged. Its baseline binds the original234 start body hash `cadd2bd966dcc96326af313fe719f36d71a8904abdc6ef40ac6abc51533bb371` and verifies240 security; its new private security check binds the resulting start body and is registered in `run_security_tests()`. This is source validation, not executed SQL proof.
+
+Verification:
+
+```sh
+rtk proxy npx vitest run src/lib/api-client.accession-confirmation.test.ts tests/accession-preview-retry-migration.test.ts
+rtk proxy npx eslint src/lib/api-client.ts src/lib/api-client.accession-confirmation.test.ts src/lib/accession-preview/http-contract.ts src/lib/accession-preview/confirmation.ts src/lib/accession-preview/status.ts tests/accession-preview-retry-migration.test.ts
+rtk npm run typecheck
+rtk proxy openspec validate add-accession-confirmation-recovery --strict --no-interactive
+rtk proxy git diff --check
+```
+
+- Latest focused GREEN: **2 files / 46 tests PASS** (41 browser, five SQL-source), 1.01s; lint **PASS, zero warnings**, typecheck **PASS**. Added checks distinguish failed GET before dispatch, dispatched response loss before commit followed by ready reconciliation/file loss/explicit retry, and response loss after commit followed by file-free receipt without another POST. HTTP status/outcome mismatch, foreign batch, invalid counts, unsafe fields and terminal/same-owner-linked admission are covered at their source boundaries.
+- Immediate regression command: `rtk proxy npx vitest run src/lib/api-client*.test.ts 'src/app/api/accession-confirmation/[batchId]/route.test.ts' src/lib/accession-preview/status.test.ts src/lib/accession-preview/confirm.test.ts src/lib/accession-preview/confirmation.test.ts 'src/app/api/accession-preview/route.test.ts' src/lib/accession-preview/server.test.ts src/lib/accession-preview/cancellation.test.ts tests/accession-confirmation-status-migration.test.ts tests/accession-preview-retry-migration.test.ts tests/accession-confirmation-atomic-migration.test.ts tests/accession-confirmation-validation-migration.test.ts`: **16 files / 244 PASS**, 5.16s, before the final four test-only assertions; the latest focused46 includes those assertions. OpenSpec strict **PASS**.
+- Historical233–240 compared byte-for-byte with HEAD: **PASS, eight files**. Core `confirm.ts` and confirmation route are untouched; `confirmation.ts` changes only its receipt-schema import/reexport. Migration241 file SHA-256: `3d72f86e0fce39ed675d28f5b40666ecbe1b2146962cc9ca99b9014540d4e02a`; resulting start body: `ea7ca3a2ec4a91f93894dcbf0ede4a1805cf7c8a18b5c1d28b7f8140326368a8`.
+- `api-client.ts` already contains mixed line endings. Repeated `apply_patch` inserted CRLF into new lines and diff-check rejected them. Root authorized a reversible native-git repair: capture the exact file diff, back up the file with trap restoration, strip CR only from added patch lines, reverse/apply that patch with `git apply --whitespace=fix`. Unchanged bytes outside47 added/one removed line compare exactly with HEAD; old CRLF count319 becomes318 because the replaced import had one CRLF. No whole-file normalization. Final diff-check **PASS**.
+- New/expanded files are below350 lines; no dependency, UI, polling scheduler, lifecycle framework, alternate writer, payload reconstruction or persistent source storage was added. Existing `api-client.ts` exceeds350 before this task and retains its established mutation boundary.
+
+Retained `tests/accession-preview-retry.sql` reuses the rollback-only synthetic seed and asserts actual ready/logical-expired/terminal linked admission, parent immutability, same-owner/role denial, zero child on rejected admission and succeeded receipt precedence. Expanded `tests/accession-confirmation-status-concurrency.md` gives concrete processing/no-official-ID and retry-race assertions around the existing controlled accepted precommit pause, committed receipt reconciliation, rollback, and the opposite parent-lock direction. All are **NOT RUN**.
+
+**Migration240/241 application, actual SQL/security fixtures, two-session concurrency/fault injection, authenticated adapter smoke, proxy/no-retention inspection, recovery/physical purge and deployment: NOT RUN.** No SSH/Docker/DB or runtime operation occurred. TASK-11 remains OPEN26/28, gates4.4/4.5 INCOMPLETE. Application/SQL code is frozen for root's independent review; root owns task acceptance, issue/backlog status, commit and push. Phase3 remains unreleased.
+
+### Root acceptance — Phase 2 SOURCE ONLY
+
+Root independently ran the frozen source:
+
+```sh
+rtk proxy npx vitest run src/lib/api-client*.test.ts src/lib/accession-preview src/app/api/accession-preview/route.test.ts src/app/api/accession-confirmation tests/accession-confirmation-status-migration.test.ts tests/accession-preview-retry-migration.test.ts
+```
+
+**16 files / 270 tests PASS**, exit0. Independent typecheck, touched six-file ESLint, strict OpenSpec and diff-check **PASS**. Separate Spec and Standards reviewers found no concrete blockers. Root inspected the client outcome validation and SQL lock scope, independently derived both start-function hashes and confirmed eight historical migrations233–240 plus `confirm.ts` byte-for-byte unchanged. Reconstructing the old API client after removing new functions and restoring its modified schema import matches the baseline bytes exactly.
+
+Root accepts tasks2.1–2.4 **SOURCE ONLY**, total **16/27**. Stop before Phase3. Runtime gates above remain **NOT RUN**, including applying240 then241 and running SQL/security/concurrency evidence; no claim of authenticated end-to-end behavior. Root owns source landing and remote-ref/issue verification.
