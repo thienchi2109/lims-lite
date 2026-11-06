@@ -133,11 +133,12 @@ publisher/single-accession deadlock rehearsal remains INCOMPLETE.
 
 The counter/single-accession inversion has this concrete retained scenario. Use
 a fresh rollback-only setup from the Phase 2 external-writer runbook; B targets
-its private batch and uses the atomic call above. In A run its synthetic actor
-setup and creator block, then:
+its private batch and uses the atomic call above. For both counter-order cases,
+change only the writer's initial public.users INSERT role literal from manager
+to analyst before creating that actor. User roles are immutable after creation.
+For counter-first, run A's actor setup and creator block, then:
 
 ```sql
-UPDATE public.users SET role='analyst' WHERE id='95610000-0000-4000-8000-000000000001';
 SELECT public.generate_next_sample_id(); -- holds the date's counter row, no sample yet
 ```
 
@@ -161,6 +162,8 @@ ROLLBACKs. A timeout/deadlock is a FAIL/INCOMPLETE runtime finding, never a pass
 source claim. Repeat with B acquiring the counter exclusion first: A's generator
 must wait before sample INSERT, then proceed after B rolls back. The added
 counter-table lock globally serializes generators; capacity remains unmeasured.
+For import-first, let B acquire exclusion before A calls generate_next_sample_id();
+defer A's creator block until B rolls back, then run the creator and single-accession API.
 
 For lock-time expiry, fresh setup S seeds `first_batch` with five seconds left:
 
@@ -212,3 +215,17 @@ disposable database requires the separately authorized home-server disposal
 operation. Record PII-free counts/states/lock modes/actor UUID comparisons only.
 These commands do not establish browser delivery, runtime configuration,
 capacity, retention, HTTP recovery or any Phase 4 acceptance until actually run.
+
+## Accepted execution checkpoint — 2026-11-06
+
+Root independently reviewed all 12 genuine multi-session scenarios and accepted
+their SQL outcomes and observed lock waits, including both counter orders and
+both TTL cases. The writer actor was seeded as analyst initially; no immutable
+role mutation or disabled guard was used. All seven synthetic disposable DBs
+were subsequently retired through separately authorized normal DROP operations;
+fresh checks found no connections to the final two, and all seven are absent.
+The private schema dump was unlinked and PII-free logs retained. See
+`openspec/changes/add-atomic-accession-confirmation/evidence.md` for exact
+production migration/parity/count checks. Task 4.3 is complete; rollout-compatible
+adapter evidence and final exit 4.4/4.5 remain INCOMPLETE. No HTTP/UI, recovery,
+retention or capacity acceptance is implied.
