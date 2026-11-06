@@ -3,9 +3,12 @@
 These same-batch and cross-batch scenarios retain concrete lock and outcome assertions.
 
 Only a separately authorized home-server `task11_disposable_*` database with
-migrations through 237 and a published eligible catalog pair may run these
+migration 235 then recovery 238 and a published eligible catalog pair may run these
 commands. No commands below ran in the source workspace. Original workbook,
 descriptor and HMAC trust are application tests; the SQL handoff is synthetic.
+Historical 236 failed during function compilation and rolled back; 238 supersedes
+236/237 unchanged. Do not execute 236/237 before or after 238. A target already
+containing any 236/237 helpers is unsupported by 238 and must fail its guard.
 Start each scenario in a fresh disposable DB. Use postgres psql sessions S/A/B/C
 through the approved home-server SSH/Docker path. No production database commands
 are provided. Explicit setup/business COMMITs below persist **synthetic** actor,

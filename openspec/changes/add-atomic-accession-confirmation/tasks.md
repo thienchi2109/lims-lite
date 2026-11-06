@@ -1,6 +1,6 @@
 # Atomic Accession Confirmation Implementation Plan
 
-> For agentic workers: implement only the phase released by root. Root owns integration, tracking, commit/push and independent SPEC/STANDARDS review. Approved #112/#113 remain decision authority. No production/SSH/Docker/DB operations in this source session.
+> For agentic workers: implement only the phase released by root. Root owns integration, tracking, commit/push and independent SPEC/STANDARDS review. Approved #112/#113 remain decision authority. Runtime operations require the separately released Phase 4 home-server scope; this source workspace never operates production containers.
 
 ## 0. Artifact and schema checkpoint — no implementation release
 
@@ -38,6 +38,8 @@
 - [x] 3.9 Root independently verified 19 files / 304 tests, touched lint, typecheck, strict OpenSpec, immutable hashes and whitespace; independent SPEC/STANDARDS PASS. Phase 3 SOURCE accepted; Phase 4/runtime/exit gates remain unreleased.
 
 ## 4. Separately authorized home-server runtime and exit gates
+
+Runtime recovery checkpoint: disposable migration 235 passed; 236 failed compilation and fully rolled back; 237 was not executed. New standalone 238 reconstructs 236/237 in one transaction from the verified 235 baseline, correcting only the confirmed CASE parser issue. Apply committed 235 then 238; skip immutable historical 236/237. Production remains at 233/234. Recovery 238, fixtures/concurrency and service smoke are NOT RUN pending source acceptance and explicit runtime release; all exit gates remain unchecked.
 
 - [ ] 4.1 Obtain operation-specific runtime release, verify committed exact revisions/immutable hashes and actual baseline from home-server checkout; no runtime authorization is implied by source release.
 - [ ] 4.2 Apply only new committed migrations through authorized home-server SSH/Docker path; run `run_security_tests()` after each and capture exact privileges/RLS/owners/search paths/final invariants.

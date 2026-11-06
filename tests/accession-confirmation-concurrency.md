@@ -1,7 +1,9 @@
 # TASK-11 Phase 2 concurrency scenarios — NOT RUN
 
-DISPOSABLE home-server database only, named `task11_disposable_*`, with migrations
-through 236 and a published eligible pair. Provisioning that database is a
+DISPOSABLE home-server database only, named `task11_disposable_*`, with migration
+235 then recovery 238 and a published eligible pair. Historical 236 failed during
+function compilation and rolled back; 238 supersedes 236/237 without editing them.
+Do not execute 236/237 before or after 238. Provisioning that database is a
 separately authorized operation. Run three postgres psql sessions A/B/C through
 the approved home-server SSH/Docker path. Never use production `postgres` DB,
 commit these transactions, disable guards/RLS/audit, or install production test hooks.
