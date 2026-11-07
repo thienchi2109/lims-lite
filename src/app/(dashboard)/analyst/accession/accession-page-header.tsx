@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { Download, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { AccessionImportPreview } from './accession-import-preview'
 
 export function AccessionPageHeader() {
     const [downloading, setDownloading] = useState(false)
@@ -58,6 +59,7 @@ export function AccessionPageHeader() {
                     {downloading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Download className="h-4 w-4" aria-hidden="true" />}
                     {downloading ? 'Đang tải template…' : 'Tải template Excel'}
                 </Button>
+                <AccessionImportPreview />
                 <WalkthroughTrigger
                     tourId="accession"
                     className="hidden xl:inline-flex"
