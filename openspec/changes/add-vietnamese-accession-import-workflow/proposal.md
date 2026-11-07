@@ -22,8 +22,8 @@ None. The approved template/atomic contracts and TASK-12 backend semantics remai
 
 ## Impact
 
-Future source changes are confined to accession UI, focused interaction tests and the existing `src/lib/api-client.ts` boundary as needed. Reuse repo components, pending states and query invalidation; add no dependency, count cap, duplicate `/samples` entry or second import engine.
+Source changes cover accession UI, focused interaction tests and the existing `src/lib/api-client.ts` boundary. The user-approved Phase 2 follow-up adds only the official-ID GET and its strict response schema/tests described in the design, reusing existing session/RLS reads without SQL changes. Reuse repo components, pending states and query invalidation; add no dependency, count cap, duplicate `/samples` entry or second import engine.
 
 The workflow must preserve server authorization/RLS, immutable audit/provenance and explicit quality attestation. It introduces no migration, audit rewrite or retention exception. Workbook bytes, preview client data and full row errors stay only in browser memory, with no durable browser cache or telemetry payloads. All user-visible copy is Vietnamese.
 
-Checkpoint 0 creates artifacts only. TASK-12 acceptance is **ISOLATED ONLY**, not a production rollout; source/mocked UI checks cannot establish deployed browser acceptance. Official sample identifiers are not present in the current compact receipt response; Phase 2 must verify an existing authorized read path or stop with that concrete contract gap before expanding scope.
+Checkpoint 0 creates artifacts only. TASK-12 acceptance is **ISOLATED ONLY**, not a production rollout; source/mocked UI checks cannot establish deployed browser acceptance. Official sample identifiers remain outside the compact receipt response. The missing app reader was confirmed, and the user approved the separate source-only reader scope on 2026-11-07; the reader then passed independent source verification before Phase 2 UI release.

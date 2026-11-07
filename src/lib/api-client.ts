@@ -48,7 +48,7 @@ import type { SubmitResultReview } from '@/types'
 import type { ClientActionName } from '@/lib/client-actions/types'
 import type { SampleLabelAuditPreset } from '@/lib/sample-label-template'
 import { PreviewValidationResponseSchema, accessionBatchIdSchema, accessionConfirmationStatusSchema,
-    type AccessionConfirmationStatus } from '@/lib/accession-preview/http-contract'
+    type AccessionConfirmationStatus, accessionReceiptSamplesSchema, type AccessionReceiptSamples } from '@/lib/accession-preview/http-contract'
 
 export {
     fetchApprovalBatchClient,
@@ -216,6 +216,23 @@ async function requestAccessionConfirmation(batchId: string, init: RequestInit):
 
 export function fetchAccessionConfirmationStatusClient(batchId: string, options: CallClientActionOptions = {}) {
     return requestAccessionConfirmation(batchId, { method: 'GET', signal: options.signal })
+}
+
+export async function fetchAccessionReceiptSamplesClient(batchId: string, options: CallClientActionOptions = {}) {
+    accessionBatchIdSchema.parse(batchId)
+    const unavailable = 'Chưa thể tải mã mẫu đã nhập. Vui lòng thử lại.'
+    let response: Response
+    try {
+        response = await fetch(`/api/accession-confirmation/${batchId}/samples`, {
+            method: 'GET', credentials: 'include', cache: 'no-store', signal: options.signal,
+        })
+    } catch { throw new Error(unavailable) }
+    if (response.status === 401) return readClientMutationResponse<AccessionReceiptSamples>(response)
+    if (response.status === 403) throw new Error('Bạn không có quyền truy cập lần nhập này.')
+    if (response.status !== 200) throw new Error(unavailable)
+    const parsed = accessionReceiptSamplesSchema.safeParse(await response.json().catch(() => null))
+    if (!parsed.success || parsed.data.batchId !== batchId) throw new Error(unavailable)
+    return parsed.data
 }
 
 export async function confirmAccessionClient(batchId: string, file?: File, acceptableQuality?: boolean, options: CallClientActionOptions = {}) {

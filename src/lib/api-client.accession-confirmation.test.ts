@@ -18,6 +18,62 @@ const json = (body: unknown, status?: number) => {
         : ['processing', 'preparing'].includes(state ?? '') ? 202 : ['failed', 'rejected', 'expired'].includes(state ?? '') ? 422 : 200) })
 }
 
+async function readSamples(id = batchId, options: { signal?: AbortSignal } = {}) {
+    const reader = Reflect.get(client, 'fetchAccessionReceiptSamplesClient')
+    expect(reader, 'owner-authorized sample ID reader must exist').toBeTypeOf('function')
+    return reader(id, options)
+}
+
+describe('committed accession sample ID browser reader', () => {
+    afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals() })
+    const samples = { batchId, samples: [{ row: 2, sampleId: other, officialSampleIdentifier: 'CDC-2026-000001' }] }
+
+    it('reads real sample IDs without a file through credentialed no-store GET', async () => {
+        const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(json(samples))
+        const signal = new AbortController().signal
+        await expect(readSamples(batchId, { signal })).resolves.toEqual(samples)
+        expect(fetch).toHaveBeenCalledExactlyOnceWith(`${url}/samples`, {
+            method: 'GET', credentials: 'include', cache: 'no-store', signal,
+        })
+        expect(fetch.mock.calls[0][1]?.body).toBeUndefined()
+    })
+
+    it('rejects an invalid batch locator before fetch', async () => {
+        const fetch = vi.spyOn(globalThis, 'fetch')
+        await expect(readSamples('../foreign')).rejects.toMatchObject({ name: 'ZodError' })
+        expect(fetch).not.toHaveBeenCalled()
+    })
+
+    it.each([
+        null, { ...samples, batchId: other }, { ...samples, samples: [] },
+        { ...samples, samples: [{ ...samples.samples[0], sampleId: 'invalid' }] },
+        { ...samples, samples: [{ ...samples.samples[0], officialSampleIdentifier: '' }] },
+        { ...samples, samples: [samples.samples[0], samples.samples[0]] },
+        { ...samples, samples: [{ ...samples.samples[0], clientName: 'RAW_PRIVATE' }] },
+    ])('fails closed for malformed/unlinked sample IDs %#', async body => {
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(json(body))
+        await expect(readSamples()).rejects.toThrow('Chưa thể tải mã mẫu')
+    })
+
+    it.each([403, 409, 503])('conceals upstream error details for HTTP %s without changing receipt status', async status => {
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(json({ error: 'RAW_PRIVATE' }, status))
+        await expect(readSamples()).rejects.toThrow(status === 403 ? 'Bạn không có quyền truy cập lần nhập này.' : 'Chưa thể tải mã mẫu')
+    })
+
+    it('retains existing session-expiry redirect handling', async () => {
+        const location = { href: '' }; vi.stubGlobal('window', { location })
+        vi.spyOn(console, 'error').mockImplementation(() => {})
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(json({ error: 'RAW_SESSION' }, 401))
+        await expect(readSamples()).rejects.toThrow('Phiên đăng nhập đã hết hạn.')
+        expect(location.href).toBe('/login?reason=session_expired')
+    })
+
+    it('reports a safe read error after transport loss', async () => {
+        vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('RAW_CONNECTION'))
+        await expect(readSamples()).rejects.toThrow('Chưa thể tải mã mẫu')
+    })
+})
+
 describe('accession confirmation browser recovery', () => {
     afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals() })
 

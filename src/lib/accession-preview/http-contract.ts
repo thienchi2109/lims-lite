@@ -13,6 +13,14 @@ const count = z.number().int().nonnegative().safe()
 export const accessionReceiptSchema = z.strictObject({ batch_id: accessionBatchIdSchema, owner_id: accessionBatchIdSchema,
     confirmation_received_at: z.string().datetime({ offset: true }), client_count: count.positive(), sample_count: count.positive(),
     assignment_count: count.positive(), create_count: count, reuse_count: count })
+export const accessionReceiptSamplesSchema = z.strictObject({ batchId: accessionBatchIdSchema,
+    samples: z.array(z.strictObject({ row: count.positive(), sampleId: accessionBatchIdSchema,
+        officialSampleIdentifier: z.string().min(1) })).min(1).refine(samples =>
+        new Set(samples.map(sample => sample.row)).size === samples.length
+        && new Set(samples.map(sample => sample.sampleId)).size === samples.length
+        && new Set(samples.map(sample => sample.officialSampleIdentifier)).size === samples.length),
+})
+export type AccessionReceiptSamples = z.infer<typeof accessionReceiptSamplesSchema>
 const reasonCode = z.enum(['WORKBOOK_INVALID', 'CLIENT_INVALID', 'PREPARATION_FAILED', 'ALREADY_IMPORTED', 'AUTHORITY_CHANGED',
     'CONFIRMATION_FAILED', 'PREVIEW_CONTENT_CHANGED', 'ATTESTATION_REQUIRED', 'CONFIGURATION_UNAVAILABLE', 'EXPIRED'])
 export const accessionConfirmationStatusSchema = z.union([

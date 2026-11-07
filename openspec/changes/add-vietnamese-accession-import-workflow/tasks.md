@@ -14,7 +14,7 @@
 
 ## 2. Phase 2 — attestation, confirmation and receipt (separate session)
 
-- [ ] 2.1 Before implementation, trace an existing owner-authorized receipt-to-committed-sample/official-ID read. If unavailable, STOP Phase 2 and return the concrete contract gap for separate scoped approval; do not invent receipt fields, query the DB directly from UI or accept counts as official IDs. All following Phase 2 tasks depend on this gate.
+- [x] 2.1 Before implementation, trace an existing owner-authorized receipt-to-committed-sample/official-ID read. If unavailable, STOP Phase 2 and return the concrete contract gap for separate scoped approval; do not invent receipt fields, query the DB directly from UI or accept counts as official IDs. All following Phase 2 tasks depend on this gate.
 - [ ] 2.2 Add focused accessible interaction tests first and record RED for explicit unchecked attestation, identical-file confirm, success receipt/official IDs, pending/double-click, changed-file invalidation, role loss, expiry and authority/content drift.
 - [ ] 2.3 Add confirmation only for the current valid unexpired immutable preview with original `File` and explicit “tất cả mẫu đã lấy, đạt chất lượng” attestation; call `confirmAccessionClient` through `api-client.ts`, reuse pending controls and never edit/reconstruct preview authority.
 - [ ] 2.4 Clear stale preview/attestation on file change and give Vietnamese new-preview guidance on role loss, expiry or drift. Preserve unknown/processing after dispatched timeout/abort; block further mutation without a rollback/failed claim until Phase 3 lookup interaction is delivered.
@@ -57,3 +57,11 @@ rtk proxy git diff --check
 ```
 
 **SOURCE ONLY, 8/24 tasks accepted. STOP before Phase 2.** All 16 later source/runtime tasks remain unchecked; Phase 2 official-ID read gate remains unresolved. Real-browser viewport/app-proxy smoke, build/deployment, SQL and production operations NOT RUN; mocks/source checks do not satisfy those gates. No Phase 2/3 UI or automatic release follows this acceptance.
+
+## Phase 2 reader gate — 2026-11-07
+
+Gate 2.1 initially found no app reader. The user separately approved the five-file source-only reader scope recorded in the design. The new file-free samples GET reuses existing owner/status authorization and authenticated session RLS; it projects only committed sample IDs, reads all pages and rejects incomplete/duplicate/malformed data. Compact receipt/status, SQL, grants/policies and dependencies are unchanged.
+
+Root independently observed behavioral RED in the existing client test module (reader missing; module loads). The new route suite separately had structural RED before the route existed. Final root GREEN: **174/174 across 8 files**, including 14 new client and 29 new route cases plus 131 existing cases. Scoped five-file ESLint, typecheck and independent Spec/Standards review PASS. Byte comparison confirms the API client's baseline is unchanged outside the new reader block/import. Its existing mixed line endings were preserved; the exact whitespace gate is `rtk proxy git -c core.whitespace=cr-at-eol diff --check` (PASS), with no repository config change or baseline rewrite.
+
+**SOURCE ONLY, 9/24 tasks accepted.** Root releases tasks 2.2–2.7 for the already authorized Phase 2 UI; Phase 3 remains unreleased. Source/mock guard tests do not prove deployed RLS: SQL, runtime/browser and production operations NOT RUN.

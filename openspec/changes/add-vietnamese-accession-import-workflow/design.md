@@ -18,7 +18,7 @@ Current source anchors:
 
 **Goals:** Deliver an accessible Vietnamese analyst flow through three independently reviewed source sessions. Preserve the existing file/preview/attestation/receipt boundaries and status-first retry. Make every failure actionable without inventing a business result.
 
-**Non-Goals:** New parser, resolver, canonicalization, transaction, generic workflow service, dependency, business count cap, backend/schema change, production operation or TASK-7 capacity/fault certification. Do not introduce a second entry on `/samples`.
+**Non-Goals:** New parser, resolver, canonicalization, transaction, generic workflow service, dependency, business count cap, schema change, production operation or TASK-7 capacity/fault certification. The only approved backend extension is the source-only official-ID reader below; no other backend change is implied. Do not introduce a second entry on `/samples`.
 
 ## Decisions
 
@@ -44,7 +44,7 @@ Enable confirm only for the current valid unexpired preview and an unchecked-by-
 
 Use `confirmAccessionClient(batchId, originalFile, true)`. It already performs status preflight, checks the source ceiling and sends only the original `File` plus literal `acceptableQuality=true`. Do not compute or send browser authority hashes, normalize/rebuild the workbook or directly import server actions. Disable repeated activation during the request. After dispatch, abort/timeout/closed UI cannot assert rollback; `unknown` or `processing` must remain unresolved and block further mutation, with status/retry interaction completed in Phase 3.
 
-Show the authorized committed receipt's batch ID, server receipt time and counts; invalidate existing affected accession/sample queries only after confirmed success using the repo's existing keys. Official sample identifiers are an explicit readiness dependency: current `accessionReceiptSchema` contains batch/owner IDs, counts and receipt time, not sample mappings. Before Phase 2 implementation, trace an existing owner-authorized receipt-to-committed-sample read. If no such path exists, stop Phase 2 and return the concrete interface gap for separate scoped approval. Do not invent identifiers, infer them from counts, extend the receipt silently or claim Phase 2 accepted without them.
+Show the authorized committed receipt's batch ID, server receipt time and counts; invalidate existing affected accession/sample queries only after confirmed success using the repo's existing keys. `accessionReceiptSchema` remains compact; official sample identifiers come from the separately approved samples GET below, which passed independent source review/verification before the Phase 2 UI release. Do not invent identifiers, infer them from counts, extend the receipt silently or claim runtime acceptance from this source gate.
 
 ### 4. Phase 3 preserves uncertainty and file-free success recovery
 
@@ -66,9 +66,31 @@ Stop after checkpoint 0 for independent root artifact review, then after each Ph
 
 Runtime is a separate authorized home-server session: deployed browser through app/proxy, synthetic download → upload → preview → confirm → status/receipt, recording exact revisions, timestamps and actors. No workspace container or DB operation is permitted. Full DB/HTTP/end-to-end budgets, capacity, atomicity, security, retention and fault matrix remain TASK-7/#134. Fixtures and pending migrations are not production readiness evidence.
 
+## Phase 2 reader readiness follow-up — approved source scope
+
+Worker and read-only Luna scout independently found no existing app-facing official-ID reader. Root verified migration 235's authenticated SELECT/RLS boundary. On 2026-11-07 the user explicitly approved “Bổ sung reader” after reviewing the five-file source-only proposal, then continuing Phase 2. This authorizes source implementation only; task 2.1 still requires independent reader review/verification before tasks 2.2–2.7. SQL, deployment and runtime remain outside this authorization.
+
+Approved reader paths (five):
+
+- `src/app/api/accession-confirmation/[batchId]/samples/route.ts` — one new file-free GET.
+- `src/app/api/accession-confirmation/[batchId]/samples/route.test.ts` — focused boundary/security regression tests.
+- `src/lib/accession-preview/http-contract.ts` — separate strict sample-list response schema; leave compact receipt/status schemas unchanged.
+- `src/lib/api-client.ts` — one reader using the existing response/session conventions and the new schema.
+- `src/lib/api-client.accession-confirmation.test.ts` — focused reader transport/validation cases.
+
+GET validates the batch UUID, reuses `authorizeAccessionRequest` and owner-bound `getAccessionConfirmationStatus`, and reads mappings only after `succeeded`. Use the session `createClient()` with existing authenticated RLS; migration 235 grants authenticated mapping reads and revokes direct `service_role` table access. No privileged fallback, new RPC, grant/policy change or migration is proposed.
+
+Select only `row_number,sample_id,official_sample_identifier` from `accession_import_mappings`, filtered by batch and `kind='sample'`, ordered by source row. Page reads to avoid silently accepting PostgREST truncation, without a business count cap. Validate rows, uniqueness and completeness against committed `receipt.sample_count`; hidden, malformed, incomplete or unavailable results fail closed with a safe error. Do not substitute counts for identifiers or return partial success.
+
+Successful response: `{ batchId, samples: [{ row, sampleId, officialSampleIdentifier }] }`. Return no workbook, normalized payload, profile/PII fields, temporary refs, client/assignment mappings or actor-supplied authority. Keep `Cache-Control: private, no-store`; denied/non-success batches expose no mappings. A reader error must not reclassify an already confirmed successful import as failed.
+
+Verification starts RED before implementation: owner/nonowner, inactive role/confidential denial, nonsuccess skips the mapping query, exact projection, file-free/no-store response, paged completion, malformed/partial/DB failure, and strict client response/batch matching. Then GREEN, scoped lint/typecheck and OpenSpec strict/diff checks. These source/mock checks cannot prove deployed RLS or runtime behavior; SQL/runtime checks remain NOT RUN without separate authorization.
+
+Phase 2 confirmation also needs a small lifetime adjustment: retain only batch/outcome metadata in the existing `AccessionImportPreview` parent, outside the unmounted dialog content, and own the confirmation request there. Closing remains keyboard-accessible and releases local file/preview display state; it does not abort accepted work or clear an unresolved guard. Reopening an unresolved flow blocks a new upload. This proposes no Phase 3 lookup/retry UI or file/PII persistence; navigation/refresh recovery remains a separate Phase 3 obligation.
+
 ## Risks / Trade-offs
 
-- Official identifiers lack a proven current browser read path → block Phase 2 at its readiness gate and return the smallest specific contract gap.
+- Official-ID visibility can change through RLS → the reviewed reader rejects partial results, while UI preserves the committed receipt and shows a separate read error; deployed behavior remains a runtime gate.
 - Response loss can hide a successful commit → preserve unknown, use status first and recover the existing receipt without file replay.
 - Workbook/preview data can contain PII → memory-only feature state, no durable caches/telemetry, clear stale data and reauthorize recovery.
 - Large valid files/errors can exceed safe runtime budgets → preserve fail-closed server admission and complete errors; TASK-7 measures capacity rather than adding count caps.
@@ -80,4 +102,4 @@ No database migration is planned. Source changes ship only after their individua
 
 ## Open Questions
 
-- **Unresolved interface, not a new product decision:** Which existing authorized read links a committed batch receipt to official sample identifiers? Phase 2 must establish it or stop for scoped follow-up; the compact HTTP receipt alone is insufficient.
+- No source interface decision blocks Phase 2 after the approved samples GET passed gate 2.1. Runtime authorization and browser/RLS evidence remain separate obligations.
