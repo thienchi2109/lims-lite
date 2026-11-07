@@ -63,7 +63,7 @@ BEGIN
     PERFORM pg_temp.assert_retry_denied('95600000-0000-4000-8000-000000000003',v_ready,'42501');
     PERFORM pg_temp.assert_retry_denied(v_actor,gen_random_uuid(),'42501');
     BEGIN
-        UPDATE public.users SET role='manager' WHERE id=v_actor;
+        UPDATE public.users SET deleted_at=clock_timestamp() WHERE id=v_actor;
         PERFORM pg_temp.assert_retry_denied(v_actor,v_ready,'42501');
         RAISE EXCEPTION 'restore actor' USING ERRCODE='Z0241';
     EXCEPTION WHEN SQLSTATE 'Z0241' THEN NULL; END;

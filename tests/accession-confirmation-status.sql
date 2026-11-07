@@ -30,11 +30,11 @@ BEGIN
     EXCEPTION WHEN SQLSTATE '42501' THEN v_denied:=TRUE; END;
     PERFORM pg_temp.assert_confirmation(v_denied,'missing batch concealed, not processing');
     BEGIN
-        UPDATE public.users SET role='manager' WHERE id=v_actor;
+        UPDATE public.users SET deleted_at=clock_timestamp() WHERE id=v_actor;
         v_denied:=FALSE;
         BEGIN PERFORM public.get_accession_import_status(v_actor,v_batch);
         EXCEPTION WHEN SQLSTATE '42501' THEN v_denied:=TRUE; END;
-        PERFORM pg_temp.assert_confirmation(v_denied,'withdrawn analyst role denied');
+        PERFORM pg_temp.assert_confirmation(v_denied,'withdrawn analyst account denied');
         RAISE EXCEPTION 'restore actor' USING ERRCODE='Z0240';
     EXCEPTION WHEN SQLSTATE 'Z0240' THEN NULL; END;
     FOREACH v_role IN ARRAY ARRAY['anon','authenticated'] LOOP
