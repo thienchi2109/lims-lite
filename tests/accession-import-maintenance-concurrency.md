@@ -4,6 +4,8 @@ Requires separately authorized `task11_disposable_*` home-server PostgreSQL, the
 
 Run `tests/accession-import-maintenance.sql` through the approved SSH/Docker `psql -v ON_ERROR_STOP=1` path after authorization. It retains runnable abandoned lease, stale heartbeat/finalization, live lease, repeated reconciliation, actual success purge, metadata/receipt/provenance retention and role/capability checks. Its inherited fixture timeouts are test guards, not accepted runtime budgets.
 
+The fixture assumes its eligible candidates are the only visible queue work. In a disposable DB with committed rehearsal batches, hold those existing rows `FOR UPDATE` in a separate transaction while running the fixture in another connection; normal maintenance `SKIP LOCKED` then isolates its candidates. Roll back both sessions. An earlier candidate selected from shared work is not evidence of a maintenance defect; compare full before/after counts before retrying.
+
 For simultaneous sessions, seed each session through `accession-confirmation-validation.sql` with `confirmation_concurrency` set. Its transaction remains open and provides `task11_confirmation_args` and `pg_temp.seed_confirmation`. Existing concurrency fixture instructions explain synthetic actor setup; no production actor or committed fixture is implied. A single session cannot observe another session's uncommitted seed: the shared visible baseline must be explicitly authorized in a disposable database, then each test mutation stays rollback-only.
 
 ## Session A / Session B retained lock scenarios

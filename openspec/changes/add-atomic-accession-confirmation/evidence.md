@@ -224,3 +224,11 @@ After health acceptance, `lims-lite-app:latest` was pointed to the new image so 
 The earlier UNKNOWN deployed revision is now resolved, but adapter runtime is **NOT REACHABLE / NOT RUN**. Scout found `confirmAccession` referenced only by its export and tests, with no route/server-action/instrumentation caller. The existing preview route imports preparation only; standalone output copies compiled traces rather than the source tree. Adapter preparation also requires an analyst session through request-bound Next cookies. Neither a bare CLI call, manual async-context injection, the preview route, mocked tests nor SQL-only RPC success proves the actual deployed adapter.
 
 A supported server invocation bridge and isolated batch lifecycle are needed for genuine adapter smoke. The confirm HTTP bridge belongs to the unreleased TASK-12 partition; the user has been asked to choose that bounded scope or retain the incomplete smoke gate. No bridge, public confirm endpoint, auth bypass or production fixture was added. **4.4/4.5 remain INCOMPLETE; progress 26/28 and issue #139 stays OPEN.** App deployment acceptance does not establish adapter, authenticated preview/download, HTTP recovery, UI, retention or capacity acceptance.
+
+## Authenticated adapter and exit acceptance — 2026-11-07
+
+Root accepts **4.4/4.5; TASK-11 28/28** from TASK-12's authorized isolated home-server real GoTrue/SSR/proxy/compiled adapter: app4457823, committed disposable SQL39553a8 through240→241→243→244 (skip failed immutable242). Forward-only244 preserves generation strings in protected/locked tuple readers. [Exact evidence and cleanup](../add-accession-confirmation-recovery/evidence.md#root-exit-acceptance-and-cleanup--2026-11-07).
+
+Four HTTP successes each have one receipt, three mappings/business rows and three canonical owner audits; eight root GET/body-free POST checks added no business/provenance/audit writes, including after transient purge. Five SQL rollback fixtures, security36/36, 19files/320 source tests, Spec/Standards PASS. Named disposable DB, new maintenance role, test containers/network, temporary credentials/schema dump removed after zero-session/dependency checks.
+
+Production remains app7e1888a/SQL239; no production TASK-12 rollout is implied. TASK-12 owns HTTP/status/recovery; TASK-7/#134 capacity/budgets and TASK-13/#141 UI remain separate.

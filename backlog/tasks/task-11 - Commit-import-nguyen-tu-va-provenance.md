@@ -1,7 +1,7 @@
 ---
 id: TASK-11
 title: Commit import nguyên tử và provenance
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-11-02'
 labels: [excel-import, implementation, database]
@@ -19,12 +19,12 @@ SQL atomic boundary sở hữu business writes, success state, durable global su
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Phase 1 — một PR/session: migration mới cho global unique successful normalized-intent claim và immutable minimal provenance/row mappings/receipt; RLS owner/role/grants/search_path, retention tách commitment TTL khỏi durable receipt/dedup/audit; không giữ workbook/full normalized payload hoặc thêm business count caps.
-- [ ] #2 Phase 2 — một PR/session: confirmation function lấy batch lock, xác thực actor/role/quality attestation/commitment/source hash/normalized hash/expiry tại thời điểm accept; serialize catalog publish/generation/pair và client-resolution drift trước writes. Không silently reuse↔create hoặc overwrite identity; common DB received_at/official IDs chỉ cấp trong commit.
-- [ ] #3 Phase 3 — một PR/session: tạo clients/samples/assignments cùng success+dedup+mapping+audit atomic; rollback/savepoint giữ safe failed state/audit khi kết nối còn tốt; same batch trả receipt cũ, hai batch cùng hash chỉ một success, không lộ receipt actor khác. Terminal attempt không replay; new linked attempt sau failure/expiry.
-- [ ] #4 Focused RED→GREEN SQL scenarios: fail sau client/sample/assignment cuối/mapping/audit, counts before/after, same-batch và cross-batch concurrent confirm, catalog/client drift, withdrawn role, lock-time TTL, no premature IDs, hash parity; source contract tests/lint/typecheck/OpenSpec strict chỉ chứng minh phạm vi tương ứng.
-- [ ] #5 Runtime session riêng sau authorization: baseline assertions/migration apply home-server SSH/Docker, SQL regression và run_security_tests() PASS, rollout-compatible RPC smoke và evidence PII-free. Không sửa applied migration. Actual crash/network/HTTP budgets và full dataset stress còn ở TASK-7 sau TASK-12/13.
-- [ ] #6 Exit: function invariants có SQL evidence đúng môi trường, minimal durable receipt/mappings/dedup/audit cùng business commit; handoff terminal/unknown-outcome semantics và locks cho TASK-12. Nếu chưa runtime-authorized ghi INCOMPLETE, không tick SQL runtime gate nhờ source tests.
+- [x] #1 Phase 1 — một PR/session: migration mới cho global unique successful normalized-intent claim và immutable minimal provenance/row mappings/receipt; RLS owner/role/grants/search_path, retention tách commitment TTL khỏi durable receipt/dedup/audit; không giữ workbook/full normalized payload hoặc thêm business count caps.
+- [x] #2 Phase 2 — một PR/session: confirmation function lấy batch lock, xác thực actor/role/quality attestation/commitment/source hash/normalized hash/expiry tại thời điểm accept; serialize catalog publish/generation/pair và client-resolution drift trước writes. Không silently reuse↔create hoặc overwrite identity; common DB received_at/official IDs chỉ cấp trong commit.
+- [x] #3 Phase 3 — một PR/session: tạo clients/samples/assignments cùng success+dedup+mapping+audit atomic; rollback/savepoint giữ safe failed state/audit khi kết nối còn tốt; same batch trả receipt cũ, hai batch cùng hash chỉ một success, không lộ receipt actor khác. Terminal attempt không replay; new linked attempt sau failure/expiry.
+- [x] #4 Focused RED→GREEN SQL scenarios: fail sau client/sample/assignment cuối/mapping/audit, counts before/after, same-batch và cross-batch concurrent confirm, catalog/client drift, withdrawn role, lock-time TTL, no premature IDs, hash parity; source contract tests/lint/typecheck/OpenSpec strict chỉ chứng minh phạm vi tương ứng.
+- [x] #5 Runtime session riêng sau authorization: baseline assertions/migration apply home-server SSH/Docker, SQL regression và run_security_tests() PASS, rollout-compatible RPC smoke và evidence PII-free. Không sửa applied migration. Actual crash/network/HTTP budgets và full dataset stress còn ở TASK-7 sau TASK-12/13.
+- [x] #6 Exit: function invariants có SQL evidence đúng môi trường, minimal durable receipt/mappings/dedup/audit cùng business commit; handoff terminal/unknown-outcome semantics và locks cho TASK-12. Nếu chưa runtime-authorized ghi INCOMPLETE, không tick SQL runtime gate nhờ source tests.
 <!-- AC:END -->
 
 ## Source release — 2026-11-05
@@ -70,3 +70,9 @@ OpenSpec **26/28**: **4.1–4.3 complete; 4.4/4.5 INCOMPLETE**. Running image c�
 Sau user release deploy app và smoke adapter, app đã build/deploy riêng từ `7e1888a` với OCI revision khớp; image `b38a5ef2` healthy, internal/public login và public auth health 200. Root xác minh trực tiếp image/revision, public health và năm container nền giữ nguyên ID/StartedAt. Giữ 21 giá trị env, security 36/36 và counts production; không thêm business fixture. `latest` trỏ image mới; rollback tag `pre-task11-7e1888a` giữ image cũ. Giữ active Compose override và log tại home evidence directory.
 
 Revision app không còn UNKNOWN, nhưng adapter **NOT REACHABLE / NOT RUN**: `confirmAccession` chưa có caller route/action trong Next entry graph; preview route chỉ prepare. Smoke thật cần bridge confirm HTTP thuộc TASK-12 cùng lifecycle test cô lập, đang chờ user chọn phạm vi. Không thêm endpoint hoặc bypass auth. **26/28; 4.4/4.5 INCOMPLETE, issue #139 OPEN**. Deployment/health PASS không thay thế smoke adapter.
+
+## Authenticated adapter exit — 2026-11-07
+
+Root nghiệm thu **28/28**, hoàn tất4.4/4.5 nhờ smoke thật cô lập TASK-12: app4457823, committed disposable SQL39553a8 qua240→241→243→244; real GoTrue/SSR/proxy, same-buffer confirm, timeout/disconnect→status-first, receipt/business/canonical actor audit và purge được kiểm chứng độc lập. SQL/security36/36, source19files/320tests và Spec/Standards PASS; tài nguyên/credential/schema dump disposable đã dọn có zero sessions/dependencies.
+
+[Evidence và giới hạn](../../openspec/changes/add-atomic-accession-confirmation/evidence.md#authenticated-adapter-and-exit-acceptance--2026-11-07). Production vẫn app7e1888a/SQL239; chưa rollout TASK-12 hoặc tạo synthetic business data trên production. TASK-7 capacity/budgets và TASK-13 UI/browser vẫn riêng.

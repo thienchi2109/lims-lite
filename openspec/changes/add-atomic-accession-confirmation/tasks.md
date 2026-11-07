@@ -44,5 +44,7 @@ Runtime checkpoint, 2026-11-06: final rollback fixtures and 12 genuine concurren
 - [x] 4.1 Obtained user Phase 4 release plus explicit schema-only export exception; root reviewed named disposable, production migration and cleanup operations, committed exact revisions/hashes and actual database baselines before each released step.
 - [x] 4.2 Apply only new committed migrations through authorized home-server SSH/Docker path; run `run_security_tests()` after each and capture exact privileges/RLS/owners/search paths/final invariants.
 - [x] 4.3 Execute rollback-only SQL behavioral/security/rollback fixtures and genuine multi-session concurrency/TTL scenarios; capture PII-free assertions and verify synthetic cleanup/baseline counts.
-- [ ] 4.4 Perform separately authorized rollout-compatible service RPC smoke and record exact source/deployed/database revision; do not claim HTTP/UI/recovery/capacity acceptance from SQL success.
-- [ ] 4.5 Root accepts evidence for TASK-11 scope and hands service signature, lock/expiry, terminal/unknown-outcome, receipt/privacy and retention boundaries to TASK-12; keep TASK-7/12/13 limits explicit.
+- [x] 4.4 Perform separately authorized rollout-compatible service RPC smoke and record exact source/deployed/database revision; do not claim HTTP/UI/recovery/capacity acceptance from SQL success.
+- [x] 4.5 Root accepts evidence for TASK-11 scope and hands service signature, lock/expiry, terminal/unknown-outcome, receipt/privacy and retention boundaries to TASK-12; keep TASK-7/12/13 limits explicit.
+
+Runtime exit 2026-11-07: TASK-12's isolated real authenticated compiled adapter plus root SQL/receipt/audit/reconciliation/purge evidence closes4.4/4.5; **28/28 accepted**. [Final adapter evidence](evidence.md#authenticated-adapter-and-exit-acceptance--2026-11-07). Production TASK-12 rollout, TASK-7 capacity/budgets and TASK-13 UI remain separate.

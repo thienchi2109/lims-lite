@@ -39,9 +39,11 @@ Each phase is one bounded source review checkpoint. Runtime operations are separ
 
 ## 4. Separately authorized home-server runtime and exit
 
-- [ ] 4.1 Obtain operation-specific runtime authorization and define isolated nonproduction actor/batch/fixture lifecycle, exact source/image/SQL baseline and failure injection; no production synthetic data by implication.
-- [ ] 4.2 Apply committed forward migrations only through home-server SSH/Docker; run retained rollback/lock/security fixtures and run_security_tests after every migration, recording actual results separately from registered test source.
-- [ ] 4.3 Roll out API and later recovery runner with exact image/config provenance; verify proxy upload boundary and no buffering/retention on disk/temp/cache/log paths. Record blockers without relaxing contracts.
-- [ ] 4.4 Execute isolated authenticated real-adapter success/failure/expiry/unknown status smoke; independently verify committed receipt/business/audit behavior before considering TASK-11 4.4/4.5 closure.
-- [ ] 4.5 Verify real crash/disconnect/concurrency/restart/outage/purge behavior within authorized scope; keep full capacity/budget acceptance with TASK-7 and UI/browser acceptance with TASK-13.
-- [ ] 4.6 Root reviews exact evidence, updates TASK-12/#140 and dependent handoff, and completes scope only when all applicable gates have evidence; commit/push handled by root.
+- [x] 4.1 Obtain operation-specific runtime authorization and define isolated nonproduction actor/batch/fixture lifecycle, exact source/image/SQL baseline and failure injection; no production synthetic data by implication.
+- [x] 4.2 Apply committed forward migrations only through home-server SSH/Docker; run retained rollback/lock/security fixtures and run_security_tests after every migration, recording actual results separately from registered test source.
+- [x] 4.3 Roll out API and later recovery runner with exact image/config provenance; verify proxy upload boundary and no buffering/retention on disk/temp/cache/log paths. Record blockers without relaxing contracts.
+- [x] 4.4 Execute isolated authenticated real-adapter success/failure/expiry/unknown status smoke; independently verify committed receipt/business/audit behavior before considering TASK-11 4.4/4.5 closure.
+- [x] 4.5 Verify real crash/disconnect/concurrency/restart/outage/purge behavior within authorized scope; keep full capacity/budget acceptance with TASK-7 and UI/browser acceptance with TASK-13.
+- [x] 4.6 Root reviews exact evidence, updates TASK-12/#140 and dependent handoff, and completes scope only when all applicable gates have evidence; commit/push handled by root.
+
+Runtime exit 2026-11-07: **27/27 accepted, ISOLATED/DISPOSABLE ONLY**. Committed240→241→243→244; security36/36, SQL/native/authenticated HTTP, independent root receipt/audit/purge/no-duplicate checks, Spec/Standards and exact cleanup PASS. Production unchanged; production rollout, TASK-7 capacity/budgets and TASK-13 UI remain separate. [Evidence](evidence.md#root-exit-acceptance-and-cleanup--2026-11-07).
