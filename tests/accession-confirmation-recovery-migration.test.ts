@@ -20,6 +20,11 @@ describe('atomic accession recovery migration', () => {
             '236_add_accession_confirmation_validation.sql': 'c1e804b0f1293304c0650d7036a3c279d2c4f938cd80a22f270de571a2417803',
             '237_add_atomic_accession_confirmation.sql': '07ab7ea28b1c2cb292ce679f94ecd893161ec10748c20964c60e070a4d6a2835',
             '238_recover_atomic_accession_confirmation.sql': '17549f4d2b47dc000f8b429da4549e0d8cafe35d4049114295689351e93f8063',
+            '239_fix_accession_confirmation_result_audit.sql': '7f04734df82d050a9a46e2b2a03f88325657b57d7a82a2e7158758bacbc1d87b',
+            '240_add_accession_confirmation_status.sql': 'e7cfb095980be3648d667f6ccf49deb368a2acabb886a508aeb99bb88046276a',
+            '241_guard_accession_preview_retry.sql': '3d72f86e0fce39ed675d28f5b40666ecbe1b2146962cc9ca99b9014540d4e02a',
+            '242_add_accession_import_maintenance.sql': 'dd25dc0ed8dca987c22d97ea1532d209e43ae742111a1453b472fa7aa7156e82',
+            '243_recover_accession_import_maintenance.sql': '04a633641e54f830ee980e9af9c752f6a3e4edcce76aea4739359e67c790d6bf',
         }
         for (const [name, hash] of Object.entries(hashes)) {
             expect(createHash('sha256').update(readMigration(name)).digest('hex')).toBe(hash)
@@ -59,5 +64,24 @@ describe('atomic accession recovery migration', () => {
         expect(sql).toContain('53c657c987d434435783652def29b185959c0d1df2629b6472333689e79c57c7')
         expect(sql).toContain("current_setting('check_function_bodies')::BOOLEAN IS DISTINCT FROM TRUE")
         expect(sql).not.toMatch(/DROP TRIGGER|DISABLE TRIGGER|LIMIT 1/)
+    })
+
+    it('forward-preserves bigint generation strings at both SQL reconstruction boundaries', () => {
+        const sql = readMigration('244_preserve_accession_binding_generation_strings.sql')
+        expect(sql).toContain("v_old CONSTANT TEXT := 'kind,row_number,parent_row,import_code,entity_id,generation,method_name'")
+        expect(sql).toContain("v_new CONSTANT TEXT := 'kind,row_number,parent_row,import_code,entity_id,generation::TEXT,method_name'")
+        for (const signature of ['get_accession_confirmation_preparation(uuid,uuid)',
+            'validate_accession_confirmation_locked(uuid,uuid,boolean,jsonb,jsonb,jsonb,jsonb,text,text,jsonb)']) expect(sql).toContain(signature)
+        for (const hash of ['6828b035ae787c10d107d4b11a8b67591f2d13ad04f56f6f9eb0e63dba5ac2e7',
+            'c5e0411b0b48cd08dfde6848dabea84d5fc763080d0069399561c2ebf96bc30a',
+            '6df2835d7d192c358af8d54c096eee1ed1d767c6b0808f9d1608ddb153173f37',
+            'f6ac7d81a78ea6414e7061921516039a72ed71292d3173286d2300c39972f4fd']) expect(sql).toContain(hash)
+        expect(sql).toContain('public.test_accession_import_maintenance_security()')
+        expect(sql).toContain('public.run_security_tests()')
+        expect(sql).not.toMatch(/UPDATE|INSERT INTO|DELETE FROM|ALTER (?:TABLE|ROLE)|GRANT |REVOKE /)
+        const fixture = readFileSync('tests/accession-confirmation-validation.sql', 'utf8')
+        expect(fixture).toContain('protected reader preserves app binding bytes and bigint generation strings')
+        expect(fixture).not.toContain("(v_type->>'compatibilityGeneration')::BIGINT")
+        expect(fixture).not.toContain("(v_assay->>'compatibilityGeneration')::BIGINT")
     })
 })

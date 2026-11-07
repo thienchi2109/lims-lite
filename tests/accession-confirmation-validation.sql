@@ -64,7 +64,7 @@ DECLARE
     v_other UUID := '95600000-0000-4000-8000-000000000002';
     v_manager UUID := '95600000-0000-4000-8000-000000000003';
     v_batch JSONB; v_id UUID; v_snapshot JSONB; v_pair JSONB; v_type JSONB; v_assay JSONB;
-    v_clients JSONB; v_expected JSONB; v_bindings JSONB; v_text TEXT; v_metadata JSONB; v_workbook JSONB;
+    v_clients JSONB; v_expected JSONB; v_bindings JSONB; v_text TEXT; v_readback TEXT; v_metadata JSONB; v_workbook JSONB;
     v_canonical TEXT; v_input JSONB; v_args JSONB; v_now TIMESTAMPTZ; v_deadline TIMESTAMPTZ;
     v_before BIGINT[]; v_after BIGINT[]; v_claims TEXT; v_subject TEXT; v_role TEXT;
     v_accepted TIMESTAMPTZ; v_client UUID; v_sample UUID; v_reused JSONB; v_matched JSONB; v_reuse_metadata JSONB;
@@ -109,8 +109,8 @@ BEGIN
             'callerContext',jsonb_build_object('sheet','Chỉ định','row',2,'temporaryReference','M-01'))));
     v_bindings:=jsonb_build_array(
         jsonb_build_array('client',2,NULL,NULL,NULL,NULL,NULL,'not_found',NULL,'synthetic-1',repeat('b',64)),
-        jsonb_build_array('sample',2,2,v_type->>'importCode',v_type->>'id',(v_type->>'compatibilityGeneration')::BIGINT,NULL,NULL,NULL,NULL,NULL),
-        jsonb_build_array('assignment',2,2,v_assay->>'importCode',v_assay->>'id',(v_assay->>'compatibilityGeneration')::BIGINT,v_assay->>'methodName',NULL,NULL,NULL,NULL));
+        jsonb_build_array('sample',2,2,v_type->>'importCode',v_type->>'id',v_type->>'compatibilityGeneration',NULL,NULL,NULL,NULL,NULL),
+        jsonb_build_array('assignment',2,2,v_assay->>'importCode',v_assay->>'id',v_assay->>'compatibilityGeneration',v_assay->>'methodName',NULL,NULL,NULL,NULL));
     SELECT public.accession_confirmation_tuple_json(jsonb_agg(value ORDER BY convert_to(public.accession_confirmation_tuple_json(value),'UTF8')))
         INTO v_text FROM jsonb_array_elements(v_bindings);
     v_metadata:=jsonb_build_object('source_sha256',repeat('a',64),'source_size',123,
@@ -129,6 +129,10 @@ BEGIN
         PERFORM public.heartbeat_accession_preview(v_owner,v_id,(v_batch->>'lease_token')::UUID,1,repeat('a',64),123);
         PERFORM public.seal_accession_preview(v_owner,v_id,(v_batch->>'lease_token')::UUID,1,v_snapshot,v_clients,v_expected,v_text,v_metadata);
     END IF;
+    -- Match real buildBindings: bigint generations are decimal strings; row/parent remain numbers.
+    SELECT public.accession_confirmation_tuple_json(jsonb_agg(value ORDER BY convert_to(public.accession_confirmation_tuple_json(value),'UTF8')))
+        INTO v_readback FROM jsonb_array_elements(public.get_accession_confirmation_preparation(v_owner,v_id)->'bindings');
+    PERFORM pg_temp.assert_confirmation(v_readback=v_text,'protected reader preserves app binding bytes and bigint generation strings');
     v_args:=jsonb_build_object('actor',v_owner,'batch',v_id,'workbook',v_workbook,'snapshot',v_snapshot,
         'clients',v_clients,'expected',v_expected,'canonical',v_canonical,'bindings',v_text,'metadata',v_metadata);
     IF current_setting('test.confirmation_concurrency',true)='on' THEN

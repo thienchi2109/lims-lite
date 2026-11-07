@@ -91,7 +91,7 @@ describe('forward-only accession maintenance source boundary', () => {
         expect(fixture).toContain('lease_generation')
         expect(fixture).toContain('42501')
         const scenarios = read('tests/accession-import-maintenance-concurrency.md')
-        expect(scenarios).toContain('NOT RUN')
+        expect(scenarios).toContain('separately authorized')
         expect(scenarios).toContain('Session A')
         expect(scenarios).toContain('Session B')
         expect(scenarios).toContain('outage')

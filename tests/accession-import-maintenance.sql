@@ -1,6 +1,7 @@
--- SOURCE ONLY / NOT RUN. Authorized task11_disposable_* database with migrations through 242 only.
+-- Disposable SQL regression: apply 240 -> 241 -> recovery 243 -> 244, skipping failed historical 242.
 -- Reuses synthetic seed, retains all original guards/RLS/audit and rolls every fixture back.
 -- Native worker provisioning and true two-session locks are separate gates in the companion runbook.
+-- Actual environment/revision evidence: openspec/changes/add-accession-confirmation-recovery/evidence.md.
 \set ON_ERROR_STOP on
 \set confirmation_concurrency 1
 \ir accession-confirmation-validation.sql
