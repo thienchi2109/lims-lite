@@ -1,5 +1,6 @@
 // Phase 1 browser interactions only; mocked previews do not prove runtime acceptance.
-import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, render as renderUI, screen, waitFor, within } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -11,6 +12,10 @@ vi.mock('@/components/walkthrough', () => ({
 
 import { AccessionPageHeader } from './accession-page-header'
 
+function render(ui: React.ReactNode) {
+    return renderUI(<QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>)
+}
+
 const batchId = '11111111-1111-4111-8111-111111111111'
 const client = {
     name: 'Khách thử nghiệm', dateOfBirth: '1990-01-02', governmentIdentityType: null,
@@ -18,7 +23,7 @@ const client = {
     healthInsuranceNum: null, expiryDate: null,
 }
 const preview = {
-    ok: true, batchId, previewCreatedAt: '2026-11-07T00:00:00.000Z', expiresAt: '2026-11-07T00:30:00.000Z',
+    ok: true, batchId, previewCreatedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 1800000).toISOString(),
     counts: { clients: 2, samples: 3, assignments: 4, create: 1, reuse: 1 },
     clients: [
         { row: 2, disposition: 'create', input: client, existingValues: null, unchangedFields: [] },
@@ -52,8 +57,11 @@ async function selectFile(user: ReturnType<typeof userEvent.setup>, size = 10, n
     return file
 }
 
-beforeEach(() => { mocks.preview.mockReset(); mocks.preview.mockResolvedValue(preview) })
-afterEach(() => { cleanup(); vi.restoreAllMocks() })
+beforeEach(() => {
+    mocks.preview.mockReset(); mocks.preview.mockResolvedValue(preview)
+    vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
+})
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
 describe('accession Excel preview', () => {
     it('opens by keyboard beside template, keeps wrapping/walkthrough and returns focus on Escape', async () => {
@@ -99,7 +107,7 @@ describe('accession Excel preview', () => {
         expect(screen.getByText('Địa chỉ đang lưu')).toBeTruthy()
         expect(screen.getByText(/Giữ nguyên.*Họ và tên.*Địa chỉ/)).toBeTruthy()
         expect(screen.getByText(/Hết hạn xem trước/)).toBeTruthy()
-        expect(screen.queryByRole('button', { name: /Xác nhận nhập/ })).toBeNull()
+        expect(screen.getByRole('button', { name: 'Xác nhận nhập' }).hasAttribute('disabled')).toBe(true)
         expect(screen.queryByRole('textbox')).toBeNull()
     })
 

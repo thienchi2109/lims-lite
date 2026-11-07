@@ -1,4 +1,5 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render as renderUI, screen, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -22,6 +23,10 @@ vi.mock('@/components/walkthrough', () => ({
 }))
 
 import { AccessionPageHeader } from './accession-page-header'
+
+function render(ui: React.ReactNode) {
+    return renderUI(<QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>)
+}
 
 describe('AccessionPageHeader', () => {
     const fetchMock = vi.fn()

@@ -15,12 +15,12 @@
 ## 2. Phase 2 — attestation, confirmation and receipt (separate session)
 
 - [x] 2.1 Before implementation, trace an existing owner-authorized receipt-to-committed-sample/official-ID read. If unavailable, STOP Phase 2 and return the concrete contract gap for separate scoped approval; do not invent receipt fields, query the DB directly from UI or accept counts as official IDs. All following Phase 2 tasks depend on this gate.
-- [ ] 2.2 Add focused accessible interaction tests first and record RED for explicit unchecked attestation, identical-file confirm, success receipt/official IDs, pending/double-click, changed-file invalidation, role loss, expiry and authority/content drift.
-- [ ] 2.3 Add confirmation only for the current valid unexpired immutable preview with original `File` and explicit “tất cả mẫu đã lấy, đạt chất lượng” attestation; call `confirmAccessionClient` through `api-client.ts`, reuse pending controls and never edit/reconstruct preview authority.
-- [ ] 2.4 Clear stale preview/attestation on file change and give Vietnamese new-preview guidance on role loss, expiry or drift. Preserve unknown/processing after dispatched timeout/abort; block further mutation without a rollback/failed claim until Phase 3 lookup interaction is delivered.
-- [ ] 2.5 Show authorized durable receipt and official IDs from the verified read, server receipt time and counts; refresh affected existing sample/accession queries using current keys only after confirmed success.
-- [ ] 2.6 Record GREEN for Phase 2 focused tests and immediate blast radius; run touched-file lint, typecheck, relevant React checks, OpenSpec strict and diff checks. Do not infer runtime acceptance from mocks.
-- [ ] 2.7 STOP: root independently reviews Phase 2 implementation, verified official-ID read and source evidence; accept only complete receipt/ID behavior and explicitly release Phase 3.
+- [x] 2.2 Add focused accessible interaction tests first and record RED for explicit unchecked attestation, identical-file confirm, success receipt/official IDs, pending/double-click, changed-file invalidation, role loss, expiry and authority/content drift.
+- [x] 2.3 Add confirmation only for the current valid unexpired immutable preview with original `File` and explicit “tất cả mẫu đã lấy, đạt chất lượng” attestation; call `confirmAccessionClient` through `api-client.ts`, reuse pending controls and never edit/reconstruct preview authority.
+- [x] 2.4 Clear stale preview/attestation on file change and give Vietnamese new-preview guidance on role loss, expiry or drift. Preserve unknown/processing after dispatched timeout/abort; block further mutation without a rollback/failed claim until Phase 3 lookup interaction is delivered.
+- [x] 2.5 Show authorized durable receipt and official IDs from the verified read, server receipt time and counts; refresh affected existing sample/accession queries using current keys only after confirmed success.
+- [x] 2.6 Record GREEN for Phase 2 focused tests and immediate blast radius; run touched-file lint, typecheck, relevant React checks, OpenSpec strict and diff checks. Do not infer runtime acceptance from mocks.
+- [x] 2.7 STOP: root independently reviews Phase 2 implementation, verified official-ID read and source evidence; accept only complete receipt/ID behavior. Phase 3 requires a separate explicit release.
 
 ## 3. Phase 3 — status, retry and recovery (separate session)
 
@@ -56,7 +56,7 @@ rtk proxy openspec validate add-vietnamese-accession-import-workflow --strict --
 rtk proxy git diff --check
 ```
 
-**SOURCE ONLY, 8/24 tasks accepted. STOP before Phase 2.** All 16 later source/runtime tasks remain unchecked; Phase 2 official-ID read gate remains unresolved. Real-browser viewport/app-proxy smoke, build/deployment, SQL and production operations NOT RUN; mocks/source checks do not satisfy those gates. No Phase 2/3 UI or automatic release follows this acceptance.
+**At the Phase 1 exit: SOURCE ONLY, 8/24 tasks accepted, stopped before Phase 2.** All 16 later source/runtime tasks were unchecked and the official-ID reader was unresolved. Real-browser viewport/app-proxy smoke, build/deployment, SQL and production operations NOT RUN; mocks/source checks do not satisfy those gates. The subsequent explicit user releases and source evidence are recorded below.
 
 ## Phase 2 reader gate — 2026-11-07
 
@@ -65,3 +65,21 @@ Gate 2.1 initially found no app reader. The user separately approved the five-fi
 Root independently observed behavioral RED in the existing client test module (reader missing; module loads). The new route suite separately had structural RED before the route existed. Final root GREEN: **174/174 across 8 files**, including 14 new client and 29 new route cases plus 131 existing cases. Scoped five-file ESLint, typecheck and independent Spec/Standards review PASS. Byte comparison confirms the API client's baseline is unchanged outside the new reader block/import. Its existing mixed line endings were preserved; the exact whitespace gate is `rtk proxy git -c core.whitespace=cr-at-eol diff --check` (PASS), with no repository config change or baseline rewrite.
 
 **SOURCE ONLY, 9/24 tasks accepted.** Root releases tasks 2.2–2.7 for the already authorized Phase 2 UI; Phase 3 remains unreleased. Source/mock guard tests do not prove deployed RLS: SQL, runtime/browser and production operations NOT RUN.
+
+## Phase 2 UI source acceptance — 2026-11-07
+
+Reader prerequisite is isolated in commit `cbf007a`. Worker `gpt-6.1-sol/high` implemented Phase 2 UI after its source gate; read-only Luna `gpt-6-luna/max` verified shared Checkbox/Label, acknowledgement, SampleIdCell and existing sample/search query patterns. The old schema/preview display moved into one feature-local results file; no shared hook/service or new dependency was introduced.
+
+Root independently observed **18/18 RED** on the missing attestation/confirmation/expiry UI before production edits. Review then found a cache gap when known success returned after header unmount: root reproduced the existing case RED (zero invalidations), worker moved only succeeded cache invalidation before the lifetime guard, and the same case went GREEN. UI state and ID reads remain guarded; accepted work is not canceled by dialog close, and unknown blocks new uploads across close/reopen. Receipt success survives separate ID-read failure. Phase 3 navigation/refresh recovery is not implemented by this local guard.
+
+Final root verification: **192/192 across 9 files**, six-file scoped ESLint, typecheck, OpenSpec strict and CRLF-aware whitespace PASS; staged offline React Doctor **100/100**, scanning all **11** changed source files against `9891d0a`. Independent Spec/Standards review PASS after the unmount-cache fix. Reproduce the source tests:
+
+```bash
+rtk npm run test:run -- 'src/app/(dashboard)/analyst/accession/accession-import-confirmation.test.tsx' 'src/app/(dashboard)/analyst/accession/accession-import-preview.test.tsx' 'src/app/(dashboard)/analyst/accession/accession-page-header.test.tsx' 'src/app/(dashboard)/analyst/accession/page.test.tsx' src/lib/api-client.accession-confirmation.test.ts 'src/app/api/accession-confirmation/[batchId]/samples/route.test.ts' src/lib/accession-preview/status.test.ts 'src/app/api/accession-confirmation/[batchId]/route.test.ts' src/lib/api-client.accession-preview.test.ts
+rtk npm run typecheck
+rtk proxy node_modules/.bin/react-doctor . --verbose --offline --yes --diff 9891d0a --no-lint
+rtk proxy openspec validate add-vietnamese-accession-import-workflow --strict --no-interactive
+rtk proxy git -c core.whitespace=cr-at-eol diff 9891d0a --check
+```
+
+**SOURCE ONLY, 15/24 tasks accepted. STOP before Phase 3.** All nine Phase 3/browser-runtime tasks remain unchecked; Backlog AC #1/#2 accepted, #3/#4/#5 remain open. No SQL/grant/policy, deployment or production operations occurred; real-browser viewport/app-proxy/RLS smoke and TASK-7 capacity/fault evidence remain NOT RUN/separate. Source/mocks do not prove runtime acceptance.

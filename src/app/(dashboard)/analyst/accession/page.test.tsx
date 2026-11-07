@@ -1,4 +1,5 @@
 import { cleanup, render, screen } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const mockGetUser = vi.fn()
@@ -52,7 +53,7 @@ describe('AccessionPage role guard', () => {
         mockSingle.mockResolvedValue({ data: { full_name: 'Analyst', role: 'analyst' } })
         mockGetSpecialties.mockResolvedValue({ data: [] })
 
-        render(await AccessionPage())
+        render(<QueryClientProvider client={new QueryClient()}>{await AccessionPage()}</QueryClientProvider>)
 
         expect(screen.getByRole('heading', { name: 'Tiếp nhận mẫu mới' })).toBeTruthy()
         expect(screen.getByRole('button', { name: 'Tải template Excel' })).toBeTruthy()
