@@ -103,3 +103,7 @@ rtk proxy git -c core.whitespace=cr-at-eol diff 070c27a --check
 ```
 
 **SOURCE ONLY.** Browser/runtime tasks 4.1–4.3 remain NOT RUN and require a separate release. Next runtime verification must bind synthetic actors, exact app/backend revisions and timestamps on the authorized home-server environment; exercise download→upload→preview→confirm→status/receipt, refresh/file loss, linked retries, owner denial and app/proxy viewport/focus behavior. No SQL, Docker, SSH, deployment or production operations occurred in Phase 3. TASK-7 retains capacity, budgets, atomicity, security, no-retention and full fault certification; these source/mocked interactions do not establish live authorization/RLS or real-browser acceptance.
+
+## Deployment preflight — 2026-11-08
+
+User subsequently authorized app deployment and backend/migration compatibility verification. [Preflight evidence](deployment-preflight-2026-11-08.md): candidate production-bound image for `bd3b0a2` built successfully on the home server and rollback image preserved; root independently verified image/revision/source labels and the active old app remains healthy. Promotion NOT RUN: production lacks recovery/maintenance RPCs, preview configuration/Compose forwarding and measured policy/proxy controls. Additional TASK-7/production SQL/configuration scope was presented for authorization; no SQL, runtime config or service replacement occurred. Do not infer rollout or browser acceptance from this candidate. Tasks 4.1–4.3 remain open, **21/24**.
