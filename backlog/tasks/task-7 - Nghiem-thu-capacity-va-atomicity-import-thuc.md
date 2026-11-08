@@ -1,10 +1,10 @@
 ---
 id: TASK-7
 title: Nghiệm thu capacity và atomicity của importer thực
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-11-02'
-updated_date: '2026-11-02'
+updated_date: '2026-11-08'
 labels: [excel-import, verification]
 dependencies: [TASK-8, TASK-9, TASK-10, TASK-11, TASK-12, TASK-13]
 priority: high
@@ -18,7 +18,7 @@ Gate nghiệm thu sau triển khai nhận toàn bộ nghĩa vụ DB/HTTP/end-to-
 
 Nguồn: [template #112](../../docs/superpowers/specs/2026-11-01-excel-template-contract-design.md), [atomic/provenance #113](../../docs/superpowers/specs/2026-11-01-atomic-import-provenance-contract-design.md), [prototype lịch sử](../../docs/superpowers/specs/2026-11-02-import-capacity-evidence.md), [file-only local evidence](../../docs/superpowers/specs/2026-11-02-import-file-limit-evidence.md), [TASK-3](task-3%20-%20Kiem-chung-nang-luc-va-gioi-han-import.md), [TASK-4](task-4%20-%20Phan-chia-OpenSpec-va-task-trien-khai-import.md).
 
-Prerequisites thực đã tạo: [TASK-8/#136 generator/download](task-8%20-%20Tao-va-tai-template-tiep-nhan-co-phien-ban.md), [TASK-9/#137 parser](task-9%20-%20Parse-va-validate-workbook-template.md), [TASK-10/#138 preview](task-10%20-%20Tao-preview-bat-bien-va-canonical-hash.md), [TASK-11/#139 commit/provenance](task-11%20-%20Commit-import-nguyen-tu-va-provenance.md), [TASK-12/#140 HTTP/recovery/purge](task-12%20-%20Xac-nhan-HTTP-tra-cuu-va-recovery-import.md), [TASK-13/#141 Vietnamese UI](task-13%20-%20Giao-dien-import-tieng-Viet.md). Chi tiết source/SQL/security/rollout ownership và exit ở [phân chia TASK-4](../../docs/superpowers/specs/2026-11-02-import-implementation-partition.md). Tất cả implementation tasks còn To Do; tạo ID không chứng minh runtime. TASK-4 không phụ thuộc TASK-7; TASK-5/6 lane riêng không chặn importer.
+Prerequisites: [TASK-8/#136 generator/download](task-8%20-%20Tao-va-tai-template-tiep-nhan-co-phien-ban.md), [TASK-9/#137 parser](task-9%20-%20Parse-va-validate-workbook-template.md), [TASK-10/#138 preview](task-10%20-%20Tao-preview-bat-bien-va-canonical-hash.md), [TASK-11/#139 commit/provenance](task-11%20-%20Commit-import-nguyen-tu-va-provenance.md), [TASK-12/#140 HTTP/recovery/purge](task-12%20-%20Xac-nhan-HTTP-tra-cuu-va-recovery-import.md), [TASK-13/#141 Vietnamese UI](task-13%20-%20Giao-dien-import-tieng-Viet.md). Chi tiết source/SQL/security/rollout ownership và exit ở [phân chia TASK-4](../../docs/superpowers/specs/2026-11-02-import-implementation-partition.md). Checkpoint 2026-11-08: TASK-13 Phase 1–3 source đã nghiệm thu 21/24; TASK-11/12 có bằng chứng runtime cô lập riêng, không suy thành full capacity/fault certification. Tạo ID hoặc source PASS không chứng minh runtime của TASK-7. TASK-4 không phụ thuộc TASK-7; TASK-5/6 lane riêng không chặn importer.
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
@@ -32,3 +32,9 @@ Prerequisites thực đã tạo: [TASK-8/#136 generator/download](task-8%20-%20T
 - [ ] #8 Chạy authorization analyst-only và RLS/security tests, audit/provenance/privacy/error-context checks qua server/database thật; lưu PII-free evidence có timestamp/revision/command/outcome cho từng gate. Tách source/local/disposable/home/deployed evidence; production chỉ SSH vào home server đúng phạm vi được cấp quyền, không vận hành production từ workspace.
 - [ ] #9 Root review bằng chứng đầy đủ, ghi PASS/INCOMPLETE theo từng gate và cập nhật backlog/GitHub/OpenSpec tương ứng; chỉ đóng nghiệm thu khi có DB/HTTP/end-to-end proof thực, không từ tick spec hoặc thành công của prototype.
 <!-- AC:END -->
+
+## Implementation Notes
+
+2026-11-08 — User duyệt hoàn thiện prerequisite production rồi deploy, gồm đo/chốt policy TASK-7 trên môi trường cô lập, SQL 240→241→243→244 (bỏ 242), binding/config và proxy. Worker `gpt-6.1-sol/high` thực hiện runtime, Luna `gpt-6-luna/max` scout, root điều phối/review/verify độc lập. Protocol đã chốt: source app `bd3b0a2`, fresh schema-only DB `task7_policy_20261108`, synthetic actors/catalog/auth, app 1 CPU/1 GiB; ba trial normal/low-compression near-limit/high-compression, multipart/response/parser/HTTP/DB/resource measurements và oversize/streaming/no-retention checks. Đây là policy prerequisite gate; các AC toàn phần ở trên giữ mở cho đến khi có đủ bằng chứng.
+
+Đã hoàn tất bootstrap DB cô lập và áp dụng bốn migration tại đó, security 36/36 sau từng migration; root chạy read-only độc lập trạng thái cuối 36/36 PASS. Bản schema export được kiểm tra DDL-only, không có dữ liệu nghiệp vụ. Policy còn đang đo, chưa chốt giá trị production; chưa áp dụng SQL hay thay service production. Candidate production-bound/rollback ban đầu và khoảng trống readiness được ghi tại [TASK-13 preflight](../../openspec/changes/add-vietnamese-accession-import-workflow/deployment-preflight-2026-11-08.md).
