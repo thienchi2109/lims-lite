@@ -60,4 +60,6 @@ Tracked and effective nginx configuration have no explicit upload-size, request-
 
 ## Next checkpoint
 
+**Subsequently completed:** the user approved the prerequisites and deployment; [production rollout evidence](production-rollout-2026-11-08.md) records the fresh encrypted backup, accepted bounded policy, ordered production SQL, deployed `92a9ec2` app/nginx and root verification. OpenSpec is now **22/24**; authenticated browser and full TASK-7 acceptance remain open. The following paragraph preserves the preflight checkpoint history.
+
 Candidate preparation is complete. At this preflight checkpoint, approval was requested for the additional prerequisite scope: measured TASK-7 policy on an isolated environment, the four production migrations, and app/proxy configuration. The user subsequently explicitly approved completing all these prerequisites and deploying. Work is proceeding under that approval; no repeat authorization is needed for the approved stages. See the [TASK-7 progress record](../../../backlog/tasks/task-7%20-%20Nghiem-thu-capacity-va-atomicity-import-thuc.md). Source tasks remain **21/24** until the runtime gates are verified. Browser/runtime tasks and Backlog AC #5 stay open; candidate build and health checks do not establish import readiness or authenticated E2E acceptance.
