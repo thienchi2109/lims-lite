@@ -24,12 +24,12 @@
 
 ## 3. Phase 3 — status, retry and recovery (separate session)
 
-- [ ] 3.1 Add focused accessible interaction tests first and record RED for unknown→lookup→success, processing, no blind replay/new upload while unresolved, refresh, file loss, eligible linked retry and owner isolation.
-- [ ] 3.2 Use `fetchAccessionConfirmationStatusClient` to look up uncertain outcomes before retry; announce lookup pending, keep unknown/preparing/processing unresolved and block confirmation/new uploads/attempts. Do not add automatic replay or an unbounded polling loop.
-- [ ] 3.3 Restore authorized success by validated batch UUID locator after refresh without file/payload persistence; display the same receipt/verified IDs, clear sensitive state on actor/role changes and disclose no other owner's batch/receipt.
-- [ ] 3.4 For unlocked valid `preview_ready`, require exact original-file reselection or an explicit eligible linked new preview; for failed/rejected/expired use `retryAccessionPreviewClient` with parent linkage. Preserve parent history and server owner/lock/byte checks; never rebuild payload from metadata.
-- [ ] 3.5 Record GREEN for Phase 3 focused tests, keyboard/focus/status announcements and immediate blast radius; run touched-file lint, typecheck, relevant React checks, OpenSpec strict and diff checks, keeping source and runtime evidence separate.
-- [ ] 3.6 STOP: root independently reviews Phase 3 diff/evidence and records source acceptance, known runtime limits and a handoff for separately authorized browser verification.
+- [x] 3.1 Add focused accessible interaction tests first and record RED for unknown→lookup→success, processing, no blind replay/new upload while unresolved, refresh, file loss, eligible linked retry and owner isolation.
+- [x] 3.2 Use `fetchAccessionConfirmationStatusClient` to look up uncertain outcomes before retry; announce lookup pending, keep unknown/preparing/processing unresolved and block confirmation/new uploads/attempts. Do not add automatic replay or an unbounded polling loop.
+- [x] 3.3 Restore authorized success by validated batch UUID locator after refresh without file/payload persistence; display the same receipt/verified IDs, clear sensitive state on actor/role changes and disclose no other owner's batch/receipt.
+- [x] 3.4 For unlocked valid `preview_ready`, require exact original-file reselection or an explicit eligible linked new preview; for failed/rejected/expired use `retryAccessionPreviewClient` with parent linkage. Preserve parent history and server owner/lock/byte checks; never rebuild payload from metadata.
+- [x] 3.5 Record GREEN for Phase 3 focused tests, keyboard/focus/status announcements and immediate blast radius; run touched-file lint, typecheck, relevant React checks, OpenSpec strict and diff checks, keeping source and runtime evidence separate.
+- [x] 3.6 STOP: root independently reviews Phase 3 diff/evidence and records source acceptance, known runtime limits and a handoff for separately authorized browser verification.
 
 ## 4. Browser/runtime acceptance — separately authorized home-server session
 
@@ -83,3 +83,23 @@ rtk proxy git -c core.whitespace=cr-at-eol diff 9891d0a --check
 ```
 
 **SOURCE ONLY, 15/24 tasks accepted. STOP before Phase 3.** All nine Phase 3/browser-runtime tasks remain unchecked; Backlog AC #1/#2 accepted, #3/#4/#5 remain open. No SQL/grant/policy, deployment or production operations occurred; real-browser viewport/app-proxy/RLS smoke and TASK-7 capacity/fault evidence remain NOT RUN/separate. Source/mocks do not prove runtime acceptance.
+
+## Phase 3 source evidence — 2026-11-08
+
+User released Phase 3 only. Worker `gpt-6.1-sol/high` reused the existing status/retry/receipt clients and UI controls. Read-only Luna `gpt-6-luna/max` confirmed that `AuthenticatedQueryBoundary` already keys its provider by `principalKey`, remounting descendants on actor/role changes; no new auth listener, provider, backend, dependency or schema was added. A small feature-local controller owns requests and a single raw validated batch UUID in `sessionStorage`; workbook, preview, receipt, IDs and errors remain in memory. Recovery requires opening the dialog and explicit status lookup, with no polling or automatic confirmation replay.
+
+Unknown/preparing/processing remain blocked across close/reopen and locator recovery. When the file/preview was lost, eligible `preview_ready`, failed, rejected or expired attempts use an explicit linked new preview through the existing retry client; no summary/expiry/payload is reconstructed. Known parent linkage survives file changes and local expiry. Denied status/ID reads clear private presentation and the locator; ordinary ID-read errors preserve the committed receipt. Requests from an unmounted/previous principal cannot restore private data or write the locator, while known success still invalidates the existing sample/search caches after unmount. If browser storage is unavailable, the in-memory unresolved guard remains; refresh persistence depends on session storage availability.
+
+Root independently observed **21 + 4 behavioral RED cases** before implementation, including real principal-boundary remounts. Review added and independently reproduced **3 RED** cases for status-shaped ordinary previews and malformed/wrong-parent retry status; **2 RED** cases for loss of known success on a resolved-unknown lookup and missing live pending announcement; and **2 RED** races where original IDs resolve during/after an unknown lookup. Strict shared schema/parent checks, live status text and same-success request ownership fixed those cases without a new abstraction. Existing test harnesses isolate session storage; the prior unmount regression now expects a recovered unknown guard and still asserts both cache invalidations and no stale receipt/IDs.
+
+Final root GREEN: **224/224 across 10 files**, including **32** new recovery cases. Five-file scoped ESLint, typecheck and staged offline React Doctor **100/100 on all 5 changed source files** PASS. OpenSpec strict and CRLF-aware whitespace checks PASS. Independent Spec and Standards/quality reviews PASS; root accepts tasks 3.1–3.6. **21/24 tasks accepted**, Backlog AC #1–#4 complete; AC #5 and all three runtime tasks remain open. STOP before browser/runtime release.
+
+```bash
+rtk npm run test:run -- 'src/app/(dashboard)/analyst/accession/accession-import-recovery.test.tsx' 'src/app/(dashboard)/analyst/accession/accession-import-confirmation.test.tsx' 'src/app/(dashboard)/analyst/accession/accession-import-preview.test.tsx' 'src/app/(dashboard)/analyst/accession/accession-page-header.test.tsx' 'src/app/(dashboard)/analyst/accession/page.test.tsx' src/lib/api-client.accession-confirmation.test.ts 'src/app/api/accession-confirmation/[batchId]/samples/route.test.ts' src/lib/accession-preview/status.test.ts 'src/app/api/accession-confirmation/[batchId]/route.test.ts' src/lib/api-client.accession-preview.test.ts
+rtk npm run typecheck
+rtk proxy node_modules/.bin/react-doctor . --verbose --offline --yes --diff 070c27a --no-lint
+rtk proxy openspec validate add-vietnamese-accession-import-workflow --strict --no-interactive
+rtk proxy git -c core.whitespace=cr-at-eol diff 070c27a --check
+```
+
+**SOURCE ONLY.** Browser/runtime tasks 4.1–4.3 remain NOT RUN and require a separate release. Next runtime verification must bind synthetic actors, exact app/backend revisions and timestamps on the authorized home-server environment; exercise download→upload→preview→confirm→status/receipt, refresh/file loss, linked retries, owner denial and app/proxy viewport/focus behavior. No SQL, Docker, SSH, deployment or production operations occurred in Phase 3. TASK-7 retains capacity, budgets, atomicity, security, no-retention and full fault certification; these source/mocked interactions do not establish live authorization/RLS or real-browser acceptance.

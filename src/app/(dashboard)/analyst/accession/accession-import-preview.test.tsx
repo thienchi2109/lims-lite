@@ -4,8 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mocks = vi.hoisted(() => ({ preview: vi.fn() }))
-vi.mock('@/lib/api-client', () => ({ createAccessionPreviewClient: mocks.preview }))
+const mocks = vi.hoisted(() => ({ preview: vi.fn(), retry: vi.fn() }))
+vi.mock('@/lib/api-client', () => ({ createAccessionPreviewClient: mocks.preview, retryAccessionPreviewClient: mocks.retry }))
 vi.mock('@/components/walkthrough', () => ({
     WalkthroughTrigger: ({ className }: { className?: string }) => <button className={className}>Hướng dẫn</button>,
 }))
@@ -58,10 +58,12 @@ async function selectFile(user: ReturnType<typeof userEvent.setup>, size = 10, n
 }
 
 beforeEach(() => {
+    sessionStorage.clear()
     mocks.preview.mockReset(); mocks.preview.mockResolvedValue(preview)
+    mocks.retry.mockReset(); mocks.retry.mockImplementation((_batchId, file, options) => mocks.preview(file, undefined, options))
     vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
 })
-afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); sessionStorage.clear() })
 
 describe('accession Excel preview', () => {
     it('opens by keyboard beside template, keeps wrapping/walkthrough and returns focus on Escape', async () => {

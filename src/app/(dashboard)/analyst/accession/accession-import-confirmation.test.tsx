@@ -5,9 +5,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { sampleKeys, searchKeys } from '@/types/query-keys'
 
-const mocks = vi.hoisted(() => ({ preview: vi.fn(), confirm: vi.fn(), samples: vi.fn() }))
+const mocks = vi.hoisted(() => ({ preview: vi.fn(), confirm: vi.fn(), samples: vi.fn(), status: vi.fn(), retry: vi.fn() }))
 vi.mock('@/lib/api-client', () => ({ createAccessionPreviewClient: mocks.preview,
-    confirmAccessionClient: mocks.confirm, fetchAccessionReceiptSamplesClient: mocks.samples }))
+    confirmAccessionClient: mocks.confirm, fetchAccessionReceiptSamplesClient: mocks.samples,
+    fetchAccessionConfirmationStatusClient: mocks.status, retryAccessionPreviewClient: mocks.retry }))
 vi.mock('@/components/walkthrough', () => ({ WalkthroughTrigger: () => <button>Hướng dẫn</button> }))
 import { AccessionPageHeader } from './accession-page-header'
 
@@ -44,13 +45,16 @@ async function prepare(user: ReturnType<typeof userEvent.setup>, name = 'goc.xls
 async function attest(user: ReturnType<typeof userEvent.setup>) { await user.click(screen.getByRole('checkbox', { name: attestation })) }
 
 beforeEach(() => {
+    sessionStorage.clear()
     vi.resetAllMocks()
     vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
     mocks.preview.mockImplementation(async () => preview())
     mocks.confirm.mockResolvedValue(succeeded)
     mocks.samples.mockResolvedValue(sampleResponse)
+    mocks.status.mockResolvedValue(succeeded)
+    mocks.retry.mockImplementation((_batchId, file, options) => mocks.preview(file, undefined, options))
 })
-afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); sessionStorage.clear() })
 
 describe('accession immutable preview confirmation', () => {
     it('requires initially unchecked accessible quality attestation and confirms exact original File once', async () => {
@@ -188,7 +192,8 @@ describe('accession immutable preview confirmation', () => {
         first.unmount()
         await open()
         await act(async () => { pending.resolve(succeeded) })
-        expect(screen.getByLabelText('Tệp Excel')).toBeTruthy()
+        expect(screen.queryByLabelText('Tệp Excel')).toBeNull()
+        expect(screen.getByRole('status').textContent).toMatch(/chưa rõ/i)
         expect(screen.queryByRole('heading', { name: 'Đã nhập thành công' })).toBeNull()
         expect(mocks.samples).not.toHaveBeenCalled()
         expect(first.invalidate).toHaveBeenCalledWith({ queryKey: sampleKeys.all })
